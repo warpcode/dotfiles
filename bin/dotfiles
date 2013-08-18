@@ -1,13 +1,13 @@
 #!/bin/bash
 
 function e_header()   { echo -e "\n\033[1m$@\033[0m"; }
-function e_success()  { echo -e " \033[1;32mSUCCESS -\033[0m $@"; }
-function e_error()    { echo -e " \033[1;31mERROR -\033[0m $@"; }
-function e_process()    { echo -e " \033[1;33mINFO -\033[0m $@"; }
+function e_success()  { echo " [✔] $@"; }
+function e_error()    { echo " [✖] $@"; }
+function e_process()    { echo " [•] $@"; }
 
 
 
-
+e_header "Dotfiles"
 #Update or download the dotfiles repo
 if [ -d ~/.dotfiles ]; then
     e_process 'Updating dotfiles'
