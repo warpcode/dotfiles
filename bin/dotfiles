@@ -1,0 +1,106 @@
+#!/bin/bash
+
+function e_header()   { echo -e "\n\033[1m$@\033[0m"; }
+function e_success()  { echo -e " \033[1;32mSUCCESS -\033[0m $@"; }
+function e_error()    { echo -e " \033[1;31mERROR -\033[0m $@"; }
+function e_process()    { echo -e " \033[1;33mINFO -\033[0m $@"; }
+
+
+
+
+#Update or download the dotfiles repo
+if [ -d ~/.dotfiles ]; then
+    e_process 'Updating dotfiles'
+    #cd ~/.dotfiles
+    #git pull
+else
+    e_process 'Downloading dotfiles'
+    #mkdir -p ~/.dotfiles
+    #cd ~/.dotfiles
+    #git clone 
+fi
+
+
+
+
+
+#Run our processes for installing
+function process(){
+    #required settings to detect files properly in the process function
+    shopt -s dotglob
+    shopt -s nullglob
+    
+    if [[ ! $(declare -f "$1_process") ]]; then
+        #stop if our process function doesn't exist
+        e_error "Function $1_process does not exist"
+        return;
+    fi
+    
+    local files=(~/.dotfiles/$1/*)
+    if (( ${#files[@]} == 0 )); then 
+        #stop if there are no files to run
+        e_error "No files to process"
+        return; 
+    fi
+    
+    for file in ${files[@]}; do
+       [[ $(declare -f "$1_process") ]] && "$1_process" "$file"
+     done
+}
+
+
+function install_process(){
+    source "$1"
+}
+
+
+function link_process(){
+    local base="$(basename $1)"
+    local dest="$HOME/$base"
+    if [[ "$1" -ef "$dest" ]]; then
+        e_process "Skipping ${base} linking. Link already exists"
+    else
+        e_success "Linking ${base}"
+        ln -sf "${1#$HOME/}" ~/
+    fi
+}
+
+
+
+process "install"
+
+e_header "Linking dot files"
+process "link"
+
+
+shopt -s expand_aliases
+source ~/.bashrc
+e_header "Completed"
+
+#if [[ "$OSTYPE" =~ ^darwin ]]; then
+    #source "${DOTFILES}/source/osx.sh";
+#fi
+
+
+
+
+
+
+# Ask for the administrator password upfront
+#sudo -v
+
+# Keep-alive: update existing `sudo` time stamp until `.osx` has finished
+#while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
+
+
+#APPDIR="$(dirname ${BASH_SOURCE})/"
+
+#hash foo 2>/dev/null || { echo >&2 "I require foo but it's not installed.  Aborting."; exit 1; }
+
+#case "$OSTYPE" in
+#  solaris*) echo "SOLARIS" ;;
+#  darwin*)  echo "OSX" ;; 
+#  linux*)   echo "LINUX" ;;
+#  bsd*)     echo "BSD" ;;
+#  *)        echo "unknown: $OSTYPE" ;;
+#esac
