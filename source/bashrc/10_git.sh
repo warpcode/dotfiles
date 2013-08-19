@@ -43,6 +43,8 @@ alias gpa="gp --all"
 alias gra='git remote add'
 alias grr='git remote rm'
 
+# Git ignore generation
+function gi() { curl "http://gitignore.io/api/$@" ;}
 
 # Logs
 alias gl='git log'
