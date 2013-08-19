@@ -2,6 +2,7 @@
 alias g="git"
 alias gs='git status'
 alias gst='gs'
+alias gss='git status -s'
 
 # Adding
 function ga() { git add "${@:-.}"; }
