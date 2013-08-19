@@ -77,13 +77,6 @@ shopt -s expand_aliases
 source ~/.bashrc
 e_header "Completed"
 
-#if [[ "$OSTYPE" =~ ^darwin ]]; then
-    #source "${DOTFILES}/source/osx.sh";
-#fi
-
-
-
-
 
 
 # Ask for the administrator password upfront
@@ -91,16 +84,3 @@ e_header "Completed"
 
 # Keep-alive: update existing `sudo` time stamp until `.osx` has finished
 #while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
-
-
-#APPDIR="$(dirname ${BASH_SOURCE})/"
-
-#hash foo 2>/dev/null || { echo >&2 "I require foo but it's not installed.  Aborting."; exit 1; }
-
-#case "$OSTYPE" in
-#  solaris*) echo "SOLARIS" ;;
-#  darwin*)  echo "OSX" ;; 
-#  linux*)   echo "LINUX" ;;
-#  bsd*)     echo "BSD" ;;
-#  *)        echo "unknown: $OSTYPE" ;;
-#esac
