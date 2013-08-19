@@ -17,11 +17,11 @@ function brcl(){
 }
 
 
-function install_homebrew(){
+#function install_homebrew(){
 
-}
+#}
 
 
-function uninstall_homebrew(){
+#function uninstall_homebrew(){
 
-}
+#}
