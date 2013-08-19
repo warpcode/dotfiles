@@ -5,7 +5,7 @@ shopt -s nocaseglob
 shopt -s checkwinsize
 
 # Reload the bashrc file
-alias reload="source ~/.bashrc"
+alias reload="source ~/.bashrc && echo Bash config reloaded"
 
 # Enable aliases to be sudo’ed
 alias sudo='sudo '
