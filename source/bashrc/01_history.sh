@@ -22,3 +22,6 @@ export HISTFILESIZE=10000
 
 # Execute last command
 alias r="fc -s"
+
+# Shortcut to view the history
+alias h="history"
