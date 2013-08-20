@@ -11,11 +11,15 @@ alias brinf="br info"
 alias brdr="br doctor"
 alias bro="br outdated"
 
+# Cleanup routine
 function brcl(){
-    br cleanup
-    br prune
+    brew cleanup && brew prune
 }
 
+# Check if a keg is installed
+function brex(){
+    brew list | grep -q "\b$@\b" || { return 1;}
+}
 
 #function install_homebrew(){
 
