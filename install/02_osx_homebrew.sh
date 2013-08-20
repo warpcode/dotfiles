@@ -1,7 +1,7 @@
 
 [[ "$OSTYPE" =~ ^darwin ]] || return;
 
-e_header "Setting up OSX config"
+e_header "Setting up OSX Homebrew"
 
 # Check whether a keg is installed
 function _brew_installed(){
