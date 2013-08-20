@@ -30,19 +30,7 @@ function process(){
     shopt -s dotglob
     shopt -s nullglob
     
-    if [[ ! $(declare -f "$1_process") ]]; then
-        #stop if our process function doesn't exist
-        e_error "Function $1_process does not exist"
-        return;
-    fi
-    
     local files=(~/.dotfiles/$1/*)
-    if (( ${#files[@]} == 0 )); then 
-        #stop if there are no files to run
-        e_error "No files to process"
-        return; 
-    fi
-    
     for file in ${files[@]}; do
        [[ $(declare -f "$1_process") ]] && "$1_process" "$file"
      done
