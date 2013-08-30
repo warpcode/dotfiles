@@ -59,4 +59,4 @@ alias gl4="gl --graph --all --date=short --pretty=format:'%C(yellow)%h%x20%C(whi
 alias gl1live="while true; do clear; gl1 -40 | cat -; sleep 15; done"
 alias gl2live="while true; do clear; gl2 -40 | cat -; sleep 15; done"
 alias gl3live="while true; do clear; gl3 -40 | cat -; sleep 15; done"
-alias gl3live="while true; do clear; gl4 -40 | cat -; sleep 15; done"
+alias gl4live="while true; do clear; gl4 -40 | cat -; sleep 15; done"
