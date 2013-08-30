@@ -26,6 +26,7 @@ alias -- -="cd -"
 alias desktop="cd ~/Desktop"
 alias downloads="cd ~/Downloads"
 alias home="cd ${HOME}"
+alias cddotfiles="cd ~/.dotfiles"
 
 
 
