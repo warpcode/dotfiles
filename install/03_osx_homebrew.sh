@@ -90,6 +90,9 @@ brew install p7zip
 echo " - Installing zopfli"
 brew install zopfli
 
+echo " - Installing cabextract"
+brew install cabextract
+
 #brew cask install "dropbox" &>/dev/null
 
 brew cleanup &>/dev/null
