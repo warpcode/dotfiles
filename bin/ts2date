@@ -1,0 +1,20 @@
+#!/bin/bash
+
+if [[ -z "$1" ]]
+then
+    if [[ -p /dev/stdin ]]    # input from a pipe
+    then
+        read -r p
+    else
+        echo "No timestamp given." >&2
+        exit
+    fi
+else
+    p=$1
+fi
+
+if [[ "$OSTYPE" =~ ^darwin ]]; then
+    date -r $p "+%Y-%m-%d %H:%M:%S"
+else
+    date -d @$p "+%Y-%m-%d %H:%M:%S"
+fi
