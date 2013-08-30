@@ -9,6 +9,6 @@ for file in ${files[@]}; do
         echo " - Skipping ${base} linking. Link already exists"
     else
         echo " - Linking ${base}"
-        ln -sf "${$file#$HOME/}" ~/
+        ln -sf "${file#$HOME/}" ~/
     fi
 done
