@@ -93,7 +93,20 @@ brew install zopfli
 echo " - Installing cabextract"
 brew install cabextract
 
+
+# Editors
+echo " - Installing nano"
+brew install nano
+
+echo " - Installing vim"
+brew install vim
+brew install macvim
+
+echo " - Installing emacs"
+brew install emacs --cocoa
+
 #brew cask install "dropbox" &>/dev/null
+
 
 brew cleanup &>/dev/null
 brew prune &>/dev/null
