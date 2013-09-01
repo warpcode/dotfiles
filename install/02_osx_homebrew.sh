@@ -58,7 +58,7 @@ echo " - Installing htop (htop-osx)"
 brew install htop-osx
 
 echo " - Installing man2html"
-brew isntall man2html
+brew install man2html
 
 
 # Install the lua interpreter
