@@ -18,3 +18,8 @@ if [[ ${ALL_INSTALLED} -eq 0 ]]; then
 fi
 
 echo " - Dependencies found"
+
+
+# include necessary bash source files
+source ~/.dotfiles/source/bashrc/01_misc_func.sh
+source ~/.dotfiles/source/bashrc/01_paths.sh
