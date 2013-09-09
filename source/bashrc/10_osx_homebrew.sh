@@ -1,5 +1,6 @@
 [[ "$OSTYPE" =~ ^darwin ]] || return 1
 
+
 alias br="brew"
 alias brc="br cleanup"
 alias brpr="br prune"
@@ -20,6 +21,12 @@ function brcl(){
 function brex(){
     brew list | grep -q "\b$@\b" || { return 1;}
 }
+
+
+# Link Homebrew casks in `/Applications` rather than `~/Applications`
+export HOMEBREW_CASK_OPTS="--appdir=/Applications"
+
+
 
 #function install_homebrew(){
 
