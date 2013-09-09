@@ -20,6 +20,9 @@ export HISTTIMEFORMAT="[%F %T] "
 export HISTSIZE=10000
 export HISTFILESIZE=10000
 
+# Make some commands not show up in history
+export HISTIGNORE="ls:cd:cd -:pwd:exit:date:* --help"
+
 # Execute last command
 alias r="fc -s"
 
