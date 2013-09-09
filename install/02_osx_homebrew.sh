@@ -93,6 +93,8 @@ brew install zopfli
 echo " - Installing cabextract"
 brew install cabextract
 
+echo " - Installing pigz"
+brew install pigz
 
 # Editors
 echo " - Installing nano"
