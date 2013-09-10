@@ -104,6 +104,9 @@ echo " - Installing vim"
 brew install vim
 brew install macvim
 
+echo " - Installing ctags"
+brew install ctags
+
 echo " - Installing emacs"
 brew install emacs --cocoa
 
