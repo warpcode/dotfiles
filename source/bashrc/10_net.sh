@@ -6,7 +6,7 @@ alias wanip="dig +short myip.opendns.com @resolver1.opendns.com"
 alias whois="whois -h whois-servers.net"
 
 # OSX flush dns cache
-[[ "$OSTYPE" =~ ^darwin ]] && alias dnsflush="dscacheutil -flushcache"
+[[ "$OSTYPE" =~ ^darwin ]] && alias dnsflush="dscacheutil -flushcache && killall -HUP mDNSResponder"
 
 # View live HTTP traffic
 alias httpdump="sudo tcpdump -i en1 -n -s 0 -w - | grep -a -o -E \"Host\: .*|GET \/.*\""
