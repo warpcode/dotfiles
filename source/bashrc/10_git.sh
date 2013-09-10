@@ -8,6 +8,9 @@ alias gss='git status -s'
 function ga() { git add "${@:-.}"; }
 alias gap='git add --patch'
 
+# Removing
+alias grm='git rm'
+
 # Branches
 alias gb='git branch'
 alias gba='git branch -a'
