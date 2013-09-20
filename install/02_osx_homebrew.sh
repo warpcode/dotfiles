@@ -113,5 +113,5 @@ brew install emacs --cocoa
 #brew cask install "dropbox" &>/dev/null
 
 
-brew cleanup &>/dev/null
-brew prune &>/dev/null
+#brew cleanup &>/dev/null
+#brew prune &>/dev/null
