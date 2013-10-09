@@ -11,6 +11,9 @@ alias whois="whois -h whois-servers.net"
 # View live HTTP traffic
 alias httpdump="sudo tcpdump -i en1 -n -s 0 -w - | grep -a -o -E \"Host\: .*|GET \/.*\""
 
+# Another traffic sniffer
+alias sniff="sudo ngrep -d 'en1' -t '^(GET|POST) ' 'tcp and port 80'"
+
 # All the dig info
 function digga() {
 	dig +nocmd "$1" any +multiline +noall +answer

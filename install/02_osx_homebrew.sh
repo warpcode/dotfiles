@@ -54,6 +54,9 @@ brew install lynx
 echo " - Installing nmap"
 brew install nmap
 
+echo " - Installing ngrep"
+brew install ngrep
+
 echo " - Installing htop (htop-osx)"
 brew install htop-osx
 
