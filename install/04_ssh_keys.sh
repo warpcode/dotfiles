@@ -21,8 +21,8 @@ else
     echo " - $SSH_KEY_NAME ssh key already exists"
 fi
 
-echo " - Setting $SSH_KEY_NAME permissions to 0644"
-chmod 644 "$SSH_DIR/$SSH_KEY_NAME"
+echo " - Setting $SSH_KEY_NAME permissions to 0600"
+chmod 600 "$SSH_DIR/$SSH_KEY_NAME"
 echo " - Setting $SSH_KEY_NAME.pub permissions to 0600"
 chmod 600 "$SSH_DIR/$SSH_KEY_NAME.pub"
 
