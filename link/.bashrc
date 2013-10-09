@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Exit now if we're not in interactive mode
 [ -z "$PS1" ] && return;

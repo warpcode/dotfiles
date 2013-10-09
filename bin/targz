@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Taken from https://github.com/mathiasbynens/dotfiles/blob/master/.functions
 
