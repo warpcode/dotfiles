@@ -57,21 +57,3 @@ elif [[ `hash nautilus 2>/dev/null` ]]; then
 elif [[ `hash dolphin 2>/dev/null` ]]; then
     alias ofb="dolphin ."
 fi
-
-#######################
-# Open Editor
-#######################
-function e(){
-    if [[ $EDITOR == '' ]]
-    then
-        echo "\$EDITOR variable is empty"
-        exit 1
-    fi
-
-    if [ "$1" = "" ] ; then
-      exec $EDITOR .
-    else
-      exec $EDITOR "$1"
-    fi
-}
-
