@@ -10,7 +10,9 @@ done
 
 # Load in dotfiles scripts
 for file in ~/.dotfiles/source/bashrc/*; do
-  source "$file"
+  if [ -f $file ]; then
+      source "$file"
+  fi
 done
 
 # Custom bashrc file
