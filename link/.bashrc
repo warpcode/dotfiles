@@ -4,6 +4,11 @@
 [ -z "$PS1" ] && return;
 
 # Load in dotfiles scripts
+for file in ~/.dotfiles/source/bashrc/completion/*; do
+  source "$file"
+done
+
+# Load in dotfiles scripts
 for file in ~/.dotfiles/source/bashrc/*; do
   source "$file"
 done

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # From https://github.com/aziz/dotfiles/blob/master/bash/completion/ssh.completion.bash
 
 export COMP_WORDBREAKS=${COMP_WORDBREAKS/\:/}
