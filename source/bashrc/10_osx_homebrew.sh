@@ -11,6 +11,8 @@ alias brs="br search"
 alias brinf="br info"
 alias brdr="br doctor"
 alias bro="br outdated"
+alias brup="br update"
+alias brupg="br upgrade"
 
 # Cleanup routine
 function brcl(){
