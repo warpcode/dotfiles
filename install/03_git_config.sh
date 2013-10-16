@@ -24,7 +24,7 @@ fi
 
 echo ' - Configuring core options'
 git config --global core.autocrlf "input"
-git config --global core.whitespace "fix,space-before-tab,tab-in-indent,trailing-space"
+git config --global core.whitespace "trailing-space"
 git config --global --replace-all core.excludesfile "${HOME}/.gitignore_global"
 git config --global apply.whitespace "fix"
 
