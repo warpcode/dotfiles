@@ -39,8 +39,13 @@ function mkcd() {
 }
 
 # Copy w/ progress
-cp_p () {
+function cp_p () {
   rsync -WavP --human-readable --progress "$1" "$2"
+}
+
+#Common rsync options I use
+function rsyncc(){
+	rsync -vhrlptD --progress "$@"
 }
 
 
