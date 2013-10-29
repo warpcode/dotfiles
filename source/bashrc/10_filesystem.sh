@@ -38,17 +38,6 @@ function mkcd() {
     mkdir -p "$@" && cd "$@"
 }
 
-# Copy w/ progress
-function cp_p () {
-  rsync -WavP --human-readable --progress "$1" "$2"
-}
-
-#Common rsync options I use
-function rsyncc(){
-	rsync -vhrlptD --progress "$@"
-}
-
-
 #######################
 # Open
 #######################
