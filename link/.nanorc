@@ -8,10 +8,12 @@ set brackets ""')>]}"
 set matchbrackets "(]}"
 
 # Mouse support (Meta-M)
-set mouse
+#set mouse
 
 # Scroll line by line rather than in chunks
 set smooth
 
+#disable automatic line wrapping
+set nowrap
 
 include ~/.dotfiles/source/nanorc/syntax.nanorc
