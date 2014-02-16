@@ -9,7 +9,7 @@ function _app_first_exists() {
   if [ -n "$1" ]; then
     local arg=$1
     shift
-    command -v $arg >> /dev/null && echo $arg || first_of "$@"
+    _app_exists $arg >> /dev/null && echo $arg || _app_first_exists "$@"
   else
     exit 1
   fi
