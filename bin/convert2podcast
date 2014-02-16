@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+
+if [[ "$1" == '' ]]
+then
+    echo "No Source specified"
+    exit 1
+fi
+
+if ffmpeg -i "$1" 2>&1 | grep 'Invalid data found'		#check if it's video file
+then
+   echo "$1 is NOT A VALID FILE!"
+   exit	   	
+fi
+
+if [[ "$2" == '' ]]
+then
+    echo "No Output specified"
+    exit 1
+fi
+
+if [[ ! "${2##*.}" == 'mp4' ]] && [[ ! "${2##*.}" == 'm4a' ]]
+then
+    echo "Output file must end with mp4 or m4a"
+    exit 1
+fi
+
+# Check FFMPEG Installation
+if ffmpeg -formats 2> /dev/null | grep "E mp4" > /dev/null
+	then
+	 echo "Check mp4 container format ... OK"
+	else
+	 echo "Check mp4 container format ... NOK"
+	 exit
+fi
+
+if ffmpeg -codecs 2> /dev/null | grep "libfdk_aac" > /dev/null
+    then
+    AAC_LIB="libfdk_aac"
+elif ffmpeg -codecs 2> /dev/null | grep "libfaac" > /dev/null
+    then
+    AAC_LIB="libfaac"
+else
+    AAC_LIB="aac -strict -2"
+fi
+
+echo "Using aac encoder: $AAC_LIB"
+
+ffmpeg -y -v error -stats -i "$1" -vn -sn -c:a $AAC_LIB -b:a 32k -ac 1 "$2" < /dev/null
+echo ""
