@@ -1,6 +1,4 @@
 # IP info
-alias localip="ifconfig -a | perl -nle'/(\d+\.\d+\.\d+\.\d+)/ && print \$1'"
-alias wanip="dig +short myip.opendns.com @resolver1.opendns.com"
 
 # Improved WHOIS lookups
 alias whois="whois -h whois-servers.net"
