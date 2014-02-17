@@ -37,17 +37,3 @@ alias cddotfiles="cd ~/.dotfiles"
 function mkcd() {
     mkdir -p "$@" && cd "$@"
 }
-
-#######################
-# Open
-#######################
-# Opening Shortcuts
-if [[ "$OSTYPE" =~ ^darwin ]]; then
-    alias ofb="open ."
-elif [[ `hash gnome-open 2>/dev/null` ]]; then
-    alias ofb="gnome-open ."
-elif [[ `hash nautilus 2>/dev/null` ]]; then
-    alias ofb="nautilus ."
-elif [[ `hash dolphin 2>/dev/null` ]]; then
-    alias ofb="dolphin ."
-fi
