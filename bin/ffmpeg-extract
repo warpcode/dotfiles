@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+
+IGNORE_VIDEO="n"
+IGNORE_AUDIO="n"
+IGNORE_SUBS="n"
+
+for i in "$@"
+do
+    case $i in
+        -vn)
+            IGNORE_VIDEO="y"
+            shift
+        ;;
+        -an)
+            IGNORE_AUDIO="y"
+            shift
+        ;;
+        -sn)
+            IGNORE_SUBS="y"
+            shift
+        ;;
+        *)
+            break
+        ;;
+    esac
+done
+
+
+if [[ "$1" == '' ]]
+then
+    echo "No Source specified"
+    exit 1
+fi
+
+if ffmpeg -i "$1" 2>&1 | grep 'Invalid data found' #check if it's video file
+then
+   echo "$1 is NOT A VALID FILE!"
+   exit	   	
+fi
+
+FILENAME="${1%.*}"
+
+SED_MODIFIER="-r"
+
+if [[ "$OSTYPE" =~ ^darwin ]]; then
+    SED_MODIFIER="-E"
+fi
+
+FFMPEG_MAP=""
+COUNTER=0
+
+while read STREAM_LINE;
+do
+    echo "$STREAM_LINE"
+    STREAM=$(echo "$STREAM_LINE" | sed $SED_MODIFIER 's|^.*#[0-9].([0-9]+).*$|\1|g')
+    STREAM_TYPE=$(echo "$STREAM_LINE" | sed $SED_MODIFIER 's|^.+[oe]\: ([a-zA-Z0-9\_]+).*$|\1|g')
+
+    COPY_TYPE=""
+    if [[ "$STREAM_LINE" == *Audio* ]] && [[ $IGNORE_AUDIO == "n" ]] #check if it's an audio stream
+    then
+        COPY_TYPE="-acodec copy" 
+    elif  [[ "$STREAM_LINE" == *Video* ]] && [[ $IGNORE_VIDEO == "n" ]] #check if it's a video stream
+    then
+        COPY_TYPE="-vcodec copy -f rawvideo"
+    elif  [[ "$STREAM_LINE" == *Subtitle* ]] && [[ $IGNORE_SUBS == "n" ]] #check if it's a subtitle stream
+    then
+        COPY_TYPE="-scodec copy"
+        
+        if [[ "$STREAM_TYPE" == "mov_text" ]] || [[ "$STREAM_TYPE" == "subrip" ]]
+        then
+            # as far as I can tell, ssa and ass are the same    
+            STREAM_TYPE="srt"
+            COPY_TYPE="-scodec srt"
+        fi
+        
+        if [[ "$STREAM_TYPE" == "ssa" ]]
+        then
+            # as far as I can tell, ssa and ass are the same    
+            STREAM_TYPE="ass"
+        fi
+        
+        if [[ ! "$STREAM_TYPE" == "ass" ]] && [[ ! "$STREAM_TYPE" == "srt" ]]
+        then
+            # Unknown format so assume bitmap subs and force inside an mkv
+            STREAM_TYPE="mkv"
+        fi
+    else
+        continue
+    fi
+  
+    if [[ "$STREAM_TYPE" == '' ]];then
+      continue
+    fi
+
+    if [[ ! "$FFMPEG_MAP" == '' ]];then
+      FFMPEG_MAP="$FFMPEG_MAP "
+    fi
+    
+    OUTPUT_FILE="${FILENAME}-s${COUNTER}.${STREAM_TYPE}"
+    echo "Extracting stream $STREAM to \"$OUTPUT_FILE\""
+    
+    FFMPEG_MAP="${FFMPEG_MAP}${COPY_TYPE} -map 0:$STREAM -y \"$OUTPUT_FILE\""
+    let COUNTER=COUNTER+1
+done < <(ffprobe "$1" 2>&1 | grep "Stream #")
+
+if [[ "$FFMPEG_MAP" == "" ]]
+then
+    echo "Nothing to extract"
+    exit	
+fi
+
+eval "ffmpeg -v error -stats -i \"$1\" $FFMPEG_MAP < /dev/null"
+echo ""
