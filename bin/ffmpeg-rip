@@ -98,9 +98,6 @@ if [[ "$MAX_HEIGHT" == "" ]]; then
     MAX_HEIGHT="$FINAL_HEIGHT"
 fi
 
-#VIDEO_LENGTH=$(ffmpeg -i "$1" 2>&1 | grep "Duration"| cut -d ' ' -f 4 | sed s/,// | sed 's@\..*@@g' | awk '{ split($1, A, ":"); split(A[3], B, "."); print 3600*A[1] + 60*A[2] + B[1] }')
-# figure out crop detection
-
 # Check the padding. If we are cropping, just ignore the padding
 VF_CROP=""
 VF_SCALE="scale=iw*min($MAX_WIDTH/iw\,$MAX_HEIGHT/ih):ih*min($MAX_WIDTH/iw\,$MAX_HEIGHT/ih)"
@@ -114,5 +111,3 @@ fi
 
 ffmpeg  -threads 0 -y -i "$1" -sn -vf "${VF_SCALE}${VF_CROP}${VF_PADDING}" -c:v libx264 -crf "$FF_CRF" -preset "$FF_PRESET" -profile:v high -level:v 4.1 -c:a libfdk_aac -b:a 256k -ac 2 "$2" < /dev/null;
 echo ""
-
-#ffmpeg -i "$1" -t 1 -vframes 1 -ss 50 -vf cropdetect -f null - 2>&1 | grep "crop=" |sed $SED_MODIFIER 's|^.*crop=([0-9]+\:[0-9]+\:[0-9]+\:[0-9]+).*$|\1|g' | tail -1
