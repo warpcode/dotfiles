@@ -61,7 +61,8 @@ do
         COPY_TYPE="-acodec copy" 
     elif  [[ "$STREAM_LINE" == *Video* ]] && [[ $IGNORE_VIDEO == "n" ]] #check if it's a video stream
     then
-        COPY_TYPE="-vcodec copy -f rawvideo"
+        COPY_TYPE="-vcodec copy"
+        STREAM_TYPE="avi"
     elif  [[ "$STREAM_LINE" == *Subtitle* ]] && [[ $IGNORE_SUBS == "n" ]] #check if it's a subtitle stream
     then
         COPY_TYPE="-scodec copy"
