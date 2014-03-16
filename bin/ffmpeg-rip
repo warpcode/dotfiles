@@ -81,12 +81,12 @@ VF_CROP=""
 if [[ "$AUTOCROP" == "y" ]]; then
     CROPDETECT="$DIR/ffmpeg-cropdetect"
     if [ -n "$MAX_WIDTH" ]; then
-        CROPDETECT="$SCALEDETECT -w $MAX_WIDTH"
+        CROPDETECT="$SCALEDETECT -mw $MAX_WIDTH"
     fi
     if [ -n "$MAX_HEIGHT" ]; then
-        CROPDETECT="$SCALEDETECT -h $MAX_HEIGHT"
+        CROPDETECT="$SCALEDETECT -mh $MAX_HEIGHT"
     fi
-    CROPSTRING=$(bash $CROPDETECT "$1")
+    CROPSTRING=$(python $CROPDETECT "$1")
     
     VF_CROP=",crop=$CROPSTRING"
 else
