@@ -1,89 +1,91 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python
 
-SED_MODIFIER="-r"
+import argparse
+import os
+import re
+import subprocess
+import sys
 
-if [[ "$OSTYPE" =~ ^darwin ]]; then
-    SED_MODIFIER="-E"
-fi
+def which(program):
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
-MAX_WIDTH=""
-MAX_HEIGHT=""
-SEPERATOR=":"
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
 
-while [[ $# > 0 ]] ; do
-    case "$1" in
-        -h)
-            shift
-            MAX_HEIGHT="$1"
-        ;;
-        -w)
-            shift
-            MAX_WIDTH="$1"
-        ;;
-        -s)
-            shift
-            SEPERATOR="$1"
-        ;;
-        *)
+    return None
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Using a bounding box, calculate the frame size for a video')
+    parser.add_argument("input", help="Location of the video")
+    parser.add_argument("-mw", "--max-width", type=int, help="Set the maximum width")
+    parser.add_argument("-mh", "--max-height", type=int, help="Set the maximum height")
+    parser.add_argument("-s", "--seperator", type=str, help="Set the width and height seperator", default=":")
+    args = parser.parse_args()
+
+    probe_executable = which('avprobe')
+    if not probe_executable:
+        probe_executable = which('ffprobe')
+        
+    if not probe_executable:
+        print('cannot find avprobe or ffprobe');
+        sys.exit(1)
+    
+    #make sure we can process the file
+    try:
+        output = subprocess.check_output([probe_executable, args.input], stderr=subprocess.STDOUT)
+    except Exception, e:
+        print('Invalid file detected');
+        sys.exit(1)
+        
+    pattern = re.compile(r'Stream.*?Video.*?([0-9]{1,})x([0-9]{3,}).*?DAR ([0-9]+):([0-9]+)')
+    width = height = ratio_width = ratio_height = 0
+    for line in output.split('\n'):
+        if line.find("Stream") > -1 and line.find("Video") > -1:
+            match = pattern.search(line)
+            if match:
+                width, height, ratio_width, ratio_height = match.groups()[0:4]
             break
-        ;;
-    esac
-    shift
-done
-
-if [[ "$1" == '' ]]; then
-    echo "No Source specified"
-    exit 1
-fi
-
-if ffmpeg -i "$1" 2>&1 | grep 'Invalid data found' #check if it's video file
-then
-   echo "$1 is NOT A VALID FILE!"
-   exit	   	
-fi
-
-VIDEO_DETAILS=$(ffmpeg -i "$1" 2>&1 < /dev/null | grep "Stream #" | grep "Video")
-
-# Grab the width and height of the current video
-WIDTH=$(echo "$VIDEO_DETAILS" | sed $SED_MODIFIER 's|^.* ([0-9]+)x[0-9]+[^0-9].*$|\1|g')
-HEIGHT=$(echo "$VIDEO_DETAILS" | sed $SED_MODIFIER 's|^.* [0-9]+x([0-9]+)[^0-9].*$|\1|g')
-
-# Find the aspect ratio of the video
-RATIO_WIDTH=$(echo "$VIDEO_DETAILS" | sed $SED_MODIFIER 's|^.*DAR ([0-9]+):[0-9]+.*$|\1|g')
-RATIO_HEIGHT=$(echo "$VIDEO_DETAILS" | sed $SED_MODIFIER 's|^.*DAR [0-9]+:([0-9]+).*$|\1|g')
-ASPECT=$(echo "$RATIO_WIDTH / $RATIO_HEIGHT" | bc -l)
-
-
-#depending on the aspect ratio direction, make sure the frame doesn't grow.
-if [[ $(echo "if ($ASPECT >= 1.0) 1 else 0" | bc) -eq 1 ]]; then
-    FINAL_WIDTH="$WIDTH"
     
-    # Calculate the display height if width is preserved
-    NEW_HEIGHT_CALC=$(echo "$WIDTH / $ASPECT" | bc -l)
-    NEW_HEIGHT=$(printf "%.0f" "$NEW_HEIGHT_CALC")
-    FINAL_HEIGHT="$NEW_HEIGHT"
-else
-    FINAL_HEIGHT="$HEIGHT"
     
-    # Calculate the display width if height is preserved
-    NEW_WIDTH_CALC=$(echo "$HEIGHT * $ASPECT" | bc -l)
-    NEW_WIDTH=$(printf "%.0f" "$NEW_WIDTH_CALC")
-    FINAL_WIDTH="$NEW_WIDTH"
-fi
-
-if [[ "$MAX_WIDTH" == "" ]]; then
-    # Set the max width as the width of the video
-    MAX_WIDTH="$FINAL_WIDTH"
-fi
-
-if [[ "$MAX_HEIGHT" == "" ]]; then
-    # Set the max height as the height of the video
-    MAX_HEIGHT="$FINAL_HEIGHT"
-fi
-
-OUTPUT_WIDTH=$(echo "$FINAL_WIDTH $MAX_WIDTH $FINAL_HEIGHT $MAX_HEIGHT" | awk "{printf(\"%.0f\", \$1*((\$2/\$1 < \$4/\$3)? \$2/\$1:\$4/\$3))}")
-OUTPUT_HEIGHT=$(echo "$FINAL_WIDTH $MAX_WIDTH $FINAL_HEIGHT $MAX_HEIGHT" | awk "{printf(\"%.0f\", \$3*((\$2/\$1 < \$4/\$3)? \$2/\$1:\$4/\$3))}")
-
-
-echo "${OUTPUT_WIDTH} ${OUTPUT_HEIGHT}" | awk "{ printf(\"%.0f${SEPERATOR}%.0f\", \$1, \$2) }"
-echo
+    if width < 1 or height < 1:
+        print "Could not determine width or height of the video"
+        sys.exit(1)
+    
+    width = float(width)
+    height = float(height)
+    ratio_width = float(ratio_width)
+    ratio_height = float(ratio_height)
+    
+    ratio = ratio_width/ratio_height
+    if ratio > 1:
+        final_width = width
+        final_height = width/ratio
+    else:
+        final_height = height
+        final_width = height/ratio
+        
+    if args.max_width:
+        max_width=float(args.max_width)
+    else:
+        max_width=final_width
+        
+    if args.max_height:
+        max_height=float(args.max_height)
+    else:
+        max_height=final_height
+        
+    
+    output_width = int(final_width*min([max_width/final_width, max_height/final_height]))
+    output_height = int(final_height*min([max_width/final_width, max_height/final_height]))
+    
+    print str(output_width)+args.seperator+str(output_height)
