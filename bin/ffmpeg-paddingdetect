@@ -45,14 +45,14 @@ fi
 SCALEDETECT="$DIR/ffmpeg-scaledetect"
 
 if [ -n "$MAX_WIDTH" ]; then
-    SCALEDETECT="$SCALEDETECT -w $MAX_WIDTH"
+    SCALEDETECT="$SCALEDETECT -mw $MAX_WIDTH"
 fi
 
 if [ -n "$MAX_HEIGHT" ]; then
-    SCALEDETECT="$SCALEDETECT -h $MAX_HEIGHT"
+    SCALEDETECT="$SCALEDETECT -mh $MAX_HEIGHT"
 fi
 
-FRAME=$(bash $SCALEDETECT "$1")
+FRAME=$(python $SCALEDETECT "$1")
 FRAME="${FRAME//:/ }"
 echo "$FRAME $MAX_WIDTH $MAX_HEIGHT" | awk "{ printf(\"%.0f:%.0f:%.0f:%.0f\", (\$1>\$3 ? \$1: \$3), (\$2>\$4 ? \$2: \$4), ((\$1>\$3 ? \$1: \$3)-\$1)/2, ((\$2>\$4 ? \$2: \$4)-\$2)/2 ) }" 
 echo
