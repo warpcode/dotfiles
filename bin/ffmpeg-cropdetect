@@ -1,59 +1,68 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python
 
-#work out script dir
-CWD=`pwd`;
-DIR="$( cd -P "$( dirname "$0" )" && pwd )"
-cd "$CWD"
+import argparse
+import os
+import re
+import subprocess
+import sys
 
-SED_MODIFIER="-r"
+def which(program):
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
-if [[ "$OSTYPE" =~ ^darwin ]]; then
-    SED_MODIFIER="-E"
-fi
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
 
-MAX_WIDTH=""
-MAX_HEIGHT=""
+    return None
 
-while [[ $# > 0 ]] ; do
-    case "$1" in
-        -h)
-            shift
-            MAX_HEIGHT="$1"
-        ;;
-        -w)
-            shift
-            MAX_WIDTH="$1"
-        ;;
-        *)
-            break
-        ;;
-    esac
-    shift
-done
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Using a bounding box, calculate the frame size for a video')
+    parser.add_argument("input", help="Location of the video")
+    parser.add_argument("-mw", "--max-width", type=int, help="Set the maximum width")
+    parser.add_argument("-mh", "--max-height", type=int, help="Set the maximum height")
+    args = parser.parse_args()
 
-if [[ "$1" == '' ]]; then
-    echo "No Source specified"
-    exit 1
-fi
+    executable = which('avconv')
+    if not executable:
+        executable = which('ffmpeg')
+        
+    if not executable:
+        print('cannot find avconv or ffmpeg');
+        sys.exit(1)
+    
+    #Get the width and height of the video
+    width_height_det = ['python', os.path.dirname(__file__)+'/ffmpeg-scaledetect']    
+    if args.max_width:
+        width_height_det.append('-mw')
+        width_height_det.append(str(args.max_width))
+        
+    if args.max_height:
+        width_height_det.append('-mh')
+        width_height_det.append(str(args.max_height))
+    
+    width_height_det.append(args.input)
+    scale_detect = subprocess.check_output(width_height_det, stderr=subprocess.STDOUT);
 
-if ffmpeg -i "$1" 2>&1 | grep 'Invalid data found' #check if it's video file
-then
-   echo "$1 is NOT A VALID FILE!"
-   exit	   	
-fi
-
-SCALEDETECT="$DIR/ffmpeg-scaledetect"
-
-if [ -n "$MAX_WIDTH" ]; then
-    SCALEDETECT="$SCALEDETECT -mw $MAX_WIDTH"
-fi
-
-if [ -n "$MAX_HEIGHT" ]; then
-    SCALEDETECT="$SCALEDETECT -mh $MAX_HEIGHT"
-fi
-
-FRAME=$(python $SCALEDETECT "$1")
-
-# Check the padding. If we are cropping, just ignore the padding
-VF_SCALE="scale=$FRAME"
-ffmpeg -i "$1" -t 1 -vframes 1 -ss 50 -vf "${VF_SCALE},cropdetect=24:8:0" -f null - 2>&1 | grep "crop=" |sed $SED_MODIFIER 's|^.*crop=([0-9]+\:[0-9]+\:[0-9]+\:[0-9]+).*$|\1|g' | tail -1
+    # Execute the crop detection
+    exec_args = [executable, '-i', args.input, "-t", "1", '-vframes', '1', '-ss', '50', '-vf', 'scale='+scale_detect.strip()+',cropdetect=24:8:0', '-f', 'null', '-']
+    output = subprocess.check_output(exec_args, stderr=subprocess.STDOUT);
+    
+    pattern = re.compile(r'crop=([0-9]+\:[0-9]+\:[0-9]+\:[0-9]+)')
+    crop_text=''
+    for line in output.split("\n"):
+        match = pattern.search(line)
+        if match:
+            crop_text = match.groups()[0]
+            
+    if not crop_text:
+        crop_text = scale_detect.strip()+':0:0'
+        
+    print crop_text
