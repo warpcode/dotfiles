@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+#work out script dir
+CWD=`pwd`;
+DIR="$( cd -P "$( dirname "$0" )" && pwd )"
+cd "$CWD"
+
+SED_MODIFIER="-r"
+
+if [[ "$OSTYPE" =~ ^darwin ]]; then
+    SED_MODIFIER="-E"
+fi
+
+MAX_WIDTH="0"
+MAX_HEIGHT="0"
+
+while [[ $# > 0 ]] ; do
+    case "$1" in
+        -h)
+            shift
+            MAX_HEIGHT="$1"
+        ;;
+        -w)
+            shift
+            MAX_WIDTH="$1"
+        ;;
+        *)
+            break
+        ;;
+    esac
+    shift
+done
+
+if [[ "$1" == '' ]]; then
+    echo "No Source specified"
+    exit 1
+fi
+
+if ffmpeg -i "$1" 2>&1 | grep 'Invalid data found' #check if it's video file
+then
+   echo "$1 is NOT A VALID FILE!"
+   exit	   	
+fi
+
+SCALEDETECT="$DIR/ffmpeg-scaledetect"
+
+if [ -n "$MAX_WIDTH" ]; then
+    SCALEDETECT="$SCALEDETECT -w $MAX_WIDTH"
+fi
+
+if [ -n "$MAX_HEIGHT" ]; then
+    SCALEDETECT="$SCALEDETECT -h $MAX_HEIGHT"
+fi
+
+FRAME=$(bash $SCALEDETECT "$1")
+FRAME="${FRAME//:/ }"
+echo "$FRAME $MAX_WIDTH $MAX_HEIGHT" | awk "{ printf(\"%.0f:%.0f:%.0f:%.0f\", (\$1>\$3 ? \$1: \$3), (\$2>\$4 ? \$2: \$4), ((\$1>\$3 ? \$1: \$3)-\$1)/2, ((\$2>\$4 ? \$2: \$4)-\$2)/2 ) }" 
+echo
