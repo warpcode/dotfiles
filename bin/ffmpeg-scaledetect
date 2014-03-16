@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+
+SED_MODIFIER="-r"
+
+if [[ "$OSTYPE" =~ ^darwin ]]; then
+    SED_MODIFIER="-E"
+fi
+
+MAX_WIDTH=""
+MAX_HEIGHT=""
+SEPERATOR=":"
+
+while [[ $# > 0 ]] ; do
+    case "$1" in
+        -h)
+            shift
+            MAX_HEIGHT="$1"
+        ;;
+        -w)
+            shift
+            MAX_WIDTH="$1"
+        ;;
+        -s)
+            shift
+            SEPERATOR="$1"
+        ;;
+        *)
+            break
+        ;;
+    esac
+    shift
+done
+
+if [[ "$1" == '' ]]; then
+    echo "No Source specified"
+    exit 1
+fi
+
+if ffmpeg -i "$1" 2>&1 | grep 'Invalid data found' #check if it's video file
+then
+   echo "$1 is NOT A VALID FILE!"
+   exit	   	
+fi
+
+VIDEO_DETAILS=$(ffmpeg -i "$1" 2>&1 < /dev/null | grep "Stream #" | grep "Video")
+
+# Grab the width and height of the current video
+WIDTH=$(echo "$VIDEO_DETAILS" | sed $SED_MODIFIER 's|^.* ([0-9]+)x[0-9]+[^0-9].*$|\1|g')
+HEIGHT=$(echo "$VIDEO_DETAILS" | sed $SED_MODIFIER 's|^.* [0-9]+x([0-9]+)[^0-9].*$|\1|g')
+
+# Find the aspect ratio of the video
+RATIO_WIDTH=$(echo "$VIDEO_DETAILS" | sed $SED_MODIFIER 's|^.*DAR ([0-9]+):[0-9]+.*$|\1|g')
+RATIO_HEIGHT=$(echo "$VIDEO_DETAILS" | sed $SED_MODIFIER 's|^.*DAR [0-9]+:([0-9]+).*$|\1|g')
+ASPECT=$(echo "$RATIO_WIDTH / $RATIO_HEIGHT" | bc -l)
+
+
+#depending on the aspect ratio direction, make sure the frame doesn't grow.
+if [[ $(echo "if ($ASPECT >= 1.0) 1 else 0" | bc) -eq 1 ]]; then
+    FINAL_WIDTH="$WIDTH"
+    
+    # Calculate the display height if width is preserved
+    NEW_HEIGHT_CALC=$(echo "$WIDTH / $ASPECT" | bc -l)
+    NEW_HEIGHT=$(printf "%.0f" "$NEW_HEIGHT_CALC")
+    FINAL_HEIGHT="$NEW_HEIGHT"
+else
+    FINAL_HEIGHT="$HEIGHT"
+    
+    # Calculate the display width if height is preserved
+    NEW_WIDTH_CALC=$(echo "$HEIGHT * $ASPECT" | bc -l)
+    NEW_WIDTH=$(printf "%.0f" "$NEW_WIDTH_CALC")
+    FINAL_WIDTH="$NEW_WIDTH"
+fi
+
+if [[ "$MAX_WIDTH" == "" ]]; then
+    # Set the max width as the width of the video
+    MAX_WIDTH="$FINAL_WIDTH"
+fi
+
+if [[ "$MAX_HEIGHT" == "" ]]; then
+    # Set the max height as the height of the video
+    MAX_HEIGHT="$FINAL_HEIGHT"
+fi
+
+OUTPUT_WIDTH=$(echo "$FINAL_WIDTH $MAX_WIDTH $FINAL_HEIGHT $MAX_HEIGHT" | awk "{printf(\"%.0f\", \$1*((\$2/\$1 < \$4/\$3)? \$2/\$1:\$4/\$3))}")
+OUTPUT_HEIGHT=$(echo "$FINAL_WIDTH $MAX_WIDTH $FINAL_HEIGHT $MAX_HEIGHT" | awk "{printf(\"%.0f\", \$3*((\$2/\$1 < \$4/\$3)? \$2/\$1:\$4/\$3))}")
+
+
+echo "${OUTPUT_WIDTH} ${OUTPUT_HEIGHT}" | awk "{ printf(\"%.0f${SEPERATOR}%.0f\", \$1, \$2) }"
+echo
