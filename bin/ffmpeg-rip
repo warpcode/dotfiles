@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+#work out script dir
+CWD=`pwd`;
+DIR="$( cd -P "$( dirname "$0" )" && pwd )"
+cd "$CWD"
+
 SED_MODIFIER="-r"
 
 if [[ "$OSTYPE" =~ ^darwin ]]; then
@@ -57,57 +62,46 @@ then
    exit	   	
 fi
 
-VIDEO_DETAILS=$(ffmpeg -i "$1" 2>&1 < /dev/null | grep "Stream #" | grep "Video")
 
-# Grab the width and height of the current video
-WIDTH=$(echo "$VIDEO_DETAILS" | sed $SED_MODIFIER 's|^.* ([0-9]+)x[0-9]+[^0-9].*$|\1|g')
-HEIGHT=$(echo "$VIDEO_DETAILS" | sed $SED_MODIFIER 's|^.* [0-9]+x([0-9]+)[^0-9].*$|\1|g')
-
-# Find the aspect ratio of the video
-RATIO_WIDTH=$(echo "$VIDEO_DETAILS" | sed $SED_MODIFIER 's|^.*DAR ([0-9]+):[0-9]+.*$|\1|g')
-RATIO_HEIGHT=$(echo "$VIDEO_DETAILS" | sed $SED_MODIFIER 's|^.*DAR [0-9]+:([0-9]+).*$|\1|g')
-ASPECT=$(echo "$RATIO_WIDTH / $RATIO_HEIGHT" | bc -l)
-
-# Calculate the display width if height is preserved
-NEW_WIDTH_CALC=$(echo "$HEIGHT * $ASPECT" | bc -l)
-NEW_WIDTH=$(printf "%.0f" "$NEW_WIDTH_CALC")
-MODULO=$(expr "$NEW_WIDTH" % 2)
-NEW_WIDTH=$(expr $NEW_WIDTH + $MODULO)
-
-# Calculate the display height if width is preserved
-NEW_HEIGHT_CALC=$(echo "$WIDTH / $ASPECT" | bc -l)
-NEW_HEIGHT=$(printf "%.0f" "$NEW_HEIGHT_CALC")
-NEW_HEIGHT_MODULO=$(expr "$NEW_HEIGHT" % 2)
-NEW_HEIGHT=$(expr $NEW_HEIGHT + $NEW_HEIGHT_MODULO)
-
-if [[ $(echo "if ($ASPECT >= 1.0) 1 else 0" | bc) -eq 1 ]]; then
-    FINAL_WIDTH="$WIDTH"
-    FINAL_HEIGHT="$NEW_HEIGHT"
-else
-    FINAL_WIDTH="$NEW_WIDTH"
-    FINAL_HEIGHT="$HEIGHT"
+SCALEDETECT="$DIR/ffmpeg-scaledetect"
+if [ -n "$MAX_WIDTH" ]; then
+    SCALEDETECT="$SCALEDETECT -w $MAX_WIDTH"
 fi
-
-if [[ "$MAX_WIDTH" == "" ]]; then
-    # Set the max width as the width of the video
-    MAX_WIDTH="$FINAL_WIDTH"
+if [ -n "$MAX_HEIGHT" ]; then
+    SCALEDETECT="$SCALEDETECT -h $MAX_HEIGHT"
 fi
-
-if [[ "$MAX_HEIGHT" == "" ]]; then
-    # Set the max height as the height of the video
-    MAX_HEIGHT="$FINAL_HEIGHT"
-fi
+FRAME=$(bash $SCALEDETECT "$1")
+VF_SCALE="scale=$FRAME"
 
 # Check the padding. If we are cropping, just ignore the padding
+
+VF_PADDING=""
 VF_CROP=""
-VF_SCALE="scale=iw*min($MAX_WIDTH/iw\,$MAX_HEIGHT/ih):ih*min($MAX_WIDTH/iw\,$MAX_HEIGHT/ih)"
-VF_PADDING=",pad=$MAX_WIDTH:$MAX_HEIGHT:($MAX_WIDTH-iw)/2:($MAX_HEIGHT-ih)/2"
 
 if [[ "$AUTOCROP" == "y" ]]; then
-    VF_PADDING=""
+    CROPDETECT="$DIR/ffmpeg-cropdetect"
+    if [ -n "$MAX_WIDTH" ]; then
+        CROPDETECT="$SCALEDETECT -w $MAX_WIDTH"
+    fi
+    if [ -n "$MAX_HEIGHT" ]; then
+        CROPDETECT="$SCALEDETECT -h $MAX_HEIGHT"
+    fi
+    CROPSTRING=$(bash $CROPDETECT "$1")
     
-    VF_CROP=",crop=$(ffmpeg -i "$1" -t 1 -vframes 1 -ss 50 -vf "${VF_SCALE},cropdetect=24:8:0" -f null - 2>&1 | grep "crop=" |sed $SED_MODIFIER 's|^.*crop=([0-9]+\:[0-9]+\:[0-9]+\:[0-9]+).*$|\1|g' | tail -1)"
+    VF_CROP=",crop=$CROPSTRING"
+else
+    PADDINGDETECT="$DIR/ffmpeg-paddingdetect"
+    if [ -n "$MAX_WIDTH" ]; then
+        PADDINGDETECT="$PADDINGDETECT -w $MAX_WIDTH"
+    fi
+    if [ -n "$MAX_HEIGHT" ]; then
+        PADDINGDETECT="$PADDINGDETECT -h $MAX_HEIGHT"
+    fi
+    PADDINGSTRING=$(bash $PADDINGDETECT "$1")
+    
+    
+    VF_PADDING=",pad=$PADDINGSTRING"
 fi
 
-ffmpeg  -threads 0 -y -i "$1" -sn -vf "${VF_SCALE}${VF_CROP}${VF_PADDING}" -c:v libx264 -crf "$FF_CRF" -preset "$FF_PRESET" -profile:v high -level:v 4.1 -c:a libfdk_aac -b:a 256k -ac 2 "$2" < /dev/null;
+ffmpeg -threads 0 -y -i "$1" -map_chapters -1 -map_metadata -1 -sn -vf "${VF_SCALE}${VF_CROP}${VF_PADDING}" -c:v libx264 -crf "$FF_CRF" -preset "$FF_PRESET" -profile:v high -level:v 4.1 -c:a libfdk_aac -b:a 256k -ac 2 "$2" < /dev/null;
 echo ""
