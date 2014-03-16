@@ -92,12 +92,12 @@ if [[ "$AUTOCROP" == "y" ]]; then
 else
     PADDINGDETECT="$DIR/ffmpeg-paddingdetect"
     if [ -n "$MAX_WIDTH" ]; then
-        PADDINGDETECT="$PADDINGDETECT -w $MAX_WIDTH"
+        PADDINGDETECT="$PADDINGDETECT -mw $MAX_WIDTH"
     fi
     if [ -n "$MAX_HEIGHT" ]; then
-        PADDINGDETECT="$PADDINGDETECT -h $MAX_HEIGHT"
+        PADDINGDETECT="$PADDINGDETECT -mh $MAX_HEIGHT"
     fi
-    PADDINGSTRING=$(bash $PADDINGDETECT "$1")
+    PADDINGSTRING=$(python $PADDINGDETECT "$1")
     
     
     VF_PADDING=",pad=$PADDINGSTRING"
