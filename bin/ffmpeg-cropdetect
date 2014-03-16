@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+
+#work out script dir
+CWD=`pwd`;
+DIR="$( cd -P "$( dirname "$0" )" && pwd )"
+cd "$CWD"
+
+SED_MODIFIER="-r"
+
+if [[ "$OSTYPE" =~ ^darwin ]]; then
+    SED_MODIFIER="-E"
+fi
+
+MAX_WIDTH=""
+MAX_HEIGHT=""
+
+while [[ $# > 0 ]] ; do
+    case "$1" in
+        -h)
+            shift
+            MAX_HEIGHT="$1"
+        ;;
+        -w)
+            shift
+            MAX_WIDTH="$1"
+        ;;
+        *)
+            break
+        ;;
+    esac
+    shift
+done
+
+if [[ "$1" == '' ]]; then
+    echo "No Source specified"
+    exit 1
+fi
+
+if ffmpeg -i "$1" 2>&1 | grep 'Invalid data found' #check if it's video file
+then
+   echo "$1 is NOT A VALID FILE!"
+   exit	   	
+fi
+
+SCALEDETECT="$DIR/ffmpeg-scaledetect"
+
+if [ -n "$MAX_WIDTH" ]; then
+    SCALEDETECT="$SCALEDETECT -w $MAX_WIDTH"
+fi
+
+if [ -n "$MAX_HEIGHT" ]; then
+    SCALEDETECT="$SCALEDETECT -h $MAX_HEIGHT"
+fi
+
+FRAME=$(bash $SCALEDETECT "$1")
+
+# Check the padding. If we are cropping, just ignore the padding
+VF_SCALE="scale=$FRAME"
+ffmpeg -i "$1" -t 1 -vframes 1 -ss 50 -vf "${VF_SCALE},cropdetect=24:8:0" -f null - 2>&1 | grep "crop=" |sed $SED_MODIFIER 's|^.*crop=([0-9]+\:[0-9]+\:[0-9]+\:[0-9]+).*$|\1|g' | tail -1
