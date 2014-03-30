@@ -67,11 +67,23 @@ do
     then
         COPY_TYPE="-scodec copy"
         
-        if [[ "$STREAM_TYPE" == "mov_text" ]] || [[ "$STREAM_TYPE" == "subrip" ]]
+        if [[ "$STREAM_TYPE" == "subrip" ]]
         then
             # as far as I can tell, ssa and ass are the same    
             STREAM_TYPE="srt"
             COPY_TYPE="-scodec srt"
+        fi
+        
+        if [[ "$STREAM_TYPE" == "mov_text" ]]
+        then
+            if [[ "$STREAM_LINE" == *tx3g* ]]
+                then
+                # as far as I can tell, ssa and ass are the same    
+                STREAM_TYPE="srt"
+                COPY_TYPE="-scodec srt"
+            else
+                continue
+            fi
         fi
         
         if [[ "$STREAM_TYPE" == "ssa" ]]
