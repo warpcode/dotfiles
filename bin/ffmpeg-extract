@@ -59,6 +59,12 @@ do
     if [[ "$STREAM_LINE" == *Audio* ]] && [[ $IGNORE_AUDIO == "n" ]] #check if it's an audio stream
     then
         COPY_TYPE="-acodec copy" 
+        
+        if [[ "$STREAM_LINE" == *aac* ]]
+        then   
+            STREAM_TYPE="m4a"
+        fi
+        
     elif  [[ "$STREAM_LINE" == *Video* ]] && [[ $IGNORE_VIDEO == "n" ]] #check if it's a video stream
     then
         COPY_TYPE="-vcodec copy"
