@@ -48,6 +48,7 @@ def get_aac_codec():
 def setup_arguments():
     parser = argparse.ArgumentParser(description='Basic video encoding helper')
     parser.add_argument("input", type=file,  help="Location of the video")
+    parser.add_argument('-print-command', action='store_true', default=False, help="Prints the command instead of running it")
     parser.add_argument("-force-original-ar",type=float, default=0.0, help="Allows forcing the original aspect ratio of the video")
     parser.add_argument("-max-width", type=int, help="maximum width for the video", default=0)
     parser.add_argument("-max-height", type=int, help="maximum height for the video", default=0)
@@ -220,7 +221,11 @@ def validate_modulus():
 
 def run_encode():
     FINAL_ENCODE_OPTS.append(os.path.splitext(args.input.name)[0]+"-encoded.mp4")
-    p = subprocess.call(FINAL_ENCODE_OPTS)
+    
+    if args.print_command:
+        print subprocess.list2cmdline(FINAL_ENCODE_OPTS)
+    else:
+        p = subprocess.call(FINAL_ENCODE_OPTS)
     
 
 if __name__ == "__main__":
