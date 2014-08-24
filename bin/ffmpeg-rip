@@ -59,6 +59,7 @@ def setup_arguments():
     parser.add_argument("-threads", type=int, help="Sets the number of threads allowed to be used", default=0)
     parser.add_argument('-opencl', action='store_true', default=False, help="Enables cropping")
     parser.add_argument("-crf", type=int, help="-crf quality to use", default=19)
+    parser.add_argument("-video-bitrate", type=int, help="Video bitrate in K to use. Overrides crf value", default=0)
     parser.add_argument("-preset", type=str, help="x264 preset to use", default='slow')
     parser.add_argument("-profile", type=str, help="x264 profile to use", default='high')
     parser.add_argument("-tune", type=str, help="x264 tune option to use", default='')
@@ -200,7 +201,12 @@ def setup_video():
 
     #encode options
     FINAL_ENCODE_VIDEO_OPTS.extend(['-c:v', 'libx264'])
-    FINAL_ENCODE_VIDEO_OPTS.extend(['-crf', str(args.crf)])
+
+    if args.video_bitrate > 0:
+        FINAL_ENCODE_VIDEO_OPTS.extend(['-b:v', ''.join([str(args.video_bitrate), 'K'])])
+    else:
+        FINAL_ENCODE_VIDEO_OPTS.extend(['-crf', str(args.crf)])
+
     FINAL_ENCODE_VIDEO_OPTS.extend(['-preset', args.preset])
 
     if args.tune:
