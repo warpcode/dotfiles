@@ -226,12 +226,30 @@ def validate_modulus():
 
 
 def run_encode():
+    first_pass_opt = []
+    if args.twopass and args.video_bitrate > 0:
+        first_pass_opt.extend(FINAL_ENCODE_OPTS)
+        first_pass_opt.extend(FINAL_ENCODE_VIDEO_OPTS)
+        first_pass_opt.extend(['-pass', '1'])
+        first_pass_opt.extend(FINAL_ENCODE_AUDIO_OPTS)
+        first_pass_opt.extend(['-f', 'mp4', '/dev/null'])
+
+        """Add second pass option to the next pass"""
+        FINAL_ENCODE_VIDEO_OPTS.extend(['-pass', '2'])
+
+        if not args.print_command:
+            subprocess.call(first_pass_opt)
+
+    """Final pass"""
     FINAL_ENCODE_OPTS.extend(FINAL_ENCODE_VIDEO_OPTS)
     FINAL_ENCODE_OPTS.extend(FINAL_ENCODE_AUDIO_OPTS)
     FINAL_ENCODE_OPTS.append(os.path.splitext(args.input.name)[0]+"-encoded.mp4")
 
     if args.print_command:
-        print subprocess.list2cmdline(FINAL_ENCODE_OPTS)
+        if first_pass_opt:
+            print ''.join([subprocess.list2cmdline(first_pass_opt), ' && ', subprocess.list2cmdline(FINAL_ENCODE_OPTS)])
+        else:
+            print subprocess.list2cmdline(FINAL_ENCODE_OPTS)
     else:
         subprocess.call(FINAL_ENCODE_OPTS)
 
