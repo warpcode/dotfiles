@@ -223,11 +223,11 @@ def run_encode():
     if args.print_command:
         print subprocess.list2cmdline(FINAL_ENCODE_OPTS)
     else:
-        p = subprocess.call(FINAL_ENCODE_OPTS)
-    
+        subprocess.call(FINAL_ENCODE_OPTS)
+
 
 if __name__ == "__main__":
-    
+
     executable = get_executable()
     if not executable:
         print('cannot find avconv or ffmpeg');
