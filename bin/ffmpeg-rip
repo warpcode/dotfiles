@@ -7,6 +7,8 @@ import subprocess
 import sys
 
 FINAL_ENCODE_OPTS=[]
+FINAL_ENCODE_AUDIO_OPTS=[]
+FINAL_ENCODE_VIDEO_OPTS=[]
 FINAL_VF=['yadif=0:-1:0']
 FINAL_X264_OPTS=[]
 
@@ -31,10 +33,9 @@ def get_executable():
     #executable = which('avconv')
     #if not executable:
     #    executable = which('ffmpeg')
-    
     executable = which('ffmpeg')
     return executable;
-    
+
 def get_aac_codec():
     codec_check = subprocess.check_output([executable, '-codecs'], stderr=subprocess.STDOUT)
 
@@ -64,26 +65,27 @@ def setup_arguments():
     parser.add_argument("-level", type=str, help="x264 level to use", default='4.1')
     #parser.add_argument("-x264opts", type=str, help="additional x264 options to use", default='')
     parser.add_argument("-audio-bitrate", type=int, help="Set audio bitrate in kb. 0 is copy", default=256)
+    parser.add_argument('-twopass', action='store_true', default=False, help="Enables two pass encoding if a bitrate is set")
     return parser.parse_args()
 
 def setup_audio():
     if args.audio_bitrate > 0:
         aac_codec = get_aac_codec()
-        FINAL_ENCODE_OPTS.extend([
+        FINAL_ENCODE_AUDIO_OPTS.extend([
             "-c:a", aac_codec,
         ])
-        
+
         if aac_codec == "aac":
-            FINAL_ENCODE_OPTS.extend([
+            FINAL_ENCODE_AUDIO_OPTS.extend([
                 "-strict", '-2',
             ])
-        
-        FINAL_ENCODE_OPTS.extend([
+
+        FINAL_ENCODE_AUDIO_OPTS.extend([
             "-b:a", str(args.audio_bitrate)+"k",
             "-ac", "2",
         ])
     else:
-        FINAL_ENCODE_OPTS.extend(['-c:a', 'copy'])
+        FINAL_ENCODE_AUDIO_OPTS.extend(['-c:a', 'copy'])
 
 
 def setup_crop():
@@ -129,7 +131,7 @@ def setup_denoise():
             else:
                 print "Invalid denoise settings. Please choose from weakest, weak, medium, strong or a value in the format of 1:2:3:4"
                 sys.exit(1)
-                
+
         FINAL_VF.append(denoise)
 
 
@@ -138,12 +140,12 @@ def setup_initial():
         executable,
         '-y',
     ])
-    
+
     if args.threads > 0:
         FINAL_ENCODE_OPTS.extend(['-threads', str(args.threads)])
         FINAL_X264_OPTS.append('threads='+str(args.threads))
-    
-    
+
+
     FINAL_ENCODE_OPTS.extend([
         '-i', args.input.name,
         "-map_chapters", "-1",
@@ -163,30 +165,30 @@ def setup_forced_dar():
     if args.force_original_ar != 0.0:
         set_dar = "setdar=dar=%f" %(args.force_original_ar)
         FINAL_VF.append(set_dar)
-        
+
 def setup_scaling():
     validate_modulus()
-    
+
     #get the width and height based on the dar
     input_width = 'if(lt(a,1/1), iw, ih*dar)'
     input_height = 'if(lt(a,1/1), iw/dar, ih)'
-    
+
     #calculate what the max area should be
     if args.max_width > 0:
         max_width=str(args.max_width)
     else:
         max_width = input_width
-        
+
     #workout the height
     if args.max_height > 0:
         max_height=str(args.max_height)
     else:
         max_height = input_height
-    
-    
+
+
     width = '(%s)*min((%s)/(%s), (%s)/(%s))' %(input_width, max_width, input_width, max_height, input_height)
     height = '(%s)*min((%s)/(%s), (%s)/(%s))' %(input_height, max_width, input_width, max_height, input_height)
-    
+
     scale="scale='trunc((%s)/%d)*%d':'trunc((%s)/%d)*%d'" %(width, args.modulus, args.modulus, height, args.modulus, args.modulus)
 
     FINAL_VF.append(scale)
@@ -194,21 +196,21 @@ def setup_scaling():
 
 def setup_video():
     #video filters
-    FINAL_ENCODE_OPTS.extend(['-vf', ','.join(FINAL_VF)])
-    
+    FINAL_ENCODE_VIDEO_OPTS.extend(['-vf', ','.join(FINAL_VF)])
+
     #encode options
-    FINAL_ENCODE_OPTS.extend(['-c:v', 'libx264'])
-    FINAL_ENCODE_OPTS.extend(['-crf', str(args.crf)])
-    FINAL_ENCODE_OPTS.extend(['-preset', args.preset])
-    
+    FINAL_ENCODE_VIDEO_OPTS.extend(['-c:v', 'libx264'])
+    FINAL_ENCODE_VIDEO_OPTS.extend(['-crf', str(args.crf)])
+    FINAL_ENCODE_VIDEO_OPTS.extend(['-preset', args.preset])
+
     if args.tune:
-        FINAL_ENCODE_OPTS.extend(['-tune', args.tune])
-    
-    FINAL_ENCODE_OPTS.extend(['-profile:v', args.profile])
-    FINAL_ENCODE_OPTS.extend(['-level:v', args.level])
-    
+        FINAL_ENCODE_VIDEO_OPTS.extend(['-tune', args.tune])
+
+    FINAL_ENCODE_VIDEO_OPTS.extend(['-profile:v', args.profile])
+    FINAL_ENCODE_VIDEO_OPTS.extend(['-level:v', args.level])
+
     if FINAL_X264_OPTS:
-        FINAL_ENCODE_OPTS.extend(['-x264opts', ':'.join(FINAL_X264_OPTS)])
+        FINAL_ENCODE_VIDEO_OPTS.extend(['-x264opts', ':'.join(FINAL_X264_OPTS)])
 
 
 def validate_modulus():
@@ -218,8 +220,10 @@ def validate_modulus():
 
 
 def run_encode():
+    FINAL_ENCODE_OPTS.extend(FINAL_ENCODE_VIDEO_OPTS)
+    FINAL_ENCODE_OPTS.extend(FINAL_ENCODE_AUDIO_OPTS)
     FINAL_ENCODE_OPTS.append(os.path.splitext(args.input.name)[0]+"-encoded.mp4")
-    
+
     if args.print_command:
         print subprocess.list2cmdline(FINAL_ENCODE_OPTS)
     else:
@@ -232,12 +236,12 @@ if __name__ == "__main__":
     if not executable:
         print('cannot find avconv or ffmpeg');
         sys.exit(1)
-    
+
     args = setup_arguments()
 
-    
+
     setup_initial()
-    
+
     """
     Video Settings
     """
@@ -248,13 +252,13 @@ if __name__ == "__main__":
     setup_denoise()
     setup_video()
 
-    
+
     """
     Audio Settings
     """
     setup_audio()
-    
-    
+
+
     """
     Execute FFmpeg
     """
