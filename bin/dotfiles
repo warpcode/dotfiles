@@ -19,7 +19,7 @@ else
     echo ' - Downloading dotfiles'
     #mkdir -p ~/.dotfiles
     #cd ~/.dotfiles
-    #git clone 
+    #git clone
 fi
 
 
