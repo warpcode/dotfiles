@@ -1,5 +1,7 @@
 e_header "Checking dependencies"
 
+echo "TODO"
+exit
 function require { hash "${1}" 2>/dev/null || { return 1;} }
 
 #Check for required installed binaries

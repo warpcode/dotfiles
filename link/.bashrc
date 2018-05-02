@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+DOTFILES_PATH=$(readlink -f ~/.bashrc)
+
 # Exit now if we're not in interactive mode
 [ -z "$PS1" ] && return;
 
