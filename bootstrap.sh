@@ -60,6 +60,8 @@ function symlink_file()
         return
     fi
 
+    echo " - $1"
+
     # Grab the real path of a file
     CURRENTFILE=$(readlink -f "$HOME/$1")
     # Grab a timestamp for file renaming
