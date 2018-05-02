@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 # View live HTTP traffic
-hash ngrep 2>/dev/null || { echo 'Please install ngrep'; exit;}
-
 
 if [ -z "$1" ]; then
     # display usage if no parameters given
