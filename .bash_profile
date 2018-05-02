@@ -14,7 +14,6 @@ then
     # Load in the dotfiles files
     for file in $DOTFILES_DIR/bashrc/{path,prompt,exports,aliases,functions,extra}.sh; do
         [ -e "$file" ] && source "$file";
-        [ -e "$file" ] && echo "$file";
     done;
     unset file;
 fi
