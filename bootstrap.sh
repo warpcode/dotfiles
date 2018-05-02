@@ -82,6 +82,8 @@ function symlink_file()
 }
 
 e_header "Processing Symlnks"
+symlink_file ".gitignore_global"
+symlink_file ".screenrc"
 symlink_file ".vimrc"
 
 
