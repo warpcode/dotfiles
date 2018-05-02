@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Retrieve all info from dig
+
+if [ -z "$1" ]; then
+    # display usage if no parameters given
+    echo "Usage: digga <domain>"
+else
+    dig +nocmd "$1" any +multiline +noall +answer
+fi

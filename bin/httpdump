@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# View live HTTP traffic
+hash ngrep 2>/dev/null || { echo 'Please install ngrep'; exit;}
+
+
+if [ -z "$1" ]; then
+    # display usage if no parameters given
+    echo "Usage: httpdump <network_interface>"
+else
+    sudo tcpdump -i "$1" -n -s 0 -w - | grep -a -o -E "Host\: .*|GET \/.*"
+fi
