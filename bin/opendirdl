@@ -5,5 +5,5 @@ if [ -z "$1" ]; then
     # display usage if no parameters given
     echo "Usage: opendirdl <link>"
 else
-    wget -m -e robots=off --no-parent $@
+    wget -m -e robots=off --no-parent --reject="index.html*" $@
 fi
