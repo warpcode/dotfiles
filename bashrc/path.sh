@@ -30,5 +30,6 @@ then
     _prepend_to_path "/usr/local/sbin"
 fi
 
+_prepend_to_path "${HOME}/.local/bin"
 _prepend_to_path "${DOTFILES_DIR}/bin"
 _prepend_to_path "${HOME}/bin"
