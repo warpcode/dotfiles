@@ -20,3 +20,10 @@ shopt -s nocaseglob
 
 # Check the window size after each command and, if necessary, update the values of LINES and COLUMNS.
 shopt -s checkwinsize
+
+
+# Autocomplete scripts
+for file in $DOTFILES_DIR/bashrc/completion/*.sh; do
+    [ -e "$file" ] && source "$file";
+done;
+unset file;
