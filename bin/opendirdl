@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Downloads an open directory
+
+if [ -z "$1" ]; then
+    # display usage if no parameters given
+    echo "Usage: opendirdl <link>"
+else
+    wget -m -e robots=off --no-parent $@
+fi
