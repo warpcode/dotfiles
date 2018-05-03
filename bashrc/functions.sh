@@ -7,3 +7,11 @@ function history_sort(){
 function mkcd() {
     mkdir -p "$@" && cd "$@"
 }
+
+if [[ "$OSTYPE" =~ ^darwin ]]
+then
+    # Change working directory to the top-most Finder window location
+    function cdfinder() {
+    	cd "$(osascript -e 'tell app "Finder" to POSIX path of (insertion location as alias)')"
+    }
+fi
