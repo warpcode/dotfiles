@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Another traffic sniffer
+hash pygmentize 2>/dev/null || { echo 'Please install with `pip install Pygments`'; exit;}
+
+
+if [ -t 0 ]; then # argument
+		python -mjson.tool <<< "$*" | pygmentize -l javascript;
+else # pipe
+	python -mjson.tool | pygmentize -l javascript;
+fi;
