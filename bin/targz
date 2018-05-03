@@ -30,7 +30,13 @@ else
 	fi
 fi
 
-echo "Compressing .tar using \`${cmd}\`…"
+echo "Compressing .tar ($((size / 1000)) kB) using \`${cmd}\`…";
 "${cmd}" -v "${tmpFile}" || exit 1
 [ -f "${tmpFile}" ] && rm "${tmpFile}"
-echo "${tmpFile}.gz created successfully."
+
+zippedSize=$(
+	stat -f"%z" "${tmpFile}.gz" 2> /dev/null; # macOS `stat`
+	stat -c"%s" "${tmpFile}.gz" 2> /dev/null; # GNU `stat`
+);
+
+echo "${tmpFile}.gz ($((zippedSize / 1000)) kB) created successfully.";
