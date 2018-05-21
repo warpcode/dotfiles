@@ -61,24 +61,31 @@ function symlink_file()
 
     echo " - $1"
 
+    SOURCE="$DOTFILESDIR/$1"
+    DESTINATION="$HOME/$1"
+    if [[ $2 != '' ]]
+    then
+        DESTINATION="$2"
+    fi
+
     # Grab the real path of a file
     CURRENTFILE=$(readlink -f "$HOME/$1")
     # Grab a timestamp for file renaming
     CURRENTDATE=$(date "+%Y-%m-%d %H:%M:%S")
 
     # Backup files that are not a symlink to dotfiles version
-    if [[ -e "$HOME/$1" ]]
+    if [[ -e "$DESTINATION" ]]
     then
-        if [[ "$CURRENTFILE" != "$DOTFILESDIR/$1" ]]
+        if [[ "$CURRENTFILE" != "$SOURCE" ]]
         then
-            mv "$HOME/$1" "$HOME/$1.$CURRENTDATE.bak"
+            mv "$DESTINATION" "$DESTINATION.$CURRENTDATE.bak"
         fi
     fi
 
     # Setup the symlink if not created or because previous file was backed up
-    if [[ ! -e "$HOME/$1" ]]
+    if [[ ! -e "$DESTINATION" ]]
     then
-        ln -s "$DOTFILESDIR/$1" "$HOME/$1"
+        ln -s "$SOURCE" "$DESTINATION"
     fi
 }
 
