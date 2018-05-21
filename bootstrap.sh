@@ -69,7 +69,7 @@ function symlink_file()
     fi
 
     # Grab the real path of a file
-    CURRENTFILE=$(readlink -f "$HOME/$1")
+    CURRENTFILE=$(readlink -f "$DESTINATION")
     # Grab a timestamp for file renaming
     CURRENTDATE=$(date "+%Y-%m-%d %H:%M:%S")
 
