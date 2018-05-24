@@ -94,7 +94,7 @@ symlink_file ".bash_profile"
 symlink_file ".bashrc"
 symlink_file ".gitignore_global"
 symlink_file ".screenrc"
-symlink_file ".vimrc"
+symlink_file "vendor/warpcode.vim-config/.vimrc" "$HOME/.vimrc"
 
 
 e_header "Completed"
