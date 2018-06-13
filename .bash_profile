@@ -26,3 +26,10 @@ for file in ~/.bash_{path,prompt,exports,aliases,functions,extra}; do
 	[ -e "$file" ] && source "$file";
 done;
 unset file;
+
+# Load 3rd Party scripts
+
+# Magicmonty/bash-git-prompt
+GIT_PROMPT_ONLY_IN_REPO=1
+__GIT_PROMPT_DIR="$DOTFILES_DIR/vendor/magicmonty.bash-git-prompt"
+source $__GIT_PROMPT_DIR/gitprompt.sh

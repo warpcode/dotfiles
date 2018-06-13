@@ -1,3 +1,6 @@
 [submodule "vendor/warpcode.vim-config"]
 	path = vendor/warpcode.vim-config
 	url = git@github.com:warpcode/vim-config.git
+[submodule "vendor/magicmonty.bash-git-prompt"]
+	path = vendor/magicmonty.bash-git-prompt
+	url = https://github.com/magicmonty/bash-git-prompt
