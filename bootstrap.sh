@@ -90,6 +90,7 @@ function symlink_file()
 }
 
 e_header "Processing Symlnks"
+symlink_file ".tmux.conf"
 symlink_file ".bash_profile"
 symlink_file ".bashrc"
 symlink_file ".gitignore_global"
