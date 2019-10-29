@@ -1,0 +1,3 @@
+#!/bin/bash
+
+vagrant port --guest 22 | grep -vE "^($|\=)" 2> /dev/null
