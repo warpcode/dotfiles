@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
 
-if [ "$(id -u)" == "0" ]; then
-   echo "This script must NOT be run as root" 1>&2
-   exit 1
-fi
-
 # header display
 function e_header()   { echo -e "\033[1m$@\033[0m"; }
 
@@ -25,14 +20,6 @@ done
 DOTFILESRDIR="$( dirname "$SOURCE" )"
 DOTFILESDIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 echo "Dotfiles Directory is : $DOTFILESDIR"
-
-# echo "This script requires sudo permissions."
-# echo "If prompted, please enter your password"
-# # Ask for the administrator password upfront
-# sudo -v
-#
-# # Keep-alive: update existing `sudo` time stamp until `.osx` has finished
-# while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
 
 e_header "Running Installer Procedures"
 #required settings to detect files properly in the process function
