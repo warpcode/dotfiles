@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-if [[ -p /dev/stdin ]]; then
+if [[ "${#*}" == "0" ]]; then
     input="$(cat -)"
 else
     input="${*}"
