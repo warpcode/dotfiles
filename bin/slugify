@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-local input=''
-
 if [[ -p /dev/stdin ]]; then
     input="$(cat -)"
 else
