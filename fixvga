@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -e
+
+DEVICE=$1
+if [ "$1" == "" ] ; then
+    xrandr --listactivemonitors
+    exit
+fi
+MODELINE=\"$(cvt 1920 1080 | grep -e "^#" -v | cut -d '"' -f 2-)
+MODENAME=$(echo $MODELINE | cut -d " " -f 1)
+MODEPARAMS=$(echo $MODELINE | cut -d " " -f 2-)
+
+xrandr --addmode $DEVICE 1920x1080
+xrandr --output $DEVICE --mode 1920x1080
+## xrandr --output eDP-1 --off --output DP-5 --primary --mode 1920x1080 --pos 0x0 --rotate normal --output DP-4 --off --output DP-3 --mode 1920x1080 --pos 1920x0 --rotate left --output DP-2 --off --output DP-1 --off
+# xrandr --output DP-3 --mode 1920x1080 --pos 1920x0 --rotate left
+# sudo xrandr --newmode $MODENAME $MODEPARAMS
+# sudo xrandr --addmode $DEVICE $MODENAME
