@@ -15,5 +15,3 @@ set smooth
 
 #disable automatic line wrapping
 set nowrap
-
-include ~/.dotfiles/source/nanorc/syntax.nanorc
