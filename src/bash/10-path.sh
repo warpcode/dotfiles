@@ -31,5 +31,4 @@ then
 fi
 
 _prepend_to_path "${HOME}/.local/bin"
-_prepend_to_path "${DOTFILES_DIR}/bin"
 _prepend_to_path "${HOME}/bin"
