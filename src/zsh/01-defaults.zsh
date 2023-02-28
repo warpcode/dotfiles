@@ -1,9 +1,9 @@
 # Default settings on a new zsh installation
 
-# Set up the prompt
-autoload -Uz promptinit
-promptinit
-prompt adam1
+# # Set up the prompt
+# autoload -Uz promptinit
+# promptinit
+# prompt adam1
 
 setopt histignorealldups sharehistory
 
