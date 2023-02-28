@@ -5,7 +5,6 @@ shopt -s extglob
 # Ensure dependencies are up to date
 
 # Use stow to install dotfiles
-for file in */.stow; do
-    stow -R --no-folding --ignore=.stow -t ~/ "$(dirname $file)"
+for dir in home bin; do
+    stow -R --no-folding -t ~/ "$dir"
 done;
-unset file;
