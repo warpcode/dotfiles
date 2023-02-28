@@ -78,9 +78,6 @@ plugins=(
 
 source $ZSH/oh-my-zsh.sh
 
-echo $PROMPT
-PROMPT=' $(battery_pct_prompt) ...'
-
 # User configuration
 
 # export MANPATH="/usr/local/man:$MANPATH"
