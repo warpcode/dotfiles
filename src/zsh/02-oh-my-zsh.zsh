@@ -64,7 +64,7 @@ ZSH_THEME="robbyrussell"
 # HIST_STAMPS="mm/dd/yyyy"
 
 # Would you like to use another custom folder than $ZSH/custom?
-# ZSH_CUSTOM=/path/to/new-custom-folder
+ZSH_CUSTOM="$DOTFILES/src/zsh/ohmyzsh"
 
 # Which plugins would you like to load?
 # Standard plugins can be found in $ZSH/plugins/
@@ -74,6 +74,7 @@ ZSH_THEME="robbyrussell"
 plugins=(
     aliases
     git
+    git-log
 )
 
 source $ZSH/oh-my-zsh.sh

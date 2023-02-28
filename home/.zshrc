@@ -13,7 +13,7 @@ fi
 if [[ "$IS_DOTFILES" == "1" ]]
 then
     # Load in the dotfiles files
-    for file in $DOTFILES/src/{zsh,shell}/**/*.{zsh,sh}(Nn); do
+    for file in $DOTFILES/src/{zsh,shell}/*.{zsh,sh}(Nn); do
         [ -e "$file" ] && source "$file";
     done;
     unset file;
