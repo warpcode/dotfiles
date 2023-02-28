@@ -4,3 +4,7 @@
 [submodule "vendor/magicmonty.bash-git-prompt"]
 	path = vendor/magicmonty.bash-git-prompt
 	url = https://github.com/magicmonty/bash-git-prompt
+[submodule "vendor/ohmyzsh"]
+	path = vendor/ohmyzsh
+	url = git@github.com:ohmyzsh/ohmyzsh.git
+	branch = master
