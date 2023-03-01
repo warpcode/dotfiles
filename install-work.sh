@@ -2,10 +2,7 @@
 set -e
 shopt -s extglob
 
-# Ensure dependencies are up to date
-git submodule update --init
-
 # Use stow to install dotfiles
-for dir in home bin; do
+for dir in work; do
     stow -R --no-folding -t ~/ "$dir"
 done;
