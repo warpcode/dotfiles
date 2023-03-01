@@ -1,4 +1,3 @@
-
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
 
@@ -64,7 +63,7 @@ ZSH_THEME="robbyrussell"
 # HIST_STAMPS="mm/dd/yyyy"
 
 # Would you like to use another custom folder than $ZSH/custom?
-ZSH_CUSTOM="$DOTFILES/src/zsh/ohmyzsh"
+ZSH_CUSTOM="$(dirname ${0:A:h})/ohmyzsh"
 
 # Which plugins would you like to load?
 # Standard plugins can be found in $ZSH/plugins/

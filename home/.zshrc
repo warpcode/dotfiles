@@ -12,11 +12,8 @@ fi
 
 if [[ "$IS_DOTFILES" == "1" ]]
 then
-    # Load in the dotfiles files
-    for file in $DOTFILES/src/{zsh,shell}/*.{zsh,sh}(Nn); do
-        [ -e "$file" ] && source "$file";
-    done;
-    unset file;
+
+    source $DOTFILES/src/zsh/autoload.zsh
 fi
 
 # Load additional custom files
