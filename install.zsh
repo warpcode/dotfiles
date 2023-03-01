@@ -1,6 +1,5 @@
 #!/usr/bin/env zsh
 set -e
-shopt -s extglob
 
 # Ensure dependencies are up to date
 git submodule update --init
