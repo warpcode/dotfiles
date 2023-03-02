@@ -12,8 +12,21 @@ if (( $+commands[npm] )); then
 else
     popd
     echo "npm is not installed"
+    exit 1
+fi
+
+# Ensure php is installed and run
+if (( $+commands[php] )); then
+    ./bin/composer install
+else
+    popd
+    echo "php is not installed"
+    exit 1
 fi
 
 # Use stow to install dotfiles
-echo "Installing dotfile"
+echo "Installing dotfiles"
 stow -R --no-folding -t ~/ stow
+
+
+echo "Install complete"

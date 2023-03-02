@@ -1,0 +1,17 @@
+{
+    "minimum-stability": "dev",
+    "prefer-stable": false,
+    "require": {
+        "squizlabs/php_codesniffer": "^3.6",
+        "phpmd/phpmd": "^2.10",
+        "friendsofphp/php-cs-fixer": "*",
+        "phpactor/phpactor": "dev-master"
+    },
+    "config": {
+        "vendor-dir": "php_modules",
+        "process-timeout": 1800,
+        "allow-plugins": {
+            "composer/package-versions-deprecated": false
+        }
+    }
+}
