@@ -1,0 +1,19 @@
+{
+    "dependencies": {
+        "emmet-ls": "^0.2.0",
+        "eslint": "^8.6.0",
+        "fixjson": "^1.1.2",
+        "jsonlint": "^1.6.3",
+        "stylelint": "^14.2.0",
+        "stylelint-scss": "^4.1.0",
+        "yarn": "^1.22.17",
+        "@ansible/ansible-language-server": "^0.7.2",
+        "bash-language-server": "^2.0.0",
+        "dockerfile-language-server-nodejs": "^0.7.2",
+        "intelephense": "^1.7.1",
+        "sql-language-server": "^1.1.0",
+        "typescript-language-server": "^0.9.1",
+        "vscode-langservers-extracted": "^3.0.1",
+        "vim-language-server": "^2.2.5"
+    }
+}
