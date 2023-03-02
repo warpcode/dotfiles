@@ -5,6 +5,4 @@ set -e
 git submodule update --init
 
 # Use stow to install dotfiles
-for dir in home bin; do
-    stow -R --no-folding -t ~/ "$dir"
-done;
+stow -R --no-folding -t ~/ stow
