@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-# Check whether a domain is registered or not
-
-if [ -z "$1" ]; then
-    # display usage if no parameters given
-    echo "Usage: domain_registered <domain>"
-else
-     dig soa $1 | grep -q ^$1 && echo "Registered" || echo "Not Registered"
-fi
