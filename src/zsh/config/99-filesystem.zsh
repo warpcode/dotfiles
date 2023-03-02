@@ -1,8 +1,8 @@
 # Setup default editor
 export EDITOR=nano
-if which nvim >/dev/null 2>&1; then
+if (( $+commands[nvim] )); then
     export EDITOR=nvim
-elif which vim >/dev/null 2>&1; then
+elif (( $+commands[vim] )); then
     export EDITOR=vim
 fi
 
@@ -32,7 +32,7 @@ if [[ "$OSTYPE" =~ ^darwin ]]
 then
     # Change working directory to the top-most Finder window location
     function cdfinder() {
-    	cd "$(osascript -e 'tell app "Finder" to POSIX path of (insertion location as alias)')"
+        cd "$(osascript -e 'tell app "Finder" to POSIX path of (insertion location as alias)')"
     }
 fi
 
