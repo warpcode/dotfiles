@@ -73,6 +73,7 @@ ZSH_CUSTOM="$(dirname ${0:A:h})/ohmyzsh"
 plugins=(
     aliases
     git
+    gitignore
     git-log
 )
 
