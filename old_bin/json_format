@@ -4,7 +4,7 @@ hash pygmentize 2>/dev/null || { echo 'Please install with `pip install Pygments
 
 
 if [ -t 0 ]; then # argument
-    python -mjson.tool <<< "$*" | pygmentize -l javascript;
+    python3 -mjson.tool <<< "$*" | pygmentize -l javascript;
 else # pipe
-	python -mjson.tool | pygmentize -l javascript;
+	python3 -mjson.tool | pygmentize -l javascript;
 fi;

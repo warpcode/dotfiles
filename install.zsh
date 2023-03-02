@@ -30,3 +30,4 @@ stow -R --no-folding -t ~/ stow
 
 
 echo "Install complete"
+echo "Please open a new terminal"
