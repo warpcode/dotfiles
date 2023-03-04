@@ -2,8 +2,9 @@
 node_modules/
 php_modules/
 
-# Optional npm cache directory
+# Optional npm cache directory/files
 .npm
+package-lock.json
 
 # dotenv environment variable files
 .env

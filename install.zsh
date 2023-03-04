@@ -8,6 +8,7 @@ git submodule update --init
 
 # Ensure npm is installed and run
 if (( $+commands[npm] )); then
+    [ -f package-lock.json ] && npm update
     [ -f package-lock.json ] && npm ci || npm i
 else
     popd
