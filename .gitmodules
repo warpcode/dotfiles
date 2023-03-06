@@ -3,6 +3,6 @@
 	url = https://github.com/warpcode/vim-config.git
 	branch = master
 [submodule "vendor/ohmyzsh"]
-	path = vendor/ohmyzsh
+	path = src/zsh/ohmyzsh
 	url = git@github.com:ohmyzsh/ohmyzsh.git
 	branch = master
