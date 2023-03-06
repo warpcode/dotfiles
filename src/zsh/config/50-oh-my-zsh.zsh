@@ -64,6 +64,7 @@ ZSH_CUSTOM="$DOTFILES/src/zsh/ohmyzsh-custom"
 # Add wisely, as too many plugins slow down shell startup.
 plugins=(
     aliases
+    extract
     git
     gitignore
     zsh-autosuggestions
