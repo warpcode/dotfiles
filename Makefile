@@ -5,12 +5,20 @@ K := $(foreach exec,$(EXECUTABLES),\
 
 install: update-submodules install-config
 
+install-work: install install-config-work
+
 install-config:
 	stow -R --no-folding -t ~/ stow
+
+install-config-work:
+	stow -R --no-folding -t ~/ stow-work
 
 update-submodules:
 	# Ensure dependencies are up to date
 	git submodule update --init
 
-uninstall:
-	stow -R --no-folding -t ~/ stow
+uninstall: uninstall-work
+	stow -D --no-folding -t ~/ stow
+
+uninstall-work:
+	stow -D --no-folding -t ~/ stow-work
