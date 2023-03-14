@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-
-ifconfig -a | perl -nle'/(\d+\.\d+\.\d+\.\d+)/ && print $1'

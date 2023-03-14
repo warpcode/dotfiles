@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-
-if [ -z "$1" ]; then
-    # display usage if no parameters given
-    echo "Usage: base64decode <string>"
-else
-    echo "$1" | base64 --decode
-fi
