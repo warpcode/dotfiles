@@ -1,6 +1,16 @@
 [submodule "vendor/warpcode.vim-config"]
 	path = vendor/warpcode.vim-config
 	url = https://github.com/warpcode/vim-config.git
-[submodule "vendor/magicmonty.bash-git-prompt"]
-	path = vendor/magicmonty.bash-git-prompt
-	url = https://github.com/magicmonty/bash-git-prompt
+	branch = master
+[submodule "vendor/ohmyzsh"]
+	path = src/zsh/ohmyzsh
+	url = git@github.com:ohmyzsh/ohmyzsh.git
+	branch = master
+[submodule "src/zsh/ohmyzsh-custom/zsh-autosuggestions"]
+	path = src/zsh/ohmyzsh-custom/plugins/zsh-autosuggestions
+	url = git@github.com:zsh-users/zsh-autosuggestions.git
+	branch = master
+[submodule "src/zsh/ohmyzsh-custom/themes/powerlevel10k"]
+	path = src/zsh/ohmyzsh-custom/themes/powerlevel10k
+	url = git@github.com:romkatv/powerlevel10k.git
+	branch = master

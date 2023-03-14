@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-
-if [[ "${#*}" == "0" ]]; then
-    input="$(cat -)"
-else
-    input="${*}"
-fi
-
-echo "$input" | sed -e 's/[^[:alnum:]]/-/g' | tr -s '-' | sed 's/\(^-*\|-*$\)//g' | tr A-Z a-z

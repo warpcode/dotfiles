@@ -1,3 +1,0 @@
-#!/bin/bash
-
-vagrant ssh -c "ip address show enp0s3 | grep 'inet ' | sed -e 's/^.*inet //' -e 's/\/.*$//'" 2> /dev/null
