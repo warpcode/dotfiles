@@ -12,3 +12,6 @@ package-lock.json
 .env.test.local
 .env.production.local
 .env.local
+
+# Macos
+.DS_Store
