@@ -67,6 +67,7 @@ plugins=(
     extract
     git
     gitignore
+    universalarchive
     zsh-autosuggestions
 )
 
