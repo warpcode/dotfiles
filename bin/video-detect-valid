@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+SOURCE=""
+
+for i in "$@"
+do
+    case $i in
+        *)
+            SOURCE=$1
+            shift
+            break
+        ;;
+    esac
+done
+
+if [[ -z "$SOURCE" ]] || [[ ! -r "$SOURCE" ]]; then
+    exit 1;
+fi
+
+fullsrcpath=$(readlink -ne "$SOURCE")
+
+[[ ! -e "$fullsrcpath" ]] && exit 1
+
+fullfilepath=$(readlink -ne "$fullsrcpath")
+
+FILETYPE=$(ffprobe -loglevel error -show_entries stream=codec_type -of default=nw=1 "$fullfilepath" 2> /dev/null < /dev/null || echo "")
+
+[[ "$FILETYPE" == *"codec_type=video"* ]] || exit 1;
+[[ "$FILETYPE" == *"codec_type=audio"* ]] || exit 1;
+
+echo -n "$SOURCE"
+exit 0

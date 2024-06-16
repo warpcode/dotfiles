@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+GPU_DETECT=$(lspci | grep VGA)
+GPU=
+if [[ "$GPU_DETECT" =~ "Intel" ]]; then
+    GPU=intel
+elif [[ "$GPU_DETECT" =~ "Nvidia" ]]; then
+    GPU=nvidia
+elif [[ "$GPU_DETECT" =~ "AMD" ]]; then
+    GPU=amd
+fi
+
+echo "$GPU"

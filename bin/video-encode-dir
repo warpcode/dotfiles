@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+
+set -e
+shopt -s globstar
+
+SOURCE=""
+DEST=""
+PASSOPT=""
+COPYINVALID=0
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --copy-invalid)
+            COPYINVALID=1
+            shift
+        ;;
+        --)
+            shift
+            PASSOPT="$@"
+            break
+        ;;
+        *)
+            [[ ! -z "$SOURCE" ]] && echo "unkown option: $1" && exit 1;
+            SOURCE=$1
+            shift
+            DEST=$1
+            shift
+        ;;
+    esac
+done
+
+if [[ -z "$SOURCE" ]] || [[ ! -d "$SOURCE" ]]; then
+    echo "Source is not a directory"
+    exit 1;
+fi
+
+if [[ -z "$DEST" ]]; then
+    echo "Destination cannot be empty"
+    exit 1;
+fi
+
+if [[ -a "$DEST" ]] && [[ ! -d "$DEST" ]]; then
+    echo "Destination exists and is not a directory"
+    exit 1
+fi
+
+[[ ! -d "$DEST" ]] && mkdir -p "$DEST"
+
+if [ "$(readlink -f "$SOURCE")" == "$(readlink -f "$DEST")" ]; then
+    echo "Destination cannot be the same as the source"
+    exit 1
+fi
+
+fullsrcpath=$(readlink -ne "$SOURCE")
+find "$SOURCE" -type f -print0 | while IFS= read -r -d '' file;
+do
+    if [[ ! -e "$file" ]]; then
+        echo $file
+        continue
+    fi
+
+    fullfilepath=$(readlink -ne "$file")
+    filename=$(basename "$fullfilepath")
+    directory=$(dirname "$fullfilepath")
+    targetdir=${directory#"$fullsrcpath"} # remove the common prefix
+    destination=$(readlink -m "${DEST}/${targetdir}")
+    destinationfile="$destination/${filename}"
+
+    # Ensure we have a video with audio
+    # so this ensures we just get videos
+    INVALID=0
+    "${0%/*}/video-detect-valid" "$file" > /dev/null || INVALID=1;
+
+    # echo $FILETYPE
+    [[ "$COPYINVALID" == 0 ]] && [[ "$INVALID" == 1 ]] && continue
+
+    if [ ! -d  "$destination" ]; then
+        mkdir -p "$destination"
+    fi
+
+    if [[ "$INVALID" == 1 ]]; then
+        echo "Copying non-video file: ${file}"
+        cp "${fullfilepath}" "${destinationfile}"
+    else
+        echo "Processing: ${file}"
+        "${0%/*}/video-encode" $PASSOPT "${fullfilepath}" "${destinationfile}"
+    fi
+
+    echo "Finished: ${file}"
+done

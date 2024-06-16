@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+
+set -e
+shopt -s globstar
+
+SOURCE=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        *)
+            [[ ! -z "$SOURCE" ]] && exit 1;
+            SOURCE=$1
+            shift
+        ;;
+    esac
+done
+
+if [[ -z "$SOURCE" ]] || [[ ! -r "$SOURCE" ]]; then
+    exit 1;
+fi
+
+# Setup the temp files
+METADATA_FILE=$(mktemp)
+
+# Register the cleanup routine
+function finish {
+  rc=$?
+  rm -f "${METADATA_FILE}"
+  exit $rc
+}
+trap finish EXIT
+
+#Hopefully this will work for either BSD or GNU sed
+extended_match="-r"
+echo -n "" | sed ${extended_match} 's|foo|bar|' 2>/dev/null || extended_match="-E"
+
+# Generate the metadata for chapters
+ts=0
+ffmpeg -y -i "$(head -1 "${SOURCE}")" -f ffmetadata "${METADATA_FILE}" -v quiet
+cat "${SOURCE}" | while read file
+do
+    ds=$(ffprobe -v quiet -of csv=p=0 -show_entries format=duration "${file}")
+    # echo "$ds"
+    escaped_title=$(echo ${file} | sed ${extended_match} -e 's|([=;#\])|\\\1|g' -e 's|.[Mm][Pp]4$||' )
+    echo "[CHAPTER]" >> "${METADATA_FILE}"
+    echo "TIMEBASE=1/1" >> "${METADATA_FILE}"
+    echo "START=${ts}" >> "${METADATA_FILE}"
+    ts=$(awk "BEGIN {print ${ts}+${ds}; exit}")
+    echo "END=${ts}" >> "${METADATA_FILE}"
+    echo "TITLE=${escaped_title}" >> "${METADATA_FILE}"
+done
+
+exec cat "${METADATA_FILE}"

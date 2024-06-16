@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+set -e
+shopt -s globstar
+
+SOURCE=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        *)
+            [[ ! -z "$SOURCE" ]] && exit 1;
+            SOURCE=$1
+            shift
+        ;;
+    esac
+done
+
+if [[ -z "$SOURCE" ]] || [[ ! -r "$SOURCE" ]]; then
+    exit 1;
+fi
+
+
+exec cat "${SOURCE}" | awk "{printf \"file '$(pwd)/%s'\n\", \$0}"
