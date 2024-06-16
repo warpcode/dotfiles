@@ -1,0 +1,178 @@
+#!/usr/bin/env bash
+
+PREOPTS=""
+HARDWARE_DECODE=1
+HARDWARE_ENCODE=0
+H264=0
+HEVC=0
+AV1=0
+SOURCE=""
+DEST=""
+GPU=$("${0%/*}/video-detect-gpu")
+
+CONCAT=0
+CONCAT_GEN_CHAPTERS=0
+
+for i in "$@"
+do
+    case $i in
+        --hw)
+            HARDWARE_ENCODE=1
+            shift
+        ;;
+        --h264)
+            H264=1
+            shift
+        ;;
+        --hevc)
+            HEVC=1
+            shift
+        ;;
+        --av1)
+            AV1=1
+            shift
+        ;;
+        --concat)
+            CONCAT=1
+            shift
+        ;;
+        --concat-as-chapters)
+            CONCAT=1
+            CONCAT_GEN_CHAPTERS=1
+            shift
+        ;;
+        *)
+            SOURCE=$1
+            shift
+            DEST=$1
+            shift
+            break
+        ;;
+    esac
+done
+
+if [[ -z "$SOURCE" ]] || [[ ! -r "$SOURCE" ]]; then
+    echo "Source is not readable"
+    exit 1;
+fi
+
+if [[ -z "$DEST" ]]; then
+    echo "Destination cannot be empty"
+    exit 1;
+fi
+
+# Setup the temp files
+FILE_LIST_SOURCE_FILE=$(mktemp)
+CONCAT_SOURCE_FILE=$(mktemp)
+METADATA_CONCAT_CHAPTERS_FILE=$(mktemp)
+
+# Register the cleanup routine
+function finish {
+  rc=$?
+  rm -f "${FILE_LIST_SOURCE_FILE}"
+  rm -f "${CONCAT_SOURCE_FILE}"
+  rm -f "${METADATA_CONCAT_CHAPTERS_FILE}"
+  exit $rc
+}
+trap finish EXIT
+
+SOURCE_FILE="$SOURCE"
+if [ $CONCAT == 1 ]; then
+    # Configure concatenation
+    cat $SOURCE > "$FILE_LIST_SOURCE_FILE"
+    "${0%/*}/video-list-to-input" "$FILE_LIST_SOURCE_FILE" > "$CONCAT_SOURCE_FILE"
+    SOURCE_FILE="$CONCAT_SOURCE_FILE"
+
+    if [ $CONCAT_GEN_CHAPTERS == 1 ]; then
+        "${0%/*}/video-list-to-chapters" "$FILE_LIST_SOURCE_FILE" > "$METADATA_CONCAT_CHAPTERS_FILE"
+    fi
+
+    STREAM_SOURCE="$(head -1 "$FILE_LIST_SOURCE_FILE")"
+else
+    STREAM_SOURCE="$SOURCE_FILE"
+fi
+
+# Parse the streams
+for line in $("${0%/*}/video-filter-streams" "$STREAM_SOURCE"); do
+    [ "$line" == "" ] && continue
+
+    MAPS=${MAPS}$(echo -e "$line" | awk -F"|" '{split($1,stream,"=");printf "-map 0:%d ", stream[2]}')
+
+    METADATA=${METADATA}$(echo -e "$line" | awk -F"|" ' \
+        { \
+            split($2,codec_type,"="); \
+            split($5,lang,"="); \
+            printf "-metadata:s:%s:%s language=%s ", substr(codec_type[2],1,1), NR-1, lang[2] \
+        } \
+    ')
+
+    DISPOSITION=${DISPOSITION}$(echo -e "$line" | awk -F"|" ' \
+        { \
+            split($2,codec_type,"="); \
+            split($3,disposition_default,"="); \
+            split($4,forced,"="); \
+            printf "-disposition:%s:%d ", substr(codec_type[2],1,1), NR-1 \
+        }; \
+        { if(forced[2] == 1) print "forced"; else if(disposition_default[2] == 1) print "default"; else print "0";} \
+        { print " " } \
+    ')
+done
+
+ENCODER=
+if [ $HARDWARE_DECODE == 1 ] || [ $HARDWARE_ENCODE == 1 ]; then
+    if [ $GPU == "amd" ]; then
+        PREOPTS="-hwaccel vaapi -hwaccel_device /dev/dri/renderD128 "
+
+        if [ $HARDWARE_ENCODE == 1 ]; then
+            PREOPTS+="-hwaccel_output_format vaapi "
+        fi
+    fi
+fi
+
+# Default encoder
+if [ $AV1 == 1 ]; then
+    ENCODER="libaom-av1 -crf 28 -row-mt 1 -tiles 2x2"
+    # ENCODER="libsvtav1 -crf 28"
+elif [ $HEVC == 1 ]; then
+    ENCODER="libx265 -crf 19 -preset veryslow"
+
+    if [ $HARDWARE_ENCODE == 1 ]; then
+        if [ $GPU == "amd" ]; then
+            ENCODER="hevc_vaapi -global_quality 18 "
+        fi
+    fi
+elif [ $H264 == 1 ]; then
+    ENCODER="libx264 -crf 19 -preset veryslow"
+
+    if [ $HARDWARE_ENCODE == 1 ]; then
+        if [ $GPU == "amd" ]; then
+            ENCODER="h264_vaapi -rc_mode 1 -qp 25 "
+        fi
+    fi
+else
+    ENCODER="copy"
+fi
+
+set -o xtrace
+exec ffmpeg \
+    $PREOPTS \
+    -y \
+    $([ $CONCAT == 1 ] && echo "-f concat -safe 0") \
+    -i "$SOURCE_FILE" \
+    $( [ $CONCAT_GEN_CHAPTERS == 1 ] && echo "-i ${METADATA_CONCAT_CHAPTERS_FILE}" ) \
+    -map 0:v \
+    $MAPS \
+    -map 0:d? \
+    -map 0:t? \
+    -map_metadata 0 \
+    $METADATA \
+    $( [ $CONCAT_GEN_CHAPTERS == 1 ] && echo "-map_metadata 1" ) \
+    $DISPOSITION \
+    -c copy \
+    -c:v $ENCODER \
+    `# If output is mkv, ffmpeg will default the first track if there are no other defaults for that stream type` \
+    $( [ "${DEST##*.}" == 'mkv' ] && echo "-default_mode infer_no_subs" ) \
+    $( [ "${DEST##*.}" == 'mp4' ] && echo "-movflags +faststart" ) \
+    -probesize 2048M \
+    -analyzeduration 2048M \
+    "$DEST" < /dev/null

@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+
+SOURCE=""
+VIDEO_STREAM=0
+MAX_WIDTH=0
+MAX_HEIGHT=0
+OUTPUT_SEP=":"
+FORCE_DAR=0
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --force-dar)
+            FORCE_DAR=1
+            shift
+            ;;
+        --width)
+            MAX_WIDTH=$(echo "$2" | xargs printf "%d" 2>/dev/null)
+            shift 2
+            ;;
+        --height)
+            MAX_HEIGHT=$(echo "$2" | xargs printf "%d" 2>/dev/null)
+            shift 2
+            ;;
+        --stream)
+            VIDEO_STREAM=$(echo "$2" | xargs printf "%d" 2>/dev/null)
+            shift 2
+            ;;
+        *)
+            SOURCE=$1
+            shift
+            break
+            ;;
+    esac
+done
+
+if [[ -z "$SOURCE" ]] || [[ ! -r "$SOURCE" ]]; then
+    echo "Source is not readable"
+    exit 1;
+fi
+
+ENTRIES="width,height,display_aspect_ratio"
+STREAM=$(ffprobe -v quiet \
+    -show_entries stream=$ENTRIES \
+    -select_streams "v:${VIDEO_STREAM}" \
+    -of default=noprint_wrappers=1 \
+    "$SOURCE"
+)
+
+WIDTH=$(echo "$STREAM" | grep 'width' | awk -F"=" '{print $2}' | xargs printf "%d")
+HEIGHT=$(echo "$STREAM" | grep 'height' | awk -F"=" '{print $2}' | xargs printf "%d")
+
+DAR_RATIO=1
+DAR_WIDTH=0
+DAR_HEIGHT=0
+
+if [ $FORCE_DAR -gt 0 ]; then
+    DAR_WIDTH=$(echo "$STREAM" | grep 'display_aspect_ratio' | awk -F"=" '{print $2}' | awk -F":" '{print $1}' | xargs printf "%d" 2>/dev/null)
+    DAR_HEIGHT=$(echo "$STREAM" | grep 'display_aspect_ratio' | awk -F"=" '{print $2}' | awk -F":" '{print $2}' | xargs printf "%d" 2>/dev/null)
+fi
+
+if [ $DAR_WIDTH -gt 0 ] && [ $DAR_HEIGHT -gt 0 ]; then
+    # bash doesn't do float math so pass to bc
+    DAR_RATIO=$(echo "scale=2; $DAR_WIDTH / $DAR_HEIGHT" | bc -l)
+else
+    DAR_RATIO=$(echo "scale=2; $WIDTH / $HEIGHT" | bc -l)
+fi
+
+FINAL_WIDTH=$WIDTH
+FINAL_HEIGHT=$HEIGHT
+MAX_WIDTH=$([[ $MAX_WIDTH -gt 0 ]] && [[ $MAX_WIDTH -lt $WIDTH ]] && echo $MAX_WIDTH || echo $WIDTH)
+MAX_HEIGHT=$([[ $MAX_HEIGHT -gt 0 ]] && [[ $MAX_HEIGHT -lt $HEIGHT ]] && echo $MAX_HEIGHT || echo $HEIGHT)
+
+if [[ $FINAL_WIDTH -gt $MAX_WIDTH ]]; then
+    # Scale down based on maximum width, maintaining aspect ratio
+    FINAL_HEIGHT=$(echo "scale=0; $MAX_WIDTH / $DAR_RATIO" | bc -l | xargs printf "%d")
+    FINAL_WIDTH=$MAX_WIDTH
+fi
+
+if [[ $FINAL_HEIGHT -gt $MAX_HEIGHT ]]; then
+    # Scale down based on maximum height, maintaining aspect ratio
+    FINAL_WIDTH=$(echo "scale=0; $MAX_HEIGHT * $DAR_RATIO" | bc -l | xargs printf "%d")
+    FINAL_HEIGHT=$MAX_HEIGHT
+fi
+
+echo "${FINAL_WIDTH}${OUTPUT_SEP}${FINAL_HEIGHT}"
