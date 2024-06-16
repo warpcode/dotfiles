@@ -91,7 +91,7 @@ opendirdl(){
         # display usage if no parameters given
         echo "Usage: opendirdl <link>"
     else
-        wget -m -e robots=off --no-parent --reject="index.html*" $@
+        wget -m -e robots=off --no-parent --reject-regex "(.*)\?(.*)" --reject="index.html*" $@
     fi
 }
 
