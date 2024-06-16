@@ -1,0 +1,289 @@
+#!/usr/bin/env python
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+
+FINAL_ENCODE_OPTS=[]
+FINAL_ENCODE_AUDIO_OPTS=[]
+FINAL_ENCODE_VIDEO_OPTS=[]
+FINAL_VF=['yadif=0:-1:0']
+FINAL_X264_OPTS=[]
+
+def is_exe(fpath):
+    return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+def which(program):
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
+
+def get_executable():
+    #executable = which('avconv')
+    #if not executable:
+    #    executable = which('ffmpeg')
+    executable = which('ffmpeg')
+    return executable;
+
+def get_aac_codec():
+    codec_check = subprocess.check_output([executable, '-codecs'], stderr=subprocess.STDOUT)
+
+    if "libfdk_aac" in codec_check:
+        return 'libfdk_aac'
+    elif 'libfaac' in codec_check:
+        return 'libfaac'
+    else:
+        return 'aac'
+
+def setup_arguments():
+    parser = argparse.ArgumentParser(description='Basic video encoding helper')
+    parser.add_argument("input", type=file,  help="Location of the video")
+    parser.add_argument('-print-command', action='store_true', default=False, help="Prints the command instead of running it")
+    parser.add_argument("-force-original-ar",type=float, default=0.0, help="Allows forcing the original aspect ratio of the video")
+    parser.add_argument("-max-width", type=int, help="maximum width for the video", default=0)
+    parser.add_argument("-max-height", type=int, help="maximum height for the video", default=0)
+    parser.add_argument('-crop', action='store_true', default=False, help="Enables cropping")
+    parser.add_argument('-denoise', type=str, help="denoise options.\n Allows weakest,weak,medium,strong and allows a custom denoise in the format x:x:x:x", default="")
+    parser.add_argument("-modulus", type=int, help="Sets the modulus to keep to for video frame size", default=8)
+    parser.add_argument("-threads", type=int, help="Sets the number of threads allowed to be used", default=0)
+    parser.add_argument('-opencl', action='store_true', default=False, help="Enables cropping")
+    parser.add_argument("-crf", type=int, help="-crf quality to use", default=19)
+    parser.add_argument("-video-bitrate", type=int, help="Video bitrate in K to use. Overrides crf value", default=0)
+    parser.add_argument("-preset", type=str, help="x264 preset to use", default='slow')
+    parser.add_argument("-profile", type=str, help="x264 profile to use", default='high')
+    parser.add_argument("-tune", type=str, help="x264 tune option to use", default='')
+    parser.add_argument("-level", type=str, help="x264 level to use", default='4.1')
+    #parser.add_argument("-x264opts", type=str, help="additional x264 options to use", default='')
+    parser.add_argument("-audio-bitrate", type=int, help="Set audio bitrate in kb. 0 is copy", default=256)
+    parser.add_argument('-twopass', action='store_true', default=False, help="Enables two pass encoding if a bitrate is set")
+    return parser.parse_args()
+
+def setup_audio():
+    if args.audio_bitrate > 0:
+        aac_codec = get_aac_codec()
+        FINAL_ENCODE_AUDIO_OPTS.extend([
+            "-c:a", aac_codec,
+        ])
+
+        if aac_codec == "aac":
+            FINAL_ENCODE_AUDIO_OPTS.extend([
+                "-strict", '-2',
+            ])
+
+        FINAL_ENCODE_AUDIO_OPTS.extend([
+            "-b:a", str(args.audio_bitrate)+"k",
+            "-ac", "2",
+        ])
+    else:
+        FINAL_ENCODE_AUDIO_OPTS.extend(['-c:a', 'copy'])
+
+
+def setup_crop():
+    if args.crop:
+        exec_args = [
+        executable,
+        '-i', args.input.name,
+        "-t", "1",
+        '-vframes', '1',
+        '-ss', '50',
+        '-vf', ','.join(FINAL_VF)+',cropdetect=24:8:0',
+        '-f', 'null',
+        '-'
+        ]
+
+        output = subprocess.check_output(exec_args, stderr=subprocess.STDOUT)
+
+        pattern = re.compile(r'crop=([0-9]+\:[0-9]+\:[0-9]+\:[0-9]+)')
+        crop_text = ''
+        for line in output.split("\n"):
+            match = pattern.search(line)
+            if match:
+                crop_text = match.groups()[0]
+
+        if crop_text:
+            crop_text = 'crop=%s' %crop_text
+            FINAL_VF.append(crop_text)
+
+def setup_denoise():
+    if args.denoise != "":
+        if args.denoise == 'weakest':
+            denoise="hqdn3d=0:0:3:3"
+        elif args.denoise == 'weak':
+            denoise="hqdn3d=2:1:2:3"
+        elif args.denoise == 'medium':
+            denoise="hqdn3d=3:2:2:3"
+        elif args.denoise == 'strong':
+            denoise="hqdn3d=7:7:5:5"
+        else:
+            dpattern = re.compile(r'([0-9]+\:[0-9]+\:[0-9]+\:[0-9]+)')
+            if dpattern.search(args.denoise):
+                denoise="hqdn3d="+args.denoise
+            else:
+                print "Invalid denoise settings. Please choose from weakest, weak, medium, strong or a value in the format of 1:2:3:4"
+                sys.exit(1)
+
+        FINAL_VF.append(denoise)
+
+
+def setup_initial():
+    FINAL_ENCODE_OPTS.extend([
+        executable,
+        '-y',
+    ])
+
+    if args.threads > 0:
+        FINAL_ENCODE_OPTS.extend(['-threads', str(args.threads)])
+        FINAL_X264_OPTS.append('threads='+str(args.threads))
+
+
+    FINAL_ENCODE_OPTS.extend([
+        '-i', args.input.name,
+        "-map_chapters", "-1",
+        "-map_metadata", "-1",
+        "-movflags", "faststart",
+        "-sn",
+    ])
+
+def setup_opencl():
+    #set open to x264 if required
+    if args.opencl:
+        FINAL_X264_OPTS.append('opencl')
+
+def setup_forced_dar():
+    #Calculate if there is a display aspect ratio force.
+    #Useful when the source contains an incorrect display aspect ratio
+    if args.force_original_ar != 0.0:
+        set_dar = "setdar=dar=%f" %(args.force_original_ar)
+        FINAL_VF.append(set_dar)
+
+def setup_scaling():
+    validate_modulus()
+
+    #get the width and height based on the dar
+    input_width = 'if(lt(a,1/1), iw, ih*dar)'
+    input_height = 'if(lt(a,1/1), iw/dar, ih)'
+
+    #calculate what the max area should be
+    if args.max_width > 0:
+        max_width=str(args.max_width)
+    else:
+        max_width = input_width
+
+    #workout the height
+    if args.max_height > 0:
+        max_height=str(args.max_height)
+    else:
+        max_height = input_height
+
+
+    width = '(%s)*min((%s)/(%s), (%s)/(%s))' %(input_width, max_width, input_width, max_height, input_height)
+    height = '(%s)*min((%s)/(%s), (%s)/(%s))' %(input_height, max_width, input_width, max_height, input_height)
+
+    scale="scale='trunc((%s)/%d)*%d':'trunc((%s)/%d)*%d'" %(width, args.modulus, args.modulus, height, args.modulus, args.modulus)
+
+    FINAL_VF.append(scale)
+    FINAL_VF.append('setsar=sar=1')
+
+def setup_video():
+    #video filters
+    FINAL_ENCODE_VIDEO_OPTS.extend(['-vf', ','.join(FINAL_VF)])
+
+    #encode options
+    FINAL_ENCODE_VIDEO_OPTS.extend(['-c:v', 'libx264'])
+
+    if args.video_bitrate > 0:
+        FINAL_ENCODE_VIDEO_OPTS.extend(['-b:v', ''.join([str(args.video_bitrate), 'K'])])
+    else:
+        FINAL_ENCODE_VIDEO_OPTS.extend(['-crf', str(args.crf)])
+
+    FINAL_ENCODE_VIDEO_OPTS.extend(['-preset', args.preset])
+
+    if args.tune:
+        FINAL_ENCODE_VIDEO_OPTS.extend(['-tune', args.tune])
+
+    FINAL_ENCODE_VIDEO_OPTS.extend(['-profile:v', args.profile])
+    FINAL_ENCODE_VIDEO_OPTS.extend(['-level:v', args.level])
+
+    if FINAL_X264_OPTS:
+        FINAL_ENCODE_VIDEO_OPTS.extend(['-x264opts', ':'.join(FINAL_X264_OPTS)])
+
+
+def validate_modulus():
+    if not args.modulus in [2,4,8,16]:
+        print "Modulus must be either 2, 4, 8 or 16"
+        sys.exit(1)
+
+
+def run_encode():
+    first_pass_opt = []
+    if args.twopass and args.video_bitrate > 0:
+        first_pass_opt.extend(FINAL_ENCODE_OPTS)
+        first_pass_opt.extend(FINAL_ENCODE_VIDEO_OPTS)
+        first_pass_opt.extend(['-pass', '1'])
+        first_pass_opt.extend(FINAL_ENCODE_AUDIO_OPTS)
+        first_pass_opt.extend(['-f', 'mp4', '/dev/null'])
+
+        """Add second pass option to the next pass"""
+        FINAL_ENCODE_VIDEO_OPTS.extend(['-pass', '2'])
+
+        if not args.print_command:
+            subprocess.call(first_pass_opt)
+
+    """Final pass"""
+    FINAL_ENCODE_OPTS.extend(FINAL_ENCODE_VIDEO_OPTS)
+    FINAL_ENCODE_OPTS.extend(FINAL_ENCODE_AUDIO_OPTS)
+    FINAL_ENCODE_OPTS.append(os.path.splitext(args.input.name)[0]+"-encoded.mp4")
+
+    if args.print_command:
+        if first_pass_opt:
+            print ''.join([subprocess.list2cmdline(first_pass_opt), ' && ', subprocess.list2cmdline(FINAL_ENCODE_OPTS)])
+        else:
+            print subprocess.list2cmdline(FINAL_ENCODE_OPTS)
+    else:
+        subprocess.call(FINAL_ENCODE_OPTS)
+
+
+if __name__ == "__main__":
+
+    executable = get_executable()
+    if not executable:
+        print('cannot find avconv or ffmpeg');
+        sys.exit(1)
+
+    args = setup_arguments()
+
+
+    setup_initial()
+
+    """
+    Video Settings
+    """
+    setup_opencl()
+    setup_forced_dar()
+    setup_scaling()
+    setup_crop()
+    setup_denoise()
+    setup_video()
+
+
+    """
+    Audio Settings
+    """
+    setup_audio()
+
+
+    """
+    Execute FFmpeg
+    """
+    run_encode()

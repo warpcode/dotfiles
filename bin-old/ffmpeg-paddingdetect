@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+
+def which(program):
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Using a bounding box, calculate the frame size for a video')
+    parser.add_argument("input", help="Location of the video")
+    parser.add_argument("-mw", "--max-width", type=int, help="Set the maximum width", default=0)
+    parser.add_argument("-mh", "--max-height", type=int, help="Set the maximum height", default=0)
+    args = parser.parse_args()
+
+    executable = which('avconv')
+    if not executable:
+        executable = which('ffmpeg')
+        
+    if not executable:
+        print('cannot find avconv or ffmpeg');
+        sys.exit(1)
+    
+    #Get the width and height of the video
+    width_height_det = ['python', os.path.dirname(__file__)+'/ffmpeg-scaledetect']    
+    if args.max_width:
+        width_height_det.append('-mw')
+        width_height_det.append(str(args.max_width))
+        
+    if args.max_height:
+        width_height_det.append('-mh')
+        width_height_det.append(str(args.max_height))
+    
+    width_height_det.append(args.input)
+    scale_detect = subprocess.check_output(width_height_det, stderr=subprocess.STDOUT);
+
+    width, height = scale_detect.strip().split(':')
+    
+    width = float(width)
+    height = float(height)
+    max_width = float(args.max_width)
+    max_height = float(args.max_height)
+    
+    print("{0}:{1}:{2}:{3}".format(int(max([width, max_width])), int(max([height, max_height])), int((max([width, max_width])-width)/2), int((max([height, max_height])-height)/2)))
