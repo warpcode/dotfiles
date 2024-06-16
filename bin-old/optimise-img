@@ -1,0 +1,196 @@
+#!/usr/bin/env bash
+
+
+INPUT=''
+QUIET='0'
+NOSTATS='0'
+
+usage()
+{
+  cat <<EO
+Usage: $PROGNAME [options] infile outfile
+
+Script to optimize PNG images.
+
+Options:
+EO
+cat <<EO | column -s\& -t
+	-h, --help & shows this help
+	-i, --input [dir]  & specify input directory (current directory by default)
+	-o, --output [dir] & specify output directory ("output" by default)
+EO
+}
+
+get_filesize(){
+    if [[ "$OSTYPE" =~ ^darwin ]]; then
+        echo $(stat -f%z "$1")  
+    else
+        echo $(stat -c%s "$1")
+    fi
+}
+
+human_readable_filesize()
+{
+echo -n $1 | awk 'function human(x) {
+     s=" b  Kb Mb Gb Tb"
+     while (x>=1024 && length(s)>1) 
+           {x/=1024; s=substr(s,4)}
+     s=substr(s,1,4)
+     xf=(s==" b ")?"%5d   ":"%.2f"
+     return sprintf( xf"%s", x, s)
+  }
+  {gsub(/^[0-9]+/, human($1)); print}'
+}
+
+optimise_png(){
+    local TMPFILE1="/tmp/$(basename $0).$$.1.png"
+    pngcrush -q "$1" "$TMPFILE1"  >/dev/null
+    local pngcrush_exit=$?
+    local pngcrush_size=""
+
+    if [ $pngcrush_exit -eq 0 ]; then
+        pngcrush_size=$(get_filesize "$TMPFILE1")
+    fi
+
+
+    local TMPFILE2="/tmp/$(basename $0).$$.2.png"
+    optipng -o7 -clobber -quiet "$1" -out "$TMPFILE2"
+    local optipng_exit=$?
+    local optipng_size=""
+
+    if [ $optipng_exit -eq 0 ]; then
+        optipng_size=$(get_filesize "$TMPFILE2")
+    fi
+
+
+    if [ "$pngcrush_size" = "" ] && [ "$optipng_size" = "" ];then
+        echo ""
+        rm "$TMPFILE1"
+        rm "$TMPFILE2"
+    elif [ "$pngcrush_size" != "" ] && [ "$optipng_size" != "" ];then
+        if [ "$pngcrush_size" -lt  "$optipng_size" ];then
+            echo "$TMPFILE1"
+            rm "$TMPFILE2"
+        else
+            echo "$TMPFILE2"
+            rm "$TMPFILE2"
+        fi
+    elif [ "$pngcrush_size" != "" ];then
+        echo "$TMPFILE1"
+        rm "$TMPFILE2"
+    else
+        echo "$TMPFILE2"
+        rm "$TMPFILE1"
+    fi
+}
+
+optimise_jpeg(){
+    local TMPFILE1="/tmp/$(basename $0).$$.1.jpg"
+    cp -f "$1" "$TMPFILE1"
+    jpegoptim -q "$TMPFILE1"
+    local jpegoptim_exit=$?
+    local jpegoptim_size=""
+
+    if [ $jpegoptim_exit -eq 0 ]; then
+        jpegoptim_size=$(get_filesize "$TMPFILE1")
+    fi
+    
+    if [ "$jpegoptim_size" = "" ];then
+        echo ""
+        rm "$TMPFILE1"
+    else
+        echo "$TMPFILE1"
+    fi
+}
+
+optimise_gif(){
+    local TMPFILE1="/tmp/$(basename $0).$$.1.gif"
+    gifsicle -O3 "$1" -o "$TMPFILE1"
+    local gifsicle_exit=$?
+    local gifsicle_size=""
+
+    if [ $gifsicle_exit -eq 0 ]; then
+        gifsicle_size=$(get_filesize "$TMPFILE1")
+    fi
+    
+    if [ "$gifsicle_size" = "" ];then
+        echo ""
+        rm "$TMPFILE1"
+    else
+        echo "$TMPFILE1"
+    fi
+    
+}
+
+INFILE=""
+OUTFILE=""
+CRUSHEDFILE=""
+while true; do
+    case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -*)
+            echo "Invalid Option $1"
+            exit 1
+            ;;
+        *)
+            INFILE="$1"
+            shift
+            OUTFILE="$1"
+            # No more args to read
+            break
+            ;;
+        esac
+        shift
+done
+
+if [ "$OUTFILE" = "" ]; then
+    OUTFILE="$INFILE"
+fi
+
+if [ "$INFILE" = "" ] || [ ! -f "$INFILE" ]; then
+    echo "No input file specified"
+    exit 1
+fi
+
+case $(echo "$INFILE" | tr -s '[:upper:]' '[:lower:]') in
+    *.png)
+        echo "Optimising PNG"
+        CRUSHEDFILE=$(optimise_png "$INFILE")
+        ;;
+   *.jpg|*.jpeg)
+       echo "Optimising JPEG"
+        CRUSHEDFILE=$(optimise_jpeg "$INFILE")
+        ;;
+    *.gif)
+        echo "Optimising GIF"
+        CRUSHEDFILE=$(optimise_gif "$INFILE")
+        ;;
+    *)
+        echo "Invalid file type"
+        exit 1
+        ;;
+esac
+
+ORIGINAL_SIZE=$(get_filesize "$INFILE")
+OUTPUT_SIZE=$(get_filesize "$CRUSHEDFILE")
+
+if [ "$CRUSHEDFILE" = "" ] || [ ! -f "$CRUSHEDFILE" ] || [ $ORIGINAL_SIZE -lt $OUTPUT_SIZE ]; then
+    cp -f "$INFILE" "$OUTFILE"
+    OUTPUT_SIZE="$ORIGINAL_SIZE"
+    if [ -f "$CRUSHEDFILE" ];then
+        rm -f "$CRUSHEDFILE"
+    fi
+    
+else
+    cp -f "$CRUSHEDFILE" "$OUTFILE"
+    if [ -f "$CRUSHEDFILE" ];then
+        rm -f "$CRUSHEDFILE"
+    fi
+fi
+
+echo "Complete"
+echo "Original Size: $(human_readable_filesize $ORIGINAL_SIZE)"
+echo "New Size: $(human_readable_filesize $OUTPUT_SIZE)"
