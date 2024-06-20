@@ -13,7 +13,7 @@ fi
 if [[ "$IS_DOTFILES" == "1" ]]
 then
 
-    source $DOTFILES/src/zsh/autoload.zsh
+    source $DOTFILES/src/zsh/init.zsh
 fi
 
 # Load additional custom files
