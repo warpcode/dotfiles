@@ -9,3 +9,9 @@ for file in ${0:A:h}/config/*.zsh(Nn); do
     [ -e "$file" ] && source "$file";
 done;
 unset file;
+
+# Load in the app specific configs
+for file in ${0:A:h}/apps/*.zsh(Nn); do
+    [ -e "$file" ] && source "$file";
+done;
+unset file;
