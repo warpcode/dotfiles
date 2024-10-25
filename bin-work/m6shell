@@ -1,3 +1,4 @@
 #!/usr/bin/env zsh
 
-exec docker exec -it martini-php8 bash
+pushd ~/src/martini/ > /dev/null
+exec docker compose exec web bash
