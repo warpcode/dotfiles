@@ -1,3 +1,4 @@
 #!/usr/bin/env zsh
 
-exec docker exec -it martini-php8 mysql m6
+pushd ~/src/martini/ > /dev/null
+exec docker compose exec web martini-db.sh
