@@ -70,6 +70,7 @@ plugins=(
     gitignore
     nvm
     universalarchive
+    urltools
     zsh-autosuggestions
 )
 
