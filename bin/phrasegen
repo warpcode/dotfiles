@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
 words="${1:-4}"
+delimiter="${2:- }"
 
 exec cat ${DOTFILES}/assets/wordlists/google-10000-english-usa-no-swears-*.txt \
     | sort -R \
     | head -n "${words}" \
-    | paste -s -d ' ' -
+    | paste -s -d "$delimiter" -
