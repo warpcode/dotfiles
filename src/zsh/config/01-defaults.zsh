@@ -43,9 +43,6 @@ alias r="fc -s"
 # Enable aliases to be sudo’ed
 alias sudo='sudo '
 
-# Common rsync I use
-alias rsyncc="rsync -vhrlptD --progress"
-
 # Reload the bashrc file
 alias reload="source ~/.zshrc && echo config reloaded"
 
