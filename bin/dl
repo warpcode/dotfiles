@@ -1,0 +1,12 @@
+#!/bin/env bash
+
+URL="$1"
+SAVETO="$2"
+
+function urldecode() { : "${*//+/ }"; echo -e "${_//%/\\x}"; }
+
+if [ -z "$2"  ]; then
+    SAVETO=$(basename "$(urldecode "$1")")
+fi
+
+exec wget -O "$SAVETO" -q --show-progress --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 "$1"
