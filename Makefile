@@ -3,22 +3,18 @@ EXECUTABLES = git stow
 K := $(foreach exec,$(EXECUTABLES),\
         $(if $(shell which $(exec)),some string,$(error "No $(exec) in PATH")))
 
-install: update-submodules install-config
-
-install-work: install install-config-work
-
-install-config:
-	stow -R --no-folding -t ~/ stow
-
-install-config-work:
-	stow -R --no-folding -t ~/ stow-work
-
 update-submodules:
 	# Ensure dependencies are up to date
 	git submodule update --init
 
-uninstall: uninstall-work
-	stow -D --no-folding -t ~/ stow
+install-generic: update-submodules
+	stow -R --no-folding -t ~/ generic
 
-uninstall-work:
-	stow -D --no-folding -t ~/ stow-work
+install-work: install-generic
+	stow -R --no-folding -t ~/ work
+
+uninstall-generic:
+	stow -D --no-folding -t ~/ generic
+
+uninstall-work: uninstall-generic
+	stow -D --no-folding -t ~/ work

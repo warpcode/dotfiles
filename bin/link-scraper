@@ -1,0 +1,5 @@
+#!/bin/env bash
+
+URL="$1"
+
+exec lynx -dump -hiddenlinks=listonly "$URL" | awk '{$1=""}1' | awk '{$1=$1}1'

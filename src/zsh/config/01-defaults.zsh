@@ -29,27 +29,12 @@ zstyle ':completion:*' verbose true
 zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=0=01;31'
 zstyle ':completion:*:kill:*' command 'ps -u $USER -o pid,%cpu,tty,cputime,cmd'
 
-if (( $+commands[dircolors] )); then
-    eval "$(dircolors -b)"
-fi
-
-# Don’t clear the screen after quitting a manual page
-export MANPAGER="less -X"
-
 # Execute last command
 alias r="fc -s"
 
 
-# Enable aliases to be sudo’ed
-alias sudo='sudo '
-
 # Reload the bashrc file
 alias reload="source ~/.zshrc && echo config reloaded"
-
-# Stopwatch
-alias timer='echo "Timer started. Stop with Ctrl-D." && date && time cat && date'
-
-
 
 
 #######################
@@ -66,8 +51,3 @@ if [ -x /usr/bin/dircolors ]; then
     alias fgrep='fgrep --color=auto'
     alias egrep='egrep --color=auto'
 fi
-
-# some more ls aliases
-alias ll='ls -alF'
-alias la='ls -A'
-alias l='ls -CF'
