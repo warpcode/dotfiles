@@ -1,0 +1,117 @@
+[color]
+    ui = auto
+    status = auto
+    branch = auto
+
+[color "branch"]
+    current = yellow reverse
+    local = yellow
+    remote = green
+
+[color "diff"]
+    meta = yellow bold
+    frag = magenta bold # line info
+    old = red # deletions
+    new = green # additions
+
+[color "status"]
+    added = yellow
+    changed = green
+    untracked = cyan
+
+[alias]
+    ; Branches
+    co = checkout
+    # Switch to a branch, creating it if necessary.
+    go = "!f() { git checkout -b \"$1\" 2> /dev/null || git checkout \"$1\"; }; f"
+    # Remove branches that have already been merged with main.
+    dm = "!git branch --merged | grep -v '\\*' | xargs -n 1 git branch -d"
+
+    ; Clone a repository including all submodules.
+    cl = clone --recursive
+
+    ; Commiting
+    ca = commit -a
+    cam = ca -m
+    amend = commit --amend --reuse-message=HEAD
+
+    ; Diffs
+    # Show the diff between the latest commit and the current state.
+    d = !"git diff-index --quiet HEAD -- || clear; git --no-pager diff --patch-with-stat"
+    s = status -s
+    l = log --graph --pretty=pretty-history --abbrev-commit --date=relative
+
+    # Pull in remote changes for the current repository and all its submodules.
+    p = pull --recurse-submodules
+    pr = p --rebase
+    fp = fetch -p
+
+    # Show the user email for the current repository.
+    whoami = config user.email
+
+[pack]
+    threads = 0
+
+[core]
+    # Treat spaces before tabs and all kinds of trailing whitespace as an error.
+    whitespace = space-before-tab,-indent-with-non-tab,trailing-space
+
+    # Make `git rebase` safer on macOS.
+    # More info: <http://www.git-tower.com/blog/make-git-rebase-safe-on-osx/>
+    trustctime = false
+
+    # Prevent showing files whose names contain non-ASCII symbols as unversioned.
+    # http://michael-kuehnel.de/git/2014/11/21/git-mac-osx-and-german-umlaute.html
+    precomposeunicode = false
+
+    # Speed up commands involving untracked files such as `git status`.
+    # https://git-scm.com/docs/git-update-index#_untracked_cache
+    untrackedCache = true
+
+    # https://help.github.com/articles/signing-commits-using-gpg/
+    gpgsign = false
+
+[diff]
+    # Detect copies as well as renames.
+    renames = copies
+
+[diff "bin"]
+    # Use `hexdump` to diff binary files.
+    textconv = hexdump -v -C
+
+[help]
+    # Automatically correct and execute mistyped commands.
+    autocorrect = 1
+
+[merge]
+    # Include summaries of merged commits in newly created merge commit messages
+    log = true
+
+[push]
+    default = simple
+    autoSetupRemote = true
+
+[pretty]
+    # style: bold, dim, reverse, ul, blink
+    # color: normal, black, red, green, yellow, blue, magenta, cyan, white
+    pretty-history = format:%C(bold yellow)%d %Creset%Cgreen%cr%Creset %s %C(cyan)<%an>%Creset %C(dim)%h
+
+# URL shorthands
+[url "git@github.com:"]
+    insteadOf = "gh:"
+    pushInsteadOf = "github:"
+    pushInsteadOf = "git://github.com/"
+
+[url "git://github.com/"]
+    insteadOf = "github:"
+
+[url "git@gist.github.com:"]
+    insteadOf = "gst:"
+    pushInsteadOf = "gist:"
+    pushInsteadOf = "git://gist.github.com/"
+
+[url "git://gist.github.com/"]
+    insteadOf = "gist:"
+
+[init]
+    defaultBranch = main

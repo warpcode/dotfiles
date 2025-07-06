@@ -16,12 +16,10 @@ e() {
     [ "$1" = "" ] && $EDITOR . || $EDITOR "$1"
 }
 
-# Have on "open alias" on par with MacOS
-if [[ ! "$OSTYPE" =~ ^darwin ]]; then
-    open() {
-        xdg-open ${@:-.}
-    }
-fi
+
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
 
 # create directory and cd into it
 function mkd() {
@@ -56,15 +54,6 @@ fs() {
     fi;
 }
 
-# `o` with no arguments opens the current directory, otherwise opens the given
-# location
-function o() {
-	if [ $# -eq 0 ]; then
-		open .;
-	else
-		open "$@";
-	fi;
-}
 
 # `tre` is a shorthand for `tree` with hidden files and color enabled, ignoring
 # the `.git` directory, listing directories first. The output gets piped into
