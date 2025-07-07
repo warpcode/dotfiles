@@ -72,12 +72,19 @@
     gpgsign = false
 
 [diff]
+	tool = nvimdiff
     # Detect copies as well as renames.
     renames = copies
 
 [diff "bin"]
     # Use `hexdump` to diff binary files.
     textconv = hexdump -v -C
+
+[difftool "nvimdiff"]
+	cmd = "nvim --cmd \":lua vim.g.noplugins=1\" -d \"$LOCAL\" \"$REMOTE\""
+
+[difftool]
+	prompt = false
 
 [help]
     # Automatically correct and execute mistyped commands.
