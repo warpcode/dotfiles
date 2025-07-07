@@ -10,6 +10,11 @@ for file in ${0:A:h}/{functions,config,apps}/*.zsh(Nn); do
 done;
 unset file;
 
+for file in ~/.zshrc.{functions,config,apps}/*.zsh(Nn); do
+    [ -e "$file" ] && source "$file";
+done;
+unset file;
+
 # Load in any custom scripts that must run after
 for file in ~/.zshrc.d/*.zsh(Nn); do
     [ -e "$file" ] && source "$file";
