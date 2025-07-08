@@ -24,3 +24,4 @@ path_remove(){
 paths() {
     echo -e ${PATH//:/\\n}
 }
+
