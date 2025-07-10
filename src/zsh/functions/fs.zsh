@@ -1,5 +1,5 @@
 
-# find the first parent file that contains a list of specified files
+# find the first parent path that contains a list of specified files/directories
 find_parent_path() {
     local files=("$@")
     local dir="$PWD"
