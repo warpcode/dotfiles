@@ -54,3 +54,4 @@ function load-venv {
 
 autoload -U add-zsh-hook
 add-zsh-hook chpwd load-venv
+load-venv
