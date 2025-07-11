@@ -1,10 +1,19 @@
-# Setup default editor
-export EDITOR=nano
-if (( $+commands[nvim] )); then
-    export EDITOR=nvim
-elif (( $+commands[vim] )); then
-    export EDITOR=vim
+# Have on "open alias" on par with MacOS
+if [[ ! "$OSTYPE" =~ ^darwin ]]; then
+    open() {
+        xdg-open ${@:-.}
+    }
 fi
+
+# `o` with no arguments opens the current directory, otherwise opens the given
+# location
+function o() {
+	if [ $# -eq 0 ]; then
+		open .;
+	else
+		open "$@";
+	fi;
+}
 
 e() {
     if [[ $EDITOR == '' ]]
@@ -15,7 +24,6 @@ e() {
 
     [ "$1" = "" ] && $EDITOR . || $EDITOR "$1"
 }
-
 
 alias ll='ls -alF'
 alias la='ls -A'
@@ -34,4 +42,3 @@ alias desktop="cd ~/Desktop"
 alias downloads="cd ~/Downloads"
 alias docs="cd ~/Documents"
 alias dotfiles="cd '$DOTFILES'"
-alias nvim.conf="git_clone_and_go 'git@github.com:warpcode/vim-config.git' ~/src/vim-config/"
