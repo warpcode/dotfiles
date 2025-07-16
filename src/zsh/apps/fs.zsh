@@ -41,4 +41,3 @@ function mkd() {
 alias desktop="cd ~/Desktop"
 alias downloads="cd ~/Downloads"
 alias docs="cd ~/Documents"
-alias dotfiles="cd '$DOTFILES'"
