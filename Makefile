@@ -5,7 +5,7 @@ K := $(foreach exec,$(EXECUTABLES),\
 
 update-submodules:
 	# Ensure dependencies are up to date
-	git submodule update --init
+	git submodule update --init --remote
 
 install-generic: update-submodules
 	stow -R --no-folding -t ~/ generic
