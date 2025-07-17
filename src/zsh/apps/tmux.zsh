@@ -16,5 +16,7 @@ function _tmux_basic_git()  {
         neww -n git \; \
         send-keys "lazygit" C-m\; \
         \
+        neww -n terminal \; \
+        \
         selectw -t editor
 }
