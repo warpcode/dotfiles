@@ -71,6 +71,9 @@
     # https://help.github.com/articles/signing-commits-using-gpg/
     gpgsign = false
 
+    # Use a global ignore file
+    excludesFile = ~/.gitignore_global
+
 [diff]
 	tool = nvimdiff
     # Detect copies as well as renames.
