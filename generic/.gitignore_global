@@ -112,3 +112,6 @@ tags
 
 ### SVN ###
 .svn/
+
+### Vibe coding tools ###
+.aider*
