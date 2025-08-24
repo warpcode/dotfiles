@@ -1,3 +1,12 @@
+# Load in a .env file from the home directory if it exists
+if [ -f ~/.env ]; then
+    while IFS== read -r key value; do
+        if [[ ! -z "$key" ]]; then
+            printf -v "$key" %s "$value" && export "$key"
+        fi
+    done <~/.env
+fi
+
 # Load in any custom dependency scripts that must run before
 for file in ~/.zshrc.before.d/*.zsh(Nn); do
     [ -e "$file" ] && source "$file";
