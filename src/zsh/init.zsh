@@ -9,22 +9,14 @@ if [ -f ~/.env ]; then
 fi
 
 local file
+local files_to_source=(
+    ~/.zshrc.before.d/*.zsh(Nn.)
+    ${0:A:h}/{functions,config,apps,projects}/*.zsh(Nn.)
+    ~/.zshrc.{functions,config,apps,projects}/*.zsh(Nn.)
+    ~/.zshrc.d/*.zsh(Nn.)
+)
 
-# Load in any custom dependency scripts that must run before
-for file in ~/.zshrc.before.d/*.zsh(Nn.); do
-    source "$file";
-done;
-
-# Load all the required files in order
-for file in ${0:A:h}/{functions,config,apps,projects}/*.zsh(Nn.); do
-    source "$file";
-done;
-
-for file in ~/.zshrc.{functions,config,apps,projects}/*.zsh(Nn.); do
-    source "$file";
-done;
-
-# Load in any custom scripts that must run after
-for file in ~/.zshrc.d/*.zsh(Nn.); do
-    source "$file";
-done;
+# Source all collected files
+for file in "${files_to_source[@]}"; do
+    source "$file"
+done
