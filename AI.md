@@ -7,7 +7,10 @@ This document provides guidance for an AI assistant interacting with this reposi
 This repository serves as a personal collection of dotfiles and utility scripts, primarily focused on enhancing a developer's command-line and development environment on Unix-like systems. It's structured to be managed with `GNU Stow` (implied by `.stow-local-ignore`), allowing for symbolic linking of configuration files into the home directory.
 
 The core components include:
-*   **Zsh Configuration:** A highly customized Zsh setup, leveraging `Oh My Zsh` and a modular structure (`src/zsh/`) for various applications, configurations, and functions.
+*   **Zsh Configuration:** A highly customized Zsh setup, leveraging `Oh My Zsh` and a modular structure (`src/zsh/`). The loading mechanism is defined in `src/zsh/init.zsh` and follows a specific order, allowing for user overrides. Key concepts to be aware of include:
+    *   **`~/.env` file:** For loading sensitive or machine-specific environment variables.
+    *   **Core Modules:** The main configuration is sourced from `src/zsh/{functions,config,apps,projects}/*.zsh`.
+    *   **User Overrides:** The system supports user-specific configurations in `~/.zshrc.before.d/`, `~/.zshrc.d/`, and `~/.zshrc.{functions,config,apps,projects}/`. New functionality should respect this override system.
 *   **Utility Scripts:** A collection of shell scripts (`bin/`, `bin-old/`) for various tasks, including media processing (ffmpeg), image optimization, Git utilities, Docker management, web scraping, and general system administration.
 *   **Editor Configuration:** Neovim configuration.
 *   **Terminal Multiplexer:** Tmux configuration.
@@ -39,7 +42,7 @@ When providing suggestions or generating code, please adhere to the following pr
 
 1.  **Contextual Awareness:** Understand that this is a dotfiles repository. Solutions should generally be command-line oriented, shell-script based, or configuration file modifications.
 2.  **Prioritize Zsh:** For shell-related tasks, assume Zsh as the primary shell unless explicitly stated otherwise. Leverage Zsh-specific features where appropriate (e.g., `src/zsh/functions/`, `src/zsh/apps/`).
-3.  **Modularity:** When adding new Zsh configurations or functions, consider integrating them into the existing modular structure within `src/zsh/`.
+3.  **Modularity:** When adding new Zsh configurations or functions, place them in the appropriate subdirectory within `src/zsh/` (`apps`, `config`, `functions`, etc.). Be mindful of the loading order defined in `src/zsh/init.zsh` and the user override directories (`~/.zshrc.d/`, etc.).
 4.  **Stow Compatibility:** If suggesting new dotfiles, consider how they would integrate with a `stow`-managed setup (e.g., placing them in appropriate top-level directories like `generic/` or `work/`).
 5.  **Scripting Focus:** Many tasks are handled by custom scripts in `bin/` and `bin-old/`. When suggesting new functionality, consider if it fits within an existing script or warrants a new one in `bin/`.
 6.  **Read-Only Files:** Remember the list of files provided as "read-only." Do not propose changes to these files without explicit instruction to "add them to the chat" first.
