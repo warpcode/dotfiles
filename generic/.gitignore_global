@@ -113,5 +113,10 @@ tags
 ### SVN ###
 .svn/
 
-### Vibe coding tools ###
+### AI tools ###
 .aider*
+.crush*
+CRUSH.md
+GEMINI.md
+.copilot-instructions*
+.github/copilot-instructions*
