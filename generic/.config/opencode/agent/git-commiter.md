@@ -16,3 +16,5 @@ Generate a commit message:
 - Prefix with "[branch-name]" if not main/master.
 - If hotfix, add "hotfix: " after the branch prefix.
 - Ensure the message is clear, not generic, and reflects the changes accurately.
+
+NEVER commit without user approval of the generated commit message.
