@@ -1,23 +1,18 @@
----
-A collection of dotfiles for *nix systems
+A collection of dotfiles for \*nix systems
 
-Description
-===========
+# Description
 
-This is my personal compilation of dotfiles that I use. It is used to set up a common environment between *nix systems.
+This is my personal compilation of dotfiles that I use. It is used to set up a common environment between \*nix systems.
 
 This project makes use of other open source projects which are listed and linked to within this readme.
 
 This project also makes use of `git subtree` so also listed will be the commands to update these subtree's
 
-Features
-========
+# Features
 
 - Automatically scans `/opt/` and `~/.local/opt/` for subdirectories containing `bin`, `sbin`, `usr/bin`, `usr/sbin`, `usr/local/bin`, and `usr/local/sbin`, and adds them to PATH, with user-local paths (`~/.local/opt/`) taking precedence over system paths (`/opt/`).
 
-
-Installation
-============
+# Installation
 
 Clone the repository and install dependencies:
 
@@ -33,9 +28,7 @@ Supported OSes: macOS (requires Homebrew), Ubuntu, Debian, Fedora, Arch Linux.
 
 Uninstall with `make uninstall-generic` or `make uninstall-work`.
 
-
-External Dependencies
-=====================
+# External Dependencies
 
 This project uses `git subtree` to manage external dependencies and stores them in the `vendor/` directory.
 
@@ -47,11 +40,10 @@ Updating a project manually can be used with a similar command and replacing `ma
 
      `git subtree pull -P vendor/project --squash git-url master`
 
-vendor/ohmyzsh
---------------
+## vendor/ohmyzsh
 
-The Oh My Zsh framework is provided by [ohmyzsh/ohmyzsh](https://github.com/ohmyzsh/ohmyzsh) using the `master` branch.
-========
+# The Oh My Zsh framework is provided by [ohmyzsh/ohmyzsh](https://github.com/ohmyzsh/ohmyzsh) using the `master` branch.
+
 ---
 
 This project uses `git subtree` to manage external dependencies and stores them in the `vendors/` directory.
@@ -64,8 +56,6 @@ Updating a project manually can be used with a similar command and replacing `ma
 
      `git subtree pull -P vendor/project --squash git-url master`
 
+## vendors/nanorc
 
-vendors/nanorc
---------------------
-
-The nano syntax highlighting repository is provided by [craigbarnes/nanorc](https://github.com/craigbarnes/nanorc) using the `master` branch. 
+The nano syntax highlighting repository is provided by [craigbarnes/nanorc](https://github.com/craigbarnes/nanorc) using the `master` branch.
