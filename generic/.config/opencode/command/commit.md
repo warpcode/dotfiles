@@ -7,6 +7,7 @@ description: Use this command to stage and commit changes in the current git rep
 - Do not push to remote repositories.
 - Do not modify files without user approval.
 - Only stage changes that are approved after peer review.
+- NEVER commit without user approval of the git message.
 
 ## Steps
 
