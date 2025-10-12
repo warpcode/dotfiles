@@ -16,6 +16,7 @@ fi
 alias ai.github.models='curl -s https://api.githubcopilot.com/models -H "Authorization: Bearer $GITHUB_COPILOT_API_TOKEN" -H "Content-Type: application/json" -H "Copilot-Integration-Id: vscode-chat" | jq -r ".data[].id"'
 
 # AI Chat configuration
+# ref: https://github.com/sigoden/aichat/wiki/Environment-Variables
 ensure_aichat() {
     if (( ! $+commands[aichat] )); then
         echo "aichat not found. Installing..."
