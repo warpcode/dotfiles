@@ -44,7 +44,9 @@ Generate a commit message:
 - If hotfix, add "hotfix: " after the branch prefix.
 - Ensure the message is clear, not generic, and reflects the changes accurately.
 
-Commit the staged changes using `git commit -m "message"`.
+Present the generated commit message and list of staged files to the user for review. Ask for confirmation to proceed with the commit. If the user does not approve, stop and suggest adjustments.
+
+If approved, commit the staged changes using `git commit -m "message"`.
 
 Run `git status` to confirm the commit.
 
