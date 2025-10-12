@@ -1,5 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "instructions": ["CRUSH.md", "GEMINI.md", "README.md", "AI.md"],
   "provider": {
     "litellm": {
       "npm": "@ai-sdk/openai-compatible",
