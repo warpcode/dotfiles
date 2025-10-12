@@ -24,9 +24,7 @@ Determine if this is a hotfix: if specified as a hotfix, set a flag to prefix th
 Run the peer-review command steps:
 
 - Determine the main branch (check if 'main' exists, else 'master').
-- Generate diff between current HEAD and main branch using `git diff main...HEAD` or `git diff master...HEAD`.
-- Generate diff for unstaged changes using `git diff`.
-- Generate diff for staged changes using `git diff --staged`.
+- Run the following commands in a single bash call to generate diffs: `git diff main...HEAD && git diff && git diff --staged` (replace main with master if necessary).
 - Check Makefiles, scripts, package.json, etc., for lint commands (e.g., make lint, npm run lint) and run them if available.
 - Analyze all diffs for inefficient code, bad practices, security issues, style violations, linting issues, bugs, documentation adequacy, unnecessary comments, and adherence to style guides.
 - Compare changes to original code on main branch.
@@ -50,5 +48,5 @@ Present the generated commit message and list of staged files to the user for re
 
 If approved, commit the staged changes using `git commit -m "message"`.
 
-Run `git status` to confirm the commit.
+Run `git log --oneline -1 && git status` to confirm the commit.
 
