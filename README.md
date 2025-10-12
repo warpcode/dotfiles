@@ -18,9 +18,22 @@ This project also makes use of `git subtree` so also listed will be the commands
 
 
 Installation
-========
+=======
 ---
-TODO
+
+Clone the repository and install dependencies:
+
+```bash
+git clone <repository-url> ~/.dotfiles
+cd ~/.dotfiles
+make install-deps  # Installs git, stow, zsh, jq, tmux, fzf, rsync, wget if needed
+make install-generic  # Installs generic dotfiles
+make install-work  # Installs work dotfiles (optional)
+```
+
+Supported OSes: macOS (requires Homebrew), Ubuntu, Debian, Fedora, Arch Linux.
+
+Uninstall with `make uninstall-generic` or `make uninstall-work`.
 
 
 ---

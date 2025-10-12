@@ -1,13 +1,13 @@
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
-EXECUTABLES = git stow
-K := $(foreach exec,$(EXECUTABLES),\
-        $(if $(shell which $(exec)),some string,$(error "No $(exec) in PATH")))
+
+install-deps:
+	bash install-deps.sh
 
 update-submodules:
 	# Ensure dependencies are up to date
 	git submodule update --init --remote
 
-install-generic: update-submodules
+install-generic: install-deps update-submodules
 	stow -R --no-folding -t ~/ generic
 
 install-work: install-generic
