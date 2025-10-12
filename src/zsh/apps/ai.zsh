@@ -41,4 +41,5 @@ ensure_aichat() {
 
 alias ai.chat='ensure_aichat && aichat'
 
-
+# Coding Agents
+alias ai.opencode='npx opencode-ai@latest'
