@@ -4,9 +4,11 @@ mode: command
 ---
 
 ## Restrictions
+
 - Do not run unit tests without explicit permission.
 
 ## Steps
+
 First, determine the main branch: check if 'main' branch exists, if not use 'master'.
 
 Generate a diff between the current HEAD and the main branch using `git diff main...HEAD` or `git diff master...HEAD`.
@@ -18,6 +20,7 @@ Also generate diff for staged changes using `git diff --staged`.
 Check Makefiles, scripts, package.json, etc., for commands to check or lint code (e.g., make lint, npm run lint) and incorporate their results into the review.
 
 Analyze the diffs for:
+
 - Inefficient code patterns (e.g., unnecessary loops, redundant computations)
 - Bad practices (e.g., hardcoded values, lack of error handling, poor naming conventions)
 - Security issues (e.g., exposed secrets, insecure functions)
@@ -35,3 +38,4 @@ Compare the changes to the original code on the main branch to provide context.
 Provide a summary of findings with specific line numbers and suggestions for improvement.
 
 If no issues found, state that the code looks good.
+
