@@ -16,6 +16,13 @@
       }
     }
   },
-  "model": "grok-code-fast-1"
+  "model": "grok-code-fast-1",
+  "mcp": {
+     "browsermcp": {
+       "type": "local",
+       "command": ["npx", "@browsermcp/mcp@latest"],
+       "enabled": false
+     }
+  }
 }
 
