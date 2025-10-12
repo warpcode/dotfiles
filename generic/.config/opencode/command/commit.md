@@ -11,6 +11,8 @@ mode: command
 
 ## Steps
 
+Ensure efficiency: Run commands as efficiently as possible. For example, when performing checks, batch multiple commands into a single call to reduce execution time.
+
 First, verify this is a git repository. If not, exit with an error.
 
 Determine the current branch name using `git branch --show-current`.
