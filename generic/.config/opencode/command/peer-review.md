@@ -32,6 +32,7 @@ Analyze the diffs for:
 - Unnecessary comments
 - Methods/functions have appropriate comment blocks for the language (e.g., PHP uses PHP docblock)
 - Adherence to style guides: PHP should match PSR-12 and/or follow rules in a codesniffer file, Python should follow PEP8, JavaScript/TypeScript should follow standards (e.g., if eslint or prettier config is present)
+- Formatting issues in text documents (e.g., inconsistent headers, broken links, trailing spaces in Markdown)
 
 Compare the changes to the original code on the main branch to provide context.
 

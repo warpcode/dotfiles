@@ -42,7 +42,7 @@ Updating a project manually can be used with a similar command and replacing `ma
 
 ## vendor/ohmyzsh
 
-# The Oh My Zsh framework is provided by [ohmyzsh/ohmyzsh](https://github.com/ohmyzsh/ohmyzsh) using the `master` branch.
+The Oh My Zsh framework is provided by [ohmyzsh/ohmyzsh](https://github.com/ohmyzsh/ohmyzsh) using the `master` branch.
 
 
 
