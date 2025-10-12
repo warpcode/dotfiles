@@ -35,13 +35,7 @@ If approved, stage only the changes that were reviewed (typically all unstaged c
 
 When a file is specified and it is untracked, it should add it to git. Otherwise, referenced files that are unstaged should be staged.
 
-Generate a commit message:
-
-- Follow the repository's commit message style from recent commits (e.g., run `git log --oneline -5`).
-- Draft a concise message focusing on "why" not "what".
-- Prefix with "[branch-name]" if not main/master.
-- If hotfix, add "hotfix: " after the branch prefix.
-- Ensure the message is clear, not generic, and reflects the changes accurately.
+Generate a commit message following the guidelines in the git-commiter agent.
 
 Present the generated commit message and list of staged files to the user for review. Ask for confirmation to proceed with the commit. If the user does not approve, stop and suggest adjustments.
 
