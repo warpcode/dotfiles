@@ -13,6 +13,8 @@ Generate a diff between the current HEAD and the main branch using `git diff mai
 
 Also generate diff for unstaged changes using `git diff`.
 
+Also generate diff for staged changes using `git diff --staged`.
+
 Check Makefiles, scripts, package.json, etc., for commands to check or lint code (e.g., make lint, npm run lint) and incorporate their results into the review.
 
 Analyze the diffs for:
