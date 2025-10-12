@@ -6,7 +6,7 @@
       "name": "LiteLLM Proxy",
       "options": {
         "baseURL": "{env:LITELLM_API_ENDPOINT}",
-        "apiKey": "{env:LITELLM_API_TOKEN}"
+        "apiKey": "{env:LITELLM_API_KEY}"
       },
       "models": {
         "qwen3-coder": {
