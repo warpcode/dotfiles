@@ -15,10 +15,10 @@ _paths_prepend(){
 
 # Remove from $PATH
 _paths_remove(){
-    #escape the string first
-    dir=$(echo "$@" | sed -e 's/[\/&]/\\&/g')
-    #remove the path
-    export PATH=$(echo $PATH | sed "s/^${dir}://g" | sed "s/:${dir}$//g" | sed "s/:${dir}:/:/g")
+    local -a path_array
+    path_array=(${(s.:.)PATH})
+    path_array=(${path_array:#$@})
+    export PATH=${(j.:.)path_array}
 }
 
 _paths_paths() {
