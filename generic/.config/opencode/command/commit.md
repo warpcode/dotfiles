@@ -4,11 +4,13 @@ mode: command
 ---
 
 ## Restrictions
+
 - Do not push to remote repositories.
 - Do not modify files without user approval.
 - Only stage changes that are approved after peer review.
 
 ## Steps
+
 First, verify this is a git repository. If not, exit with an error.
 
 Determine the current branch name using `git branch --show-current`.
@@ -18,6 +20,7 @@ Prefix the commit message with "[branch-name]" (in lowercase) if not main/master
 Determine if this is a hotfix: if specified as a hotfix, set a flag to prefix the commit message with "hotfix: " after the branch prefix.
 
 Run the peer-review command steps:
+
 - Determine the main branch (check if 'main' exists, else 'master').
 - Generate diff between current HEAD and main branch using `git diff main...HEAD` or `git diff master...HEAD`.
 - Generate diff for unstaged changes using `git diff`.
@@ -34,6 +37,7 @@ If approved, stage only the changes that were reviewed (typically all unstaged c
 When a file is specified and it is untracked, it should add it to git. Otherwise, referenced files that are unstaged should be staged.
 
 Generate a commit message:
+
 - Follow the repository's commit message style from recent commits (e.g., run `git log --oneline -5`).
 - Draft a concise message focusing on "why" not "what".
 - Prefix with "[branch-name]" if not main/master.
@@ -43,3 +47,4 @@ Generate a commit message:
 Commit the staged changes using `git commit -m "message"`.
 
 Run `git status` to confirm the commit.
+
