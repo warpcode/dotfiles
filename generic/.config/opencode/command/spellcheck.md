@@ -1,6 +1,5 @@
 ---
 description: Use this command to generate diffs between the current repository state and the main branch, then check for spelling and grammatical mistakes in the changes.
-mode: command
 ---
 
 ## Restrictions

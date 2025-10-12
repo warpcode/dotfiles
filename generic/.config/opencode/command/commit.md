@@ -1,6 +1,5 @@
 ---
 description: Use this command to stage and commit changes in the current git repository. It performs a peer review, requires user confirmation, and generates a commit message with appropriate prefixes.
-mode: command
 ---
 
 ## Restrictions
@@ -24,7 +23,7 @@ Determine if this is a hotfix: if specified as a hotfix, set a flag to prefix th
 Run the peer-review command steps:
 
 - Determine the main branch (check if 'main' exists, else 'master').
-- Run the following commands in a single bash call to generate diffs: `git diff main...HEAD && git diff && git diff --staged` (replace main with master if necessary).
+- Run the following commands in a single bash call to generate diffs: `git diff main...HEAD;  git diff; git diff --staged` (replace main with master if necessary).
 - Check Makefiles, scripts, package.json, etc., for lint commands (e.g., make lint, npm run lint) and run them if available.
 - Analyze all diffs for inefficient code, bad practices, security issues, style violations, linting issues, bugs, documentation adequacy, unnecessary comments, and adherence to style guides.
 - Compare changes to original code on main branch.
