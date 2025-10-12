@@ -118,5 +118,6 @@ tags
 .crush*
 CRUSH.md
 GEMINI.md
+AGENTS.md
 .copilot-instructions*
 .github/copilot-instructions*
