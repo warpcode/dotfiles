@@ -1,6 +1,6 @@
 
 # find the first parent path that contains a list of specified files/directories
-find_parent_path() {
+_fs_find_parent_path() {
     local files=("$@")
     local dir="$PWD"
 

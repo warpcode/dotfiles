@@ -42,7 +42,7 @@ function vrun() {
 # Autoload python venv
 function load-venv {
     # Find the nearest parent directory where the .venv exists
-    local venv_path="$(find_parent_path .venv)"
+    local venv_path="$(_fs_find_parent_path .venv)"
 
     if [ -n "$venv_path" ]; then
         vrun "$venv_path"
