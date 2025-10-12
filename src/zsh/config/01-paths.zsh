@@ -1,4 +1,4 @@
-path_prepend "/usr/local/bin"
-path_prepend "/usr/local/sbin"
-path_prepend "${HOME}/.local/bin"
-path_prepend "${HOME}/bin"
+_paths_prepend "/usr/local/bin"
+_paths_prepend "/usr/local/sbin"
+_paths_prepend "${HOME}/.local/bin"
+_paths_prepend "${HOME}/bin"
