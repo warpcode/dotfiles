@@ -1,4 +1,0 @@
-#!/usr/bin/env zsh
-
-pushd ~/src/martini/ > /dev/null
-exec docker compose exec web martini-db.sh
