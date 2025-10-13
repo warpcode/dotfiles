@@ -1,0 +1,66 @@
+{
+  "providers": {
+    "litellm": {
+      "name": "litellm",
+      "base_url": "${LITELLM_API_BASE}",
+      "api_key": "${LITELLM_API_KEY}",
+      "type": "openai",
+      "models": [
+        {
+          "name": "Grok 4 Fast",
+          "id": "grok-4-fast",
+          "context_window": 128000,
+          "default_max_tokens": 4096
+        },
+        {
+          "name": "Qwen3 Coder",
+          "id": "qwen3-coder",
+          "context_window": 256000,
+          "default_max_tokens": 20000
+        },
+        {
+          "name": "Gpt Oss 20b",
+          "id": "gpt-oss-20b",
+          "context_window": 128000,
+          "default_max_tokens": 4096
+        },
+        {
+          "name": "Gpt Oss 120b",
+          "id": "gpt-oss-120b",
+          "context_window": 128000,
+          "default_max_tokens": 4096
+        },
+        {
+          "name": "Llama 4 Maverick 17b Instruct",
+          "id": "llama-4-maverick-17b-instruct",
+          "context_window": 128000,
+          "default_max_tokens": 4096
+        },
+        {
+          "name": "Gemini 2.5 Pro",
+          "id": "gemini-2.5-pro",
+          "context_window": 128000,
+          "default_max_tokens": 4096
+        },
+        {
+          "name": "Gemini 2.5 Flash",
+          "id": "gemini-2.5-flash",
+          "context_window": 128000,
+          "default_max_tokens": 4096
+        },
+        {
+          "name": "O3 Mini",
+          "id": "o3-mini",
+          "context_window": 128000,
+          "default_max_tokens": 4096
+        },
+        {
+          "name": "Deepseek V3",
+          "id": "deepseek-v3",
+          "context_window": 128000,
+          "default_max_tokens": 4096
+        }
+      ]
+    }
+  }
+}
