@@ -12,3 +12,11 @@ for base in "${HOME}/.local/opt" /opt; do
   fi
 done
 
+if [[ -e /opt/homebrew/bin/brew ]]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+fi
+if [[ -n $IS_WORK ]]; then
+  _paths_prepend "/opt/homebrew/opt/node@18/bin"
+  _paths_prepend "/opt/homebrew/opt/mysql-client/bin"
+fi
+
