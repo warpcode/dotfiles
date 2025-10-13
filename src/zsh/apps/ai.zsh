@@ -51,3 +51,4 @@ fi
 
 alias ai.opencode='npx opencode-ai@latest'
 alias ai.code='ai.opencode'
+alias ai.crush='npx @charmland/crush@latest'
