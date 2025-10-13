@@ -50,3 +50,4 @@ else
 fi
 
 alias ai.opencode='npx opencode-ai@latest'
+alias ai.code='ai.opencode'
