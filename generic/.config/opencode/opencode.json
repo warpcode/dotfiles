@@ -16,7 +16,7 @@
       }
     }
   },
-  "model": "grok-code-fast-1",
+   "model": "{env:OPENCODE_MODEL}",
   "mcp": {
      "browsermcp": {
        "type": "local",
