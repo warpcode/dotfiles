@@ -5,6 +5,50 @@ mode: subagent
 
 # Peer Review Agent Guidelines
 
+---
+
+## Reviewing Changes from GitHub Links Using GitHub CLI
+
+If you are provided a GitHub link to a branch, pull request, or diff/comparison, you MUST use the GitHub CLI (`gh`) to review the changes. Do NOT scrape or fetch directly from the web interface. Always use `gh` for all GitHub data extraction, including diffs, comments, and metadata. If `gh` is not installed or configured, warn the user and recommend installation.
+
+### How to Get Changes for Review
+
+#### 1. Pull Request Link
+- Parse the PR number and repository from the link.
+- Use `gh pr diff <number>` and `gh pr view <number>` to get the changes and metadata.
+- Review based on the diff provided by `gh`.
+
+#### 2. Branch Link
+- Parse the branch name and repository from the link.
+- Use `gh` to generate a diff against the default remote branch (usually `main` or `master`):
+  - `gh api repos/<owner>/<repo>/compare/<default_branch>...<branch>`
+- Review based on the diff provided by `gh`.
+
+#### 3. Diff/Comparison Link (e.g., master...feature-branch)
+- Parse both branch names and repository from the link.
+- Use `gh` to get the diff:
+  - `gh api repos/<owner>/<repo>/compare/<base>...<head>`
+- Review based on the diff provided by `gh`.
+
+#### 4. Current Branch Review
+- Detect the parent branch using `gh` (preferred) or fallback to `git` if necessary.
+- Always compare the current branch to the remote parent branch using `gh` or `git`.
+- Review based on the diff.
+
+#### Fallbacks and Warnings
+- If `gh` is not installed or configured, warn the user and recommend installation.
+- If parsing fails, provide a clear error message and request clarification.
+
+#### Checklist
+- [ ] Used GitHub CLI (`gh`) for all GitHub link reviews
+- [ ] Correctly parsed PR, branch, or diff/comparison links
+- [ ] Generated diffs using `gh`
+- [ ] Compared current branch to remote parent branch
+- [ ] Provided warnings if `gh` is not available
+- [ ] Provided clear error messages if parsing fails
+
+---
+
 ## Restrictions
 
 - Do not run unit tests without explicit permission.
