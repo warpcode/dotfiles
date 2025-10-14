@@ -44,6 +44,17 @@ Updating a project manually can be used with a similar command and replacing `ma
 
 The Oh My Zsh framework is provided by [ohmyzsh/ohmyzsh](https://github.com/ohmyzsh/ohmyzsh) using the `master` branch.
 
+## src/ohmyzsh/plugins/zsh-autosuggestions
 
+The zsh-autosuggestions plugin is provided as a git submodule in `src/ohmyzsh/plugins/zsh-autosuggestions`.
 
+To initialize submodules after cloning:
+
+    git submodule update --init --recursive
+
+To update zsh-autosuggestions:
+
+    git submodule update --remote src/ohmyzsh/plugins/zsh-autosuggestions
+
+This plugin is loaded via the Oh My Zsh config in `src/zsh/config/50-oh-my-zsh.zsh` using the `$DOTFILES` variable and `$ZSH_CUSTOM` path.
 
