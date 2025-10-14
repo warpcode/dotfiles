@@ -6,6 +6,8 @@ description: Peer review subagent for reviewing code changes.
 
 ---
 
+> **CRITICAL RESTRICTION:** This command is strictly read-only. It must never make changes to files, code, or configuration. It only retrieves and reviews information.
+
 ## Table of Contents
 1. Overview
 2. Reviewing Changes from GitHub Links Using GitHub CLI
@@ -24,6 +26,8 @@ description: Peer review subagent for reviewing code changes.
 > **IMPORTANT:** Under no circumstances should you fetch, scrape, or request the GitHub URL from the web. Only use the URL string itself to extract repository, branch, or PR information for use with the GitHub CLI (`gh`).
 
 ## Overview
+
+**This command is strictly read-only. It must never make changes to files, code, or configuration. It only retrieves and reviews information.**
 
 This document provides step-by-step guidelines for performing peer reviews of code changes using the GitHub CLI (`gh`). It covers how to extract and compare diffs, analyze code quality, and notify users of any suspicious, breaking, or bad changes.
 
@@ -71,6 +75,7 @@ If you are provided a GitHub link to a branch, pull request, or diff/comparison,
 
 ## Restrictions
 
+- **This command is strictly read-only. It must never make changes to files, code, or configuration. It only retrieves and reviews information.**
 - If there are any new files or changes within the `.github/` folder, the user MUST explicitly approve them before merging or committing, as these changes can trigger CI/CD workflows or other automation that may incur costs.
 - Do not run unit tests without explicit permission.
 - Do not fetch, scrape, or request GitHub URLs from the web. Only use the URL string for CLI commands.
@@ -87,21 +92,23 @@ If you are provided a GitHub link to a branch, pull request, or diff/comparison,
    - Check for Makefiles, scripts, `package.json`, `composer.json`, etc., for lint/check/format/test commands.
    - Use the [Tool Discovery Guidelines](#tool-discovery-guidelines) below to reliably locate project-local tools.
    - Incorporate results from these tools into the review.
-4. **Analyze diffs for:**
-    - Inefficient code patterns
-    - Bad practices
-    - Security issues
-    - Code style violations
-    - Linting issues
-    - Potential bugs
-    - Adequate documentation (explains rationale, not just code narration)
-    - Unnecessary comments
-    - Proper comment blocks for functions/methods
-    - Adherence to DRY (Don't Repeat Yourself) principle
-    - Adherence to SOLID principles (Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion)
-    - Adherence to language style guides (e.g., PSR-12 for PHP, PEP8 for Python, ESLint/Prettier for JS/TS)
-    - Formatting issues in text documents
-    - Inconsistent indentation
+ 4. **Analyze diffs for:**
+     - Inefficient code patterns
+     - Bad practices
+     - Security issues
+     - Code style violations
+     - Linting issues
+     - Potential bugs
+     - Logical errors or inconsistencies
+     - Orphaned variables, functions, constants, classes, etc. (defined but never used or referenced)
+     - Adequate documentation (explains rationale, not just code narration)
+     - Unnecessary comments
+     - Proper comment blocks for functions/methods
+     - Adherence to DRY (Don't Repeat Yourself) principle
+     - Adherence to SOLID principles (Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion)
+     - Adherence to language style guides (e.g., PSR-12 for PHP, PEP8 for Python, ESLint/Prettier for JS/TS)
+     - Formatting issues in text documents
+     - Inconsistent indentation
 5. **Compare changes to original code for context.**
    - Where possible, fetch the original version of each changed file from the parent branch (e.g., using `git show main:path/to/file` or `gh api repos/<owner>/<repo>/contents/<path>?ref=main`) and compare it to the new version. This provides deeper context beyond the diff output, especially for non-trivial changes.
 6. **Notify the user of any suspicious, breaking, or bad changes.**
@@ -209,7 +216,7 @@ fi
 - [ ] Diffs generated and reviewed
 - [ ] Compared changed files to originals from parent branch for context
 - [ ] Lint/check/format results incorporated
-- [ ] Code analyzed for efficiency, style, security, and documentation
+- [ ] Code analyzed for efficiency, style, security, documentation, logical errors/inconsistencies, and orphaned variables/functions/constants/classes
 - [ ] Code reviewed for DRY (Don't Repeat Yourself) principle
 - [ ] Code reviewed for SOLID principles (Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion)
 - [ ] User notified of any suspicious, breaking, or bad changes
