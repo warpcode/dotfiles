@@ -1,5 +1,5 @@
 ---
-description: Use this command to generate a diff between the current repository state and the main branch (master if main doesn't exist), then review the changes for inefficient and bad practice code.
+description: Use this command to commit changes to the repository.
 ---
 
 ## Steps
