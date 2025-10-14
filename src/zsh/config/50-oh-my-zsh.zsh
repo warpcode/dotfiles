@@ -55,7 +55,7 @@ ZSH_THEME="candy"
 # DISABLE_UNTRACKED_FILES_DIRTY="true"
 
 # Would you like to use another custom folder than $ZSH/custom?
-# ZSH_CUSTOM="$DOTFILES/src/zsh/ohmyzsh-custom"
+export ZSH_CUSTOM="$DOTFILES/src/ohmyzsh"
 
 # Which plugins would you like to load?
 # Standard plugins can be found in $ZSH/plugins/
@@ -69,6 +69,7 @@ plugins=(
     gitignore
     universalarchive
     urltools
+    zsh-autosuggestions
 )
 
 source $ZSH/oh-my-zsh.sh

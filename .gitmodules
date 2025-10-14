@@ -2,3 +2,7 @@
 	path = vendor/ohmyzsh
 	url = https://github.com/ohmyzsh/ohmyzsh.git
 	branch = master
+[submodule "src/ohmyzsh/plugins/zsh-autosuggestions"]
+	path = src/ohmyzsh/plugins/zsh-autosuggestions
+	url = https://github.com/zsh-users/zsh-autosuggestions.git
+	branch = master
