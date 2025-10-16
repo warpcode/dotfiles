@@ -3,6 +3,8 @@ _paths_prepend "/usr/local/sbin"
 _paths_prepend "${HOME}/.local/bin"
 _paths_prepend "${HOME}/bin"
 
+_paths_append "${HOME}/.cargo/bin"
+
 # Add paths from /opt/ and ~/.local/opt/ subdirectories
 for base in "${HOME}/.local/opt" /opt; do
   if [[ -d $base ]]; then
