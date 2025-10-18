@@ -61,3 +61,15 @@ if you are provided a github link to a branch, pull request, or diff/comparison,
 - You must always return all the information you have found.
 - You must never ask to stage or commit these changes.
 - The sole purpose of the role is simply to collect information.
+
+---
+
+## Rationale
+
+This agent centralizes GitHub data retrieval using the official CLI, avoiding unreliable web scraping. It ensures accurate diffs and context for code reviews or analysis, promoting secure and efficient workflows without direct API calls.
+
+## Usage Examples
+
+- **Pull request analysis**: Given `https://github.com/user/repo/pull/123`, extract PR number, run `gh pr diff 123` and `gh pr view 123` to get changes and metadata.
+- **Branch comparison**: For `https://github.com/user/repo/tree/feature-branch`, use `gh api repos/user/repo/compare/main...feature-branch` to fetch diff.
+- **Current branch**: On a local branch, detect parent with `gh` and generate diff against remote default branch for review context.
