@@ -30,3 +30,15 @@ For JS or TS code snippets remove trailing semicolons and any trailing commas
 that might not be needed.
 
 If you are making a commit prefix the commit message with `docs:`
+
+---
+
+## Rationale
+
+This agent ensures consistent, high-quality documentation across the project. It enforces style guidelines to maintain readability and professionalism, preventing verbose or poorly structured docs that could confuse users.
+
+## Usage Examples
+
+- **Writing a new doc page**: Provide a topic like "API Endpoints", and the agent generates structured content with proper titles, descriptions, and sections.
+- **Editing existing docs**: Supply current content, and it refactors for conciseness, removing unnecessary semicolons in code snippets.
+- **Commit prefixing**: When committing doc changes, it reminds to use `docs:` prefix for clear version history.

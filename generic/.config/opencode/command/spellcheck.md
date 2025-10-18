@@ -28,3 +28,15 @@ Provide a summary of findings with specific line numbers and suggestions for cor
 
 If no issues found, state that the text looks good.
 
+---
+
+## Rationale
+
+This command catches spelling and grammatical errors in code changes before commits, improving code quality and readability. It analyzes diffs to identify typos in comments, strings, and identifiers, reducing manual proofreading effort.
+
+## Usage Examples
+
+- **Check staged changes**: Run on `git diff --staged`, find "teh" instead of "the" in a comment at line 45, suggest correction.
+- **Review unstaged work**: Analyze `git diff`, detect grammatical error in docstring like "This function does not work" to "This function does not work correctly".
+- **Branch diff**: Compare to main branch with `git diff main...HEAD`, report typos in variable names or commit messages.
+
