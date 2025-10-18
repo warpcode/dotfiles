@@ -51,6 +51,7 @@ Language Support and Tool Priority:
 
 Tool Discovery Process:
 - Check for local tool installations first (node_modules/.bin, vendor/bin, venv/bin)
+- Note that locally installed tools may not be in the root directory and may be nested in a subdirectory with multiple instances.
 - Verify tool availability with `which` or `command -v`
 - Use project-local tools when available to ensure version consistency
 - Warn about potential version mismatches when using global tools
