@@ -49,11 +49,11 @@ if you are provided a github link to a branch, pull request, or diff/comparison,
 
 **checklist:**
 
-- [ ] used github cli (`gh`) for all github link retrievals
-- [ ] correctly extracted pr, branch, or diff/comparison info from the url string (did not fetch or scrape the url)
-- [ ] generated diffs using `gh`
-- [ ] compared current branch to remote parent branch
-- [ ] provided warnings if `gh` is not available
+- [ ] used github cli (`gh`) for all github link retrievals. Use `git` if not branch was provided (assumed we use the current branch).
+- [ ] correctly extracted pr, branch, or diff/comparison info from the url string (do not fetch or scrape the url)
+- [ ] generated diffs using `gh` or `git` depending on preview checklist points
+- [ ] If possible, retrieve the original file contents (before changes), for extra context
+- [ ] provided warnings if `gh` is not available and a github url was given
 - [ ] provided clear error messages if parsing fails
 
 # Restrictions

@@ -10,7 +10,7 @@ description: Peer review subagent for reviewing code changes.
 
 ## Table of Contents
 1. Overview
-2. Reviewing Changes from GitHub Links Using GitHub CLI
+2. Retrieving Changes from GitHub Links
 3. Restrictions
 4. Steps
 5. Tool Discovery Guidelines
@@ -31,45 +31,11 @@ description: Peer review subagent for reviewing code changes.
 
 This document provides step-by-step guidelines for performing peer reviews of code changes using the GitHub CLI (`gh`). It covers how to extract and compare diffs, analyze code quality, and notify users of any suspicious, breaking, or bad changes.
 
-## Reviewing Changes from GitHub Links Using GitHub CLI
+## Retrieving Changes to review
 
-If you are provided a GitHub link to a branch, pull request, or diff/comparison, you MUST use the GitHub CLI (`gh`) to review the changes. Do NOT scrape or fetch directly from the web interface. Always use `gh` for all GitHub data extraction, including diffs, comments, and metadata. If `gh` is not installed or configured, warn the user and recommend installation.
+Use the `git-changes-from-default-branch.md` subagent to retrieve changes and context for original files from GitHub links or git branches. This subagent handles extracting diffs, comments, and metadata using the GitHub CLI (`gh`) or git executable, without scraping or fetching directly from the web interface.
 
-### How to Get Changes for Review
-
-- **Pull Request Link:**
-  - Extract the PR number and repository from the URL string (do NOT fetch the URL).
-  - Use `gh pr diff <number>` and `gh pr view <number>` to get the changes and metadata.
-  - Review based on the diff provided by `gh`.
-
-- **Branch Link:**
-  - Extract the branch name and repository from the URL string (do NOT fetch the URL).
-  - Use `gh` to generate a diff against the default remote branch (usually `main` or `master`):
-    - `gh api repos/<owner>/<repo>/compare/<default_branch>...<branch>`
-  - Review based on the diff provided by `gh`.
-
-- **Diff/Comparison Link (e.g., master...feature-branch):**
-  - Extract both branch names and repository from the URL string (do NOT fetch the URL).
-  - Use `gh` to get the diff:
-    - `gh api repos/<owner>/<repo>/compare/<base>...<head>`
-  - Review based on the diff provided by `gh`.
-
-- **Current Branch Review:**
-  - Detect the parent branch using `gh` (preferred) or fallback to `git` if necessary.
-  - Always compare the current branch to the remote parent branch using `gh` or `git`.
-  - Review based on the diff.
-
-**Fallbacks and Warnings:**
-- If `gh` is not installed or configured, warn the user and recommend installation.
-- If parsing fails, provide a clear error message and request clarification.
-
-**Checklist:**
-- [ ] Used GitHub CLI (`gh`) for all GitHub link reviews
-- [ ] Correctly extracted PR, branch, or diff/comparison info from the URL string (did NOT fetch or scrape the URL)
-- [ ] Generated diffs using `gh`
-- [ ] Compared current branch to remote parent branch
-- [ ] Provided warnings if `gh` is not available
-- [ ] Provided clear error messages if parsing fails
+If a GitHub link to a branch, diff, or pull request is provided, use that for retrieval. If not, use the current git branch for the project.
 
 ---
 
