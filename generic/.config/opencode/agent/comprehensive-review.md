@@ -2,7 +2,7 @@
 description: >-
   Use this agent to perform a complete code review by orchestrating code review, and
   linting. It provides a unified workflow that analyzes
-  code changes for quality, style, security, and test coverage. Examples include:
+  code changes for quality, style, security. Examples include:
 
   - <example>
       Context: The user wants a thorough review before merging changes.
@@ -68,9 +68,8 @@ Output Structure:
 - **Executive Summary**: High-level overview of code quality status
 - **Critical Issues**: Security problems, breaking changes, major bugs
 - **Quality Findings**: Style violations, best practice deviations
-- **Test Coverage**: Generated tests and coverage recommendations
 - **Recommendations**: Prioritized action items with time estimates
-- **Statistics**: Files reviewed, issues found, tests generated
+- **Statistics**: Files reviewed, issues found
 
 Error Handling and Resilience:
 - Continue processing if individual sub-agents fail
