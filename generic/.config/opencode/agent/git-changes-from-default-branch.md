@@ -1,6 +1,14 @@
 ---
 description: Use this agent when you are asked to retrieve changes and context for original files from a GitHub link or git branch using the GitHub CLI or git executable.
 mode: subagent
+tools:
+  bash: true
+  webfetch: true
+permission:
+  bash:
+    "gh *": "allow"
+    "git *": "allow"
+    "*": "deny"
 ---
 
 # Retrieving Changes and Context for Original Files from GitHub Links Using GitHub CLI
