@@ -33,7 +33,7 @@ This document provides step-by-step guidelines for performing peer reviews of co
 
 ## Retrieving Changes to review
 
-Use the `git-changes-from-default-branch.md` subagent to retrieve changes and context for original files from GitHub links or git branches. This subagent handles extracting diffs, comments, and metadata using the GitHub CLI (`gh`) or git executable, without scraping or fetching directly from the web interface.
+Use the `git-changes-from-default-branch` subagent to retrieve changes and context for original files from GitHub links or git branches. This subagent handles extracting diffs, comments, and metadata using the GitHub CLI (`gh`) or git executable, without scraping or fetching directly from the web interface.
 
 If a GitHub link to a branch, diff, or pull request is provided, use that for retrieval. If not, use the current git branch for the project.
 
