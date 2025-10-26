@@ -1,6 +1,15 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "instructions": ["CRUSH.md", "GEMINI.md", "README.md", "AI.md", ".github/copilot-instructions.md"],
+  "instructions": [
+    "CRUSH.md",
+    "GEMINI.md",
+    "README.md",
+    "CONTRIBUTING.md",
+    "docs/guidelines.md",
+    ".cursor/rules/*.md",
+    "AI.md",
+    ".github/copilot-instructions.md"
+  ],
   "provider": {
     "litellm": {
       "npm": "@ai-sdk/openai-compatible",
@@ -16,13 +25,15 @@
       }
     }
   },
-   "model": "{env:OPENCODE_MODEL}",
+  "model": "{env:OPENCODE_MODEL}",
   "mcp": {
-     "browsermcp": {
-       "type": "local",
-       "command": ["npx", "@browsermcp/mcp@latest"],
-       "enabled": false
-     }
+    "browsermcp": {
+      "type": "local",
+      "command": [
+        "npx",
+        "@browsermcp/mcp@latest"
+      ],
+      "enabled": false
+    }
   }
 }
-
