@@ -32,7 +32,7 @@
       "command": [
         "npx",
         "@browsermcp/mcp@latest"
-      ],
+      ]
     },
     "context7": {
       "type": "remote",
