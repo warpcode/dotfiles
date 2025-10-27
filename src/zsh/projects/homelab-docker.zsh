@@ -7,6 +7,6 @@ if [[ ! -d "$HOMELAB_DOCKER_DIR" ]]; then
 fi
 
 # Navigation
-alias hd.cd="hd.ensure && pushd \"$HOMELAB_DOCKER_DIR\" > /dev/null"
+alias hd.cd="hd.ensure && cd \"$HOMELAB_DOCKER_DIR\""
 alias hd.ensure="_g_ensure_cloned \"$HOMELAB_DOCKER_REPO\" \"$HOMELAB_DOCKER_DIR\""
 

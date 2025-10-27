@@ -7,11 +7,11 @@ if [[ ! -d "$HOMELAB_INFRASTRUCTURE_DIR" ]]; then
 fi
 
 # Navigation
-alias hi.cd="hi.ensure && pushd \"$HOMELAB_INFRASTRUCTURE_DIR\" > /dev/null"
+alias hi.cd="hi.ensure && cd \"$HOMELAB_INFRASTRUCTURE_DIR\""
 alias hi.ensure="_g_ensure_cloned \"$HOMELAB_INFRASTRUCTURE_REPO\" \"$HOMELAB_INFRASTRUCTURE_DIR\""
 
 # Infrastructure management aliases (assuming Terraform)
-alias hi.init="hi.cd && terraform init; popd > /dev/null"
-alias hi.plan="hi.cd && terraform plan; popd > /dev/null"
-alias hi.apply="hi.cd && terraform apply; popd > /dev/null"
-alias hi.destroy="hi.cd && terraform destroy; popd > /dev/null"
+alias hi.init="(hi.cd && terraform init)"
+alias hi.plan="(hi.cd && terraform plan)"
+alias hi.apply="(hi.cd && terraform apply)"
+alias hi.destroy="(hi.cd && terraform destroy)"
