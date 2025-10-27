@@ -30,19 +30,19 @@ Uninstall with `make uninstall-generic` or `make uninstall-work`.
 
 # External Dependencies
 
-This project uses `git subtree` to manage external dependencies and stores them in the `vendor/` directory.
+This project uses `git submodule` to manage external dependencies.
 
-The external dependencies were added using the following template and replacing `master` where/if necessary to select the branch to link to
+To initialize all submodules after cloning:
 
-     `git subtree add -P vendor/project --squash git-url master`
+    git submodule update --init --recursive
 
-Updating a project manually can be used with a similar command and replacing `master` where necessary
+To update all submodules:
 
-     `git subtree pull -P vendor/project --squash git-url master`
+    make update-submodules
 
 ## vendor/ohmyzsh
 
-The Oh My Zsh framework is provided by [ohmyzsh/ohmyzsh](https://github.com/ohmyzsh/ohmyzsh) using the `master` branch.
+The Oh My Zsh framework is provided by [ohmyzsh/ohmyzsh](https://github.com/ohmyzsh/ohmyzsh) as a git submodule using the `master` branch.
 
 ## src/ohmyzsh/plugins/zsh-autosuggestions
 
