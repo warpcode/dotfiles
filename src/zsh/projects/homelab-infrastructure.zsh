@@ -7,8 +7,7 @@ if [[ ! -d "$HOMELAB_INFRASTRUCTURE_DIR" ]]; then
 fi
 
 # Navigation
-alias hi.cd="hi.ensure && cd \"$HOMELAB_INFRASTRUCTURE_DIR\""
-alias hi.ensure="_git_ensure_cloned \"$HOMELAB_INFRASTRUCTURE_REPO\" \"$HOMELAB_INFRASTRUCTURE_DIR\""
+alias hi.cd="_git_clone_and_cd \"$HOMELAB_INFRASTRUCTURE_REPO\" \"$HOMELAB_INFRASTRUCTURE_DIR\""
 
 # Infrastructure management aliases (assuming Terraform)
 alias hi.init="(hi.cd && terraform init)"
