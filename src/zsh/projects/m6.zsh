@@ -13,7 +13,7 @@ alias m6.sh="pushd \"$MARTINI_DIR\" > /dev/null && docker compose exec web bash;
 
 # Database management
 alias m6.db="pushd \"$MARTINI_DIR\" > /dev/null && docker compose exec web martini-db.sh; popd > /dev/null"
-alias m6.db.dump="pushd \"$MARTINI_DIR\" > /dev/null && docker compose exec db mysqldump -u root > backup_\$(date +%Y%m%d_%H%M%S).sql; popd > /dev/null"
+alias m6.db.dump="pushd \"$MARTINI_DIR\" > /dev/null && docker compose exec mysql mysqldump -u root > backup_\$(date +%Y%m%d_%H%M%S).sql; popd > /dev/null"
 alias m6.db.query="pushd \"$MARTINI_DIR\" > /dev/null && docker compose exec web martini-db.sh -e"
 alias m6.db.tables="pushd \"$MARTINI_DIR\" > /dev/null && docker compose exec web martini-db.sh -e 'SHOW TABLES;'; popd > /dev/null"
 
