@@ -34,9 +34,10 @@ alias m6.staging.old="ssh m6-staging-old"
 alias m6.staging.db="ssh m6-staging-db"
 
 # Fetch config value as JSON from martini-config-docker.php
-# Usage: _m6_get_config_json <key>
+# Usage: _m6_get_config_json <key> [jq_filter]
 _m6_get_config_json() {
     local key="$1"
+    local jq_filter="$2"
     if [[ -z "$key" ]]; then
         echo "Error: key parameter required" >&2
         return 1
@@ -44,8 +45,16 @@ _m6_get_config_json() {
 
     pushd "$MARTINI_DIR" > /dev/null || { echo "Error: martini directory not found" >&2; return 2; }
     # Only output JSON, suppress all other output
-    php -r 'chdir("etc"); $key = $argv[1];require "martini-config-docker.php";$value = Config::get($key);echo json_encode($value, JSON_PRETTY_PRINT);' "$key" 2>/dev/null
+    local json_output=$(php -r 'chdir("etc"); $key = $argv[1];require "martini-config-docker.php";$value = Config::get($key);echo json_encode($value);' "$key" 2>/dev/null)
     local ret=$?
     popd > /dev/null
+
+    if [[ $ret -eq 0 ]]; then
+        if [[ -n "$jq_filter" ]]; then
+            echo "$json_output" | jq -r "$jq_filter" | tr -d '[:space:]'
+        else
+            echo "$json_output" | tr -d '[:space:]'
+        fi
+    fi
     return $ret
 }
