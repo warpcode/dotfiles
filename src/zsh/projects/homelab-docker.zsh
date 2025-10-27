@@ -8,5 +8,5 @@ fi
 
 # Navigation
 alias hd.cd="hd.ensure && cd \"$HOMELAB_DOCKER_DIR\""
-alias hd.ensure="_g_ensure_cloned \"$HOMELAB_DOCKER_REPO\" \"$HOMELAB_DOCKER_DIR\""
+alias hd.ensure="_git_ensure_cloned \"$HOMELAB_DOCKER_REPO\" \"$HOMELAB_DOCKER_DIR\""
 
