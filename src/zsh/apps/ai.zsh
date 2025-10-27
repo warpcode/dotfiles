@@ -5,6 +5,9 @@ export LITELLM_API_ENDPOINT="http://litellm.ai.localhost/v1"
 export LITELLM_API_BASE="$LITELLM_API_ENDPOINT"
 export LITELLM_API_KEY="sk-1234"  # Local only, insecure storage is acceptable
 
+# MCP configuration
+export CONTEXT7_API_KEY="${CONTEXT7_API_KEY:-}"  # Local only, insecure storage is acceptable
+
 alias ai.litellm.models='curl -s $LITELLM_API_ENDPOINT/models -H "Authorization: Bearer $LITELLM_API_KEY" -H "Content-Type: application/json" | jq -r ".data[].id"'
 
 # GitHub Copilot Configuration

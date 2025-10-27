@@ -33,7 +33,31 @@
         "npx",
         "@browsermcp/mcp@latest"
       ],
+    },
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}"
+      }
+    },
+    "context7_local": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "{env:CONTEXT7_API_KEY}"
+      ],
       "enabled": false
+    },
+    "git": {
+      "type": "local",
+      "command": [
+        "uvx",
+        "mcp-server-git"
+      ]
     }
   }
 }
