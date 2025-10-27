@@ -13,7 +13,7 @@ alias m6.sh="(cd \"$MARTINI_DIR\" && docker compose exec web bash)"
 
 # Database management
 alias m6.db="(cd \"$MARTINI_DIR\" && docker compose exec web martini-db.sh)"
-alias m6.db.dump="pushd \"$MARTINI_DIR\" > /dev/null && docker compose exec mysql mysqldump -u\$(_m6_get_config_json martini-db '.username') -p\$(_m6_get_config_json martini-db '.password') \$(_m6_get_config_json martini-db '.name') > backup_\$(date +%Y%m%d_%H%M%S).sql; popd > /dev/null"
+alias m6.db.dump="(cd \"$MARTINI_DIR\" && docker compose exec mysql mysqldump -u\$(_m6_get_config_json martini-db '.username') -p\$(_m6_get_config_json martini-db '.password') \$(_m6_get_config_json martini-db '.name'))"
 alias m6.db.query="(cd \"$MARTINI_DIR\" && docker compose exec web martini-db.sh -e"
 alias m6.db.tables="(cd \"$MARTINI_DIR\" && docker compose exec web martini-db.sh -e 'SHOW TABLES;')"
 
