@@ -2,7 +2,7 @@
 
 # Ensure a git repository is cloned to a directory
 # Usage: _g_ensure_cloned <repo_url> <directory>
-_g_ensure_cloned() {
+_git_ensure_cloned() {
   local repo="$1"
   local dir="$2"
 

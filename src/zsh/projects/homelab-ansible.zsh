@@ -12,4 +12,4 @@ alias ha.cd="ha.ensure && cd \"$HOMELAB_ANSIBLE_DIR\""
 # Ansible management aliases
 alias ha.play="(ha.cd && ansible-playbook site.yml)"
 alias ha.ping="(ha.cd && ansible all -m ping)"
-alias ha.ensure="_g_ensure_cloned \"$HOMELAB_ANSIBLE_REPO\" \"$HOMELAB_ANSIBLE_DIR\""
+alias ha.ensure="_git_ensure_cloned \"$HOMELAB_ANSIBLE_REPO\" \"$HOMELAB_ANSIBLE_DIR\""
