@@ -5,7 +5,7 @@ alias git-zip="git archive --format=zip HEAD ':!*.gitignore' -o ${PWD##*/}.zip"
 # Ensure the defaults are loaded
 git config --global include.path "~/.gitconfig_default"
 
-function git_clone_and_cd() {
+function _git_clone_and_cd() {
     if [[ -z "$1" ]]; then
         echo "Please provide a valid git url"
         return 1

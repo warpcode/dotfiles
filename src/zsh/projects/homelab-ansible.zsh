@@ -7,9 +7,9 @@ if [[ ! -d "$HOMELAB_ANSIBLE_DIR" ]]; then
 fi
 
 # Navigation
-alias ha.cd="ha.ensure && cd \"$HOMELAB_ANSIBLE_DIR\""
+alias ha.cd="_git_clone_and_cd \"$HOMELAB_ANSIBLE_REPO\" \"$HOMELAB_ANSIBLE_DIR\""
 
 # Ansible management aliases
 alias ha.play="(ha.cd && ansible-playbook site.yml)"
 alias ha.ping="(ha.cd && ansible all -m ping)"
-alias ha.ensure="_git_ensure_cloned \"$HOMELAB_ANSIBLE_REPO\" \"$HOMELAB_ANSIBLE_DIR\""
+
