@@ -9,19 +9,19 @@ fi
 alias m6.cd="cd \"$MARTINI_DIR\""
 
 # Martini management aliases
-alias m6.sh="(cd \"$MARTINI_DIR\" && docker compose exec web bash)"
+alias m6.sh="(m6.cd && docker compose exec web bash)"
 
 # Database management
-alias m6.db="(cd \"$MARTINI_DIR\" && docker compose exec web martini-db.sh)"
-alias m6.db.dump="(cd \"$MARTINI_DIR\" && docker compose exec mysql mysqldump -u\$(_m6_get_config_json martini-db '.username') -p\$(_m6_get_config_json martini-db '.password') \$(_m6_get_config_json martini-db '.name'))"
-alias m6.db.query="(cd \"$MARTINI_DIR\" && docker compose exec web martini-db.sh -e"
-alias m6.db.tables="(cd \"$MARTINI_DIR\" && docker compose exec web martini-db.sh -e 'SHOW TABLES;')"
+alias m6.db="(m6.cd && docker compose exec web martini-db.sh)"
+alias m6.db.dump="(m6.cd && docker compose exec mysql mysqldump -u\$(_m6_get_config_json martini-db '.username') -p\$(_m6_get_config_json martini-db '.password') \$(_m6_get_config_json martini-db '.name'))"
+alias m6.db.query="(m6.cd && docker compose exec web martini-db.sh -e"
+alias m6.db.tables="(m6.cd && docker compose exec web martini-db.sh -e 'SHOW TABLES;')"
 
 # Docker management aliases
-alias m6.up="(cd \"$MARTINI_DIR\" && docker compose up -d --build)"
-alias m6.stop="(cd \"$MARTINI_DIR\" && docker compose stop)"
+alias m6.up="(m6.cd && docker compose up -d --build)"
+alias m6.stop="(m6.cd && docker compose stop)"
 alias m6.restart="m6.stop && m6.up"
-alias m6.logs="(cd \"$MARTINI_DIR\" && docker compose logs -f --tail=100 web)"
+alias m6.logs="(m6.cd && docker compose logs -f --tail=100 web)"
 
 # FE tools
 alias m6.build.mds="(cd \"$MARTINI_DIR\"/misc/responsive-static/mds && npm run build)"
@@ -44,7 +44,7 @@ _m6_get_config_json() {
     fi
 
     # Run in subshell to avoid changing parent directory
-    local json_output=$(cd "$MARTINI_DIR" && php -r 'chdir("etc"); $key = $argv[1];require "martini-config-docker.php";$value = Config::get($key);echo json_encode($value);' "$key" 2>/dev/null)
+    local json_output=$(m6.cd && php -r 'chdir("etc"); $key = $argv[1];require "martini-config-docker.php";$value = Config::get($key);echo json_encode($value);' "$key" 2>/dev/null)
     local ret=$?
 
     if [[ $ret -eq 0 ]]; then
