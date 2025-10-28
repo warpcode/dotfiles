@@ -52,6 +52,7 @@ else
     export OPENCODE_MODEL="opencode/grok-code"
 fi
 
-alias ai.opencode='npx opencode-ai@latest'
 alias ai.code='ai.opencode'
-alias ai.crush='npx @charmland/crush@latest'
+alias ai.crush='npx -y @charmland/crush@latest'
+alias ai.gemini='npx -y @google/gemini-cli'
+alias ai.opencode='npx -y opencode-ai@latest'
