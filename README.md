@@ -1,60 +1,66 @@
-A collection of dotfiles for \*nix systems
+# Dotfiles
 
-# Description
+This is a personal collection of dotfiles for \*nix systems, designed to create a consistent and powerful command-line experience across multiple machines. It uses `stow` for managing symlinks and comes with a `Makefile` for easy installation and dependency management.
 
-This is my personal compilation of dotfiles that I use. It is used to set up a common environment between \*nix systems.
+## Features
 
-This project makes use of other open source projects which are listed and linked to within this readme.
+This dotfiles repository comes with a wide range of features to enhance your shell environment:
 
-This project also makes use of `git subtree` so also listed will be the commands to update these subtree's
+-   **Modular Zsh Configuration:** The Zsh configuration is organized into `config`, `functions`, `apps`, and `projects` directories, making it easy to extend and manage.
+-   **Cross-Platform Support:** An installation script is provided to install dependencies on macOS, Debian/Ubuntu, Fedora, and Arch Linux.
+-   **Oh My Zsh Integration:** Includes the popular [Oh My Zsh](https://github.com/ohmyzsh/ohmyzsh) framework for themes and plugins.
+-   **AI Command-Line Tools:** A suite of aliases is provided for interacting with various AI services directly from the command line, including:
+    -   `ai.chat`: A wrapper for the `aichat` tool.
+    -   `ai.code` / `ai.opencode`: For code generation with OpenCode.
+    -   `ai.crush`: To use the crush.dev CLI.
+    -   `ai.gemini`: To use the Google Gemini CLI.
+-   **Automatic Python Virtualenv:** Automatically activates and deactivates Python virtual environments (`.venv`) as you navigate your filesystem.
+-   **Project-Specific Workflows:** The `src/zsh/projects` directory allows you to define aliases and functions to streamline workflows for your individual projects.
+-   **FZF Integration:** Integrates [fzf](https://github.com/junegunn/fzf) for powerful fuzzy history search.
+-   **Neovim Management:** Includes helper functions for checking for updates and installing specific versions of Neovim.
+-   **Automatic PATH management:** Automatically scans `/opt/` and `~/.local/opt/` for subdirectories containing `bin`, `sbin`, `usr/bin`, `usr/sbin`, `usr/local/bin`, and `usr/local/sbin`, and adds them to PATH.
 
-# Features
+## Installation
 
-- Automatically scans `/opt/` and `~/.local/opt/` for subdirectories containing `bin`, `sbin`, `usr/bin`, `usr/sbin`, `usr/local/bin`, and `usr/local/sbin`, and adds them to PATH, with user-local paths (`~/.local/opt/`) taking precedence over system paths (`/opt/`).
+1.  Clone the repository:
+    ```bash
+    git clone <repository-url> ~/.dotfiles
+    cd ~/.dotfiles
+    ```
 
-# Installation
+2.  Install dependencies:
+    ```bash
+    make install-deps
+    ```
+    This will install `git`, `stow`, `zsh`, `jq`, `tmux`, `fzf`, `rsync`, and `wget` if they are not already installed.
 
-Clone the repository and install dependencies:
+3.  Install the dotfiles:
+    ```bash
+    make install-generic
+    ```
+    This will create symlinks for the generic configuration files in your home directory.
 
-```bash
-git clone <repository-url> ~/.dotfiles
-cd ~/.dotfiles
-make install-deps  # Installs git, stow, zsh, jq, tmux, fzf, rsync, wget if needed
-make install-generic  # Installs generic dotfiles
-make install-work  # Installs work dotfiles (optional)
-```
+4.  (Optional) Install work-specific dotfiles:
+    ```bash
+    make install-work
+    ```
 
-Supported OSes: macOS (requires Homebrew), Ubuntu, Debian, Fedora, Arch Linux.
+To uninstall, you can use `make uninstall-generic` or `make uninstall-work`.
 
-Uninstall with `make uninstall-generic` or `make uninstall-work`.
-
-# External Dependencies
+## External Dependencies
 
 This project uses `git submodule` to manage external dependencies.
 
-To initialize all submodules after cloning:
+-   **[ohmyzsh/ohmyzsh](https://github.com/ohmyzsh/ohmyzsh):** The Oh My Zsh framework.
+-   **[zsh-users/zsh-autosuggestions](https://github.com/zsh-users/zsh-autosuggestions):** A plugin for Zsh that provides command suggestions.
 
-    git submodule update --init --recursive
+To initialize all submodules after cloning, run:
+```bash
+git submodule update --init --recursive
+```
 
-To update all submodules:
-
-    make update-submodules
-
-## vendor/ohmyzsh
-
-The Oh My Zsh framework is provided by [ohmyzsh/ohmyzsh](https://github.com/ohmyzsh/ohmyzsh) as a git submodule using the `master` branch.
-
-## src/ohmyzsh/plugins/zsh-autosuggestions
-
-The zsh-autosuggestions plugin is provided as a git submodule in `src/ohmyzsh/plugins/zsh-autosuggestions`.
-
-To initialize submodules after cloning:
-
-    git submodule update --init --recursive
-
-To update zsh-autosuggestions:
-
-    git submodule update --remote src/ohmyzsh/plugins/zsh-autosuggestions
-
-This plugin is loaded via the Oh My Zsh config in `src/zsh/config/50-oh-my-zsh.zsh` using the `$DOTFILES` variable and `$ZSH_CUSTOM` path.
+To update all submodules to their latest versions, run:
+```bash
+make update-submodules
+```
 
