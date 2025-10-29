@@ -1,3 +1,6 @@
+# Register git package mappings using the new API
+_installer_package "default" git
+
 (( $+commands[git] )) || return
 
 alias git-zip="git archive --format=zip HEAD ':!*.gitignore' -o ${PWD##*/}.zip"

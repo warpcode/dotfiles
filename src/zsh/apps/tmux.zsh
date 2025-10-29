@@ -1,3 +1,5 @@
+# Register tmux package mappings using the new API
+_installer_package "default" tmux
 
 function _tmux_basic_git()  {
     # check if $1 is empty
