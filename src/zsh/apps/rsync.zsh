@@ -1,4 +1,4 @@
-_installer_package "default" tmux
+_installer_package "default" rsync
 
 (( $+commands[rsync] )) || return
 
