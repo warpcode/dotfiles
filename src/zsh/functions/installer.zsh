@@ -2,7 +2,8 @@
 #
 # This module provides a system for registering and installing packages across different package managers.
 # Apps register their package dependencies using _installer_package, and packages are
-# automatically collected. Use _installer_install to install all collected packages.
+# automatically collected. Use _installer_install to install all collected packages, or
+# _installer_get_packages_for_os to retrieve packages for a specific manager.
 #
 # Priority order for package installation:
 # 1. Flatpak (if flatpak mapping exists and flatpak is installed) - exclusive, no fallback
@@ -15,6 +16,7 @@
 #   _installer_package "flatpak" discord com.discordapp.Discord  # Discord via Flatpak
 #   _installer_package "snap" discord              # Discord via Snap
 #   _installer_install                             # Install collected packages
+#   _installer_get_packages_for_os flatpak         # Get flatpak packages
 #
 # Supported package managers: macos (brew), debian (apt), fedora (dnf), arch (pacman), flatpak, snap
 # Moved and refactored from install-deps.sh
@@ -29,6 +31,7 @@ typeset -i _installer_verbose=0
 # Detect OS and return a string identifier
 # Examines $OSTYPE and /etc/os-release to determine the operating system,
 # returning one of: macos, debian, fedora, arch, unsupported, or unknown.
+# @return string OS identifier
 _installer_detect_os() {
     case $OSTYPE in
         darwin*) echo macos ;;
@@ -48,6 +51,8 @@ _installer_detect_os() {
 # Get the list of packages for a specific package manager or OS
 # Dynamically builds and returns a space-separated string of packages
 # for the given manager, following the same priority logic as _installer_install.
+# @param manager The package manager or OS (e.g., flatpak, snap, debian)
+# @return string Space-separated list of packages
 _installer_get_packages_for_os() {
     local manager=$1
     local os=$(_installer_detect_os)
@@ -99,8 +104,10 @@ _installer_get_packages_for_os() {
 
 # Function to register a package mapping for an app
 # Registers a package dependency for a specific OS or as a default.
-# Usage: _installer_package "debian" tmux
-#        _installer_package "default" tmux
+# @param os The OS or package manager (e.g., debian, flatpak, default)
+# @param app The app name
+# @param package The package name (optional, defaults to app name)
+# @return 0 on success, 1 on error
 _installer_package() {
     # Input validation
     if [[ $# -lt 2 ]]; then
@@ -124,7 +131,9 @@ _installer_package() {
 }
 
 # Install packages using priority-based package manager selection
-# For each app, checks in order: flatpak, snap, then OS-specific/default packages
+# For each app, checks in order: flatpak, snap, then OS-specific/default packages.
+# Uses _installer_get_packages_for_os to retrieve packages for each manager.
+# @return 0 on success, 1 on error
 _installer_install() {
     local os=$(_installer_detect_os)
     echo "Detected OS: $os"
