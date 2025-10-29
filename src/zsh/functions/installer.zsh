@@ -45,28 +45,56 @@ _installer_detect_os() {
     esac
 }
 
-# Get the list of packages for a specific OS
+# Get the list of packages for a specific package manager or OS
 # Dynamically builds and returns a space-separated string of packages
-# for the given OS, preferring OS-specific mappings over defaults.
+# for the given manager, following the same priority logic as _installer_install.
 _installer_get_packages_for_os() {
-    local os=$1
-    local -A app_pkgs
+    local manager=$1
+    local os=$(_installer_detect_os)
+
+    # Determine available managers
+    local available_flatpak=0
+    (( $+commands[flatpak] )) && available_flatpak=1
+    local available_snap=0
+    (( $+commands[snap] )) && available_snap=1
+
+    # Get unique app names
+    local -A apps
     for key in ${(k)_installer_app_mappings}; do
         local app=${key%%:*}
-        local map_os=${key#*:}
-        if [[ $map_os == $os || $map_os == default ]]; then
-            local pkg=${_installer_app_mappings[$key]}
-            # Prefer OS-specific over default
-            if [[ -z ${app_pkgs[$app]} || $map_os == $os ]]; then
-                app_pkgs[$app]=$pkg
+        apps[$app]=1
+    done
+
+    # Collect packages for the manager
+    local packages=()
+    for app in ${(k)apps}; do
+        local assigned_manager=""
+        local pkg=""
+        if (( available_flatpak )) && [[ -n ${_installer_app_mappings[${app}:flatpak]} ]]; then
+            assigned_manager="flatpak"
+            pkg=${_installer_app_mappings[${app}:flatpak]}
+        elif (( available_snap )) && [[ -n ${_installer_app_mappings[${app}:snap]} ]]; then
+            assigned_manager="snap"
+            pkg=${_installer_app_mappings[${app}:snap]}
+        else
+            assigned_manager=$os
+            if [[ -n ${_installer_app_mappings[${app}:${os}]} ]]; then
+                pkg=${_installer_app_mappings[${app}:${os}]}
+            elif [[ -n ${_installer_app_mappings[${app}:default]} ]]; then
+                pkg=${_installer_app_mappings[${app}:default]}
             fi
         fi
+        if [[ $assigned_manager == $manager ]]; then
+            packages+=($pkg)
+        fi
     done
-    local packages=""
-    for pkg in ${(v)app_pkgs}; do
-        packages+=" $pkg"
+
+    # Join packages into space separated string
+    local result=""
+    for pkg in $packages; do
+        result+=" $pkg"
     done
-    echo "${packages# }"
+    echo "${result# }"
 }
 
 # Function to register a package mapping for an app
@@ -95,54 +123,16 @@ _installer_package() {
     [[ $_installer_verbose -eq 1 ]] && echo "Registered package '$pkg' for $app on $os"
 }
 
-
-
 # Install packages using priority-based package manager selection
 # For each app, checks in order: flatpak, snap, then OS-specific/default packages
 _installer_install() {
     local os=$(_installer_detect_os)
     echo "Detected OS: $os"
 
-    # Arrays to hold packages for each package manager
-    local flatpak_packages=()
-    local snap_packages=()
-    local os_packages=()
-
-    # Get unique app names
-    local -A apps
-    for key in ${(k)_installer_app_mappings}; do
-        local app=${key%%:*}
-        apps[$app]=1
-    done
-
-    # Process each app exactly once according to priority
-    for app in ${(k)apps}; do
-        # Check for flatpak mapping first
-        if (( $+commands[flatpak] )) && [[ -n "${_installer_app_mappings[${app}:flatpak]}" ]]; then
-            echo "HERE"
-            flatpak_packages+=(${_installer_app_mappings[${app}:flatpak]})
-            (( _installer_verbose == 1 )) && echo "Assigned $app to flatpak"
-        # Check for snap mapping second
-        elif (( $+commands[snap] )) && [[ -n ${_installer_app_mappings[${app}:snap]} ]]; then
-            snap_packages+=(${_installer_app_mappings[${app}:snap]})
-            (( _installer_verbose == 1 )) && echo "Assigned $app to snap"
-        # Check for OS-specific or default mapping last
-        else
-            local pkg=""
-            # Prefer OS-specific over default
-            if [[ -n ${_installer_app_mappings[${app}:${os}]} ]]; then
-                pkg=${_installer_app_mappings[${app}:${os}]}
-                [[ $_installer_verbose -eq 1 ]] && echo "Assigned $app to $os"
-            elif [[ -n ${_installer_app_mappings[${app}:default]} ]]; then
-                pkg=${_installer_app_mappings[${app}:default]}
-                [[ $_installer_verbose -eq 1 ]] && echo "Assigned $app to default"
-            fi
-            # Add package if found
-            if [[ -n $pkg ]]; then
-                os_packages+=($pkg)
-            fi
-        fi
-    done
+    # Get packages for each package manager using the shared logic
+    local flatpak_packages=($(_installer_get_packages_for_os flatpak))
+    local snap_packages=($(_installer_get_packages_for_os snap))
+    local os_packages=($(_installer_get_packages_for_os $os))
 
     # Install packages for each package manager
     if [ ${#flatpak_packages[@]} -gt 0 ]; then
@@ -188,6 +178,3 @@ _installer_install() {
         return 0
     fi
 }
-
-
-
