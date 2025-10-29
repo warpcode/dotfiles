@@ -6,3 +6,5 @@
 
 alias nvim.cd="_git_clone_and_cd $NVIM_CONFIG_GIT_URL $NVIM_CONFIG_PATH"
 alias nvim.edit="(nvim.cd && _tmux_basic_git "neovim")"
+
+
