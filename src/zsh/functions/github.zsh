@@ -1,4 +1,6 @@
 # Get the latest release version from a GitHub repository
+# @param repo The repository in owner/repo format
+# @return Latest tag name, or empty on error
 _gh_get_latest_release() {
     local repo="$1"
     if [[ -z "$repo" ]]; then
@@ -10,8 +12,11 @@ _gh_get_latest_release() {
         sed -E 's/.*"([^"]+)".*/\1/'
 }
 
-# Get GitHub release asset URL that matches pattern array
-# Usage: _gh_get_asset_url <owner/repo> <version|latest> [pattern1] [pattern2] [pattern3]...
+# Get GitHub release asset URLs that match all provided patterns
+# @param repo The repository in owner/repo format
+# @param version The version tag or "latest"
+# @param patterns Optional patterns that must all match the asset URL
+# @return Matching asset URLs, one per line
 _gh_get_asset_url() {
     local repo="$1"
     local version="$2"

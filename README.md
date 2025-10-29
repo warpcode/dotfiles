@@ -30,9 +30,9 @@ This dotfiles repository comes with a wide range of features to enhance your she
 -   **Automatic Python Virtualenv:** Automatically activates and deactivates Python virtual environments (`.venv`) as you navigate your filesystem.
 -   **Project-Specific Workflows:** The `src/zsh/projects` directory allows you to define aliases and functions to streamline workflows for your individual projects.
 -   **FZF Integration:** Integrates [fzf](https://github.com/junegunn/fzf) for powerful fuzzy history search.
--   **Neovim Management:** Includes helper functions for checking for updates and installing specific versions of Neovim.
+-   **Neovim Support:** Includes Neovim in the automatic package installation system.
 -   **Automatic PATH management:** Automatically scans `/opt/` and `~/.local/opt/` for subdirectories containing `bin`, `sbin`, `usr/bin`, `usr/sbin`, `usr/local/bin`, and `usr/local/sbin`, and adds them to PATH.
--   **GitHub Release Installer:** Automatically downloads and installs applications directly from GitHub releases. Supports OS and architecture detection, version management, and creates executable symlinks in a `bin/` directory. Configurable installation directory via `INSTALLER_OPT_DIR` environment variable.
+-   **GitHub Release Installer:** Automatically downloads and installs applications directly from GitHub releases. Supports OS and architecture detection, version management, and creates executable symlinks in a `bin/` directory. Configurable installation directory via `INSTALLER_OPT_DIR` environment variable (defaults to `~/.local/opt`).
 
 ## Installation
 
@@ -42,11 +42,11 @@ This dotfiles repository comes with a wide range of features to enhance your she
     cd ~/.dotfiles
     ```
 
-2.  Install the dotfiles and dependencies:
+2.  Install the dotfiles:
     ```bash
     make install-generic
     ```
-    This will install required dependencies and create symlinks for the generic configuration files in your home directory.
+    This will create symlinks for the generic configuration files in your home directory. Required dependencies will be installed automatically when you start a new Zsh session.
 
 3.  (Optional) Install work-specific dotfiles:
     ```bash
@@ -72,7 +72,7 @@ The installer supports downloading applications directly from GitHub releases wi
 
 This will:
 - Download the appropriate `.tar.gz` asset for your OS and architecture
-- Extract it to `~/.config/opt/appname/` (configurable via `INSTALLER_OPT_DIR`)
+- Extract it to `~/.local/opt/appname/` (configurable via `INSTALLER_OPT_DIR`)
 - Automatically flatten top-level directories containing `bin/`, `sbin/`, `usr/`, or `lib/`
 - Create symlinks to all executable files in `bin/` for PATH access
 - Track versions in `.version` files to avoid unnecessary re-downloads
@@ -95,4 +95,40 @@ To update all submodules to their latest versions, run:
 ```bash
 make update-submodules
 ```
+
+## Troubleshooting
+
+### Dependencies not installing?
+- Ensure your OS is supported (macOS, Debian/Ubuntu, Fedora, Arch Linux)
+- Check that you have `sudo` access for system package installation
+- For GitHub releases, ensure `curl` and `tar` are available
+
+### Conflicts with existing configuration?
+- The dotfiles use `stow` to manage symlinks, which won't overwrite existing files
+- Check for conflicts in `~/.zshrc`, `~/.gitconfig`, etc.
+- User overrides can be added to `~/.zshrc.d/` or `~/.zshrc.{functions,config,apps,projects}/`
+
+### Customizing the setup
+- Add personal aliases/functions to `~/.zshrc.d/`
+- Override app configurations in `~/.zshrc.apps/`
+- Add project-specific settings to `~/.zshrc.projects/`
+- Modify `INSTALLER_OPT_DIR` to change where GitHub releases are installed
+
+## Customization
+
+### Adding new applications
+Create a new file in `src/zsh/apps/yourapp.zsh`:
+```zsh
+# Register packages
+_installer_package "default" yourapp
+
+# Add app-specific configuration
+alias youralias="yourapp --option"
+```
+
+### Project-specific configurations
+Add files to `src/zsh/projects/yourproject.zsh` for project-specific aliases and functions.
+
+### Overriding settings
+Any file in `~/.zshrc.d/` will be sourced after the main configuration, allowing you to override or add settings.
 
