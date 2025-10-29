@@ -17,26 +17,26 @@ _gh_get_asset_url() {
     local version="$2"
     shift 2
     local patterns=("$@")
-    
+
     if [[ -z "$repo" || -z "$version" ]]; then
         echo "Usage: _gh_get_asset_url <owner/repo> <version|latest> [pattern1] [pattern2]..." >&2
         return 1
     fi
-    
+
     local api_url
     if [[ "$version" == "latest" ]]; then
         api_url="https://api.github.com/repos/$repo/releases/latest"
     else
         api_url="https://api.github.com/repos/$repo/releases/tags/$version"
     fi
-    
+
     curl --silent "$api_url" | jq -r '.assets[].browser_download_url' | while read -r asset; do
         # If no patterns provided, return all assets
         if [[ ${#patterns[@]} -eq 0 ]]; then
             echo "$asset"
             continue
         fi
-        
+
         local match=true
         for pattern in "${patterns[@]}"; do
             if [[ ! "$asset" =~ $pattern ]]; then
