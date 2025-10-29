@@ -164,6 +164,7 @@ _installer_package() {
 # Install packages using priority-based package manager selection
 # For each app, checks availability in order: flatpak, snap, GitHub, then OS-specific/default packages.
 # Installs in order: OS packages, flatpak, snap, GitHub releases
+# Triggers 'installer_post_install' event after completion for additional setup.
 # Uses _installer_get_packages_for_os to retrieve packages for each manager.
 # @return 0 on success, 1 on error
 _installer_install() {
@@ -218,6 +219,9 @@ _installer_install() {
         echo "Installing GitHub releases: ${github_packages[*]}"
         _installer_install_github "${github_packages[@]}"
     fi
+
+    # Trigger post-install hooks
+    _events_trigger "installer_post_install"
 
     # Check if no packages were assigned
     if [ ${#flatpak_packages[@]} -eq 0 ] && [ ${#snap_packages[@]} -eq 0 ] && [ ${#github_packages[@]} -eq 0 ] && [ ${#os_packages[@]} -eq 0 ]; then
