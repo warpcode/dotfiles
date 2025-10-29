@@ -1,13 +1,10 @@
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
-install-deps:
-	bash install-deps.sh
-
 update-submodules:
 	# Ensure dependencies are up to date
 	git submodule update --init --remote
 
-install-generic: install-deps update-submodules
+install-generic: update-submodules
 	stow -R --no-folding -t ~/ generic
 
 install-work: install-generic

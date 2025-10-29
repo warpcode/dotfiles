@@ -2,6 +2,19 @@
 
 This is a personal collection of dotfiles for \*nix systems, designed to create a consistent and powerful command-line experience across multiple machines. It uses `stow` for managing symlinks and comes with a `Makefile` for easy installation and dependency management.
 
+## Requirements
+
+The following dependencies are required and will be installed automatically by the installer:
+
+- **git** - Version control
+- **stow** - Symlink management
+- **zsh** - Shell (pre-installed on macOS)
+- **jq** - JSON processor
+- **wget** - HTTP downloader
+- **curl** - HTTP client
+
+Additional tools like `fzf`, `uv`, `tmux`, and `rsync` can be installed using the dotfiles installer.
+
 ## Features
 
 This dotfiles repository comes with a wide range of features to enhance your shell environment:
@@ -29,19 +42,13 @@ This dotfiles repository comes with a wide range of features to enhance your she
     cd ~/.dotfiles
     ```
 
-2.  Install dependencies:
-    ```bash
-    make install-deps
-    ```
-    This will install `git`, `stow`, `zsh`, `jq`, `tmux`, `fzf`, `rsync`, and `wget` if they are not already installed.
-
-3.  Install the dotfiles:
+2.  Install the dotfiles and dependencies:
     ```bash
     make install-generic
     ```
-    This will create symlinks for the generic configuration files in your home directory.
+    This will install required dependencies and create symlinks for the generic configuration files in your home directory.
 
-4.  (Optional) Install work-specific dotfiles:
+3.  (Optional) Install work-specific dotfiles:
     ```bash
     make install-work
     ```
