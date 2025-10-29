@@ -19,6 +19,7 @@ This dotfiles repository comes with a wide range of features to enhance your she
 -   **FZF Integration:** Integrates [fzf](https://github.com/junegunn/fzf) for powerful fuzzy history search.
 -   **Neovim Management:** Includes helper functions for checking for updates and installing specific versions of Neovim.
 -   **Automatic PATH management:** Automatically scans `/opt/` and `~/.local/opt/` for subdirectories containing `bin`, `sbin`, `usr/bin`, `usr/sbin`, `usr/local/bin`, and `usr/local/sbin`, and adds them to PATH.
+-   **GitHub Release Installer:** Automatically downloads and installs applications directly from GitHub releases. Supports OS and architecture detection, version management, and creates executable symlinks in a `bin/` directory. Configurable installation directory via `INSTALLER_OPT_DIR` environment variable.
 
 ## Installation
 
@@ -46,6 +47,30 @@ This dotfiles repository comes with a wide range of features to enhance your she
     ```
 
 To uninstall, you can use `make uninstall-generic` or `make uninstall-work`.
+
+### Installing Applications from GitHub Releases
+
+The installer supports downloading applications directly from GitHub releases with automatic OS and architecture detection:
+
+1. Register a GitHub release in your app configuration:
+   ```zsh
+   _installer_package "github" "fzf" "junegunn/fzf@v0.66.1"
+   _installer_package "github" "uv" "astral-sh/uv@latest"
+   ```
+
+2. Install all registered packages:
+   ```zsh
+   _installer_install
+   ```
+
+This will:
+- Download the appropriate `.tar.gz` asset for your OS and architecture
+- Extract it to `~/.config/opt/appname/` (configurable via `INSTALLER_OPT_DIR`)
+- Automatically flatten top-level directories containing `bin/`, `sbin/`, `usr/`, or `lib/`
+- Create symlinks to all executable files in `bin/` for PATH access
+- Track versions in `.version` files to avoid unnecessary re-downloads
+
+Supported formats: Currently `.tar.gz` archives. The system detects Linux/macOS and x86_64/aarch64 architectures, with fallback patterns for common naming variations.
 
 ## External Dependencies
 
