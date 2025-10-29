@@ -62,7 +62,7 @@
     "figma": {
       "url": "https://mcp.figma.com/mcp",
       "type": "remote",
-      "enabled": true
+      "enabled": false
     }
   }
 }
