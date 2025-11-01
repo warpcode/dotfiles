@@ -9,9 +9,6 @@ fi
 # Execute last command
 alias r="fc -s"
 
-# Reload the bashrc file
-alias reload="source ~/.zshrc && echo config reloaded"
-
 
 # enable color support of ls and also add handy aliases
 if [ -x /usr/bin/dircolors ]; then
