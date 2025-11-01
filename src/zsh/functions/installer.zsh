@@ -26,9 +26,8 @@
 #   _installer_install                             # Install collected packages
 #   _installer_get_packages_for_pkg_mgr flatpak         # Get flatpak packages
 #
-# Supported package managers: macos (brew), macos-brew (brew), macos-cask (brew cask), debian (apt), fedora (dnf), arch (pacman), flatpak, snap, github
+# Supports apt, dnf, pacman, brew, flatpak, snap, github
 # GitHub releases support .tar.gz archives with automatic OS/arch detection and executable symlinking
-# Moved and refactored from install-deps.sh
 
 # Global app mappings (set by apps at load time)
 # Format: _installer_app_mappings[app:os]=package
@@ -45,8 +44,7 @@ typeset -i _installer_verbose=0
 : ${INSTALLER_OPT_DIR:="$HOME/.local/opt"}
 
 # Detect OS and return a string identifier
-# Examines $OSTYPE and /etc/os-release to determine the operating system,
-# returning one of: macos, debian, fedora, arch, unsupported, or unknown.
+# Detect OS from $OSTYPE and /etc/os-release.
 # @return string OS identifier
 _installer_detect_os() {
     case $OSTYPE in
@@ -64,10 +62,8 @@ _installer_detect_os() {
     esac
 }
 
-# Detect architecture and return a string identifier
-# Uses uname -m to determine the architecture,
-# returning one of: x86_64, aarch64, or the raw uname output.
-# @return string Architecture identifier
+# Detect architecture using uname.
+# @return string arch identifier
 _installer_detect_arch() {
     case $(uname -m) in
         x86_64|amd64) echo x86_64 ;;
@@ -76,12 +72,10 @@ _installer_detect_arch() {
     esac
 }
 
-# Get the list of packages for a specific package manager or OS
-# Returns packages directly mapped to the manager, with default fallback for non-special managers.
-# Special managers (flatpak, snap, github, macos-brew, macos-cask) have no default fallback.
-# @param manager The package manager or OS (e.g., flatpak, snap, debian)
-# @param app_filter Optional single app name to filter by
-# @return string Space-separated list of packages
+# Get packages for a manager.
+# @param manager The package manager or OS
+# @param app_filter Optional app name filter
+# @return string packages
 _installer_get_packages_for_pkg_mgr() {
     local manager=$1
     local app_filter=$2
@@ -104,7 +98,7 @@ _installer_get_packages_for_pkg_mgr() {
     fi
 
     # Get packages with conditional default fallback
-    # Prioritize flatpak/snap for better isolation and sandboxing before falling back to OS packages
+    # Prioritize flatpak/snap for isolation before OS packages
     local packages=()
     for app in ${(k)apps}; do
         local pkg=""
@@ -151,11 +145,11 @@ _installer_get_packages_for_pkg_mgr() {
 }
 
 # Function to register package mappings for an app
-# Registers package dependencies for a specific app and package manager group.
-# Supports multiple packages per app/manager with package[@version][:metadata] format
-# @param group The package manager group (e.g., debian, flatpak, default)
-# @param packages The first package is the app name, followed by additional packages
-# @return 0 on success, 1 on error
+# Register package mappings for an app.
+# @param package_manager The package manager
+# @param app_name The app name
+# @param packages Additional packages
+# @return 0 on success
 _installer_package() {
     # Input validation
     if [[ $# -lt 1 ]]; then
@@ -174,10 +168,7 @@ _installer_package() {
         packages=$app_name
     fi
 
-    # Validate package manager (basic check)
-    if [[ ! $package_manager =~ ^(default|macos|macos-brew|macos-cask|debian|fedora|arch|flatpak|snap|github)$ ]]; then
-        echo "Warning: Unknown package manager '$package_manager' specified for app '$app'" >&2
-    fi
+
 
     # Parse packages for @version:metadata (for future use)
     # For now, just store as is
@@ -189,8 +180,9 @@ _installer_package() {
 }
 
 # Get the package manager command for an OS
-# @param os The operating system identifier
-# @return string Package manager command
+# Get package manager command for OS.
+# @param os The OS identifier
+# @return string cmd
 _installer_get_pkg_mgr_for_os() {
     local os=$1
     case $os in
@@ -202,10 +194,10 @@ _installer_get_pkg_mgr_for_os() {
     esac
 }
 
-# Install packages using a specific package manager
-# @param pkg_mgr The package manager (apt, dnf, pacman, brew, brew-cask)
-# @param packages Array of packages to install
-# @return 0 on success, 1 on error
+# Install packages using a manager.
+# @param pkg_mgr The package manager
+# @param packages Array of packages
+# @return 0 on success
 _installer_install_packages() {
     local pkg_mgr=$1
     shift
@@ -263,12 +255,10 @@ _installer_install_packages() {
     esac
 }
 
-# Function to register prerequisite dependencies for OS package managers
-# Registers package dependencies that must be installed before other packages
-# Only supports OS-specific package managers with no fallbacks
-# @param group The OS package manager group (e.g., debian, fedora, arch, macos)
-# @param packages The packages to install as prerequisites
-# @return 0 on success, 1 on error
+# Register prerequisite dependencies.
+# @param package_manager The package manager
+# @param packages The packages
+# @return 0 on success
 _installer_dependencies() {
     # Input validation
     if [[ $# -lt 1 ]]; then
@@ -281,11 +271,7 @@ _installer_dependencies() {
 
     local packages="$*"
 
-    # Validate package manager (only OS-specific, no fallbacks)
-    if [[ ! $package_manager =~ ^(macos|macos-brew|macos-cask|debian|fedora|arch)$ ]]; then
-        echo "Warning: _installer_dependencies only supports OS package managers '$package_manager' specified" >&2
-        return 1
-    fi
+
 
     # Parse packages for @version:metadata (for future use)
     # For now, just store as is
@@ -301,12 +287,8 @@ _installer_dependencies() {
     [[ $_installer_verbose -eq 1 ]] && echo "Registered dependencies '$packages' for $package_manager"
 }
 
-# Install packages using priority-based package manager selection
-# For each app, checks availability in order: flatpak, snap, GitHub, then OS-specific/default packages.
-# Installs in order: prerequisite dependencies, OS packages, flatpak, snap, GitHub releases
-# Triggers 'installer_post_install' event after completion for additional setup.
-# Uses _installer_get_packages_for_pkg_mgr to retrieve packages for each manager.
-# @return 0 on success, 1 on error
+# Install all collected packages with priority.
+# @return 0 on success
 _installer_install() {
     local os=$(_installer_detect_os)
     echo "Detected OS: $os"
@@ -400,9 +382,9 @@ _installer_install() {
     fi
 }
 
-# Install GitHub releases for the given app:repo@version items
-# @param items Array of "app:repo@version" strings
-# @return 0 on success, 1 on error
+# Install GitHub releases.
+# @param items Array of app:repo@version strings
+# @return 0 on success
 _installer_install_github() {
     for item in "$@"; do
         local app=${item%%:*}
@@ -413,13 +395,11 @@ _installer_install_github() {
     done
 }
 
-# Download and install a GitHub release
-# Resolves version, detects OS/arch, finds compatible .tar.gz asset,
-# skips if already installed, then extracts and sets up the application
-# @param app The app name (used for directory)
-# @param repo The GitHub repo in owner/repo format
-# @param version The version tag or "latest"
-# @return 0 on success, 1 on error
+# Download and install a GitHub release.
+# @param app The app name
+# @param repo The repo in owner/repo format
+# @param version The version tag
+# @return 0 on success
 _installer_github_download() {
     local app=$1
     local repo=$2
@@ -494,14 +474,11 @@ _installer_github_download() {
     _installer_extract_asset "$app" "$asset_url" "$version"
 }
 
-# Download and extract a GitHub release asset
-# Downloads .tar.gz archive, extracts to $INSTALLER_OPT_DIR/app/,
-# handles top-level directory flattening, creates bin/ symlinks to executables,
-# and writes version file for tracking
-# @param app The app name (used for directory)
-# @param asset_url The URL of the asset to download
-# @param version The version tag
-# @return 0 on success, 1 on error
+# Extract GitHub asset and setup.
+# @param app The app name
+# @param asset_url The asset URL
+# @param version The version
+# @return 0 on success
 _installer_extract_asset() {
     local app=$1
     local asset_url=$2
@@ -514,8 +491,7 @@ _installer_extract_asset() {
 
     # Download and extract (with path traversal protection)
     if curl -L "$asset_url" | tar --strip-components=1 --no-overwrite-dir -xzf - -C "$dir"; then
-        # If extracted to a single subdirectory containing common Unix dirs, move contents up
-        # This flattens unnecessary top-level dirs common in releases for simpler structure
+# Flattens top-level dirs for simpler structure
         local subdirs=($(find "$dir" -mindepth 1 -maxdepth 1 -type d))
         if [[ ${#subdirs[@]} -eq 1 ]]; then
             local subdir=$subdirs[1]
@@ -530,7 +506,7 @@ _installer_extract_asset() {
         # Ensure bin/ directory exists and contains symlinks to executables
         if [[ ! -d "$dir/bin" ]]; then
             mkdir -p "$dir/bin"
-            # Find executable files (top-level only to avoid linking libraries or deep files) and create symlinks in bin/
+            # Create symlinks to top-level executables in bin/
             for exe in $(find "$dir" -maxdepth 1 -type f -executable); do
                 local basename=$(basename "$exe")
                 ln -sf "$exe" "$dir/bin/$basename"
