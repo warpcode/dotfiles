@@ -1963,6 +1963,228 @@ class User:
 ```
 **Fix:** Move business logic into domain objects, avoid anemic models.
 
+---
+
+## Software Development Best Practices
+
+This section outlines key software development practices from [DevIQ](https://deviq.com/practices/practices-overview), providing guidance for high-quality code and processes with code samples where applicable.
+
+### Development Practices
+- **The 50/72 Rule**: Keep commit subject lines under 50 characters and total commit messages under 72 characters for optimal readability in git logs.
+- **Authentication**: Implement secure user identity verification mechanisms to ensure only legitimate users access the system.
+- **Authorization**: Control and manage access permissions to resources based on user roles and privileges.
+- **Behavior Driven Development**: Write tests in natural language that describe expected behavior from a user perspective.
+
+  **Example (Gherkin syntax):**
+  ```gherkin
+  Feature: Online Checkout
+  Scenario: Checking out a single book
+    Given the library collection has the book I want to check out
+    When I check out the book
+    Then the library collection's available count is reduced by 1
+  ```
+
+- **Code Readability**: Write code that is self-documenting and easy for other developers to understand and maintain.
+- **Collective Code Ownership**: Encourage team members to take responsibility for all code in the project, not just their own.
+- **Common Architectural Vision**: Ensure the entire team shares a clear understanding of the system's overall architecture and design principles.
+- **Continuous Integration**: Automatically integrate and test code changes frequently to catch issues early.
+
+  **Example (GitHub Actions workflow):**
+  ```yaml
+  name: CI
+  on: [push, pull_request]
+  jobs:
+    build:
+      runs-on: ubuntu-latest
+      steps:
+      - uses: actions/checkout@v2
+      - name: Run tests
+        run: npm test
+  ```
+
+- **Dependency Injection**: Provide object dependencies from external sources rather than creating them internally, improving testability and flexibility.
+
+  **Example (Constructor Injection in C#):**
+  ```csharp
+  // Tight coupling (BAD)
+  public class OrderProcessor
+  {
+      private readonly SqlRepository _repository = new SqlRepository();
+  }
+
+  // Dependency Injection (GOOD)
+  public class OrderProcessor
+  {
+      private readonly IRepository _repository;
+
+      public OrderProcessor(IRepository repository)
+      {
+          _repository = repository;
+      }
+  }
+  ```
+
+- **Descriptive Error Messages**: Create clear, informative error messages that help developers understand and resolve issues quickly.
+- **Dogfooding**: Use your own product or service internally to gain firsthand experience with user challenges.
+- **Know Where You Are Going**: Establish clear goals and direction before starting development work.
+- **Naming Things**: Use consistent, descriptive naming conventions that clearly convey the purpose and intent of code elements.
+- **Observability**: Implement logging, monitoring, and tracing to understand system behavior in production.
+
+  **Example (Logging with Serilog):**
+  ```csharp
+  using Serilog;
+
+  Log.Information("Processing order {OrderId} for customer {CustomerId}",
+                  order.Id, customer.Id);
+  ```
+
+  **Tools:** Prometheus, Jaeger, Grafana, OpenTelemetry
+
+- **Pain Driven Development**: Identify and address the most painful problems first to maximize impact.
+- **Pair Programming**: Have two developers work together on the same code, combining knowledge and catching issues immediately.
+- **Parse, Don't Validate**: Transform input data into the correct types rather than just checking if it's valid.
+
+  **Example (C# DateTime parsing):**
+  ```csharp
+  // Validation (BAD - repeated checks)
+  public bool IsValidDate(string input)
+  {
+      return DateTime.TryParse(input, out _);
+  }
+
+  // Parsing (GOOD - single transformation)
+  public DateTime ParseDate(string input)
+  {
+      return DateTime.Parse(input); // Throws if invalid
+  }
+  ```
+
+- **Read the Manual**: Thoroughly understand tools, libraries, and frameworks before using them.
+- **Red, Green, Refactor**: Follow the TDD cycle of writing failing tests, making them pass, then improving the code.
+
+  **Example (TDD cycle):**
+  ```csharp
+  // RED: Write failing test
+  [Fact]
+  public void CalculateTotal_ReturnsCorrectSum()
+  {
+      var calculator = new Calculator();
+      var result = calculator.CalculateTotal(new[] { 1, 2, 3 });
+      Assert.Equal(6, result); // Fails initially
+  }
+
+  // GREEN: Make test pass
+  public class Calculator
+  {
+      public int CalculateTotal(int[] numbers)
+      {
+          return numbers.Sum(); // Simple implementation
+      }
+  }
+
+  // REFACTOR: Improve design while keeping tests green
+  public class Calculator
+  {
+      public int CalculateTotal(IEnumerable<int> numbers)
+      {
+          return numbers.Sum();
+      }
+  }
+  ```
+
+- **Refactoring**: Improve code structure and design without changing its external behavior.
+
+  **Example (Extract Method):**
+  ```csharp
+  // Before refactoring
+  public void ProcessOrder(Order order)
+  {
+      if (order.Total > 100)
+      {
+          order.Discount = order.Total * 0.1m;
+          order.FinalTotal = order.Total - order.Discount;
+      }
+      else
+      {
+          order.FinalTotal = order.Total;
+      }
+      SaveOrder(order);
+  }
+
+  // After refactoring
+  public void ProcessOrder(Order order)
+  {
+      ApplyDiscount(order);
+      SaveOrder(order);
+  }
+
+  private void ApplyDiscount(Order order)
+  {
+      if (order.Total > 100)
+      {
+          order.Discount = order.Total * 0.1m;
+          order.FinalTotal = order.Total - order.Discount;
+      }
+      else
+      {
+          order.FinalTotal = order.Total;
+      }
+  }
+  ```
+
+- **Shipping Is A Feature**: Prioritize delivering working software over perfect code.
+- **Simple Design**: Keep designs as simple as possible while meeting requirements.
+
+  **Kent Beck's Four Rules (in priority order):**
+  1. Tests pass
+  2. Express intent clearly
+  3. No duplication
+  4. Minimal classes/methods
+
+- **Single Point of Enforcement**: Implement business rules in one place to ensure consistency.
+- **Test Driven Development**: Write automated tests before implementing the code they test.
+
+  **Example (TDD workflow):**
+  ```csharp
+  // 1. Write test first
+  [Fact]
+  public void Add_ReturnsSumOfTwoNumbers()
+  {
+      var calculator = new Calculator();
+      var result = calculator.Add(2, 3);
+      Assert.Equal(5, result);
+  }
+
+  // 2. Make it compile (minimal implementation)
+  public class Calculator
+  {
+      public int Add(int a, int b)
+      {
+          return a + b;
+      }
+  }
+
+  // 3. Refactor as needed while keeping tests green
+  ```
+
+- **Timeboxing**: Set fixed time limits for tasks to maintain focus and prevent over-engineering.
+- **Update the Plan**: Regularly revise plans based on new information and changing circumstances.
+- **Vertical Slices**: Deliver complete, end-to-end features rather than horizontal layers.
+
+  **Example Structure:**
+  ```
+  Feature: User Registration
+  ├── UI: Registration form
+  ├── API: POST /api/users
+  ├── Business Logic: User validation & creation
+  ├── Data: User table & repository
+  └── Tests: End-to-end registration flow
+  ```
+
+- **Whole Team**: Include all necessary roles (developers, testers, designers, etc.) in the development process.
+- **Whole Team Activity**: Involve the entire team in activities like planning, estimation, and retrospectives.
+- **YOLO Architecture**: Take bold, experimental approaches to architecture when appropriate, accepting that some attempts may fail.
+
 ### CODE STRUCTURE ANTI-PATTERNS
 
 #### 1. God Object / God Class
