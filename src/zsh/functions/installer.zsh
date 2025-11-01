@@ -40,38 +40,6 @@ declare -A _install_dependency_mappings
 # Verbose mode (set to 1 to enable logging)
 typeset -i _installer_verbose=0
 
-# Installation directory for GitHub releases (can be overridden by INSTALLER_OPT_DIR env var)
-: ${INSTALLER_OPT_DIR:="$HOME/.local/opt"}
-
-# Detect OS and return a string identifier
-# Detect OS from $OSTYPE and /etc/os-release.
-# @return string OS identifier
-_installer_detect_os() {
-    case $OSTYPE in
-        darwin*) echo macos ;;
-        linux*)
-            [ -f /etc/os-release ] || { echo unknown; return; }
-             . /etc/os-release
-             case $ID in
-                 ubuntu|debian) echo debian ;;
-                  fedora|arch) echo "$ID" ;;
-                 *) echo unsupported ;;
-             esac
-            ;;
-        *) echo unknown ;;
-    esac
-}
-
-# Detect architecture using uname.
-# @return string arch identifier
-_installer_detect_arch() {
-    case $(uname -m) in
-        x86_64|amd64) echo x86_64 ;;
-        aarch64|arm64) echo aarch64 ;;
-        *) uname -m ;;
-    esac
-}
-
 # Get packages for a manager.
 # @param manager The package manager or OS
 # @param app_filter Optional app name filter
@@ -294,7 +262,7 @@ _installer_install() {
 
     echo "Detection Phase"
     echo ""
-    local os=$(_installer_detect_os)
+    local os=$(_os_detect_os_family)
     echo "🔍 Detected OS: $os"
 
     # Get packages for each package manager using the shared logic
@@ -404,132 +372,8 @@ _installer_install_github() {
         local pkg=${item#*:}
         local repo=${pkg%%@*}
         local version=${pkg#*@}
-        _installer_github_download "$app" "$repo" "$version" || return 1
+        _gh_install_release "$app" "$repo" "$version" || return 1
     done
 }
 
-# Download and install a GitHub release.
-# @param app The app name
-# @param repo The repo in owner/repo format
-# @param version The version tag
-# @return 0 on success
-_installer_github_download() {
-    local app=$1
-    local repo=$2
-    local version=$3
-
-    local os=$(_installer_detect_os)
-    local arch=$(_installer_detect_arch)
-
-    # Resolve latest version
-    if [[ $version == "latest" ]]; then
-        version=$(_gh_get_latest_release "$repo")
-        if [[ -z $version ]]; then
-            echo "❌ Failed to get latest release for $repo" >&2
-            return 1
-        fi
-    fi
-
-    # Input validation for security
-    if [[ ! $repo =~ ^[a-zA-Z0-9._/-]+$ ]]; then
-        echo "❌ Invalid repo name: $repo (only alphanumeric, dots, underscores, slashes, and hyphens allowed)" >&2
-        return 1
-    fi
-
-    local dir="$INSTALLER_OPT_DIR/$app"
-
-    # Check current version
-    if [[ -f "$dir/.version" ]]; then
-        local current=$(<"$dir/.version")
-        if [[ $current == "$version" ]]; then
-            echo "🔄 $app is already at version $version"
-            return 0
-        fi
-    fi
-
-    echo "📦 Installing $app version $version from $repo"
-    echo "⚠️ WARNING: No signature verification performed - manually verify $repo releases for security" >&2
-
-    # Build OS patterns
-    local os_patterns=()
-    if [[ $os =~ ^(debian|fedora|arch)$ ]]; then
-        os_patterns=("linux")
-    elif [[ $os == "macos" ]]; then
-        os_patterns=("darwin" "macos")
-    else
-        os_patterns=("$os")
-    fi
-
-    # Build arch patterns
-    local arch_patterns=()
-    case $arch in
-        x86_64) arch_patterns=("x86_64" "amd64" "x64") ;;
-        aarch64) arch_patterns=("arm64" "aarch64") ;;
-        *) arch_patterns=("$arch") ;;
-    esac
-
-    # Find compatible asset (only .tar.gz supported initially)
-    local os_regex="($(IFS='|'; echo "${os_patterns[*]}"))"
-    local arch_regex="($(IFS='|'; echo "${arch_patterns[*]}"))"
-    local asset_url=$(
-        _gh_get_asset_url "$repo" "$version" |
-        grep -E "$os_regex" |
-        grep -E "$arch_regex" |
-        grep '\.tar\.gz$' |
-        head -1
-    )
-
-    if [[ -z $asset_url ]]; then
-        echo "❌ No compatible .tar.gz asset found for $repo $version on $os $arch" >&2
-        return 1
-    fi
-
-    _installer_extract_asset "$app" "$asset_url" "$version"
-}
-
-# Extract GitHub asset and setup.
-# @param app The app name
-# @param asset_url The asset URL
-# @param version The version
-# @return 0 on success
-_installer_extract_asset() {
-    local app=$1
-    local asset_url=$2
-    local version=$3
-
-    local dir="$INSTALLER_OPT_DIR/$app"
-
-    # Create directory
-    mkdir -p "$dir"
-
-    # Download and extract (with path traversal protection)
-    if curl -L "$asset_url" | tar --strip-components=1 --no-overwrite-dir -xzf - -C "$dir"; then
-# Flattens top-level dirs for simpler structure
-        local subdirs=($(find "$dir" -mindepth 1 -maxdepth 1 -type d))
-        if [[ ${#subdirs[@]} -eq 1 ]]; then
-            local subdir=$subdirs[1]
-            if [[ -d "$subdir/bin" || -d "$subdir/sbin" || -d "$subdir/usr" || -d "$subdir/lib" ]]; then
-                setopt local_options dotglob
-                mv "$subdir"/* "$dir"/ 2>/dev/null || true
-                unsetopt dotglob
-                rmdir "$subdir" 2>/dev/null || true
-            fi
-        fi
-
-        # Ensure bin/ directory exists and contains symlinks to executables
-        if [[ ! -d "$dir/bin" ]]; then
-            mkdir -p "$dir/bin"
-            # Create symlinks to top-level executables in bin/
-            for exe in $(find "$dir" -maxdepth 1 -type f -executable); do
-                local basename=$(basename "$exe")
-                ln -sf "$exe" "$dir/bin/$basename"
-            done
-        fi
-        echo "$version" > "$dir/.version"
-        echo "✅ Successfully installed $app version $version"
-    else
-        echo "❌ Failed to download or extract $asset_url" >&2
-        return 1
-    fi
-}
 
