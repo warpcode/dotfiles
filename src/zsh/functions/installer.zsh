@@ -260,8 +260,6 @@ _installer_dependencies() {
 _installer_install() {
     echo "🚀 Starting Installation"
 
-    echo "Detection Phase"
-    echo ""
     local os=$(_os_detect_os_family)
     echo "🔍 Detected OS: $os"
 
@@ -282,7 +280,6 @@ _installer_install() {
     # Trigger post-dependencies hook
     _events_trigger "installer_pre_deps" "$os"
 
-    echo "Dependency Phase"
     echo ""
     # Install prerequisite dependencies first
     local deps_packages=($(_installer_get_packages_for_pkg_mgr "$os" __deps__))
@@ -301,7 +298,6 @@ _installer_install() {
     # Trigger pre-install hooks for OS-specific repo setup (after deps are installed)
     _events_trigger "installer_pre_install" "$os"
 
-    echo "Package Installation Phase"
     echo ""
     # Install packages for each package manager (OS first, then alternatives)
     if [[ $os == "macos" ]]; then
@@ -340,7 +336,6 @@ _installer_install() {
         fi
     fi
 
-    echo "GitHub Releases Phase"
     echo ""
     if [ ${#github_packages[@]} -gt 0 ]; then
         echo "📦 Installing GitHub releases: ${github_packages[*]}"
