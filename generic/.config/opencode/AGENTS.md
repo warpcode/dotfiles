@@ -11,7 +11,7 @@ Follow all instructions
 - Avoid trailing whitespace
 
 ### Zsh-Specific Guidelines
-- **Primary Shell**: Assume Zsh as the primary shell unless explicitly stated otherwise
+- **Primary Shell**: Assume Zsh as primary shell unless explicitly stated otherwise
 - **Variable Declaration**: Use Zsh-appropriate patterns (e.g., `local var=$(command)` is acceptable in Zsh)
 - **Array Handling**: Use Zsh array syntax (`array=($(command))` not bash-specific `mapfile`
 - **Error Checking**: Zsh error checking patterns are acceptable (`if [[ $? -ne 0 ]]`)
@@ -27,6 +27,32 @@ Follow all instructions
 - Use `local` for function-scoped variables
 - Handle errors gracefully; exit nonzero on failure
 - Check command availability before use
+
+### Early Return Pattern
+- Use early returns to reduce nesting and improve readability
+- Validate inputs at the beginning of functions and return early on errors
+- Avoid deep nesting by handling error conditions first
+- Example pattern:
+  ```zsh
+  function_name() {
+      local param1="$1"
+      local param2="$2"
+      
+      # Validate inputs early
+      if [[ -z "$param1" ]]; then
+          echo "❌ Missing required parameter" >&2
+          return 1
+      fi
+      
+      if [[ ! $param1 =~ ^[a-zA-Z0-9]+$ ]]; then
+          echo "❌ Invalid parameter format" >&2
+          return 1
+      fi
+      
+      # Main logic here (inputs are validated)
+      do_something "$param1" "$param2"
+  }
+  ```
 
 ### Security Requirements
 - **Input Validation**: Always validate user input, especially repository names
