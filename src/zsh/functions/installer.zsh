@@ -3,7 +3,7 @@
 # This module provides a system for registering and installing packages across different package managers
 # and direct GitHub releases. Apps register their package dependencies using _installer_package, and packages are
 # automatically collected. Use _installer_install to install all collected packages, or
-# _installer_get_packages_for_os to retrieve packages for a specific manager.
+# _installer_get_packages_for_pkg_mgr to retrieve packages for a specific manager.
 #
 # Package manager priority (checked in this order for each app):
 # 1. Flatpak (if available and mapping exists)
@@ -24,9 +24,9 @@
 #   _installer_package "snap" discord              # Discord via Snap
 #   _installer_package "github" fzf "junegunn/fzf@v0.66.1"  # GitHub release
 #   _installer_install                             # Install collected packages
-#   _installer_get_packages_for_os flatpak         # Get flatpak packages
+#   _installer_get_packages_for_pkg_mgr flatpak         # Get flatpak packages
 #
-# Supported package managers: macos (brew), debian (apt), fedora (dnf), arch (pacman), flatpak, snap, github
+# Supported package managers: macos (brew), macos-brew (brew), macos-cask (brew cask), debian (apt), fedora (dnf), arch (pacman), flatpak, snap, github
 # GitHub releases support .tar.gz archives with automatic OS/arch detection and executable symlinking
 # Moved and refactored from install-deps.sh
 
@@ -49,12 +49,12 @@ _installer_detect_os() {
         darwin*) echo macos ;;
         linux*)
             [ -f /etc/os-release ] || { echo unknown; return; }
-            . /etc/os-release
-            case $ID in
-                ubuntu|debian) echo debian ;;
-                fedora|arch) echo $ID ;;
-                *) echo unsupported ;;
-            esac
+             . /etc/os-release
+             case $ID in
+                 ubuntu|debian) echo debian ;;
+                 fedora|arch) echo $ID ;;
+                 *) echo unsupported ;;
+             esac
             ;;
         *) echo unknown ;;
     esac
@@ -73,50 +73,48 @@ _installer_detect_arch() {
 }
 
 # Get the list of packages for a specific package manager or OS
-# Dynamically builds and returns a space-separated string of packages
-# for the given manager, following the same priority logic as _installer_install.
+# Returns packages directly mapped to the manager, with default fallback for non-special managers.
+# Special managers (flatpak, snap, github, macos-brew, macos-cask) have no default fallback.
 # @param manager The package manager or OS (e.g., flatpak, snap, debian)
 # @return string Space-separated list of packages
-_installer_get_packages_for_os() {
+_installer_get_packages_for_pkg_mgr() {
     local manager=$1
-    local os=$(_installer_detect_os)
 
-    # Determine available managers
-    local available_flatpak=0
-    (( $+commands[flatpak] )) && available_flatpak=1
-    local available_snap=0
-    (( $+commands[snap] )) && available_snap=1
-
-    # Get unique app names
+    # Collect unique app names from all mappings
     local -A apps
     for key in ${(k)_installer_app_mappings}; do
         local app=${key%%:*}
         apps[$app]=1
     done
 
-    # Collect packages for the manager
+    # Get packages with conditional default fallback
     local packages=()
     for app in ${(k)apps}; do
-        local assigned_manager=""
         local pkg=""
-        if (( available_flatpak )) && [[ -n ${_installer_app_mappings[${app}:flatpak]} ]]; then
-            assigned_manager="flatpak"
-            pkg=${_installer_app_mappings[${app}:flatpak]}
-        elif (( available_snap )) && [[ -n ${_installer_app_mappings[${app}:snap]} ]]; then
-            assigned_manager="snap"
-            pkg=${_installer_app_mappings[${app}:snap]}
-        elif [[ -n ${_installer_app_mappings[${app}:github]} ]]; then
-            assigned_manager="github"
-            pkg=${_installer_app_mappings[${app}:github]}
-        else
-            assigned_manager=$os
-            if [[ -n ${_installer_app_mappings[${app}:${os}]} ]]; then
-                pkg=${_installer_app_mappings[${app}:${os}]}
-            elif [[ -n ${_installer_app_mappings[${app}:default]} ]]; then
-                pkg=${_installer_app_mappings[${app}:default]}
-            fi
-        fi
-        if [[ $assigned_manager == $manager ]]; then
+        local has_snap_pkg=$(( $+commands[snap] && ${#_installer_app_mappings[${app}:snap]} > 0 ? 1 : 0 ))
+        local has_flatpak_pkg=$(( $+commands[flatpak] && ${#_installer_app_mappings[${app}:flatpak]} > 0 ? 1 : 0 ))
+        case $manager in
+            flatpak|github|macos-brew|macos-cask)
+                if [[ -n ${_installer_app_mappings[${app}:${manager}]} ]]; then
+                    pkg=${_installer_app_mappings[${app}:${manager}]}
+                fi
+                ;;
+            snap)
+                if [[ $has_snap_pkg -eq 1 ]] && [[ $has_flatpak_pkg -eq 0 ]]; then
+                    pkg=${_installer_app_mappings[${app}:snap]}
+                fi
+                ;;
+            *)
+                if [[ $has_snap_pkg -eq 0 ]] && [[ $has_flatpak_pkg -eq 0 ]]; then
+                    if [[ -n ${_installer_app_mappings[${app}:${manager}]} ]]; then
+                        pkg=${_installer_app_mappings[${app}:${manager}]}
+                    elif [[ -n ${_installer_app_mappings[${app}:default]} ]]; then
+                        pkg=${_installer_app_mappings[${app}:default]}
+                    fi
+                fi
+                ;;
+        esac
+        if [[ -n $pkg ]]; then
             if [[ $manager == "github" ]]; then
                 packages+=("$app:$pkg")
             else
@@ -151,7 +149,7 @@ _installer_package() {
     local pkg=${3:-$app}
 
     # Validate package manager (basic check)
-    if [[ ! $os =~ ^(default|macos|debian|fedora|arch|flatpak|snap|github)$ ]]; then
+    if [[ ! $os =~ ^(default|macos|macos-brew|macos-cask|debian|fedora|arch|flatpak|snap|github)$ ]]; then
         echo "Warning: Unknown package manager '$os' specified for app '$app'" >&2
     fi
 
@@ -165,17 +163,28 @@ _installer_package() {
 # For each app, checks availability in order: flatpak, snap, GitHub, then OS-specific/default packages.
 # Installs in order: OS packages, flatpak, snap, GitHub releases
 # Triggers 'installer_post_install' event after completion for additional setup.
-# Uses _installer_get_packages_for_os to retrieve packages for each manager.
+# Uses _installer_get_packages_for_pkg_mgr to retrieve packages for each manager.
 # @return 0 on success, 1 on error
 _installer_install() {
     local os=$(_installer_detect_os)
     echo "Detected OS: $os"
 
     # Get packages for each package manager using the shared logic
-    local flatpak_packages=($(_installer_get_packages_for_os flatpak))
-    local snap_packages=($(_installer_get_packages_for_os snap))
-    local github_packages=($(_installer_get_packages_for_os github))
-    local os_packages=($(_installer_get_packages_for_os $os))
+    local flatpak_packages=($(_installer_get_packages_for_pkg_mgr flatpak))
+    local snap_packages=($(_installer_get_packages_for_pkg_mgr snap))
+    local github_packages=($(_installer_get_packages_for_pkg_mgr github))
+    local os_packages=()
+    local brew_packages=()
+    local cask_packages=()
+    if [[ $os == "macos" ]]; then
+        brew_packages=($(_installer_get_packages_for_pkg_mgr macos-brew))
+        cask_packages=($(_installer_get_packages_for_pkg_mgr macos-cask))
+    else
+        os_packages=($(_installer_get_packages_for_pkg_mgr $os))
+    fi
+
+    # Trigger pre-install hooks for OS-specific repo setup
+    _events_trigger "installer_pre_install_$os" "$os"
 
     # Install packages for each package manager (OS first, then alternatives)
     if [ ${#os_packages[@]} -gt 0 ]; then
@@ -187,7 +196,17 @@ _installer_install() {
                     return 1
                 fi
 
-                brew install "${os_packages[@]}"
+                if [ ${#brew_packages[@]} -gt 0 ]; then
+                    echo "Installing Homebrew packages: ${brew_packages[*]}"
+                    brew install "${brew_packages[@]}"
+                fi
+
+                if [ ${#cask_packages[@]} -gt 0 ]; then
+                    echo "Installing Homebrew cask packages: ${cask_packages[*]}"
+                    brew install --cask "${cask_packages[@]}"
+                fi
+
+
                 ;;
             debian)
                 sudo apt update && sudo apt install -y "${os_packages[@]}"
