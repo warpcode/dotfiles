@@ -1094,6 +1094,244 @@ def test_discount_applied_to_order_total():
 - [ ] Is there tight coupling that should be loosened?
 - [ ] Are interfaces/abstractions used appropriately?
 
+##### Abstract Factory
+**Description:** The Abstract Factory pattern provides an interface for creating families of related or dependent objects without specifying their concrete classes. This pattern is particularly useful when a system needs to be independent of how its products are created, composed, and represented.
+
+**Pros:**
+- Isolates concrete classes, making the client code independent of the implementation.
+- Promotes consistency among products by ensuring that the created objects are from the same family.
+- Facilitates the interchangeability of product families, allowing for easy extension with new product variations.
+
+**Cons:**
+- Adding new kinds of products is difficult as it requires extending the factory interface, which affects all subclass factories.
+- Can lead to a proliferation of classes, making the system more complex.
+
+**General Usage:**
+- When a system should be configured with one of multiple families of products.
+- When you want to provide a class library of products, and you want to reveal just their interfaces, not their implementations.
+- In GUI libraries for creating families of related UI elements (e.g., buttons, text fields) for different look-and-feel themes.
+
+##### Adapter
+**Description:** The Adapter pattern allows the interface of an existing class to be used as another interface. It is often used to make existing classes work with others without modifying their source code.
+
+**Pros:**
+- Allows two or more previously incompatible objects to interact.
+- Increases the reusability of older code.
+- Helps in integrating new features with existing systems smoothly.
+
+**Cons:**- Can add unnecessary complexity by introducing new classes and objects.
+- May result in a less transparent and harder-to-debug system.
+
+**General Usage:**
+- When you want to use an existing class, and its interface does not match the one you need.
+- When you want to create a reusable class that cooperates with unrelated or unforeseen classes.
+- In systems that use third-party libraries or frameworks with incompatible interfaces.
+
+##### Builder
+**Description:** The Builder pattern separates the construction of a complex object from its representation so that the same construction process can create different representations. This is useful for creating objects that have a large number of optional parameters or require a multi-step creation process.
+
+**Pros:**
+- Allows you to vary the internal representation of a product.
+- Encapsulates code for construction and representation.
+- Provides better control over the construction process.
+
+**Cons:**
+- Requires creating a separate ConcreteBuilder for each different type of product.
+- Can be more verbose than other creational patterns.
+
+**General Usage:**
+- When the algorithm for creating a complex object should be independent of the parts that make up the object and how they're assembled.
+- When the construction process must allow different representations for the object that's constructed.
+- To construct complex objects that have many optional components or configurations.
+
+##### Chain of Responsibility
+**Description:** The Chain of Responsibility pattern creates a chain of receiver objects for a request. This pattern decouples sender and receiver of a request based on the type of request. Each receiver in the chain has a reference to the next receiver, and it decides whether to process the request or pass it to the next receiver in the chain.
+
+**Pros:**
+- Reduces coupling between the sender and receivers.
+- Provides flexibility in assigning responsibilities to objects.
+- Allows for dynamic modification of the chain at runtime.
+
+**Cons:**
+- Receipt of the request is not guaranteed as it can fall off the end of the chain if no object handles it.
+- Can be difficult to observe and debug the runtime characteristics.
+
+**General Usage:**
+- When you want to issue a request to one of several objects without specifying the receiver explicitly.
+- When the set of objects that can handle a request should be specified dynamically.
+- In UI event handling, where an event can be handled by different UI elements in a hierarchical structure.
+
+##### Decorator
+**Description:** The Decorator pattern attaches additional responsibilities to an object dynamically. Decorators provide a flexible alternative to subclassing for extending functionality.
+
+**Pros:**
+- Provides a flexible way to add functionality to objects without using inheritance.
+- Allows for runtime modification of an object's behavior.
+- Simplifies code by allowing you to divide functionality into smaller, manageable pieces.
+
+**Cons:**
+- Can result in a large number of small objects, which can be hard to manage.
+- Decorators and the decorated component are not identical, which can cause issues with identity checks.
+
+**General Usage:**
+- To add responsibilities to individual objects dynamically and transparently, without affecting other objects.
+- For responsibilities that can be withdrawn.
+- When extension by subclassing is impractical.
+
+##### Facade
+**Description:** The Facade pattern provides a unified interface to a set of interfaces in a subsystem. Facade defines a higher-level interface that makes the subsystem easier to use.
+
+**Pros:**
+- Decouples the client from the subsystem, making it easier to use, understand, and test.
+- Promotes a layered architecture, reducing dependencies between subsystems.
+- Can improve readability and usability of the code.
+
+**Cons:**
+- The facade can become a god object, coupled to all classes in the app.
+- It may hide important features of the underlying subsystem that are needed by advanced clients.
+
+**General Usage:**
+- When you want to provide a simple interface to a complex subsystem.
+- When you want to structure a system into layers with well-defined entry points.
+- To wrap a poorly designed collection of APIs with a single, well-designed API.
+
+##### Factory Method
+**Description:** The Factory Method pattern defines an interface for creating an object, but lets subclasses alter the type of objects that will be created.
+
+**Pros:**
+- Allows subclasses to provide an extended version of an object.
+- Promotes loose coupling by eliminating the need to bind application-specific classes into the code.
+- Provides hooks for subclasses, making it more customizable.
+
+**Cons:**
+- Can result in a parallel class hierarchy, as a creator class is needed for each concrete product.
+- Clients might have to subclass the creator class just to create a particular concrete product object.
+
+**General Usage:**
+- When a class cannot anticipate the class of objects it must create.
+- When a class wants its subclasses to specify the objects it creates.
+- When you want to provide users of your library or framework with a way to extend its internal components.
+
+##### Mediator
+**Description:** The Mediator pattern defines an object that encapsulates how a set of objects interact. This pattern promotes loose coupling by keeping objects from referring to each other explicitly, and it lets you vary their interaction independently.
+
+**Pros:**
+- Centralizes complex communications and control logic.
+- Reduces coupling among components, making them more reusable and easier to maintain.
+- Simplifies object protocols.
+
+**Cons:**
+- The mediator can become a god object, which is complex and difficult to maintain.
+- Can introduce a single point of failure.
+
+**General Usage:**
+- When a set of objects communicates in well-defined but complex ways.
+- To reuse an object that is difficult to reuse because it is tightly coupled to other objects.
+- To customize a behavior that's distributed between several classes without a lot of subclassing.
+
+##### Memento
+**Description:** The Memento pattern provides the ability to restore an object to its previous state (undo via rollback). This is implemented with three objects: the originator, a caretaker, and a memento. The originator is the object with an internal state, the caretaker is going to do something to the originator, but wants to be able to undo the change, and the memento is the object that will store the state of the originator.
+
+**Pros:**
+- Preserves encapsulation boundaries.
+- It simplifies the originator.
+- It provides an easy way to implement undo/redo functionality.
+
+**Cons:**
+- Mementos might be expensive if the originator's state is large.
+- Can be difficult to manage the lifecycle of mementos.
+
+**General Usage:**
+- When you need to provide an undo/redo mechanism.
+- When you need to save snapshots of an object's state to be restored later.
+- To protect the integrity of an object's state by allowing only the originator to access it.
+
+##### Observer
+**Description:** The Observer pattern defines a one-to-many dependency between objects so that when one object changes state, all its dependents are notified and updated automatically.
+
+**Pros:**
+- Supports the principle of loose coupling between objects that interact.
+- Allows sending data to other objects without having to know who those objects are.
+- Can be used to implement event handling systems.
+
+**Cons:**
+- The order of notification of the observers is not guaranteed.
+- Can lead to memory leaks (the "lapsed listener" problem) if observers are not properly deregistered.
+
+**General Usage:**
+- When a change to one object requires changing others, and you don't know how many objects need to be changed.
+- In event-driven systems.
+- When you want to decouple the objects that change state from the objects that observe the changes.
+
+##### Proxy
+**Description:** The Proxy pattern provides a surrogate or placeholder for another object to control access to it. This can be used for various purposes such as lazy initialization (virtual proxy), access control (protection proxy), logging (logging proxy), or caching (caching proxy).
+
+**Pros:**
+- Can provide a level of indirection when accessing an object.
+- Can be used to add functionality to an object without changing its code.
+- Can be used to implement security and access control.
+
+**Cons:**
+- Can introduce a new layer of complexity and a potential performance hit.
+- The response from the proxy might be delayed.
+
+**General Usage:**
+- When you need a more versatile or sophisticated reference to an object than a simple pointer.
+- To provide a local representative for an object in a different address space (remote proxy).
+- To create expensive objects on demand (virtual proxy).
+
+##### Singleton
+**Description:** The Singleton pattern ensures a class only has one instance, and provides a global point of access to it.
+
+**Pros:**
+- Ensures that there is only one instance of a class.
+- Provides a global point of access to the instance.
+- The singleton instance is created only when it is requested for the first time.
+
+**Cons:**
+- Violates the Single Responsibility Principle.
+- Can be difficult to test.
+- Can mask bad design, for instance, when the components of the program know too much about each other.
+
+**General Usage:**
+- When exactly one instance of a class is needed to coordinate actions across the system.
+- For managing a shared resource, such as a database connection or a file.
+- In logging, caching, and configuration settings.
+
+##### State
+**Description:** The State pattern allows an object to alter its behavior when its internal state changes. The object will appear to change its class.
+
+**Pros:**
+- Localizes state-specific behavior and partitions behavior for different states.
+- Makes state transitions explicit.
+- Organizes the code around states, which can make the code more understandable.
+
+**Cons:**
+- Can result in a large number of classes if an object has many states.
+- The logic for state transitions can become complex.
+
+**General Usage:**
+- When an object's behavior depends on its state and it must change its behavior at runtime depending on that state.
+- When operations have large, multipart conditional statements that depend on the object's state.
+- To model the states of an object in a state machine.
+
+##### Strategy
+**Description:** The Strategy pattern defines a family of algorithms, encapsulates each one, and makes them interchangeable. Strategy lets the algorithm vary independently from clients that use it.
+
+**Pros:**
+- Provides an alternative to subclassing.
+- It defines each behavior within its own class, eliminating the need for conditional statements.
+- It's easy to switch from one algorithm to another at runtime.
+
+**Cons:**
+- Can increase the number of objects in an application.
+- Clients must be aware of the different strategies to be able to select the right one.
+
+**General Usage:**
+- When you want to use different variants of an algorithm within an object and be able to switch from one algorithm to another during runtime.
+- To isolate the business logic of a class from the implementation details of algorithms.
+- When you have a lot of similar classes that only differ in the way they execute some behavior.
+
 #### System Design
 - [ ] Does this fit well with existing architecture?
 - [ ] Are there scalability concerns?
