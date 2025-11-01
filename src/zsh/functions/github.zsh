@@ -10,6 +10,13 @@ _gh_get_latest_release() {
         echo "Usage: _gh_get_latest_release <owner/repo>" >&2
         return 1
     fi
+
+    # Input validation for security
+    if [[ ! $repo =~ ^[a-zA-Z0-9._/-]+$ ]]; then
+        echo "❌ Invalid repo name: $repo (only alphanumeric, dots, underscores, slashes, and hyphens allowed)" >&2
+        return 1
+    fi
+
     # Try latest release first
     local tag
     if ! tag=$(curl --fail --silent "https://api.github.com/repos/$repo/releases/latest" 2>/dev/null |
@@ -43,6 +50,12 @@ _gh_get_asset_url() {
 
     if [[ -z "$repo" || -z "$version" ]]; then
         echo "Usage: _gh_get_asset_url <owner/repo> <version|latest> [pattern1] [pattern2]..." >&2
+        return 1
+    fi
+
+    # Input validation for security
+    if [[ ! $repo =~ ^[a-zA-Z0-9._/-]+$ ]]; then
+        echo "❌ Invalid repo name: $repo (only alphanumeric, dots, underscores, slashes, and hyphens allowed)" >&2
         return 1
     fi
 
@@ -82,24 +95,12 @@ _gh_get_asset_url() {
 # Download and install a GitHub release.
 # @param app The app name
 # @param repo The repo in owner/repo format
-# @param version The version tag
+# @param version The version tag or "latest"
 # @return 0 on success
 _gh_install_release() {
     local app=$1
     local repo=$2
     local version=$3
-
-    local os=$(_os_detect_os_family)
-    local arch=$(_os_detect_arch)
-
-    # Resolve latest version
-    if [[ $version == "latest" ]]; then
-        version=$(_gh_get_latest_release "$repo")
-        if [[ -z $version ]]; then
-            echo "❌ Failed to get latest release for $repo" >&2
-            return 1
-        fi
-    fi
 
     # Input validation for security
     if [[ ! $repo =~ ^[a-zA-Z0-9._/-]+$ ]]; then
@@ -110,16 +111,35 @@ _gh_install_release() {
     local dir="$GITHUB_RELEASES_INSTALL_DIR/$app"
 
     # Check current version
+    local current_version=""
     if [[ -f "$dir/.version" ]]; then
-        local current=$(<"$dir/.version")
-        if [[ $current == "$version" ]]; then
-            echo "🔄 $app is already at version $version"
-            return 0
-        fi
+        current_version=$(<"$dir/.version")
     fi
 
-    echo "📦 Installing $app version $version from $repo"
+    # Get target version using comparison function
+    local target_version=$(_gh_compare_versions "$repo" "$version" "$current_version")
+    if [[ $? -ne 0 ]]; then
+        echo "❌ Failed to resolve version for $repo" >&2
+        return 1
+    fi
+
+    # If versions match, skip
+    if [[ "$target_version" == "$current_version" ]]; then
+        echo "🔄 $app is already installed ($current_version)"
+        return 0
+    fi
+
+    # Install/update
+    if [[ -n "$current_version" ]]; then
+        echo "📦 $app version mismatch (installed: $current_version, target: $target_version). Installing..."
+    else
+        echo "📦 Installing $app version $target_version from $repo"
+    fi
     echo "⚠️ WARNING: No signature verification performed - manually verify $repo releases for security" >&2
+
+    # Get OS and arch information
+    local os=$(_os_detect_os_family)
+    local arch=$(_os_detect_arch)
 
     # Build OS patterns
     local os_patterns=()
@@ -134,18 +154,18 @@ _gh_install_release() {
     # Find compatible asset (only .tar.gz supported initially)
     local os_regex="($(IFS='|'; echo "${os_patterns[*]}"))"
     local asset_url=$(
-        _os_filter_by_arch "$(_gh_get_asset_url "$repo" "$version")" |
+        _os_filter_by_arch "$(_gh_get_asset_url "$repo" "$target_version")" |
         grep -E "$os_regex" |
         grep '\.tar\.gz$' |
         head -1
     )
 
     if [[ -z $asset_url ]]; then
-        echo "❌ No compatible .tar.gz asset found for $repo $version on $os $arch" >&2
+        echo "❌ No compatible .tar.gz asset found for $repo $target_version on $os $arch" >&2
         return 1
     fi
 
-    _gh_extract_asset_to_install_dir "$app" "$asset_url" "$version"
+    _gh_extract_asset_to_install_dir "$app" "$asset_url" "$target_version"
 }
 
 # Extract GitHub asset and setup.
@@ -165,7 +185,7 @@ _gh_extract_asset_to_install_dir() {
 
     # Download and extract (with path traversal protection)
     if curl --fail -L "$asset_url" | tar --strip-components=1 --no-overwrite-dir -xzf - -C "$dir"; then
-# Flattens top-level dirs for simpler structure
+        # Flattens top-level dirs for simpler structure
         local subdirs=($(find "$dir" -mindepth 1 -maxdepth 1 -type d))
         if [[ ${#subdirs[@]} -eq 1 ]]; then
             local subdir=${subdirs[1]}
@@ -191,5 +211,46 @@ _gh_extract_asset_to_install_dir() {
     else
         echo "❌ Failed to download or extract $asset_url" >&2
         return 1
+    fi
+}
+
+# Compare versions and return the target version to use
+# @param repo The repository in owner/repo format
+# @param expected_version The expected version, or "latest", "main", "master"
+# @param current_version The currently installed version
+# @return The version to use (expected if different from current, else current)
+_gh_compare_versions() {
+    local repo="$1"
+    local expected_version="$2"
+    local current_version="$3"
+
+    if [[ -z "$repo" || -z "$expected_version" ]]; then
+        echo "Usage: _gh_compare_versions <owner/repo> <expected_version> [current_version]" >&2
+        return 1
+    fi
+
+    # Input validation for security
+    if [[ ! $repo =~ ^[a-zA-Z0-9._/-]+$ ]]; then
+        echo "❌ Invalid repo name: $repo (only alphanumeric, dots, underscores, slashes, and hyphens allowed)" >&2
+        return 1
+    fi
+
+    # Resolve expected version if it's a special keyword
+    if [[ "$expected_version" =~ ^(latest|main|master)$ ]]; then
+        expected_version=$(_gh_get_latest_release "$repo")
+        if [[ $? -ne 0 ]]; then
+            echo "❌ Failed to get latest release for $repo" >&2
+            return 1
+        fi
+    fi
+
+    # Compare versions (normalize by removing leading 'v')
+    local expected_normalized="${expected_version#v}"
+    local current_normalized="${current_version#v}"
+
+    if [[ "$expected_normalized" != "$current_normalized" ]]; then
+        echo "$expected_version"
+    else
+        echo "$current_version"
     fi
 }
