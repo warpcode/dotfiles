@@ -1,0 +1,1 @@
+_installer_package "default" tmux

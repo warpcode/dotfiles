@@ -24,8 +24,8 @@ fi
 local file
 local files_to_source=(
     ~/.zshrc.before.d/*.zsh(Nn-)
-    ${0:A:h}/{functions,config,apps,projects}/*.zsh(Nn-)
-    ~/.zshrc.{functions,config,apps,projects}/*.zsh(Nn-)
+    ${0:A:h}/{functions,installers,config,apps,projects}/*.zsh(Nn-)
+    ~/.zshrc.{functions,installers,config,apps,projects}/*.zsh(Nn-)
     ~/.zshrc.d/*.zsh(Nn-)
 )
 
