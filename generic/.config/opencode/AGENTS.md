@@ -1,5 +1,16 @@
 Follow all instructions
 
+## Critical Safety Rules
+
+### Git Operations
+- **NEVER commit without explicit user approval**
+- Always stage changes first, then ask for confirmation before committing
+- Use `git status` to show what will be committed
+- Provide clear commit message and wait for user approval
+- If user does not approve, stop and suggest fixes
+
+
+
 # Code Style and Development Guidelines
 
 ## Shell Scripting (Zsh/Bash)
