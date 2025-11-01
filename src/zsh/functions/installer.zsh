@@ -115,48 +115,54 @@ _installer_get_packages_for_pkg_mgr() {
                 ;;
         esac
         if [[ -n $pkg ]]; then
-            if [[ $manager == "github" ]]; then
-                packages+=("$app:$pkg")
-            else
-                packages+=("$pkg")
-            fi
+            packages+=(${(s: :)pkg})
         fi
     done
 
     # Join packages into space separated string
     local result=""
-    for pkg in $packages; do
+    for pkg in "${packages[@]}"; do
         result+=" $pkg"
     done
     echo "${result# }"
 }
 
-# Function to register a package mapping for an app
-# Registers a package dependency for a specific OS or as a default.
-# @param os The OS or package manager (e.g., debian, flatpak, default)
-# @param app The app name
-# @param package The package name (optional, defaults to app name)
+# Function to register package mappings for an app
+# Registers package dependencies for a specific app and package manager group.
+# Supports multiple packages per app/manager with package[@version][:metadata] format
+# @param group The package manager group (e.g., debian, flatpak, default)
+# @param packages The first package is the app name, followed by additional packages
 # @return 0 on success, 1 on error
 _installer_package() {
     # Input validation
-    if [[ $# -lt 2 ]]; then
-        echo "Usage: _installer_package <os> <app> [package]" >&2
+    if [[ $# -lt 1 ]]; then
+        echo "Usage: _installer_package <group> [package...]" >&2
         return 1
     fi
 
-    local os=$1
-    local app=$2
-    local pkg=${3:-$app}
+    local pkg_mgr=$1
+    local group=$2
+    shift 2
 
-    # Validate package manager (basic check)
-    if [[ ! $os =~ ^(default|macos|macos-brew|macos-cask|debian|fedora|arch|flatpak|snap|github)$ ]]; then
-        echo "Warning: Unknown package manager '$os' specified for app '$app'" >&2
+    local app=$group
+    local packages="$*"
+
+    if [[ $# -eq 0 ]]; then
+        packages=$group
     fi
 
-    # Set the mapping for this app:os
-    _installer_app_mappings[$app:$os]=$pkg
+    # Validate package manager (basic check)
+    if [[ ! $pkg_mgr =~ ^(default|macos|macos-brew|macos-cask|debian|fedora|arch|flatpak|snap|github)$ ]]; then
+        echo "Warning: Unknown package manager '$pkg_mgr' specified for app '$app'" >&2
+    fi
 
-    [[ $_installer_verbose -eq 1 ]] && echo "Registered package '$pkg' for $app on $os"
+    # Parse packages for @version:metadata (for future use)
+    # For now, just store as is
+
+    # Store space-separated packages
+    _installer_app_mappings[$app:$pkg_mgr]=$packages
+
+    [[ $_installer_verbose -eq 1 ]] && echo "Registered packages '$packages' for $app on $group"
 }
 
 # Install packages using priority-based package manager selection
