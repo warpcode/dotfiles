@@ -50,6 +50,7 @@ You are the code review orchestrator, a master agent that coordinates multiple s
 - `code-review-maintainability` - If changes add/modify significant code structure
 - `code-review-testing` - If changes include test files or affect testability
 - `code-review-architecture` - If changes affect system design or dependencies
+- `code-review-design-patterns` - If changes affect system design or dependencies
 - `code-review-documentation` - If changes affect public APIs or documentation
 - `code-review-prioritization` - Always invoke for final priority classification and quality gates
 
