@@ -23,10 +23,10 @@ _installer_add_docker_repo() {
             local gpg_url="https://download.docker.com/linux/$distro/gpg"
             # Check if Docker repo is already configured
             if [[ -f $repo_file ]] && [[ -f $keyring_file ]]; then
-                echo "Docker repository already configured for $distro"
+                echo "✅ Docker repository already configured for $distro"
                 return 0
             fi
-            echo "Installing Docker repository for $distro"
+            echo "📦 Installing Docker repository for $distro"
             # Add Docker's official GPG key
             curl -fsSL "$gpg_url" | sudo gpg --dearmor -o "$keyring_file"
             # Add Docker repository
@@ -38,10 +38,10 @@ _installer_add_docker_repo() {
             local repo_url="https://download.docker.com/linux/fedora/docker-ce.repo"
             # Check if Docker repo is already configured (check repo file existence)
             if [[ -f $repo_file ]]; then
-                echo "Docker repository already configured for Fedora"
+                echo "✅ Docker repository already configured for Fedora"
                 return 0
             fi
-            echo "Installing Docker repository for Fedora"
+            echo "📦 Installing Docker repository for Fedora"
             # Add Docker repository
             sudo dnf config-manager --add-repo "$repo_url"
             ;;
