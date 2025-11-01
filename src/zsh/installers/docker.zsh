@@ -105,5 +105,4 @@ _installer_post_docker_mcp() {
 
 # Register pre-install hooks for repo setup
 _events_add_hook "installer_post_deps" "_installer_add_docker_repo"
-_events_add_hook "installer_post_deps" "_installer_add_docker_repo"
 _events_add_hook "installer_post_install" "_installer_post_docker_mcp"
