@@ -356,6 +356,9 @@ _installer_install() {
 
     echo "✅ Installation Complete"
     echo "🎉 All packages have been successfully installed! Your dotfiles environment is ready to use."
+
+    # Reload configuration to ensure PATH and latest config are applied
+    reload
 }
 
 # Install GitHub releases.
