@@ -176,7 +176,7 @@ _installer_package() {
     # Store space-separated packages
     _installer_app_mappings[$app:$package_manager]=$packages
 
-    [[ $_installer_verbose -eq 1 ]] && echo "Registered packages '$packages' for $app on $package_manager"
+    [[ $_installer_verbose -eq 1 ]] && echo "🔍 Registered packages '$packages' for $app on $package_manager"
 }
 
 # Get the package manager command for an OS
@@ -211,7 +211,7 @@ _installer_install_packages() {
     case $pkg_mgr in
         apt|dnf|pacman)
             if ! (( $+commands[sudo] )); then
-                echo "sudo not available, required for $pkg_mgr" >&2
+                echo "❌ sudo not available, required for $pkg_mgr" >&2
                 return 1
             fi
             ;;
@@ -220,36 +220,36 @@ _installer_install_packages() {
     case $pkg_mgr in
         apt)
             if ! sudo apt update && sudo apt install -y "${packages[@]}"; then
-                echo "apt install failed" >&2
+                echo "❌ apt install failed" >&2
                 return 1
             fi
             ;;
         dnf)
             if ! sudo dnf install -y "${packages[@]}"; then
-                echo "dnf install failed" >&2
+                echo "❌ dnf install failed" >&2
                 return 1
             fi
             ;;
         pacman)
             if ! sudo pacman -Syu --noconfirm "${packages[@]}"; then
-                echo "pacman install failed" >&2
+                echo "❌ pacman install failed" >&2
                 return 1
             fi
             ;;
         brew)
             if ! brew install "${packages[@]}"; then
-                echo "brew install failed" >&2
+                echo "❌ brew install failed" >&2
                 return 1
             fi
             ;;
         brew-cask)
             if ! brew install --cask "${packages[@]}"; then
-                echo "brew cask install failed" >&2
+                echo "❌ brew cask install failed" >&2
                 return 1
             fi
             ;;
         *)
-            echo "Unsupported package manager: $pkg_mgr" >&2
+            echo "❌ Unsupported package manager: $pkg_mgr" >&2
             return 1
             ;;
     esac
@@ -284,14 +284,18 @@ _installer_dependencies() {
         _install_dependency_mappings[$package_manager]=$packages
     fi
 
-    [[ $_installer_verbose -eq 1 ]] && echo "Registered dependencies '$packages' for $package_manager"
+    [[ $_installer_verbose -eq 1 ]] && echo "🔍 Registered dependencies '$packages' for $package_manager"
 }
 
 # Install all collected packages with priority.
 # @return 0 on success
 _installer_install() {
+    echo "🚀 Starting Installation"
+
+    echo "Detection Phase"
+    echo ""
     local os=$(_installer_detect_os)
-    echo "Detected OS: $os"
+    echo "🔍 Detected OS: $os"
 
     # Get packages for each package manager using the shared logic
     local flatpak_packages=($(_installer_get_packages_for_pkg_mgr flatpak))
@@ -310,12 +314,14 @@ _installer_install() {
     # Trigger post-dependencies hook
     _events_trigger "installer_pre_deps" "$os"
 
+    echo "Dependency Phase"
+    echo ""
     # Install prerequisite dependencies first
     local deps_packages=($(_installer_get_packages_for_pkg_mgr "$os" __deps__))
     if [ ${#deps_packages[@]} -gt 0 ]; then
-        echo "Installing prerequisite dependencies: ${deps_packages[*]}"
+        echo "📦 Installing prerequisite dependencies: ${deps_packages[*]}"
         if [[ $os == "macos" ]] && ! (( $+commands[brew] )); then
-            echo "Homebrew not found. Please install Homebrew first." >&2
+            echo "❌ Homebrew not found. Please install Homebrew first." >&2
             return 1
         fi
         _installer_install_packages "$(_installer_get_pkg_mgr_for_os "$os")" "${deps_packages[@]}"
@@ -327,47 +333,51 @@ _installer_install() {
     # Trigger pre-install hooks for OS-specific repo setup (after deps are installed)
     _events_trigger "installer_pre_install" "$os"
 
+    echo "Package Installation Phase"
+    echo ""
     # Install packages for each package manager (OS first, then alternatives)
     if [[ $os == "macos" ]]; then
         if ! (( $+commands[brew] )); then
-            echo "Homebrew not found. Please install Homebrew first." >&2
+            echo "❌ Homebrew not found. Please install Homebrew first." >&2
             return 1
         fi
 
         if [ ${#brew_packages[@]} -gt 0 ]; then
-            echo "Installing Homebrew packages: ${brew_packages[*]}"
+            echo "📦 Installing Homebrew packages: ${brew_packages[*]}"
             _installer_install_packages brew "${brew_packages[@]}"
         fi
 
         if [ ${#cask_packages[@]} -gt 0 ]; then
-            echo "Installing Homebrew cask packages: ${cask_packages[*]}"
+            echo "📦 Installing Homebrew cask packages: ${cask_packages[*]}"
             _installer_install_packages brew-cask "${cask_packages[@]}"
         fi
     elif [ ${#os_packages[@]} -gt 0 ]; then
-        echo "Installing OS packages: ${os_packages[*]}"
+        echo "📦 Installing OS packages: ${os_packages[*]}"
         _installer_install_packages "$(_installer_get_pkg_mgr_for_os "$os")" "${os_packages[@]}"
     fi
 
     if [ ${#flatpak_packages[@]} -gt 0 ]; then
-        echo "Installing flatpak packages: ${flatpak_packages[*]}"
+        echo "📦 Installing flatpak packages: ${flatpak_packages[*]}"
         if ! flatpak install -y "${flatpak_packages[@]}"; then
-            echo "Flatpak install failed" >&2
+            echo "❌ Flatpak install failed" >&2
             return 1
         fi
     fi
 
     if [ ${#snap_packages[@]} -gt 0 ]; then
-        echo "Installing snap packages: ${snap_packages[*]}"
+        echo "📦 Installing snap packages: ${snap_packages[*]}"
         if ! snap install "${snap_packages[@]}"; then
-            echo "Snap install failed" >&2
+            echo "❌ Snap install failed" >&2
             return 1
         fi
     fi
 
+    echo "GitHub Releases Phase"
+    echo ""
     if [ ${#github_packages[@]} -gt 0 ]; then
-        echo "Installing GitHub releases: ${github_packages[*]}"
+        echo "📦 Installing GitHub releases: ${github_packages[*]}"
         if ! _installer_install_github "${github_packages[@]}"; then
-            echo "GitHub install failed" >&2
+            echo "❌ GitHub install failed" >&2
             return 1
         fi
     fi
@@ -377,9 +387,12 @@ _installer_install() {
 
     # Check if no packages were assigned
     if [ ${#flatpak_packages[@]} -eq 0 ] && [ ${#snap_packages[@]} -eq 0 ] && [ ${#github_packages[@]} -eq 0 ] && [ ${#os_packages[@]} -eq 0 ]; then
-        echo "No packages to install"
+        echo "ℹ️ No packages to install"
         return 0
     fi
+
+    echo "✅ Installation Complete"
+    echo "🎉 All packages have been successfully installed! Your dotfiles environment is ready to use."
 }
 
 # Install GitHub releases.
@@ -412,14 +425,14 @@ _installer_github_download() {
     if [[ $version == "latest" ]]; then
         version=$(_gh_get_latest_release "$repo")
         if [[ -z $version ]]; then
-            echo "Failed to get latest release for $repo" >&2
+            echo "❌ Failed to get latest release for $repo" >&2
             return 1
         fi
     fi
 
     # Input validation for security
     if [[ ! $repo =~ ^[a-zA-Z0-9._/-]+$ ]]; then
-        echo "Invalid repo name: $repo (only alphanumeric, dots, underscores, slashes, and hyphens allowed)" >&2
+        echo "❌ Invalid repo name: $repo (only alphanumeric, dots, underscores, slashes, and hyphens allowed)" >&2
         return 1
     fi
 
@@ -429,13 +442,13 @@ _installer_github_download() {
     if [[ -f "$dir/.version" ]]; then
         local current=$(<"$dir/.version")
         if [[ $current == "$version" ]]; then
-            echo "$app is already at version $version"
+            echo "🔄 $app is already at version $version"
             return 0
         fi
     fi
 
-    echo "Installing $app version $version from $repo"
-    echo "WARNING: No signature verification performed - manually verify $repo releases for security" >&2
+    echo "📦 Installing $app version $version from $repo"
+    echo "⚠️ WARNING: No signature verification performed - manually verify $repo releases for security" >&2
 
     # Build OS patterns
     local os_patterns=()
@@ -467,7 +480,7 @@ _installer_github_download() {
     )
 
     if [[ -z $asset_url ]]; then
-        echo "No compatible .tar.gz asset found for $repo $version on $os $arch" >&2
+        echo "❌ No compatible .tar.gz asset found for $repo $version on $os $arch" >&2
         return 1
     fi
 
@@ -513,9 +526,9 @@ _installer_extract_asset() {
             done
         fi
         echo "$version" > "$dir/.version"
-        echo "Successfully installed $app version $version"
+        echo "✅ Successfully installed $app version $version"
     else
-        echo "Failed to download or extract $asset_url" >&2
+        echo "❌ Failed to download or extract $asset_url" >&2
         return 1
     fi
 }
