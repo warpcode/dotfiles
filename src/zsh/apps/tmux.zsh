@@ -1,5 +1,3 @@
-_installer_package "default" tmux
-
 function _tmux_basic_git()  {
     # check if $1 is empty
     if [[ -z "$1" ]]; then

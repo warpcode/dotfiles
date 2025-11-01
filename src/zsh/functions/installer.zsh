@@ -34,6 +34,10 @@
 # Format: _installer_app_mappings[app:os]=package
 declare -A _installer_app_mappings
 
+# Global dependency mappings (set by apps at load time)
+# Format: _install_dependency_mappings[os]=packages
+declare -A _install_dependency_mappings
+
 # Verbose mode (set to 1 to enable logging)
 typeset -i _installer_verbose=0
 
@@ -76,16 +80,28 @@ _installer_detect_arch() {
 # Returns packages directly mapped to the manager, with default fallback for non-special managers.
 # Special managers (flatpak, snap, github, macos-brew, macos-cask) have no default fallback.
 # @param manager The package manager or OS (e.g., flatpak, snap, debian)
+# @param app_filter Optional single app name to filter by
 # @return string Space-separated list of packages
 _installer_get_packages_for_pkg_mgr() {
     local manager=$1
+    local app_filter=$2
+
+    # Special handling for dependencies
+    if [[ $app_filter == "__deps__" ]]; then
+        echo "${_install_dependency_mappings[$manager]%%[[:space:]]##}"
+        return
+    fi
 
     # Collect unique app names from all mappings
     local -A apps
-    for key in ${(k)_installer_app_mappings}; do
-        local app=${key%%:*}
-        apps[$app]=1
-    done
+    if [[ -n $app_filter ]]; then
+        apps[$app_filter]=1
+    else
+        for key in ${(k)_installer_app_mappings}; do
+            local app=${key%%:*}
+            apps[$app]=1
+        done
+    fi
 
     # Get packages with conditional default fallback
     local packages=()
@@ -94,9 +110,14 @@ _installer_get_packages_for_pkg_mgr() {
         local has_snap_pkg=$(( $+commands[snap] && ${#_installer_app_mappings[${app}:snap]} > 0 ? 1 : 0 ))
         local has_flatpak_pkg=$(( $+commands[flatpak] && ${#_installer_app_mappings[${app}:flatpak]} > 0 ? 1 : 0 ))
         case $manager in
-            flatpak|github|macos-brew|macos-cask)
+            flatpak|macos-brew|macos-cask)
                 if [[ -n ${_installer_app_mappings[${app}:${manager}]} ]]; then
                     pkg=${_installer_app_mappings[${app}:${manager}]}
+                fi
+                ;;
+            github)
+                if [[ -n ${_installer_app_mappings[${app}:${manager}]} ]]; then
+                    pkg="$app:${_installer_app_mappings[${app}:${manager}]}"
                 fi
                 ;;
             snap)
@@ -165,9 +186,97 @@ _installer_package() {
     [[ $_installer_verbose -eq 1 ]] && echo "Registered packages '$packages' for $app on $group"
 }
 
+# Get the package manager command for an OS
+# @param os The operating system identifier
+# @return string Package manager command
+_installer_get_pkg_mgr_for_os() {
+    local os=$1
+    case $os in
+        debian) echo apt ;;
+        fedora) echo dnf ;;
+        arch) echo pacman ;;
+        macos) echo brew ;;
+        *) echo unknown ;;
+    esac
+}
+
+# Install packages using a specific package manager
+# @param pkg_mgr The package manager (apt, dnf, pacman, brew, brew-cask)
+# @param packages Array of packages to install
+# @return 0 on success, 1 on error
+_installer_install_packages() {
+    local pkg_mgr=$1
+    shift
+    local packages=("$@")
+
+    if [ ${#packages[@]} -eq 0 ]; then
+        return 0
+    fi
+
+    case $pkg_mgr in
+        apt)
+            sudo apt update && sudo apt install -y "${packages[@]}"
+            ;;
+        dnf)
+            sudo dnf install -y "${packages[@]}"
+            ;;
+        pacman)
+            sudo pacman -Syu --noconfirm "${packages[@]}"
+            ;;
+        brew)
+            brew install "${packages[@]}"
+            ;;
+        brew-cask)
+            brew install --cask "${packages[@]}"
+            ;;
+        *)
+            echo "Unsupported package manager: $pkg_mgr" >&2
+            return 1
+            ;;
+    esac
+}
+
+# Function to register prerequisite dependencies for OS package managers
+# Registers package dependencies that must be installed before other packages
+# Only supports OS-specific package managers with no fallbacks
+# @param group The OS package manager group (e.g., debian, fedora, arch, macos)
+# @param packages The packages to install as prerequisites
+# @return 0 on success, 1 on error
+_installer_dependencies() {
+    # Input validation
+    if [[ $# -lt 1 ]]; then
+        echo "Usage: _installer_dependencies <group> [package...]" >&2
+        return 1
+    fi
+
+    local pkg_mgr=$1
+    shift
+
+    local packages="$*"
+
+    # Validate package manager (only OS-specific, no fallbacks)
+    if [[ ! $pkg_mgr =~ ^(macos|macos-brew|macos-cask|debian|fedora|arch)$ ]]; then
+        echo "Warning: _installer_dependencies only supports OS package managers '$pkg_mgr' specified" >&2
+        return 1
+    fi
+
+    # Parse packages for @version:metadata (for future use)
+    # For now, just store as is
+
+    # Store space-separated packages in the dependency mappings
+    # Append to existing packages if already set
+    if [[ -n ${_install_dependency_mappings[$pkg_mgr]} ]]; then
+        _install_dependency_mappings[$pkg_mgr]="${_install_dependency_mappings[$pkg_mgr]} $packages"
+    else
+        _install_dependency_mappings[$pkg_mgr]=$packages
+    fi
+
+    [[ $_installer_verbose -eq 1 ]] && echo "Registered dependencies '$packages' for $pkg_mgr"
+}
+
 # Install packages using priority-based package manager selection
 # For each app, checks availability in order: flatpak, snap, GitHub, then OS-specific/default packages.
-# Installs in order: OS packages, flatpak, snap, GitHub releases
+# Installs in order: prerequisite dependencies, OS packages, flatpak, snap, GitHub releases
 # Triggers 'installer_post_install' event after completion for additional setup.
 # Uses _installer_get_packages_for_pkg_mgr to retrieve packages for each manager.
 # @return 0 on success, 1 on error
@@ -189,45 +298,45 @@ _installer_install() {
         os_packages=($(_installer_get_packages_for_pkg_mgr $os))
     fi
 
-    # Trigger pre-install hooks for OS-specific repo setup
-    _events_trigger "installer_pre_install_$os" "$os"
+    # Trigger post-dependencies hook
+    _events_trigger "installer_pre_deps" "$os"
+
+    # Install prerequisite dependencies first
+    local deps_packages=($(_installer_get_packages_for_pkg_mgr $os __deps__))
+    if [ ${#deps_packages[@]} -gt 0 ]; then
+        echo "Installing prerequisite dependencies: ${deps_packages[*]}"
+        if [[ $os == "macos" ]] && ! (( $+commands[brew] )); then
+            echo "Homebrew not found. Please install Homebrew first." >&2
+            return 1
+        fi
+        _installer_install_packages "$(_installer_get_pkg_mgr_for_os $os)" "${deps_packages[@]}"
+    fi
+
+    # Trigger post-dependencies hook
+    _events_trigger "installer_post_deps" "$os"
+
+    # Trigger pre-install hooks for OS-specific repo setup (after deps are installed)
+    _events_trigger "installer_pre_install" "$os"
 
     # Install packages for each package manager (OS first, then alternatives)
-    if [ ${#os_packages[@]} -gt 0 ]; then
+    if [[ $os == "macos" ]]; then
+        if ! (( $+commands[brew] )); then
+            echo "Homebrew not found. Please install Homebrew first." >&2
+            return 1
+        fi
+
+        if [ ${#brew_packages[@]} -gt 0 ]; then
+            echo "Installing Homebrew packages: ${brew_packages[*]}"
+            _installer_install_packages brew "${brew_packages[@]}"
+        fi
+
+        if [ ${#cask_packages[@]} -gt 0 ]; then
+            echo "Installing Homebrew cask packages: ${cask_packages[*]}"
+            _installer_install_packages brew-cask "${cask_packages[@]}"
+        fi
+    elif [ ${#os_packages[@]} -gt 0 ]; then
         echo "Installing OS packages: ${os_packages[*]}"
-        case $os in
-            macos)
-                if ! (( $+commands[brew] )); then
-                    echo "Homebrew not found. Please install Homebrew first." >&2
-                    return 1
-                fi
-
-                if [ ${#brew_packages[@]} -gt 0 ]; then
-                    echo "Installing Homebrew packages: ${brew_packages[*]}"
-                    brew install "${brew_packages[@]}"
-                fi
-
-                if [ ${#cask_packages[@]} -gt 0 ]; then
-                    echo "Installing Homebrew cask packages: ${cask_packages[*]}"
-                    brew install --cask "${cask_packages[@]}"
-                fi
-
-
-                ;;
-            debian)
-                sudo apt update && sudo apt install -y "${os_packages[@]}"
-                ;;
-            fedora)
-                sudo dnf install -y "${os_packages[@]}"
-                ;;
-            arch)
-                sudo pacman -Syu --noconfirm "${os_packages[@]}"
-                ;;
-            *)
-                echo "Unsupported OS: $os" >&2
-                return 1
-                ;;
-        esac
+        _installer_install_packages "$(_installer_get_pkg_mgr_for_os $os)" "${os_packages[@]}"
     fi
 
     if [ ${#flatpak_packages[@]} -gt 0 ]; then

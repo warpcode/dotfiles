@@ -1,1 +1,1 @@
-_installer_package "github" neovim "neovim/neovim@v0.11.4"
+
