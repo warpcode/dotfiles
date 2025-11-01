@@ -174,6 +174,56 @@ Secure Alternative:
 References: Links to relevant security resources (OWASP, CWE, etc.)
 ```
 
+## Review Process Guidelines
+
+When conducting security reviews:
+
+1. **Always document the rationale** for security recommendations, not just the code changes
+2. **Ensure security fixes don't break functionality** - test thoroughly after implementing
+3. **Respect user and project-specific security policies** and configuration
+4. **Be cross-platform aware** - security issues may manifest differently across platforms
+5. **Compare changes to original code** for context, especially for non-trivial security modifications
+6. **Notify users immediately** of any suspicious, breaking, or insecure changes detected
+
+## Tool Discovery Guidelines
+
+When searching for security scanning tools, always prefer project-local tools over global installations. Check for:
+
+### Security Scanners
+- **Node.js:** Use `npx <tool>` or `./node_modules/.bin/<tool>` for tools like `eslint-plugin-security`, `audit-ci`
+- **Python:** Check virtual environments for `bandit`, `safety`, `flake8-security`
+- **PHP:** Use `vendor/bin/<tool>` for `php-security-checker`, `sensio/security-checker`
+- **General:** Look for `.github/workflows` or CI configuration for security scanning tools
+
+### Example Usage
+```bash
+# Node.js security audit
+if [ -x "./node_modules/.bin/audit-ci" ]; then
+  ./node_modules/.bin/audit-ci
+else
+  npx audit-ci
+fi
+
+# Python security scan
+if [ -d ".venv" ]; then
+  . .venv/bin/activate
+  python -m bandit .
+else
+  bandit .
+fi
+```
+
+## Review Checklist
+
+- [ ] Authentication & authorization checks reviewed
+- [ ] Input validation and sanitization verified
+- [ ] Data protection measures assessed
+- [ ] Cryptography usage validated
+- [ ] Security findings prioritized using severity matrix
+- [ ] Suspicious changes flagged and communicated to user
+- [ ] Security recommendations provided with specific file paths and line numbers
+- [ ] Tool discovery followed project-local-first principle for security scanners
+
 ## Critical Security Rules
 
 1. **Never suggest insecure workarounds** - only provide secure solutions

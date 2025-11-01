@@ -355,6 +355,26 @@ Secure Code:
 Tools: Use shellcheck for automated analysis.
 ```
 
+## Review Process Guidelines
+
+When conducting shell script reviews:
+
+1. **Always document the rationale** for shell script recommendations, explaining security or portability concerns
+2. **Ensure shell script improvements don't break functionality** - test thoroughly after implementing
+3. **Respect user and project-specific shell conventions** (Bash vs Zsh, POSIX compliance)
+4. **Be cross-platform aware** - shell scripts should work across different Unix-like systems
+5. **Compare changes to original code** for context, especially for security-critical modifications
+6. **Notify users immediately** of any command injection vulnerabilities or insecure patterns
+
+## Review Checklist
+
+- [ ] Shell script security audit completed (quoting, input validation)
+- [ ] Error handling evaluation performed
+- [ ] Portability assessment done (POSIX compliance, shell-specific features)
+- [ ] Code quality review completed (function organization, naming)
+- [ ] Shell script findings prioritized using severity matrix
+- [ ] Tool discovery followed project-local-first principle for shell tools
+
 ## Critical Shell Script Rules
 
 1. **Always quote variables** - Prevent word splitting and glob expansion

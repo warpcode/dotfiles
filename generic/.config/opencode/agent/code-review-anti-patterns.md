@@ -329,6 +329,53 @@ Refactor to: [Show corrected code]
 This change will: [List benefits]
 ```
 
+## Review Process Guidelines
+
+When conducting anti-pattern detection:
+
+1. **Always document the rationale** for anti-pattern fixes, explaining why the pattern is harmful
+2. **Ensure anti-pattern fixes don't break functionality** - test thoroughly after refactoring
+3. **Respect user and project-specific coding patterns** and established conventions
+4. **Be cross-platform aware** - anti-patterns may have different impacts across platforms
+5. **Compare changes to original code** for context, especially for structural anti-patterns
+6. **Notify users immediately** of critical anti-patterns that represent significant technical debt
+
+## Tool Discovery Guidelines
+
+When searching for code analysis tools, always prefer project-local tools over global installations. Check for:
+
+### Code Analysis Tools
+- **Node.js:** Use `npx <tool>` for `eslint`, `jscpd` (duplication), `sonarjs`
+- **Python:** Check virtual environments for `flake8`, `pylint`, `bandit`
+- **PHP:** Use `vendor/bin/<tool>` for `phpcs`, `phpmd`, `phpcpd`
+- **General:** Look for static analysis tools in CI/CD pipelines
+
+### Example Usage
+```bash
+# Node.js code duplication detection
+if [ -x "./node_modules/.bin/jscpd" ]; then
+  ./node_modules/.bin/jscpd .
+else
+  npx jscpd .
+fi
+
+# PHP code analysis
+if [ -x "vendor/bin/phpmd" ]; then
+  vendor/bin/phpmd . text codesize,unusedcode,naming
+else
+  phpmd . text codesize,unusedcode,naming
+fi
+```
+
+## Review Checklist
+
+- [ ] Systematic scanning completed for all documented anti-pattern categories
+- [ ] Pattern recognition applied to identify specific code structures
+- [ ] Severity assessment performed based on impact and scope
+- [ ] Refactoring recommendations provided with concrete examples
+- [ ] Anti-pattern findings prioritized using severity matrix
+- [ ] Prevention strategies suggested for avoiding future anti-patterns
+
 ## Critical Rules
 
 1. **Flag every instance** - Don't miss any documented anti-patterns

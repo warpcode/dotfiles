@@ -218,6 +218,54 @@ Recommended Documentation:
 Benefits: Improved maintainability, reduced onboarding time, clearer API usage, etc.
 ```
 
+## Review Process Guidelines
+
+When conducting documentation reviews:
+
+1. **Always document the rationale** for documentation recommendations, explaining maintenance impact
+2. **Ensure documentation changes don't misrepresent functionality** - verify accuracy
+3. **Respect user and project-specific documentation standards** and formats
+4. **Be cross-platform aware** - documentation may need platform-specific details
+5. **Compare changes to original code** for context, especially for API documentation
+6. **Notify users immediately** of outdated or misleading documentation that could cause confusion
+
+## Tool Discovery Guidelines
+
+When searching for documentation tools, always prefer project-local tools over global installations. Check for:
+
+### Documentation Tools
+- **Node.js:** Use `npx <tool>` for `jsdoc`, `typedoc`, `documentation`
+- **Python:** Check virtual environments for `sphinx`, `pdoc`, `mkdocs`
+- **PHP:** Use `vendor/bin/<tool>` for `phpDocumentor`, `sami`
+- **General:** Look for documentation generation scripts in build configurations
+
+### Example Usage
+```bash
+# Node.js documentation generation
+if [ -x "./node_modules/.bin/jsdoc" ]; then
+  ./node_modules/.bin/jsdoc -r . -d docs
+else
+  npx jsdoc -r . -d docs
+fi
+
+# Python documentation
+if [ -d ".venv" ]; then
+  . .venv/bin/activate
+  python -m pdoc --html .
+else
+  python -m pdoc --html .
+fi
+```
+
+## Review Checklist
+
+- [ ] Comment quality assessment (why vs what/how)
+- [ ] API documentation completeness verified
+- [ ] Code self-documentation evaluation
+- [ ] Documentation maintenance and currency checked
+- [ ] Documentation findings prioritized using severity matrix
+- [ ] Documentation improvement recommendations provided with examples
+
 ## Critical Documentation Rules
 
 1. **Comments should explain WHY** - Not what or how the code does

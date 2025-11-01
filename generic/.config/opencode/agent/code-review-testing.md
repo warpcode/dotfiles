@@ -214,6 +214,55 @@ Recommended Test:
 Coverage Impact: This test will cover X% of the code and prevent Y type of regressions.
 ```
 
+## Review Process Guidelines
+
+When conducting testing reviews:
+
+1. **Always document the rationale** for testing recommendations, explaining coverage and reliability impact
+2. **Ensure testing improvements don't break existing functionality** - test thoroughly after implementing
+3. **Respect user and project-specific testing frameworks** and conventions
+4. **Be cross-platform aware** - testing requirements may differ across platforms
+5. **Compare changes to original code** for context, especially for test coverage modifications
+6. **Notify users immediately** of significant test coverage gaps or unreliable test suites
+
+## Tool Discovery Guidelines
+
+When searching for testing tools, always prefer project-local tools over global installations. Check for:
+
+### Testing Frameworks & Tools
+- **Node.js:** Use `npx <tool>` for `jest`, `nyc` (coverage), `cypress`
+- **Python:** Check virtual environments for `pytest`, `coverage`, `tox`
+- **PHP:** Use `vendor/bin/<tool>` for `phpunit`, `php-coveralls`
+- **General:** Look for test scripts in `package.json`, `composer.json`, `Makefile`, or CI configuration
+
+### Example Usage
+```bash
+# Node.js test coverage
+if [ -x "./node_modules/.bin/nyc" ]; then
+  ./node_modules/.bin/nyc npm test
+else
+  npx nyc npm test
+fi
+
+# Python test coverage
+if [ -d ".venv" ]; then
+  . .venv/bin/activate
+  python -m pytest --cov=.
+else
+  python -m pytest --cov=.
+fi
+```
+
+## Review Checklist
+
+- [ ] Test coverage assessment completed for new functionality
+- [ ] Test quality evaluation performed (deterministic, focused, maintainable)
+- [ ] Anti-pattern detection in test code
+- [ ] Test strategy review (unit vs integration balance)
+- [ ] Testing findings prioritized using severity matrix
+- [ ] Test implementation recommendations provided with examples
+- [ ] Coverage metrics and improvement targets specified
+
 ## Critical Testing Rules
 
 1. **Every feature needs tests** - New functionality must be validated
