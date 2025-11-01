@@ -2,17 +2,11 @@
 #
 # Registers Docker package and pre-install hooks for adding official repositories
 
-# Register Docker package
-_installer_package "macos-cask" docker docker
-_installer_package "debian" docker docker-ce
-_installer_package "debian" docker-compose-plugin
-_installer_package "debian" docker-model-plugin
-_installer_package "fedora" docker docker-ce
-_installer_package "fedora" docker-compose-plugin
-_installer_package "fedora" docker-model-plugin
-_installer_package "arch" docker
-_installer_package "arch" docker-compose-plugin
-_installer_package "arch" docker-model-plugin
+# Register Docker packages
+_installer_package "macos-cask" docker
+_installer_package "debian" docker docker-ce docker-compose-plugin docker-model-plugin
+_installer_package "fedora" docker docker-ce docker-compose-plugin docker-model-plugin
+_installer_package "arch" docker docker docker-compose-plugin docker-model-plugin
 
 # Function to add Docker's official repository (idempotent, follows official guides)
 _installer_add_docker_repo() {
