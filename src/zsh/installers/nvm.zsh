@@ -22,7 +22,7 @@ _installer_post_nvm() {
 
     # If versions match, skip
     if [[ "$target_version" == "$current_version" ]]; then
-        echo "✅ nvm is already installed ($current_version)"
+        echo "🔄 nvm is already installed ($current_version)"
         return 0
     fi
 
