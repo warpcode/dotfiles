@@ -48,6 +48,62 @@ _installer_add_docker_repo() {
     esac
 }
 
+# Function to install docker-mcp directly to CLI plugins directory
+_installer_post_docker_mcp() {
+    # Only run on Linux
+    if [[ $OSTYPE != *linux* ]]; then
+        return 0
+    fi
+
+    local repo="docker/mcp-gateway"
+    local target_dir="$HOME/.docker/cli-plugins/"
+    local target="$target_dir/docker-mcp"
+
+    # Get latest version
+    local version=$(_gh_get_latest_release "$repo")
+    if [[ -z $version ]]; then
+        echo "❌ Failed to get latest release for $repo" >&2
+        return 1
+    fi
+
+    # Check if already installed
+    if [[ -f "$target" ]]; then
+        local current=$("$target" --version 2>/dev/null | sed 's/.*version //' | head -1)
+        if [[ "$current" == "$version" ]]; then
+            echo "🔄 docker-mcp is already at version $version"
+            return 0
+        fi
+    fi
+
+    # Find asset URL (only Linux assets)
+    local asset_url=$(
+        _os_filter_by_arch "$(_gh_get_asset_url "$repo" "$version")" |
+        grep "linux" |
+        grep '\.tar\.gz$' |
+        head -1
+    )
+
+    if [[ -z $asset_url ]]; then
+        echo "❌ No compatible .tar.gz asset found for $repo $version on Linux" >&2
+        return 1
+    fi
+
+    echo "📦 Installing docker-mcp $version to $target"
+
+    # Create directory
+    mkdir -p "$target_dir"
+
+    # Download and extract directly
+    if curl -L "$asset_url" | tar -xzf - -C "$target_dir"; then
+        chmod +x "$target"
+        echo "✅ Successfully installed docker-mcp $version"
+    else
+        echo "❌ Failed to download or extract $asset_url" >&2
+        return 1
+    fi
+}
+
 # Register pre-install hooks for repo setup
 _events_add_hook "installer_post_deps" "_installer_add_docker_repo"
 _events_add_hook "installer_post_deps" "_installer_add_docker_repo"
+_events_add_hook "installer_post_install" "_installer_post_docker_mcp"

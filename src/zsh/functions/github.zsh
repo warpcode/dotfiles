@@ -10,9 +10,17 @@ _gh_get_latest_release() {
         echo "Usage: _gh_get_latest_release <owner/repo>" >&2
         return 1
     fi
-    curl --silent "https://api.github.com/repos/$repo/releases/latest" |
+    # Try latest release first
+    local tag=$(curl --silent "https://api.github.com/repos/$repo/releases/latest" |
         grep '"tag_name":' |
-        sed -E 's/.*"([^"]+)".*/\1/'
+        sed -E 's/.*"([^"]+)".*/\1/')
+    if [[ -n "$tag" ]]; then
+        echo "$tag"
+        return 0
+    fi
+    # Fallback to latest overall release (including pre-releases)
+    curl --silent "https://api.github.com/repos/$repo/releases" |
+        jq -r '.[0].tag_name' 2>/dev/null
 }
 
 # Get GitHub release asset URLs that match all provided patterns
@@ -110,21 +118,11 @@ _gh_install_release() {
         os_patterns=("$os")
     fi
 
-    # Build arch patterns
-    local arch_patterns=()
-    case $arch in
-        amd64) arch_patterns=("amd64" "x86_64" "x64") ;;
-        aarch64) arch_patterns=("arm64" "aarch64") ;;
-        *) arch_patterns=("$arch") ;;
-    esac
-
     # Find compatible asset (only .tar.gz supported initially)
     local os_regex="($(IFS='|'; echo "${os_patterns[*]}"))"
-    local arch_regex="($(IFS='|'; echo "${arch_patterns[*]}"))"
     local asset_url=$(
-        _gh_get_asset_url "$repo" "$version" |
+        _os_filter_by_arch "$(_gh_get_asset_url "$repo" "$version")" |
         grep -E "$os_regex" |
-        grep -E "$arch_regex" |
         grep '\.tar\.gz$' |
         head -1
     )
@@ -157,7 +155,7 @@ _gh_extract_asset_to_install_dir() {
 # Flattens top-level dirs for simpler structure
         local subdirs=($(find "$dir" -mindepth 1 -maxdepth 1 -type d))
         if [[ ${#subdirs[@]} -eq 1 ]]; then
-            local subdir=$subdirs[1]
+            local subdir=${subdirs[1]}
             if [[ -d "$subdir/bin" || -d "$subdir/sbin" || -d "$subdir/usr" || -d "$subdir/lib" ]]; then
                 setopt local_options dotglob
                 mv "$subdir"/* "$dir"/ 2>/dev/null || true
