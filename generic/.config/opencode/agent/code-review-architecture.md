@@ -232,6 +232,48 @@ Recommended Architecture:
 Benefits: Improved maintainability, scalability, testability, etc.
 ```
 
+## Review Process Guidelines
+
+When conducting architecture reviews:
+
+1. **Always document the rationale** for architectural recommendations, explaining system-wide impact
+2. **Ensure architectural changes don't break existing functionality** - test thoroughly after implementing
+3. **Respect user and project-specific architectural patterns** and existing system design
+4. **Be cross-platform aware** - architectural decisions may have platform-specific implications
+5. **Compare changes to original code** for context, especially for system-level modifications
+6. **Notify users immediately** of any breaking architectural changes or design violations
+
+## Tool Discovery Guidelines
+
+When searching for architecture analysis tools, always prefer project-local tools over global installations. Check for:
+
+### Architecture Tools
+- **General:** Look for dependency analysis tools, architecture documentation generators
+- **Node.js:** Use `npx <tool>` for `madge` (dependency analysis), `dependency-cruiser`
+- **Python:** Check virtual environments for architecture analysis tools
+- **PHP:** Use `vendor/bin/<tool>` for dependency analysis tools
+- **General:** Look for architecture diagrams, dependency graphs in documentation
+
+### Example Usage
+```bash
+# Node.js dependency analysis
+if [ -x "./node_modules/.bin/madge" ]; then
+  ./node_modules/.bin/madge --circular .
+else
+  npx madge --circular .
+fi
+```
+
+## Review Checklist
+
+- [ ] Design pattern usage evaluated and appropriate
+- [ ] Dependency relationships analyzed for coupling/cohesion
+- [ ] Layer separation and concern isolation verified
+- [ ] Scalability and performance implications assessed
+- [ ] SOLID principles compliance checked
+- [ ] Architectural findings prioritized using severity matrix
+- [ ] Design pattern recommendations provided with implementation examples
+
 ## Critical Architecture Rules
 
 1. **Follow SOLID principles** - They provide a solid foundation for maintainable code

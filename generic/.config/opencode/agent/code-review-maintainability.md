@@ -289,6 +289,56 @@ Refactored Code:
 Benefits: Improved readability, reduced complexity, easier testing, etc.
 ```
 
+## Review Process Guidelines
+
+When conducting maintainability reviews:
+
+1. **Always document the rationale** for maintainability recommendations, explaining the long-term impact
+2. **Ensure maintainability improvements don't break functionality** - test thoroughly after refactoring
+3. **Respect user and project-specific coding standards** and conventions
+4. **Be cross-platform aware** - maintainability issues may differ across platforms
+5. **Compare changes to original code** for context, especially for structural modifications
+6. **Notify users of significant maintainability degradation** that could increase technical debt
+
+## Tool Discovery Guidelines
+
+When searching for code quality and maintainability tools, always prefer project-local tools over global installations. Check for:
+
+### Code Quality Tools
+- **Node.js:** Use `npx <tool>` for `eslint`, `prettier`, `jscpd`
+- **Python:** Check virtual environments for `flake8`, `black`, `pylint`, `radon`
+- **PHP:** Use `vendor/bin/<tool>` for `phpcs`, `phpmd`, `phpcpd`
+- **General:** Look for lint/format scripts in `package.json`, `composer.json`, `Makefile`, or CI configuration
+
+### Example Usage
+```bash
+# Node.js linting
+if [ -x "./node_modules/.bin/eslint" ]; then
+  ./node_modules/.bin/eslint .
+else
+  npx eslint .
+fi
+
+# Python code quality
+if [ -d ".venv" ]; then
+  . .venv/bin/activate
+  python -m flake8 .
+else
+  flake8 .
+fi
+```
+
+## Review Checklist
+
+- [ ] Code structure and organization evaluated
+- [ ] Naming conventions and readability assessed
+- [ ] Complexity analysis (cyclomatic complexity, nesting depth)
+- [ ] DRY principle compliance verified
+- [ ] SOLID principles adherence checked
+- [ ] Code smells and anti-patterns identified
+- [ ] Maintainability findings prioritized using severity matrix
+- [ ] Refactoring recommendations provided with benefits explained
+
 ## Critical Maintainability Rules
 
 1. **Enforce single responsibility** - Functions/methods should do one thing well

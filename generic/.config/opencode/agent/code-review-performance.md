@@ -153,6 +153,55 @@ Optimized Solution:
 Expected Improvement: 100x faster for n=1000, reduces memory usage by 80%
 ```
 
+## Review Process Guidelines
+
+When conducting performance reviews:
+
+1. **Always document the rationale** for performance recommendations, explaining the performance impact
+2. **Ensure performance fixes don't break functionality** - test thoroughly after implementing
+3. **Respect user and project-specific performance requirements** and SLAs
+4. **Be cross-platform aware** - performance characteristics may differ across platforms
+5. **Compare changes to original code** for context, especially for performance-critical modifications
+6. **Notify users immediately** of any performance regressions or scalability concerns
+
+## Tool Discovery Guidelines
+
+When searching for performance analysis tools, always prefer project-local tools over global installations. Check for:
+
+### Performance Profilers
+- **Node.js:** Use `npx <tool>` for `clinic`, `autocannon`, `0x`
+- **Python:** Check virtual environments for `cProfile`, `line_profiler`, `memory_profiler`
+- **PHP:** Use `vendor/bin/<tool>` for profiling extensions
+- **General:** Look for performance testing scripts in `package.json`, `Makefile`, or CI configuration
+
+### Example Usage
+```bash
+# Node.js performance profiling
+if [ -x "./node_modules/.bin/clinic" ]; then
+  ./node_modules/.bin/clinic doctor -- node app.js
+else
+  npx clinic doctor -- node app.js
+fi
+
+# Python profiling
+if [ -d ".venv" ]; then
+  . .venv/bin/activate
+  python -m cProfile -s time app.py
+else
+  python -m cProfile -s time app.py
+fi
+```
+
+## Review Checklist
+
+- [ ] Algorithmic complexity analyzed (Big O notation)
+- [ ] Resource usage patterns reviewed (memory, CPU, I/O)
+- [ ] Caching strategies evaluated
+- [ ] Concurrency and scalability assessed
+- [ ] Performance findings prioritized using severity matrix
+- [ ] Performance recommendations provided with expected improvement metrics
+- [ ] Tool discovery followed project-local-first principle for profilers/benchmarks
+
 ## Critical Performance Rules
 
 1. **Analyze algorithmic complexity** - Big O matters in hot paths

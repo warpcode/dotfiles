@@ -179,6 +179,55 @@ Corrected Logic:
 Test Case: Input that would expose this bug and expected vs actual output.
 ```
 
+## Review Process Guidelines
+
+When conducting correctness reviews:
+
+1. **Always document the rationale** for correctness recommendations, explaining why the logic is incorrect
+2. **Ensure correctness fixes don't break functionality** - test thoroughly after implementing
+3. **Respect user and project-specific business logic** and requirements
+4. **Be cross-platform aware** - correctness issues may manifest differently across platforms
+5. **Compare changes to original code** for context, especially for complex algorithmic modifications
+6. **Notify users immediately** of any logic bugs or algorithmic errors that could cause incorrect behavior
+
+## Tool Discovery Guidelines
+
+When searching for testing and validation tools, always prefer project-local tools over global installations. Check for:
+
+### Testing Frameworks
+- **Node.js:** Use `npx <tool>` for `jest`, `mocha`, `ava`
+- **Python:** Check virtual environments for `pytest`, `unittest`, `doctest`
+- **PHP:** Use `vendor/bin/<tool>` for `phpunit`, `pest`
+- **General:** Look for test scripts in `package.json`, `composer.json`, `Makefile`, or CI configuration
+
+### Example Usage
+```bash
+# Node.js testing
+if [ -x "./node_modules/.bin/jest" ]; then
+  ./node_modules/.bin/jest
+else
+  npx jest
+fi
+
+# Python testing
+if [ -d ".venv" ]; then
+  . .venv/bin/activate
+  python -m pytest
+else
+  python -m pytest
+fi
+```
+
+## Review Checklist
+
+- [ ] Algorithm validation completed through manual inspection
+- [ ] Edge cases and boundary conditions tested
+- [ ] Logic flow analysis performed
+- [ ] Concurrency issues (race conditions, deadlocks) assessed
+- [ ] Data flow analysis for variable initialization and updates
+- [ ] Correctness findings prioritized using severity matrix
+- [ ] Test cases provided for bug reproduction and validation
+
 ## Critical Correctness Rules
 
 1. **Verify algorithmic correctness** - Don't assume algorithms work as intended

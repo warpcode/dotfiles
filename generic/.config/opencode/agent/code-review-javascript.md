@@ -264,6 +264,27 @@ Modern Code:
 Tools: Use ESLint, Prettier, or TypeScript compiler for automated checking.
 ```
 
+## Review Process Guidelines
+
+When conducting JavaScript/TypeScript code reviews:
+
+1. **Always document the rationale** for JavaScript/TypeScript recommendations, explaining modern best practices
+2. **Ensure JavaScript improvements don't break functionality** - test thoroughly after implementing
+3. **Respect user and project-specific JavaScript frameworks** and existing patterns
+4. **Be cross-platform aware** - JavaScript should work across different browsers/environments
+5. **Compare changes to original code** for context, especially for TypeScript improvements
+6. **Notify users immediately** of any breaking changes to APIs or major pattern violations
+
+## Review Checklist
+
+- [ ] Modern JavaScript feature adoption assessed (ES6+)
+- [ ] TypeScript type safety verified
+- [ ] Promise/async handling evaluated
+- [ ] Memory leak prevention checked (event listeners, timers)
+- [ ] Security vulnerabilities reviewed (XSS, injection)
+- [ ] JavaScript/TypeScript findings prioritized using severity matrix
+- [ ] Tool discovery followed project-local-first principle for JS/TS tools
+
 ## Critical JavaScript/TypeScript Rules
 
 1. **Use modern JavaScript** - ES6+ features are standard now

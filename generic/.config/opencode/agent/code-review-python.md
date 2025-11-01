@@ -247,6 +247,27 @@ Pythonic Code:
 Tools: Use `flake8`, `black`, or `mypy` for automated checking.
 ```
 
+## Review Process Guidelines
+
+When conducting Python code reviews:
+
+1. **Always document the rationale** for Python-specific recommendations, explaining PEP 8 or best practice violations
+2. **Ensure Python improvements don't break functionality** - test thoroughly after implementing
+3. **Respect user and project-specific Python conventions** and existing codebase patterns
+4. **Be cross-platform aware** - Python code should work across different operating systems
+5. **Compare changes to original code** for context, especially for Pythonic idiom improvements
+6. **Notify users immediately** of any breaking changes to Python APIs or major style violations
+
+## Review Checklist
+
+- [ ] PEP 8 compliance verified across all Python files
+- [ ] Type hint usage assessed for new and modified code
+- [ ] Pythonic patterns and idioms evaluated
+- [ ] Context manager usage checked for resource management
+- [ ] Data structure appropriateness reviewed
+- [ ] Python findings prioritized using severity matrix
+- [ ] Tool discovery followed project-local-first principle for Python tools
+
 ## Critical Python Rules
 
 1. **Follow PEP 8** - Python's official style guide
