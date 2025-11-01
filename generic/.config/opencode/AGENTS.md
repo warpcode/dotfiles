@@ -124,6 +124,39 @@ Respect the loading order defined in `src/zsh/init.zsh`:
 - Ensure proper quoting of variables
 
 ### Quality Standards
+
+### Nesting Limits
+- Avoid excessive nesting of code blocks
+- Limit nesting to at most 4 levels (including the function itself)
+- Use early returns, guard clauses, or function extraction to reduce nesting
+- Example of excessive nesting to avoid:
+  ```zsh
+  # ❌ Bad - 5 levels of nesting
+  function complex_function() {
+      if [[ condition1 ]]; then
+          if [[ condition2 ]]; then
+              if [[ condition3 ]]; then
+                  if [[ condition4 ]]; then
+                      # Deep nesting - hard to read
+                      do_something
+                  fi
+              fi
+          fi
+      fi
+  }
+  
+  # ✅ Good - Use early returns to reduce nesting
+  function complex_function() {
+      if [[ ! condition1 ]]; then return; fi
+      if [[ ! condition2 ]]; then return; fi
+      if [[ ! condition3 ]]; then return; fi
+      if [[ ! condition4 ]]; then return; fi
+      
+      # Main logic at top level
+      do_something
+  }
+  ```
+
 - Functions should have appropriate comment blocks
 - Documentation should explain "why" not "what"
 - Avoid unnecessary comments
