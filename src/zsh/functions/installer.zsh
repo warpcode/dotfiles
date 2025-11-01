@@ -56,7 +56,7 @@ _installer_detect_os() {
              . /etc/os-release
              case $ID in
                  ubuntu|debian) echo debian ;;
-                 fedora|arch) echo $ID ;;
+                  fedora|arch) echo "$ID" ;;
                  *) echo unsupported ;;
              esac
             ;;
@@ -104,6 +104,7 @@ _installer_get_packages_for_pkg_mgr() {
     fi
 
     # Get packages with conditional default fallback
+    # Prioritize flatpak/snap for better isolation and sandboxing before falling back to OS packages
     local packages=()
     for app in ${(k)apps}; do
         local pkg=""
@@ -136,7 +137,8 @@ _installer_get_packages_for_pkg_mgr() {
                 ;;
         esac
         if [[ -n $pkg ]]; then
-            packages+=(${(s: :)pkg})
+            # Use robust splitting to handle potential edge cases (e.g., validate no colons in pkg if needed)
+            packages+=("${(s: :)pkg}")
         fi
     done
 
@@ -157,33 +159,33 @@ _installer_get_packages_for_pkg_mgr() {
 _installer_package() {
     # Input validation
     if [[ $# -lt 1 ]]; then
-        echo "Usage: _installer_package <group> [package...]" >&2
+        echo "Usage: _installer_package <package_manager> [app_name] [package...]" >&2
         return 1
     fi
 
-    local pkg_mgr=$1
-    local group=$2
+    local package_manager=$1
+    local app_name=$2
     shift 2
 
-    local app=$group
+    local app=$app_name
     local packages="$*"
 
     if [[ $# -eq 0 ]]; then
-        packages=$group
+        packages=$app_name
     fi
 
     # Validate package manager (basic check)
-    if [[ ! $pkg_mgr =~ ^(default|macos|macos-brew|macos-cask|debian|fedora|arch|flatpak|snap|github)$ ]]; then
-        echo "Warning: Unknown package manager '$pkg_mgr' specified for app '$app'" >&2
+    if [[ ! $package_manager =~ ^(default|macos|macos-brew|macos-cask|debian|fedora|arch|flatpak|snap|github)$ ]]; then
+        echo "Warning: Unknown package manager '$package_manager' specified for app '$app'" >&2
     fi
 
     # Parse packages for @version:metadata (for future use)
     # For now, just store as is
 
     # Store space-separated packages
-    _installer_app_mappings[$app:$pkg_mgr]=$packages
+    _installer_app_mappings[$app:$package_manager]=$packages
 
-    [[ $_installer_verbose -eq 1 ]] && echo "Registered packages '$packages' for $app on $group"
+    [[ $_installer_verbose -eq 1 ]] && echo "Registered packages '$packages' for $app on $package_manager"
 }
 
 # Get the package manager command for an OS
@@ -213,21 +215,46 @@ _installer_install_packages() {
         return 0
     fi
 
+    # Check sudo availability for package managers that require it
+    case $pkg_mgr in
+        apt|dnf|pacman)
+            if ! (( $+commands[sudo] )); then
+                echo "sudo not available, required for $pkg_mgr" >&2
+                return 1
+            fi
+            ;;
+    esac
+
     case $pkg_mgr in
         apt)
-            sudo apt update && sudo apt install -y "${packages[@]}"
+            if ! sudo apt update && sudo apt install -y "${packages[@]}"; then
+                echo "apt install failed" >&2
+                return 1
+            fi
             ;;
         dnf)
-            sudo dnf install -y "${packages[@]}"
+            if ! sudo dnf install -y "${packages[@]}"; then
+                echo "dnf install failed" >&2
+                return 1
+            fi
             ;;
         pacman)
-            sudo pacman -Syu --noconfirm "${packages[@]}"
+            if ! sudo pacman -Syu --noconfirm "${packages[@]}"; then
+                echo "pacman install failed" >&2
+                return 1
+            fi
             ;;
         brew)
-            brew install "${packages[@]}"
+            if ! brew install "${packages[@]}"; then
+                echo "brew install failed" >&2
+                return 1
+            fi
             ;;
         brew-cask)
-            brew install --cask "${packages[@]}"
+            if ! brew install --cask "${packages[@]}"; then
+                echo "brew cask install failed" >&2
+                return 1
+            fi
             ;;
         *)
             echo "Unsupported package manager: $pkg_mgr" >&2
@@ -245,18 +272,18 @@ _installer_install_packages() {
 _installer_dependencies() {
     # Input validation
     if [[ $# -lt 1 ]]; then
-        echo "Usage: _installer_dependencies <group> [package...]" >&2
+        echo "Usage: _installer_dependencies <package_manager> [package...]" >&2
         return 1
     fi
 
-    local pkg_mgr=$1
+    local package_manager=$1
     shift
 
     local packages="$*"
 
     # Validate package manager (only OS-specific, no fallbacks)
-    if [[ ! $pkg_mgr =~ ^(macos|macos-brew|macos-cask|debian|fedora|arch)$ ]]; then
-        echo "Warning: _installer_dependencies only supports OS package managers '$pkg_mgr' specified" >&2
+    if [[ ! $package_manager =~ ^(macos|macos-brew|macos-cask|debian|fedora|arch)$ ]]; then
+        echo "Warning: _installer_dependencies only supports OS package managers '$package_manager' specified" >&2
         return 1
     fi
 
@@ -265,13 +292,13 @@ _installer_dependencies() {
 
     # Store space-separated packages in the dependency mappings
     # Append to existing packages if already set
-    if [[ -n ${_install_dependency_mappings[$pkg_mgr]} ]]; then
-        _install_dependency_mappings[$pkg_mgr]="${_install_dependency_mappings[$pkg_mgr]} $packages"
+    if [[ -n ${_install_dependency_mappings[$package_manager]} ]]; then
+        _install_dependency_mappings[$package_manager]="${_install_dependency_mappings[$package_manager]} $packages"
     else
-        _install_dependency_mappings[$pkg_mgr]=$packages
+        _install_dependency_mappings[$package_manager]=$packages
     fi
 
-    [[ $_installer_verbose -eq 1 ]] && echo "Registered dependencies '$packages' for $pkg_mgr"
+    [[ $_installer_verbose -eq 1 ]] && echo "Registered dependencies '$packages' for $package_manager"
 }
 
 # Install packages using priority-based package manager selection
@@ -295,21 +322,21 @@ _installer_install() {
         brew_packages=($(_installer_get_packages_for_pkg_mgr macos-brew))
         cask_packages=($(_installer_get_packages_for_pkg_mgr macos-cask))
     else
-        os_packages=($(_installer_get_packages_for_pkg_mgr $os))
+        os_packages=($(_installer_get_packages_for_pkg_mgr "$os"))
     fi
 
     # Trigger post-dependencies hook
     _events_trigger "installer_pre_deps" "$os"
 
     # Install prerequisite dependencies first
-    local deps_packages=($(_installer_get_packages_for_pkg_mgr $os __deps__))
+    local deps_packages=($(_installer_get_packages_for_pkg_mgr "$os" __deps__))
     if [ ${#deps_packages[@]} -gt 0 ]; then
         echo "Installing prerequisite dependencies: ${deps_packages[*]}"
         if [[ $os == "macos" ]] && ! (( $+commands[brew] )); then
             echo "Homebrew not found. Please install Homebrew first." >&2
             return 1
         fi
-        _installer_install_packages "$(_installer_get_pkg_mgr_for_os $os)" "${deps_packages[@]}"
+        _installer_install_packages "$(_installer_get_pkg_mgr_for_os "$os")" "${deps_packages[@]}"
     fi
 
     # Trigger post-dependencies hook
@@ -336,22 +363,31 @@ _installer_install() {
         fi
     elif [ ${#os_packages[@]} -gt 0 ]; then
         echo "Installing OS packages: ${os_packages[*]}"
-        _installer_install_packages "$(_installer_get_pkg_mgr_for_os $os)" "${os_packages[@]}"
+        _installer_install_packages "$(_installer_get_pkg_mgr_for_os "$os")" "${os_packages[@]}"
     fi
 
     if [ ${#flatpak_packages[@]} -gt 0 ]; then
         echo "Installing flatpak packages: ${flatpak_packages[*]}"
-        flatpak install -y "${flatpak_packages[@]}"
+        if ! flatpak install -y "${flatpak_packages[@]}"; then
+            echo "Flatpak install failed" >&2
+            return 1
+        fi
     fi
 
     if [ ${#snap_packages[@]} -gt 0 ]; then
         echo "Installing snap packages: ${snap_packages[*]}"
-        snap install "${snap_packages[@]}"
+        if ! snap install "${snap_packages[@]}"; then
+            echo "Snap install failed" >&2
+            return 1
+        fi
     fi
 
     if [ ${#github_packages[@]} -gt 0 ]; then
         echo "Installing GitHub releases: ${github_packages[*]}"
-        _installer_install_github "${github_packages[@]}"
+        if ! _installer_install_github "${github_packages[@]}"; then
+            echo "GitHub install failed" >&2
+            return 1
+        fi
     fi
 
     # Trigger post-install hooks
@@ -394,11 +430,17 @@ _installer_github_download() {
 
     # Resolve latest version
     if [[ $version == "latest" ]]; then
-        version=$(_gh_get_latest_release $repo)
+        version=$(_gh_get_latest_release "$repo")
         if [[ -z $version ]]; then
             echo "Failed to get latest release for $repo" >&2
             return 1
         fi
+    fi
+
+    # Input validation for security
+    if [[ ! $repo =~ ^[a-zA-Z0-9._/-]+$ ]]; then
+        echo "Invalid repo name: $repo (only alphanumeric, dots, underscores, slashes, and hyphens allowed)" >&2
+        return 1
     fi
 
     local dir="$INSTALLER_OPT_DIR/$app"
@@ -406,13 +448,14 @@ _installer_github_download() {
     # Check current version
     if [[ -f "$dir/.version" ]]; then
         local current=$(<"$dir/.version")
-        if [[ $current == $version ]]; then
+        if [[ $current == "$version" ]]; then
             echo "$app is already at version $version"
             return 0
         fi
     fi
 
     echo "Installing $app version $version from $repo"
+    echo "WARNING: No signature verification performed - manually verify $repo releases for security" >&2
 
     # Build OS patterns
     local os_patterns=()
@@ -436,7 +479,7 @@ _installer_github_download() {
     local os_regex="($(IFS='|'; echo "${os_patterns[*]}"))"
     local arch_regex="($(IFS='|'; echo "${arch_patterns[*]}"))"
     local asset_url=$(
-        _gh_get_asset_url $repo $version |
+        _gh_get_asset_url "$repo" "$version" |
         grep -E "$os_regex" |
         grep -E "$arch_regex" |
         grep '\.tar\.gz$' |
@@ -469,9 +512,10 @@ _installer_extract_asset() {
     # Create directory
     mkdir -p "$dir"
 
-    # Download and extract
-    if curl -L "$asset_url" | tar -xzf - -C "$dir"; then
+    # Download and extract (with path traversal protection)
+    if curl -L "$asset_url" | tar --strip-components=1 --no-overwrite-dir -xzf - -C "$dir"; then
         # If extracted to a single subdirectory containing common Unix dirs, move contents up
+        # This flattens unnecessary top-level dirs common in releases for simpler structure
         local subdirs=($(find "$dir" -mindepth 1 -maxdepth 1 -type d))
         if [[ ${#subdirs[@]} -eq 1 ]]; then
             local subdir=$subdirs[1]
@@ -486,8 +530,8 @@ _installer_extract_asset() {
         # Ensure bin/ directory exists and contains symlinks to executables
         if [[ ! -d "$dir/bin" ]]; then
             mkdir -p "$dir/bin"
-            # Find executable files and create symlinks in bin/
-            for exe in $(find "$dir" -type f -executable); do
+            # Find executable files (top-level only to avoid linking libraries or deep files) and create symlinks in bin/
+            for exe in $(find "$dir" -maxdepth 1 -type f -executable); do
                 local basename=$(basename "$exe")
                 ln -sf "$exe" "$dir/bin/$basename"
             done
