@@ -11,16 +11,23 @@ _gh_get_latest_release() {
         return 1
     fi
     # Try latest release first
-    local tag=$(curl --silent "https://api.github.com/repos/$repo/releases/latest" |
+    local tag
+    if ! tag=$(curl --fail --silent "https://api.github.com/repos/$repo/releases/latest" 2>/dev/null |
         grep '"tag_name":' |
-        sed -E 's/.*"([^"]+)".*/\1/')
+        sed -E 's/.*"([^"]+)".*/\1/'); then
+        echo "❌ Failed to fetch latest release for $repo" >&2
+        return 1
+    fi
     if [[ -n "$tag" ]]; then
         echo "$tag"
         return 0
     fi
     # Fallback to latest overall release (including pre-releases)
-    curl --silent "https://api.github.com/repos/$repo/releases" |
-        jq -r '.[0].tag_name' 2>/dev/null
+    if ! curl --fail --silent "https://api.github.com/repos/$repo/releases" 2>/dev/null |
+        jq -r '.[0].tag_name' 2>/dev/null; then
+        echo "❌ Failed to fetch releases for $repo" >&2
+        return 1
+    fi
 }
 
 # Get GitHub release asset URLs that match all provided patterns
@@ -46,7 +53,13 @@ _gh_get_asset_url() {
         api_url="https://api.github.com/repos/$repo/releases/tags/$version"
     fi
 
-    curl --silent "$api_url" | jq -r '.assets[].browser_download_url' | while read -r asset; do
+    local assets
+    if ! assets=$(curl --fail --silent "$api_url" 2>/dev/null | jq -r '.assets[].browser_download_url' 2>/dev/null); then
+        echo "❌ Failed to fetch assets for $repo $version" >&2
+        return 1
+    fi
+
+    echo "$assets" | while read -r asset; do
         # If no patterns provided, return all assets
         if [[ ${#patterns[@]} -eq 0 ]]; then
             echo "$asset"
@@ -151,7 +164,7 @@ _gh_extract_asset_to_install_dir() {
     mkdir -p "$dir"
 
     # Download and extract (with path traversal protection)
-    if curl -L "$asset_url" | tar --strip-components=1 --no-overwrite-dir -xzf - -C "$dir"; then
+    if curl --fail -L "$asset_url" | tar --strip-components=1 --no-overwrite-dir -xzf - -C "$dir"; then
 # Flattens top-level dirs for simpler structure
         local subdirs=($(find "$dir" -mindepth 1 -maxdepth 1 -type d))
         if [[ ${#subdirs[@]} -eq 1 ]]; then

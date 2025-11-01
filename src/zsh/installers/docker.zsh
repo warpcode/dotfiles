@@ -28,7 +28,10 @@ _installer_add_docker_repo() {
             fi
             echo "📦 Installing Docker repository for $distro"
             # Add Docker's official GPG key
-            curl -fsSL "$gpg_url" | sudo gpg --dearmor -o "$keyring_file"
+            if ! curl --fail -fsSL "$gpg_url" | sudo gpg --dearmor -o "$keyring_file"; then
+                echo "❌ Failed to download Docker GPG key from $gpg_url" >&2
+                return 1
+            fi
             # Add Docker repository
             echo "deb [arch=$(dpkg --print-architecture) signed-by=$keyring_file] https://download.docker.com/linux/$distro $VERSION_CODENAME stable" | sudo tee "$repo_file" > /dev/null
             ;;
@@ -94,7 +97,7 @@ _installer_post_docker_mcp() {
     mkdir -p "$target_dir"
 
     # Download and extract directly
-    if curl -L "$asset_url" | tar -xzf - -C "$target_dir"; then
+    if curl --fail -L "$asset_url" | tar -xzf - -C "$target_dir"; then
         chmod +x "$target"
         echo "✅ Successfully installed docker-mcp $version"
     else

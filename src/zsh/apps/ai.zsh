@@ -8,7 +8,12 @@ export LITELLM_API_KEY="sk-1234"  # Local only, insecure storage is acceptable
 # MCP configuration
 export CONTEXT7_API_KEY="${CONTEXT7_API_KEY:-}"  # Local only, insecure storage is acceptable
 
-alias ai.litellm.models='curl -s $LITELLM_API_ENDPOINT/models -H "Authorization: Bearer $LITELLM_API_KEY" -H "Content-Type: application/json" | jq -r ".data[].id"'
+ai.litellm.models() {
+    if ! curl --fail -s "$LITELLM_API_ENDPOINT/models" -H "Authorization: Bearer $LITELLM_API_KEY" -H "Content-Type: application/json" | jq -r ".data[].id" 2>/dev/null; then
+        echo "❌ Failed to fetch LiteLLM models from $LITELLM_API_ENDPOINT" >&2
+        return 1
+    fi
+}
 
 # GitHub Copilot Configuration
 if [[ -f "$HOME/.config/github-copilot/apps.json" ]]; then
@@ -16,7 +21,12 @@ if [[ -f "$HOME/.config/github-copilot/apps.json" ]]; then
     export GITHUB_COPILOT_API_TOKEN=$(jq -r 'to_entries[0].value.oauth_token' "$HOME/.config/github-copilot/apps.json" 2>/dev/null)
 fi
 
-alias ai.github.models='curl -s https://api.githubcopilot.com/models -H "Authorization: Bearer $GITHUB_COPILOT_API_TOKEN" -H "Content-Type: application/json" -H "Copilot-Integration-Id: vscode-chat" | jq -r ".data[].id"'
+ai.github.models() {
+    if ! curl --fail -s https://api.githubcopilot.com/models -H "Authorization: Bearer $GITHUB_COPILOT_API_TOKEN" -H "Content-Type: application/json" -H "Copilot-Integration-Id: vscode-chat" | jq -r ".data[].id" 2>/dev/null; then
+        echo "❌ Failed to fetch GitHub Copilot models" >&2
+        return 1
+    fi
+}
 
 # AI Chat configuration
 # ref: https://github.com/sigoden/aichat/wiki/Environment-Variables
