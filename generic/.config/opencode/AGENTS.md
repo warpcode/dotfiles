@@ -241,33 +241,702 @@ for user in users:
 - [ ] Are there any god classes or god functions?
 - [ ] Is the code DRY (Don't Repeat Yourself)?
 
-**Code Smells:**
+**Code Smells - Bloaters:**
 ```python
-# BAD: Function doing too much
-def process_user(user_data):
-    # Validates data
-    # Saves to database
-    # Sends email
-    # Updates cache
-    # Logs analytics
-    # 200 lines of code...
+# BAD: Data Clumps - Same group of variables always passed together
+def create_user(first_name, last_name, email, phone, address, city, state, zip_code):
+    # These address parameters always go together - should be an Address object
 
-# BAD: Repeated code
-def calculate_discount_vip(price):
-    tax = price * 0.1
-    discount = price * 0.2
-    return price - discount + tax
+# GOOD: Extract data clumps into objects
+@dataclass
+class Address:
+    street: str
+    city: str
+    state: str
+    zip_code: str
 
-def calculate_discount_regular(price):
-    tax = price * 0.1
-    discount = price * 0.1
-    return price - discount + tax
+def create_user(first_name: str, last_name: str, email: str, phone: str, address: Address):
+    pass
 
-# GOOD: Extract common logic
-def calculate_final_price(price, discount_rate):
-    tax = price * 0.1
-    discount = price * discount_rate
-    return price - discount + tax
+# BAD: Combinatorial Explosion - Too many combinations to test/maintain
+class ReportGenerator:
+    def generate_report(self, format='pdf', include_charts=True, include_tables=True,
+                       include_summary=True, include_details=True, include_footer=True):
+        # 2^5 = 32 possible combinations!
+
+# GOOD: Use builder pattern or configuration object
+@dataclass
+class ReportConfig:
+    format: str = 'pdf'
+    include_charts: bool = True
+    include_tables: bool = True
+    include_summary: bool = True
+    include_details: bool = True
+    include_footer: bool = True
+
+class ReportGenerator:
+    def generate_report(self, config: ReportConfig):
+        pass
+
+# BAD: Oddball Solution - One case handled differently
+def calculate_shipping(weight, destination):
+    if destination == "Alaska":
+        return weight * 2.5  # Special case!
+    else:
+        return weight * 1.2
+
+# GOOD: Consistent logic
+SHIPPING_RATES = {
+    "continental": 1.2,
+    "Alaska": 2.5,
+    "Hawaii": 2.0
+}
+
+def calculate_shipping(weight, destination):
+    rate = SHIPPING_RATES.get(destination, SHIPPING_RATES["continental"])
+    return weight * rate
+
+# BAD: Class Doesn't Do Much - Too simple to justify existence
+class UserValidator:
+    def validate(self, user):
+        return len(user.name) > 0 and '@' in user.email
+
+# GOOD: Inline the simple logic or expand if more validation is needed
+def is_valid_user(user):
+    return len(user.name) > 0 and '@' in user.email
+
+# BAD: Required Setup/Teardown Code - Complex initialization everywhere
+def process_data():
+    setup_database()
+    setup_cache()
+    setup_logging()
+    try:
+        # actual work
+        pass
+    finally:
+        teardown_cache()
+        teardown_database()
+        teardown_logging()
+
+# GOOD: Use context managers or dependency injection
+class DataProcessor:
+    def __init__(self, db, cache, logger):
+        self.db = db
+        self.cache = cache
+        self.logger = logger
+
+    def process(self):
+        # work with injected dependencies
+        pass
+```
+
+**Code Smells - Obfuscators:**
+```python
+# BAD: Regions - Hiding code behind collapsible blocks
+#region Validation Logic
+def validate_user(user):
+    if not user.name:
+        raise ValueError("Name required")
+    if '@' not in user.email:
+        raise ValueError("Invalid email")
+#endregion
+
+# GOOD: Extract to well-named functions
+def validate_user_name(name: str):
+    if not name:
+        raise ValueError("Name required")
+
+def validate_user_email(email: str):
+    if '@' not in email:
+        raise ValueError("Invalid email")
+
+def validate_user(user):
+    validate_user_name(user.name)
+    validate_user_email(user.email)
+
+# BAD: Poor Names - Unclear or misleading
+def process(data):  # What does it process?
+    x = data.get('val')  # What is x?
+    if x > 10:
+        return x * 2
+    return x
+
+# GOOD: Descriptive names
+def calculate_discounted_price(order_data: dict) -> float:
+    base_price = order_data.get('price', 0)
+    if base_price > 10:
+        return base_price * 0.8  # 20% discount
+    return base_price
+
+# BAD: Vertical Separation - Related code separated by unrelated code
+class UserService:
+    def __init__(self, db):
+        self.db = db
+
+    def save(self, user):
+        # 50 lines of unrelated logging code here
+        self.db.save(user)
+
+    def find(self, user_id):
+        # 30 lines of validation code here
+        return self.db.find(user_id)
+
+# GOOD: Keep related code together
+class UserService:
+    def __init__(self, db):
+        self.db = db
+
+    def save(self, user):
+        self._log_operation("save", user.id)
+        self._validate_user(user)
+        self.db.save(user)
+
+    def find(self, user_id):
+        self._log_operation("find", user_id)
+        return self.db.find(user_id)
+
+    def _log_operation(self, operation, user_id):
+        # logging code
+
+    def _validate_user(self, user):
+        # validation code
+
+# BAD: Inconsistency - Same concept named differently
+def get_user_by_id(id): ...
+def fetch_customer(customer_id): ...  # Same as user!
+def retrieve_person(personId): ...  # Same as user!
+
+# GOOD: Consistent naming
+def get_user(user_id): ...
+def get_customer(customer_id): ...
+def get_person(person_id): ...
+
+# BAD: Obscured Intent - Code doesn't clearly show what it does
+def calc(x, y, z):
+    return (x + y) * z if x > 0 else (x - y) * z
+
+# GOOD: Clear intent
+def calculate_total_price(base_price: float, tax_rate: float, discount_percent: float) -> float:
+    if discount_percent > 0:
+        discounted_price = base_price * (1 - discount_percent / 100)
+    else:
+        discounted_price = base_price
+
+    return discounted_price * (1 + tax_rate / 100)
+
+# BAD: Bump Road - Inconsistent formatting creates visual noise
+def processOrder(order){
+if(order.status=="pending"){
+processPayment(order)
+}else if(order.status=="paid"){
+shipOrder(order)
+}else{
+cancelOrder(order)
+}
+}
+
+# GOOD: Consistent formatting
+def process_order(order):
+    if order.status == "pending":
+        process_payment(order)
+    elif order.status == "paid":
+        ship_order(order)
+    else:
+        cancel_order(order)
+```
+
+**Code Smells - Object Orientation Abusers:**
+```python
+# BAD: Switch Statements - Violates Open/Closed Principle
+def calculate_fee(vehicle_type, days):
+    if vehicle_type == "car":
+        return days * 20
+    elif vehicle_type == "truck":
+        return days * 30
+    elif vehicle_type == "motorcycle":
+        return days * 15
+    else:
+        raise ValueError("Unknown vehicle type")
+
+# GOOD: Polymorphism
+class Vehicle:
+    def daily_fee(self):
+        raise NotImplementedError
+
+class Car(Vehicle):
+    def daily_fee(self):
+        return 20
+
+class Truck(Vehicle):
+    def daily_fee(self):
+        return 30
+
+def calculate_fee(vehicle: Vehicle, days: int):
+    return vehicle.daily_fee() * days
+
+# BAD: Temporary Field - Field only used in specific circumstances
+class OrderProcessor:
+    def __init__(self):
+        self.discount_code = None  # Only set sometimes
+        self.discount_amount = 0   # Only calculated sometimes
+
+    def process(self, order):
+        if order.has_discount:
+            self.discount_code = order.discount_code
+            self.discount_amount = self._calculate_discount()
+        # discount_code and discount_amount unused in other cases
+
+# GOOD: Extract to separate class or method
+class OrderProcessor:
+    def process(self, order):
+        if order.has_discount:
+            discount_calculator = DiscountCalculator()
+            discount_amount = discount_calculator.calculate(order.discount_code)
+            # Use discount_amount locally
+
+# BAD: Alternative Class with Different Interfaces - Same concept, different APIs
+class XmlParser:
+    def parse_xml(self, xml_string):
+        # parse XML
+
+class JsonParser:
+    def parse_json(self, json_string):  # Different method name!
+        # parse JSON
+
+# GOOD: Common interface
+class Parser:
+    def parse(self, data: str):
+        raise NotImplementedError
+
+class XmlParser(Parser):
+    def parse(self, xml_string: str):
+        # parse XML
+
+class JsonParser(Parser):
+    def parse(self, json_string: str):
+        # parse JSON
+
+# BAD: Class Depends on Subclass - Base class knows about derived classes
+class Shape:
+    def area(self):
+        raise NotImplementedError
+
+    def draw(self):
+        if isinstance(self, Circle):
+            # Circle-specific drawing
+        elif isinstance(self, Square):
+            # Square-specific drawing
+
+# GOOD: Each class handles its own responsibilities
+class Shape:
+    def area(self):
+        raise NotImplementedError
+
+    def draw(self):
+        raise NotImplementedError
+
+class Circle(Shape):
+    def area(self):
+        return 3.14 * self.radius ** 2
+
+    def draw(self):
+        # Circle-specific drawing
+
+class Square(Shape):
+    def area(self):
+        return self.side ** 2
+
+    def draw(self):
+        # Square-specific drawing
+```
+
+**Code Smells - Change Preventers:**
+```python
+# BAD: Divergent Change - One class changed for many reasons
+class ReportGenerator:
+    def generate_pdf(self, data): ...  # Changes when PDF format changes
+    def generate_excel(self, data): ...  # Changes when Excel format changes
+    def save_to_file(self, report, path): ...  # Changes when file I/O changes
+    def send_email(self, report, recipient): ...  # Changes when email changes
+
+# GOOD: Separate concerns
+class ReportGenerator:
+    def generate(self, data, format_type):
+        if format_type == "pdf":
+            return PDFGenerator().generate(data)
+        elif format_type == "excel":
+            return ExcelGenerator().generate(data)
+
+class FileSaver:
+    def save(self, report, path): ...
+
+class EmailSender:
+    def send(self, report, recipient): ...
+
+# BAD: Parallel Inheritance Hierarchies - One hierarchy mirrors another
+class Shape: pass
+class Circle(Shape): pass
+class Square(Shape): pass
+
+class ShapeDrawer: pass  # Mirrors Shape hierarchy
+class CircleDrawer(ShapeDrawer): pass
+class SquareDrawer(ShapeDrawer): pass
+
+# GOOD: Use composition or strategy pattern
+class Shape:
+    def draw(self):
+        raise NotImplementedError
+
+class Circle(Shape):
+    def draw(self):
+        CircleDrawer().draw(self)
+
+class Square(Shape):
+    def draw(self):
+        SquareDrawer().draw(self)
+
+# BAD: Inconsistent Abstraction Levels - Mixes high and low level concepts
+def process_order(order):
+    # High level: validate order
+    if not order.is_valid():
+        raise ValueError("Invalid order")
+
+    # Low level: database operations mixed with business logic
+    conn = sqlite3.connect('orders.db')
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO orders VALUES (?, ?)", (order.id, order.total))
+
+    # High level: send notification
+    email_service.send_confirmation(order.customer_email)
+
+    # Low level: file operations
+    with open(f'order_{order.id}.log', 'w') as f:
+        f.write(f'Order {order.id} processed')
+
+# GOOD: Consistent abstraction levels
+def process_order(order):
+    validate_order(order)
+    save_order(order)
+    send_confirmation(order)
+
+def validate_order(order):
+    # Business logic only
+
+def save_order(order):
+    # Database operations only
+
+def send_confirmation(order):
+    # Notification logic only
+
+# BAD: Conditional Complexity - Too many nested conditions
+def process_payment(payment):
+    if payment.amount > 0:
+        if payment.method == "credit_card":
+            if payment.card_valid():
+                if payment.has_funds():
+                    if not payment.is_fraudulent():
+                        # Finally process payment!
+                        return process_credit_card_payment(payment)
+    return None
+
+# GOOD: Early returns and guard clauses
+def process_payment(payment):
+    if payment.amount <= 0:
+        raise ValueError("Invalid amount")
+
+    if payment.method != "credit_card":
+        raise ValueError("Unsupported payment method")
+
+    if not payment.card_valid():
+        raise ValueError("Invalid card")
+
+    if not payment.has_funds():
+        raise ValueError("Insufficient funds")
+
+    if payment.is_fraudulent():
+        raise ValueError("Fraudulent payment")
+
+    return process_credit_card_payment(payment)
+```
+
+**Code Smells - Dispensables:**
+```python
+# BAD: Lazy Class - Does too little to justify existence
+class StringHelper:
+    def to_upper(self, s):
+        return s.upper()
+
+    def to_lower(self, s):
+        return s.lower()
+
+# GOOD: Use built-in methods or remove if not needed
+text = "hello"
+upper_text = text.upper()  # Built-in method
+lower_text = text.lower()  # Built-in method
+
+# BAD: Data Class - Only holds data, no behavior
+class Person:
+    def __init__(self, name, age, email):
+        self.name = name
+        self.age = age
+        self.email = email
+
+# All logic elsewhere
+def is_adult(person):
+    return person.age >= 18
+
+def send_email(person, message):
+    # email sending logic
+
+# GOOD: Rich domain model with behavior
+class Person:
+    def __init__(self, name, age, email):
+        self.name = name
+        self.age = age
+        self.email = email
+
+    def is_adult(self):
+        return self.age >= 18
+
+    def send_email(self, message):
+        # email sending logic
+```
+
+**Code Smells - Couplers:**
+```python
+# BAD: Inappropriate Intimacy - Classes know too much about each other
+class Order:
+    def __init__(self, customer):
+        self.customer = customer
+
+    def apply_discount(self):
+        # Knows too much about customer's internal state
+        if self.customer.account_balance > 1000:
+            self.discount = 0.1
+        elif len(self.customer.purchase_history) > 10:
+            self.discount = 0.05
+
+# GOOD: Tell, Don't Ask principle
+class Order:
+    def __init__(self, customer):
+        self.customer = customer
+
+    def apply_discount(self):
+        self.discount = self.customer.calculate_discount_rate()
+
+class Customer:
+    def calculate_discount_rate(self):
+        if self.account_balance > 1000:
+            return 0.1
+        elif len(self.purchase_history) > 10:
+            return 0.05
+        return 0
+
+# BAD: Law of Demeter Violations - Method chains accessing distant objects
+def get_customer_city(order):
+    return order.customer.address.city  # Chain of calls
+
+# GOOD: Hide the structure
+def get_customer_city(order):
+    return order.customer_city  # Single call
+
+# Or better, don't expose internal structure
+class Order:
+    def get_customer_city(self):
+        return self.customer.get_city()
+
+class Customer:
+    def get_city(self):
+        return self.address.city
+
+# BAD: Indecent Exposure - Public fields that shouldn't be public
+class BankAccount:
+    def __init__(self, balance):
+        self.balance = balance  # Should be private!
+
+# Anyone can modify balance directly
+account = BankAccount(1000)
+account.balance = -500  # Invalid state!
+
+# GOOD: Encapsulation
+class BankAccount:
+    def __init__(self, balance):
+        self._balance = balance
+
+    @property
+    def balance(self):
+        return self._balance
+
+    def deposit(self, amount):
+        if amount > 0:
+            self._balance += amount
+
+    def withdraw(self, amount):
+        if 0 < amount <= self._balance:
+            self._balance -= amount
+
+# BAD: Message Chains - Long chain of method calls
+order.customer.address.city.get_weather().get_temperature()
+
+# GOOD: Hide the chain behind a method
+order.get_customer_city_temperature()
+
+# BAD: Middle Man - Class that just delegates to another class
+class OrderService:
+    def __init__(self, order_repository):
+        self.order_repository = order_repository
+
+    def save_order(self, order):
+        return self.order_repository.save(order)
+
+    def find_order(self, order_id):
+        return self.order_repository.find(order_id)
+
+    def delete_order(self, order_id):
+        return self.order_repository.delete(order_id)
+
+# GOOD: Remove middle man if not adding value
+class OrderService:
+    def __init__(self, order_repository):
+        self.order_repository = order_repository
+
+    def process_order(self, order):
+        # Actual business logic here
+        self.order_repository.save(order)
+        self._send_confirmation_email(order)
+
+# BAD: Tramp Data - Data passed through multiple methods unchanged
+def process_order(order_id, customer_id, product_id, quantity, price, tax_rate, discount):
+    validate_order(customer_id, product_id, quantity)
+    calculate_total(price, quantity, tax_rate, discount)
+    save_order(order_id, customer_id, product_id, quantity, price, tax_rate, discount)
+
+def validate_order(customer_id, product_id, quantity):
+    # Only uses customer_id, product_id, quantity
+
+def calculate_total(price, quantity, tax_rate, discount):
+    # Only uses price, quantity, tax_rate, discount
+
+# GOOD: Group related data
+@dataclass
+class OrderData:
+    order_id: str
+    customer_id: str
+    product_id: str
+    quantity: int
+    price: float
+    tax_rate: float
+    discount: float
+
+def process_order(order_data: OrderData):
+    validate_order(order_data)
+    total = calculate_total(order_data)
+    save_order(order_data)
+
+def validate_order(order_data: OrderData):
+    # Uses relevant fields
+
+def calculate_total(order_data: OrderData):
+    # Uses relevant fields
+```
+
+**Code Smells - Test Smells:**
+```python
+# BAD: Not Enough Tests - Critical functionality untested
+class PaymentProcessor:
+    def process_payment(self, amount, card_details):
+        # Complex payment logic with no tests
+        return self._charge_card(amount, card_details)
+
+# GOOD: Comprehensive test coverage
+def test_payment_processor():
+    # Tests for success, failure, edge cases, etc.
+
+# BAD: DRY vs DAMP - Tests too DRY (hard to understand)
+def test_calculator():
+    for a, b, expected in [(1, 2, 3), (5, 3, 8), (-1, 1, 0)]:
+        assert Calculator().add(a, b) == expected
+
+# GOOD: DAMP (Descriptive And Meaningful Phrases)
+def test_calculator_addition():
+    assert Calculator().add(1, 2) == 3
+    assert Calculator().add(5, 3) == 8
+    assert Calculator().add(-1, 1) == 0
+
+# BAD: Fragility - Tests break from unrelated changes
+def test_user_creation():
+    user = User("John", "john@example.com")
+    assert user.name == "John"
+    assert user.email == "john@example.com"
+    assert user.created_at is not None  # Breaks if created_at logic changes
+    assert user.id is not None  # Breaks if ID generation changes
+
+# GOOD: Test only what's relevant
+def test_user_creation():
+    user = User("John", "john@example.com")
+    assert user.name == "John"
+    assert user.email == "john@example.com"
+
+# BAD: The Liar - Test that doesn't actually test anything
+def test_payment_processing():
+    processor = PaymentProcessor()
+    # No assertions!
+    processor.process_payment(100, valid_card())
+
+# GOOD: Meaningful assertions
+def test_payment_processing():
+    processor = PaymentProcessor()
+    result = processor.process_payment(100, valid_card())
+    assert result.success is True
+    assert result.transaction_id is not None
+
+# BAD: Excessive Setup - Too much setup for simple test
+def test_simple_calculation():
+    db = create_test_database()
+    user_repo = UserRepository(db)
+    calculator_service = CalculatorService(user_repo)
+    auth_service = AuthService(user_repo)
+    calculator = Calculator(calculator_service, auth_service)
+
+    result = calculator.add(1, 2)
+    assert result == 3
+
+# GOOD: Minimal setup
+def test_simple_calculation():
+    calculator = Calculator()
+    assert calculator.add(1, 2) == 3
+
+# BAD: The Giant - Single huge test method
+def test_entire_application():
+    # 200 lines testing everything at once
+    # Hard to debug, maintain, or understand
+
+# GOOD: Focused, single-responsibility tests
+def test_user_registration():
+    # Test just user registration
+
+def test_user_login():
+    # Test just user login
+
+# BAD: The Mockery - Overuse of mocks hiding real issues
+def test_order_processing():
+    mock_repo = Mock()
+    mock_payment = Mock()
+    mock_email = Mock()
+    # 20 more mocks...
+
+    service = OrderService(mock_repo, mock_payment, mock_email)
+    service.process_order(order)
+
+    # Verifies mocks were called but not actual behavior
+
+# GOOD: Use mocks judiciously, test real behavior when possible
+def test_order_processing():
+    # Test with real dependencies or minimal mocks
+    service = OrderService(real_repo, real_payment_service)
+    result = service.process_order(order)
+    assert result.success is True
+    assert order.status == "processed"
 ```
 
 #### Naming & Readability
@@ -446,7 +1115,7 @@ def test_discount_applied_to_order_total():
 
 **CRITICAL RULE: Comments should ONLY explain WHY, never WHAT or HOW**
 
-The code itself should be clear enough to explain WHAT it does and HOW it does it. Comments should only exist when:
+The code itself should be clear enough to explain WHAT it does and HOW it works. Comments should only exist when:
 1. The WHY is not obvious from the code
 2. The code is inherently complex and the reasoning needs explanation
 3. There are non-obvious side effects or behaviors
@@ -520,7 +1189,7 @@ results = sorted(query_results, key=lambda x: x.date or datetime.min)
 
 # GOOD: Explains complex algorithm reasoning
 # We use binary search here despite unsorted data because
-# sorting once (O(n log n)) + binary search (O(log n)) 
+# sorting once (O(n log n)) + binary search (O(log n))
 # is faster than linear search (O(n)) when this function
 # is called 1000+ times per request
 sorted_items = sorted(items, key=lambda x: x.id)
@@ -540,7 +1209,7 @@ def is_eligible_for_access(user):
     is_verified = user.verified
     is_premium = user.tier == UserTier.PREMIUM
     has_sufficient_points = user.points > MINIMUM_POINTS
-    
+
     return is_active and is_verified and (is_premium or has_sufficient_points)
 
 if is_eligible_for_access(user):
@@ -558,6 +1227,69 @@ Only write inline comments when the code has inherently high complexity that can
 - Non-obvious side effects or behaviors
 
 Even in these cases, the comment should explain WHY, not describe the steps.
+
+---
+
+## CRITICAL: Anti-Pattern Detection Protocol
+
+When reviewing code, **YOU MUST:**
+
+1. **Actively scan for ALL 80+ anti-patterns** listed above
+2. **Flag every instance** with appropriate severity
+3. **Explain why it's problematic** with specific consequences
+4. **Provide concrete refactoring suggestion** showing the fix
+5. **Reference the anti-pattern by name** in your review comment
+
+**Special Requirements for Shell Scripts:**
+- **ALWAYS check nesting depth** - flag if exceeds 4 levels
+- **ALWAYS validate input validation** - flag missing validation
+- **ALWAYS check for command injection** - validate all user inputs
+- **ALWAYS check variable quoting** - flag unquoted variables
+- **ALWAYS check line length** - flag lines over 110 characters
+- **ALWAYS check for early returns** - flag deep nesting that could be flattened
+
+**Special Requirements for PHP:**
+- **ALWAYS verify PSR-12 compliance** - this is MANDATORY for PHP code
+- **ALWAYS check file structure** - declare(strict_types=1) must be first after <?php
+- **ALWAYS verify indentation** - must be 4 spaces, no tabs
+- **ALWAYS check brace placement** - classes/methods next line, control structures same line
+- **ALWAYS verify naming** - PascalCase for classes, camelCase for methods
+- **ALWAYS check line endings** - must be LF (Unix), not CRLF
+- **ALWAYS verify UTF-8 without BOM**
+- **ALWAYS check for closing ?>** - must be omitted in pure PHP files
+- **ALWAYS verify use statement grouping** - must be grouped and sorted
+- **ALWAYS check type declarations** - strict_types and full type hints required
+
+**Example Review Comment Format:**
+```
+[SEVERITY] Category: Anti-Pattern Name
+
+This code exhibits the [Anti-Pattern Name] anti-pattern. [Explain issue and consequences]
+
+Specifically: [Point out the problematic code]
+
+Refactor to: [Show corrected code]
+
+This change will: [List benefits]
+```
+
+**For PSR-12 Violations in PHP:**
+```
+[HIGH] Code Style: PSR-12 Non-Compliance - [Specific Violation]
+
+This code violates PSR-12 [specific rule]. [Explain the PSR-12 requirement]
+
+Specifically: [Show the violating code]
+
+Fix: [Show PSR-12 compliant code]
+
+PSR-12 compliance is mandatory for all PHP code. Use `phpcs --standard=PSR12`
+to check for violations or `phpcbf --standard=PSR12` to auto-fix.
+```
+
+**Remember:** Finding and fixing anti-patterns is a PRIMARY goal of code review. These patterns lead to bugs, security issues, performance problems, and unmaintainable code. Be vigilant!
+
+**For PHP code, PSR-12 compliance is NON-NEGOTIABLE and must be enforced strictly.**
 
 #### API Documentation
 - [ ] Are public functions/classes documented?
@@ -692,6 +1424,306 @@ This is a model for how error handling should be done.
 ## Complete Anti-Pattern Reference
 
 This section lists all common anti-patterns that MUST be flagged during code review. When you encounter these patterns, always recommend refactoring.
+
+### ORGANIZATIONAL & PROCESS ANTI-PATTERNS
+
+#### 48. Analysis Paralysis
+**What:** Over-analyzing a problem to the point where no decision or action is taken.
+```python
+# Example: Team spends 6 months designing the "perfect" architecture
+# but never ships any working software
+```
+**Fix:** Set time limits for analysis, use iterative development, ship MVPs.
+
+#### 49. Architecture by Implication
+**What:** Allowing architecture to emerge implicitly without conscious design decisions.
+```python
+# Example: Code grows organically without architectural oversight
+# Result: Inconsistent patterns, unclear boundaries, technical debt
+```
+**Fix:** Make explicit architectural decisions, document them, and review regularly.
+
+#### 50. Assumption Driven Programming
+**What:** Writing code based on assumptions rather than verified requirements.
+```python
+# BAD: Assuming users will never have more than 10 items in cart
+if len(cart.items) <= 10:
+    process_order()
+else:
+    # This path never tested because "users won't have that many items"
+    handle_large_order()
+```
+**Fix:** Base code on verified requirements, write tests for edge cases.
+
+#### 51. Big Design Up Front (BDUF)
+**What:** Attempting to design the entire system before writing any code.
+```python
+# Example: 6-month design phase before any coding begins
+# Result: Design becomes obsolete before implementation starts
+```
+**Fix:** Use iterative design, evolutionary architecture, YAGNI principle.
+
+#### 52. Broken Windows
+**What:** Allowing small problems to accumulate, leading to overall code degradation.
+```python
+# Example: Ignoring one failing test leads to 50 failing tests
+# Ignoring one code smell leads to pervasive poor quality
+```
+**Fix:** Fix problems immediately (Boy Scout Rule), maintain code quality standards.
+
+#### 53. Calendar Coder
+**What:** Measuring productivity by lines of code or time spent rather than value delivered.
+```python
+# BAD: Developer pads code with unnecessary abstractions
+# to meet "lines of code" metrics
+class UnnecessaryWrapper:
+    def __init__(self, data):
+        self._data = data
+
+    def get_data(self):
+        return self._data
+
+    def set_data(self, data):
+        self._data = data
+```
+**Fix:** Measure productivity by working software delivered, business value created.
+
+#### 54. Death by Planning
+**What:** Excessive planning and documentation that prevents actual development.
+```python
+# Example: Team creates 200-page specification but never writes code
+```
+**Fix:** Balance planning with action, use just enough documentation.
+
+#### 55. Death March
+**What:** Working unsustainable hours on unrealistic schedules.
+```python
+# Example: Team working 80-hour weeks for 6 months straight
+# Result: Burnout, poor quality, high turnover
+```
+**Fix:** Set realistic schedules, maintain work-life balance, use sustainable pace.
+
+#### 56. Duct Tape Coder
+**What:** Using quick, temporary fixes instead of proper solutions.
+```python
+# BAD: Temporary fix becomes permanent
+# Original: Proper error handling
+# Duct tape: if error: pass  # "Will fix later"
+```
+**Fix:** Use technical debt tracking, schedule proper fixes, avoid accumulation.
+
+#### 57. Fast Beats Right
+**What:** Prioritizing speed over quality, leading to accumulating technical debt.
+```python
+# Example: Shipping buggy code quickly, then spending more time fixing bugs
+```
+**Fix:** Balance speed and quality, invest in quality to maintain long-term velocity.
+
+#### 58. Feature Creep
+**What:** Adding unnecessary features beyond the original scope.
+```python
+# Example: Simple login becomes full social platform with chat, games, etc.
+```
+**Fix:** Define clear scope, use MoSCoW method, say no to out-of-scope features.
+
+#### 59. Flags Over Objects
+**What:** Using boolean flags to control behavior instead of polymorphism.
+```python
+# BAD: Flag-based behavior
+def process_payment(amount, use_paypal=False, use_stripe=False):
+    if use_paypal:
+        # PayPal logic
+    elif use_stripe:
+        # Stripe logic
+```
+**Fix:** Use strategy pattern or polymorphism instead of flags.
+
+#### 60. Found on Internet
+**What:** Using code from the internet without understanding or testing it.
+```python
+# BAD: Copied from Stack Overflow without understanding
+def complex_algorithm(data):
+    # Copied code that works but has security vulnerabilities
+    return eval(data)  # Dangerous!
+```
+**Fix:** Understand code before using, test thoroughly, consider security implications.
+
+#### 61. Frankencode
+**What:** Patching together incompatible systems or libraries.
+```python
+# Example: Forcing two incompatible APIs to work together
+# with extensive glue code and workarounds
+```
+**Fix:** Choose compatible technologies, use adapters properly, consider migration.
+
+#### 62. Frozen Caveman
+**What:** Refusing to adopt new technologies or practices.
+```python
+# Example: Still using PHP 4 in 2024 "because it works"
+```
+**Fix:** Balance stability with modernization, adopt proven new technologies.
+
+#### 63. Golden Hammer
+**What:** Using one favorite tool or pattern for every problem.
+```python
+# Example: Using React for everything, even command-line tools
+```
+**Fix:** Use appropriate tools for each problem, maintain broad technology knowledge.
+
+#### 64. Iceberg Class
+**What:** Class appears simple but has complex hidden behavior.
+```python
+class SimpleCalculator:
+    def calculate(self, a, b):
+        # 500 lines of complex logic hidden inside
+        # Appears simple but is actually very complex
+```
+**Fix:** Break down complex classes, make complexity visible through proper naming.
+
+#### 65. Last 10% Trap
+**What:** Underestimating the effort needed to finish the last part of a project.
+```python
+# Example: 90% done for 3 months, still not shipped
+```
+**Fix:** Plan for completion, break down final tasks, track progress realistically.
+
+#### 66. Lois Lane Planning
+**What:** Planning based on incomplete or incorrect information.
+```python
+# Example: Designing system without consulting actual users
+```
+**Fix:** Gather requirements from real users, validate assumptions.
+
+#### 67. Magic Strings
+**What:** Using string literals instead of named constants.
+```python
+# BAD: Magic strings
+if user.status == "active":
+    # vs named constant
+if user.status == UserStatus.ACTIVE:
+```
+**Fix:** Use named constants or enums instead of magic strings.
+
+#### 68. Mushroom Management
+**What:** Keeping developers in the dark about project goals and progress.
+```python
+# Example: Developers only see their small task, not big picture
+```
+**Fix:** Share vision, provide context, include team in decision-making.
+
+#### 69. Not Invented Here (NIH)
+**What:** Rejecting external solutions in favor of building everything internally.
+```python
+# Example: Building custom logging instead of using established libraries
+```
+**Fix:** Evaluate external solutions, balance control with efficiency.
+
+#### 70. One Thing to Rule Them All
+**What:** One component or pattern trying to handle too many responsibilities.
+```python
+# Example: Single service handling payments, inventory, shipping, notifications
+```
+**Fix:** Apply single responsibility principle, decompose large components.
+
+#### 71. Reinventing the Wheel
+**What:** Building something that already exists.
+```python
+# Example: Custom date library when mature ones exist
+```
+**Fix:** Research existing solutions before building new ones.
+
+#### 72. Service Locator
+**What:** Global registry for accessing services instead of dependency injection.
+```python
+# BAD: Service locator pattern
+class ServiceLocator:
+    @staticmethod
+    def get_database():
+        return global_db_instance
+
+# Usage
+db = ServiceLocator.get_database()
+```
+**Fix:** Use dependency injection instead of global service locators.
+
+#### 73. Shiny Toy
+**What:** Adopting new technologies without considering if they're appropriate.
+```python
+# Example: Using blockchain for a simple blog
+```
+**Fix:** Choose technologies based on actual needs, not hype.
+
+#### 74. Smoke and Mirrors
+**What:** Hiding problems with superficial fixes or misleading metrics.
+```python
+# Example: Hiding failing tests by disabling them
+```
+**Fix:** Address root causes, maintain honest metrics.
+
+#### 75. Static Cling
+**What:** Overusing static methods and state.
+```python
+# BAD: Everything static
+class Utils:
+    @staticmethod
+    def format_date(date):
+        # Can't be mocked, tested, or have multiple instances
+```
+**Fix:** Use instance methods, dependency injection, avoid global state.
+
+#### 76. Walking Through a Minefield
+**What:** Working in a codebase with many known issues that must be avoided.
+```python
+# Example: "Don't touch the payment module, it's buggy"
+```
+**Fix:** Fix technical debt systematically, improve code quality.
+
+#### 77. Waterfall / Waterfail
+**What:** Sequential development phases with no iteration.
+```python
+# Example: Requirements → Design → Code → Test (no feedback loops)
+```
+**Fix:** Use iterative development (Agile, Scrum), incorporate feedback.
+
+#### 78. Witches' Brew Architecture
+**What:** Complex, magical architecture that's hard to understand or maintain.
+```python
+# Example: Over-engineered system with unnecessary abstractions
+```
+**Fix:** Keep architecture simple, avoid over-engineering.
+
+#### 79. Big Ball of Mud
+**What:** A system with no discernible architecture, where everything is interconnected.
+```python
+# Example: Monolithic application where changing one function
+# breaks seemingly unrelated parts of the system
+```
+**Fix:** Apply architectural patterns, separate concerns, refactor incrementally.
+
+#### 80. Anemic Model
+**What:** Domain objects that only contain data with no behavior.
+```python
+# BAD: Anemic model - just data, no behavior
+class User:
+    def __init__(self, name, email):
+        self.name = name
+        self.email = email
+
+# Business logic elsewhere
+def validate_user(user):
+    if not user.email:
+        raise ValueError("Email required")
+
+# GOOD: Rich domain model
+class User:
+    def __init__(self, name, email):
+        self.name = name
+        self.email = email
+
+    def is_valid(self):
+        return bool(self.email)
+```
+**Fix:** Move business logic into domain objects, avoid anemic models.
 
 ### CODE STRUCTURE ANTI-PATTERNS
 
