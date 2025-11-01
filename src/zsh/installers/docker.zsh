@@ -2,6 +2,9 @@
 #
 # Registers Docker package and pre-install hooks for adding official repositories
 
+# Docker MCP installation version
+DOCKER_MCP_INSTALL_VERSION="latest"
+
 # Register Docker packages
 _installer_package "macos-cask" docker
 _installer_package "debian" docker docker-ce docker-compose-plugin docker-model-plugin
@@ -69,7 +72,7 @@ _installer_post_docker_mcp() {
     fi
 
     # Get target version using comparison function
-    local target_version=$(_gh_compare_versions "$repo" "latest" "$current_version")
+    local target_version=$(_gh_compare_versions "$repo" "$DOCKER_MCP_INSTALL_VERSION" "$current_version")
     if [[ $? -ne 0 ]]; then
         echo "❌ Failed to resolve docker-mcp version" >&2
         return 1
