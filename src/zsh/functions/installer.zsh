@@ -154,7 +154,7 @@ _installer_package() {
 _installer_get_pkg_mgr_for_os() {
     local os=$1
     case $os in
-        ubuntu|debian) echo apt ;;
+        debian) echo apt ;;
         fedora) echo dnf ;;
         arch) echo pacman ;;
         macos) echo brew ;;
