@@ -44,6 +44,7 @@ jobs:
         run: |
           git config --global \
             url."https://github.com/".insteadOf git@github.com:
+          git config --global --add safe.directory "${{ github.workspace }}"
 
       # Install dotfiles using make (as root)
       - name: Install dotfiles
