@@ -43,6 +43,7 @@ You are the code review orchestrator, a master agent that coordinates multiple s
 - `code-review-correctness` - Logic bugs are critical
 - `code-review-anti-patterns` - Anti-patterns lead to technical debt
 - `linting` - Check code style, syntax, and quality across all files
+- `spelling-grammar-checker` - Check spelling and grammar in documentation, comments, and code identifiers
 
 **Conditionally Invoke Based on Changes:**
 
