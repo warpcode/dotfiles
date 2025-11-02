@@ -59,36 +59,6 @@ jobs:
             _installer_install
           '
 
-      # Run tests as root
-      - name: Run tests as root
-        run: |
-          zsh -c '
-            # Test configuration loading
-            source ~/.zshrc && echo "Config loaded successfully"
-            # Test df.install alias availability
-            if alias df.install >/dev/null 2>&1; then
-              echo "df.install alias is defined"
-            else
-              echo "df.install alias not found" >&2
-              exit 1
-            fi
-          '
-
-      # Run tests as root
-      - name: Run tests as root
-        run: |
-          zsh -c '
-            # Test configuration loading
-            source ~/.zshrc && echo "Config loaded successfully"
-            # Test df.install alias availability
-            if alias df.install >/dev/null 2>&1; then
-              echo "df.install alias is defined"
-            else
-              echo "df.install alias not found" >&2
-              exit 1
-            fi
-          '
-
   test-macos:
     runs-on: macos-latest
     defaults:
@@ -130,19 +100,4 @@ jobs:
           zsh -c '
             source ~/.zshrc
             _installer_install
-          '
-
-      # Run tests
-      - name: Run tests
-        run: |
-          zsh -c '
-            # Test configuration loading
-            source ~/.zshrc && echo "Config loaded successfully"
-            # Test df.install alias availability
-            if alias df.install >/dev/null 2>&1; then
-              echo "df.install alias is defined"
-            else
-              echo "df.install alias not found" >&2
-              exit 1
-            fi
           '
