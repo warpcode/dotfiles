@@ -22,12 +22,9 @@ jobs:
         working-directory: ${{ github.workspace }}
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       # Install required dependencies
       - name: Install dependencies
+        container: ${{ matrix.container }}
         run: |
           if command -v apt-get >/dev/null 2>&1; then
             apt-get update -qq && \
@@ -41,6 +38,17 @@ jobs:
             echo "Unsupported package manager"
             exit 1
           fi
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Configure git to use HTTPS instead of SSH
+      - name: Configure git
+        container: ${{ matrix.container }}
+        run: |
+          git config --global \
+            url."https://github.com/".insteadOf git@github.com:
 
       # Configure git to use HTTPS instead of SSH
       - name: Configure git
