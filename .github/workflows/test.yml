@@ -13,10 +13,7 @@ jobs:
           - debian:latest
           - fedora:latest
           - archlinux:latest
-    container:
-      image: ${{ matrix.container }}
-      volumes:
-        - ${{ github.workspace }}:${{ github.workspace }}
+    container: ${{ matrix.container }}
     defaults:
       run:
         working-directory: ${{ github.workspace }}
@@ -24,7 +21,6 @@ jobs:
     steps:
       # Install required dependencies
       - name: Install dependencies
-        container: ${{ matrix.container }}
         run: |
           if command -v apt-get >/dev/null 2>&1; then
             apt-get update -qq && \
@@ -45,13 +41,6 @@ jobs:
 
       # Configure git to use HTTPS instead of SSH
       - name: Configure git
-        container: ${{ matrix.container }}
-        run: |
-          git config --global \
-            url."https://github.com/".insteadOf git@github.com:
-
-      # Configure git to use HTTPS instead of SSH
-      - name: Configure git
         run: |
           git config --global \
             url."https://github.com/".insteadOf git@github.com:
@@ -69,6 +58,21 @@ jobs:
           zsh -c '
             source ~/.zshrc
             _installer_install
+          '
+
+      # Run tests as root
+      - name: Run tests as root
+        run: |
+          zsh -c '
+            # Test configuration loading
+            source ~/.zshrc && echo "Config loaded successfully"
+            # Test df.install alias availability
+            if alias df.install >/dev/null 2>&1; then
+              echo "df.install alias is defined"
+            else
+              echo "df.install alias not found" >&2
+              exit 1
+            fi
           '
 
       # Run tests as root
