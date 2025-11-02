@@ -222,7 +222,7 @@ _gh_extract_asset_to_install_dir() {
     if [[ ! -d "$dir/bin" ]]; then
         mkdir -p "$dir/bin"
         # Create symlinks to top-level executables in bin/
-        for exe in $(find "$dir" -maxdepth 1 -type f -executable); do
+        for exe in $(find "$dir" -maxdepth 1 -type f -perm +111); do
             local basename=$(basename "$exe")
             ln -sf "$exe" "$dir/bin/$basename"
         done
