@@ -199,22 +199,32 @@ _gh_extract_asset_to_install_dir() {
     }
 
     # Download and extract
+    local temp_file=$(mktemp)
+    trap "rm -f '$temp_file'" EXIT
+
+    if ! curl --fail -L "$asset_url" -o "$temp_file"; then
+        echo "❌ Failed to download $asset_url" >&2
+        return 1
+    fi
+
     if [[ $asset_url =~ \.zip$ ]]; then
-        local temp_file=$(mktemp)
-        if curl --fail -L "$asset_url" -o "$temp_file" && unzip -d "$dir" "$temp_file"; then
+        if unzip -d "$dir" "$temp_file"; then
             echo "📦 Downloaded and extracted $asset_url"
-            rm "$temp_file"
             _flatten_dir
         else
             echo "❌ Failed to extract $asset_url" >&2
-            rm -f "$temp_file"
             return 1
         fi
-    elif { local temp_file=$(mktemp); curl --fail -L "$asset_url" -o "$temp_file" && { tar --strip-components=1 -xzf "$temp_file" -C "$dir" 2>/dev/null || tar -xzf "$temp_file" -C "$dir"; }; rm "$temp_file"; }; then
-        echo "📦 Downloaded and extracted $asset_url"
-        _flatten_dir
+    elif [[ $asset_url =~ \.tar\.gz$ ]]; then
+        if { tar --strip-components=1 -xzf "$temp_file" -C "$dir" 2>/dev/null || tar -xzf "$temp_file" -C "$dir"; }; then
+            echo "📦 Downloaded and extracted $asset_url"
+            _flatten_dir
+        else
+            echo "❌ Failed to extract $asset_url" >&2
+            return 1
+        fi
     else
-        echo "❌ Failed to extract $asset_url" >&2
+        echo "❌ Unsupported archive format" >&2
         return 1
     fi
 
