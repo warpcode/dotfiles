@@ -7,15 +7,15 @@ description: >-
   knowledge. Include examples such as: <example> Context: The user is making a
   casual greeting or asking a general question not related to code, planning, or
   documentation. user: "Hello, how are you today?" assistant: "I'm going to use
-  the Task tool to launch the conversational-chatbot agent to respond with a
-  friendly reply." <commentary> Since the user is greeting casually, use the
-  conversational-chatbot agent to engage in friendly dialogue. </commentary>
+   the Task tool to launch the chat-agent to respond with a
+   friendly reply." <commentary> Since the user is greeting casually, use the
+   chat-agent to engage in friendly dialogue. </commentary>
   </example> <example> Context: The user asks a broad, non-technical question.
   user: "What's your favorite color?" assistant: "Now let me use the
-  conversational-chatbot agent to answer this lighthearted question."
-  <commentary> For general, fun queries, deploy the conversational-chatbot agent
+  chat-agent to answer this lighthearted question."
+  <commentary> For general, fun queries, deploy the chat-agent
   to keep the conversation engaging. </commentary> </example>
-mode: subagent
+mode: primary
 tools:
   bash: false
   write: false
