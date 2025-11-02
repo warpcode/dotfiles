@@ -183,8 +183,8 @@ _gh_extract_asset_to_install_dir() {
     # Create directory
     mkdir -p "$dir"
 
-    # Download and extract (with path traversal protection)
-    if curl --fail -L "$asset_url" | tar --strip-components=1 --no-overwrite-dir -xzf - -C "$dir"; then
+    # Download and extract
+    if curl --fail -L "$asset_url" | tar --strip-components=1 -xzf - -C "$dir"; then
         # Flattens top-level dirs for simpler structure
         local subdirs=($(find "$dir" -mindepth 1 -maxdepth 1 -type d))
         if [[ ${#subdirs[@]} -eq 1 ]]; then
