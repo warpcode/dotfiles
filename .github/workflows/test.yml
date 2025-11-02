@@ -89,41 +89,60 @@ jobs:
             fi
           '
 
-   # test-macos:
-   #   runs-on: macos-latest
-   #   defaults:
-   #     run:
-   #       working-directory: ${{ github.workspace }}
+  test-macos:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
 
-   #   steps:
-   #     - uses: actions/checkout@v4
-   #       with:
-   #         fetch-depth: 0
+    steps:
+      # Install Homebrew
+      - name: Install Homebrew
+        run: |
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-   #     # Configure git to use HTTPS instead of SSH
-   #     - name: Configure git
-   #       run: |
-   #         git config --global \
-   #           url."https://github.com/".insteadOf git@github.com:
+      # Install required dependencies
+      - name: Install dependencies
+        run: |
+          brew update
+          brew install zsh stow git jq wget curl make
 
-   #     # Install dotfiles using make (as root)
-   #     - name: Install dotfiles
-   #       run: |
-   #         pwd
-   #         ls -al
-   #         make install-generic
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-   #     # Run tests as root
-   #     - name: Run tests as root
-   #       run: |
-   #         zsh -c '
-   #           # Test configuration loading
-   #           source ~/.zshrc && echo "Config loaded successfully"
-   #           # Test df.install alias availability
-   #           if alias df.install >/dev/null 2>&1; then
-   #             echo "df.install alias is defined"
-   #           else
-   #             echo "df.install alias not found" >&2
-   #             exit 1
-   #           fi
-   #         '
+      # Configure git to use HTTPS instead of SSH
+      - name: Configure git
+        run: |
+          git config --global \
+            url."https://github.com/".insteadOf git@github.com:
+
+      # Install dotfiles using make
+      - name: Install dotfiles
+        run: |
+          pwd
+          ls -al
+          make install-generic
+
+      # Install additional dependencies using df.install
+      - name: Install additional dependencies
+        run: |
+          zsh -c '
+            source ~/.zshrc
+            _installer_install
+          '
+
+      # Run tests
+      - name: Run tests
+        run: |
+          zsh -c '
+            # Test configuration loading
+            source ~/.zshrc && echo "Config loaded successfully"
+            # Test df.install alias availability
+            if alias df.install >/dev/null 2>&1; then
+              echo "df.install alias is defined"
+            else
+              echo "df.install alias not found" >&2
+              exit 1
+            fi
+          '
