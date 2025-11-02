@@ -43,11 +43,8 @@ jobs:
       # Install dotfiles using make (as root)
       - name: Install dotfiles
         run: |
-          sudo bash -c "
-            cd '${{ github.workspace }}'
-            export DOTFILES='${{ github.workspace }}'
-            make install-generic
-          "
+          export DOTFILES='${{ github.workspace }}'
+          make install-generic
 
       # Install additional dependencies using df.install
       - name: Install additional dependencies
@@ -60,7 +57,7 @@ jobs:
       # Run tests as root
       - name: Run tests as root
         run: |
-          sudo zsh -c '
+          zsh -c '
             # Test configuration loading
             source ~/.zshrc && echo "Config loaded successfully"
             # Test df.install alias availability
