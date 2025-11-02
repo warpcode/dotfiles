@@ -17,6 +17,9 @@ jobs:
       image: ${{ matrix.container }}
       volumes:
         - ${{ github.workspace }}:${{ github.workspace }}
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
 
     steps:
       - uses: actions/checkout@v4
@@ -47,7 +50,6 @@ jobs:
 
       # Install dotfiles using make (as root)
       - name: Install dotfiles
-        working-directory: ${{ github.workspace }}
         run: |
           pwd
           ls -al
@@ -55,7 +57,6 @@ jobs:
 
       # Install additional dependencies using df.install
       - name: Install additional dependencies
-        working-directory: ${{ github.workspace }}
         run: |
           zsh -c '
             source ~/.zshrc
@@ -64,7 +65,6 @@ jobs:
 
       # Run tests as root
       - name: Run tests as root
-        working-directory: ${{ github.workspace }}
         run: |
           zsh -c '
             # Test configuration loading
@@ -80,6 +80,9 @@ jobs:
 
    # test-macos:
    #   runs-on: macos-latest
+   #   defaults:
+   #     run:
+   #       working-directory: ${{ github.workspace }}
 
    #   steps:
    #     - uses: actions/checkout@v4
@@ -94,7 +97,6 @@ jobs:
 
    #     # Install dotfiles using make (as root)
    #     - name: Install dotfiles
-   #       working-directory: ${{ github.workspace }}
    #       run: |
    #         pwd
    #         ls -al
@@ -102,7 +104,6 @@ jobs:
 
    #     # Run tests as root
    #     - name: Run tests as root
-   #       working-directory: ${{ github.workspace }}
    #       run: |
    #         zsh -c '
    #           # Test configuration loading
