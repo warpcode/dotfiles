@@ -155,7 +155,7 @@ _gh_install_release() {
     local os_regex="($(IFS='|'; echo "${os_patterns[*]}"))"
     local asset_url=$(
         _os_filter_by_arch "$(_gh_get_asset_url "$repo" "$target_version")" |
-        grep -E "$os_regex" |
+        grep -i -E "$os_regex" |
         grep '\.tar\.gz$' |
         head -1
     )
