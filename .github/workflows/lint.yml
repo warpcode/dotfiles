@@ -1,5 +1,11 @@
 name: Lint Zsh Files
-on: [push, pull_request]
+on:
+  push:
+    paths:
+      - 'src/**/*.zsh'
+  pull_request:
+    paths:
+      - 'src/**/*.zsh'
 
 jobs:
   lint:
