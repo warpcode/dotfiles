@@ -1,0 +1,24 @@
+name: Lint Zsh Files
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Zsh
+        run: sudo apt-get update && sudo apt-get install -y zsh
+      
+      - name: Lint Zsh files
+        run: find src/zsh -name "*.zsh" -exec zsh -n {} \;
+      
+      - name: Check for syntax errors
+        run: |
+          if find src/zsh -name "*.zsh" -exec zsh -n {} \; 2>&1 | grep -q "error"; then
+            echo "Syntax errors found"
+            exit 1
+          else
+            echo "All Zsh files passed syntax check"
+          fi
