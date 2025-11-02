@@ -210,7 +210,7 @@ _gh_extract_asset_to_install_dir() {
             rm -f "$temp_file"
             return 1
         fi
-    elif curl --fail -L "$asset_url" | tar --strip-components=1 -xzf - -C "$dir" 2>/dev/null || curl --fail -L "$asset_url" | tar -xzf - -C "$dir"; then
+    elif { local temp_file=$(mktemp); curl --fail -L "$asset_url" -o "$temp_file" && { tar --strip-components=1 -xzf "$temp_file" -C "$dir" 2>/dev/null || tar -xzf "$temp_file" -C "$dir"; }; rm "$temp_file"; }; then
         echo "📦 Downloaded and extracted $asset_url"
         _flatten_dir
     else
