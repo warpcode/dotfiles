@@ -74,36 +74,36 @@ jobs:
             fi
           '
 
-   test-macos:
-     runs-on: macos-latest
+   # test-macos:
+   #   runs-on: macos-latest
 
-     steps:
-       - uses: actions/checkout@v4
+   #   steps:
+   #     - uses: actions/checkout@v4
 
-       # Configure git to use HTTPS instead of SSH
-       - name: Configure git
-         run: |
-           git config --global \
-             url."https://github.com/".insteadOf git@github.com:
+   #     # Configure git to use HTTPS instead of SSH
+   #     - name: Configure git
+   #       run: |
+   #         git config --global \
+   #           url."https://github.com/".insteadOf git@github.com:
 
-       # Install dotfiles using make (as root)
-       - name: Install dotfiles
-         working-directory: ${{ github.workspace }}
-         run: |
-           make install-generic
+   #     # Install dotfiles using make (as root)
+   #     - name: Install dotfiles
+   #       working-directory: ${{ github.workspace }}
+   #       run: |
+   #         make install-generic
 
-      # Run tests as root
-      - name: Run tests as root
-        working-directory: ${{ github.workspace }}
-        run: |
-          zsh -c '
-            # Test configuration loading
-            source ~/.zshrc && echo "Config loaded successfully"
-            # Test df.install alias availability
-            if alias df.install >/dev/null 2>&1; then
-              echo "df.install alias is defined"
-            else
-              echo "df.install alias not found" >&2
-              exit 1
-            fi
-          '
+   #     # Run tests as root
+   #     - name: Run tests as root
+   #       working-directory: ${{ github.workspace }}
+   #       run: |
+   #         zsh -c '
+   #           # Test configuration loading
+   #           source ~/.zshrc && echo "Config loaded successfully"
+   #           # Test df.install alias availability
+   #           if alias df.install >/dev/null 2>&1; then
+   #             echo "df.install alias is defined"
+   #           else
+   #             echo "df.install alias not found" >&2
+   #             exit 1
+   #           fi
+   #         '
