@@ -1,78 +1,115 @@
+---
 name: Test Dotfiles
 on: [push, pull_request]
 
 jobs:
   test-linux:
+    name: test-linux-${{ matrix.container }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ubuntu-latest, ubuntu-20.04]
-    runs-on: ${{ matrix.os }}
+        container:
+          - ubuntu:latest
+          - debian:latest
+          - fedora:latest
+          - archlinux:latest
+    container: ${{ matrix.container }}
 
     steps:
       - uses: actions/checkout@v4
-
-      # Initialize and update submodules
-      - name: Initialize submodules
-        run: git submodule update --init --recursive
 
       # Install required dependencies
       - name: Install dependencies
         run: |
-          apt-get update && apt-get install -y sudo zsh stow git jq wget curl
+          SUDO=""
+          if command -v sudo >/dev/null 2>&1; then SUDO="sudo"; fi
+          if command -v apt-get >/dev/null 2>&1; then
+            $SUDO apt-get update -qq && \
+              $SUDO apt-get install -y -qq sudo zsh stow git jq wget curl make
+          elif command -v dnf >/dev/null 2>&1; then
+            $SUDO dnf update -y -q && \
+              $SUDO dnf install -y -q sudo zsh stow git jq wget curl make
+          elif command -v pacman >/dev/null 2>&1; then
+            pacman -Syu --noconfirm --quiet sudo zsh stow git jq wget curl make
+          else
+            echo "Unsupported package manager"
+            exit 1
+          fi
 
-      # Create test user (Ubuntu/Debian)
-      - name: Create test-user
-        run: useradd -m test-user
-
-      # Configure passwordless sudo for test-user
-      - name: Configure sudo for test-user
+      # Configure git to use HTTPS instead of SSH
+      - name: Configure git
         run: |
-          echo 'test-user ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+          git config --global \
+            url."https://github.com/".insteadOf git@github.com:
 
-      # Run tests as test-user
-      - name: Run tests as test-user
+      # Install dotfiles using make (as root)
+      - name: Install dotfiles
         run: |
-          su - test-user -c '
-            cd ${{ github.workspace }}
-            export DOTFILES=${{ github.workspace }}
-            # Config loading test
-            zsh -c "source src/zsh/init.zsh && echo \"Config loaded\""
-            # Installer test
-            zsh -c "source src/zsh/init.zsh && _installer_install"
+          sudo bash -c "
+            cd '${{ github.workspace }}'
+            export DOTFILES='${{ github.workspace }}'
+            make install-generic
+          "
+
+      # Install additional dependencies using df.install
+      - name: Install additional dependencies
+        run: |
+          zsh -c '
+            source ~/.zshrc
+            _installer_install
+          '
+
+      # Run tests as root
+      - name: Run tests as root
+        run: |
+          sudo zsh -c '
+            # Test configuration loading
+            source ~/.zshrc && echo "Config loaded successfully"
+            # Test df.install alias availability
+            if alias df.install >/dev/null 2>&1; then
+              echo "df.install alias is defined"
+            else
+              echo "df.install alias not found" >&2
+              exit 1
+            fi
           '
 
   test-macos:
     runs-on: macos-latest
-    
+
     steps:
       - uses: actions/checkout@v4
 
-      # Initialize and update submodules
-      - name: Initialize submodules
-        run: git submodule update --init --recursive
-
-      # macOS already has sudo, create test user differently
-      - name: Create test-user (macOS)
+      # Configure git to use HTTPS instead of SSH
+      - name: Configure git
         run: |
-          sudo dscl . -create /Users/test-user
-          sudo dscl . -create /Users/test-user UserShell /bin/zsh
-          sudo dscl . -create /Users/test-user RealName "Test User"
-          sudo dscl . -create /Users/test-user UniqueID 1001
-          sudo dscl . -create /Users/test-user PrimaryGroupID 20
-          sudo dscl . -passwd /Users/test-user ""
+          git config --global \
+            url."https://github.com/".insteadOf git@github.com:
 
-      # Configure passwordless sudo for test-user (macOS)
-      - name: Configure sudo for test-user (macOS)
+      # Install dotfiles using make (as root)
+      - name: Install dotfiles
         run: |
-          echo 'test-user ALL=(ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers
+          SUDO=""
+          if command -v sudo >/dev/null 2>&1; then SUDO="sudo"; fi
+          $SUDO bash -c "
+            cd '${{ github.workspace }}'
+            export DOTFILES='${{ github.workspace }}'
+            make install-generic
+          "
 
-      # Run tests as test-user
-      - name: Run tests as test-user
+      # Run tests as root
+      - name: Run tests as root
         run: |
-          sudo su - test-user -c '
-            cd ${{ github.workspace }}
-            export DOTFILES=${{ github.workspace }}
-            # Same test commands as Linux
-            zsh -c "source src/zsh/init.zsh && echo \"Config loaded\""
-            zsh -c "source src/zsh/init.zsh && _installer_install"
+          SUDO=""
+          if command -v sudo >/dev/null 2>&1; then SUDO="sudo"; fi
+          $SUDO zsh -c '
+            # Test configuration loading
+            source ~/.zshrc && echo "Config loaded successfully"
+            # Test df.install alias availability
+            if alias df.install >/dev/null 2>&1; then
+              echo "df.install alias is defined"
+            else
+              echo "df.install alias not found" >&2
+              exit 1
+            fi
           '
