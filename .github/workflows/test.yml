@@ -13,7 +13,10 @@ jobs:
           - debian:latest
           - fedora:latest
           - archlinux:latest
-    container: ${{ matrix.container }}
+    container:
+      image: ${{ matrix.container }}
+      volumes:
+        - ${{ github.workspace }}:${{ github.workspace }}
 
     steps:
       - uses: actions/checkout@v4
@@ -43,7 +46,7 @@ jobs:
       # Install dotfiles using make (as root)
       - name: Install dotfiles
         run: |
-          export DOTFILES='${{ github.workspace }}'
+          cd '${{ github.workspace }}'
           make install-generic
 
       # Install additional dependencies using df.install
@@ -84,13 +87,8 @@ jobs:
       # Install dotfiles using make (as root)
       - name: Install dotfiles
         run: |
-          SUDO=""
-          if command -v sudo >/dev/null 2>&1; then SUDO="sudo"; fi
-          $SUDO bash -c "
-            cd '${{ github.workspace }}'
-            export DOTFILES='${{ github.workspace }}'
-            make install-generic
-          "
+          cd '${{ github.workspace }}'
+          make install-generic
 
       # Run tests as root
       - name: Run tests as root
