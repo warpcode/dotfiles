@@ -1,0 +1,78 @@
+name: Test Dotfiles
+on: [push, pull_request]
+
+jobs:
+  test-linux:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, ubuntu-20.04]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Initialize and update submodules
+      - name: Initialize submodules
+        run: git submodule update --init --recursive
+
+      # Install required dependencies
+      - name: Install dependencies
+        run: |
+          apt-get update && apt-get install -y sudo zsh stow git jq wget curl
+
+      # Create test user (Ubuntu/Debian)
+      - name: Create test-user
+        run: useradd -m test-user
+
+      # Configure passwordless sudo for test-user
+      - name: Configure sudo for test-user
+        run: |
+          echo 'test-user ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+
+      # Run tests as test-user
+      - name: Run tests as test-user
+        run: |
+          su - test-user -c '
+            cd ${{ github.workspace }}
+            export DOTFILES=${{ github.workspace }}
+            # Config loading test
+            zsh -c "source src/zsh/init.zsh && echo \"Config loaded\""
+            # Installer test
+            zsh -c "source src/zsh/init.zsh && _installer_install"
+          '
+
+  test-macos:
+    runs-on: macos-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      # Initialize and update submodules
+      - name: Initialize submodules
+        run: git submodule update --init --recursive
+
+      # macOS already has sudo, create test user differently
+      - name: Create test-user (macOS)
+        run: |
+          sudo dscl . -create /Users/test-user
+          sudo dscl . -create /Users/test-user UserShell /bin/zsh
+          sudo dscl . -create /Users/test-user RealName "Test User"
+          sudo dscl . -create /Users/test-user UniqueID 1001
+          sudo dscl . -create /Users/test-user PrimaryGroupID 20
+          sudo dscl . -passwd /Users/test-user ""
+
+      # Configure passwordless sudo for test-user (macOS)
+      - name: Configure sudo for test-user (macOS)
+        run: |
+          echo 'test-user ALL=(ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers
+
+      # Run tests as test-user
+      - name: Run tests as test-user
+        run: |
+          sudo su - test-user -c '
+            cd ${{ github.workspace }}
+            export DOTFILES=${{ github.workspace }}
+            # Same test commands as Linux
+            zsh -c "source src/zsh/init.zsh && echo \"Config loaded\""
+            zsh -c "source src/zsh/init.zsh && _installer_install"
+          '
