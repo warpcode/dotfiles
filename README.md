@@ -77,7 +77,7 @@ This will:
 - Create symlinks to all executable files in `bin/` for PATH access
 - Track versions in `.version` files to avoid unnecessary re-downloads
 
-Supported formats: Currently `.tar.gz` archives. The system detects Linux/macOS and x86_64/aarch64 architectures, with fallback patterns for common naming variations.
+Supported formats: `.tar.gz` and `.zip` archives. The system detects Linux/macOS and x86_64/aarch64 architectures, with fallback patterns for common naming variations.
 
 ## External Dependencies
 

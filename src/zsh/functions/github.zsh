@@ -200,11 +200,14 @@ _gh_extract_asset_to_install_dir() {
 
     # Download and extract
     if [[ $asset_url =~ \.zip$ ]]; then
-        if curl --fail -L "$asset_url" | unzip -d "$dir" -; then
+        local temp_file=$(mktemp)
+        if curl --fail -L "$asset_url" -o "$temp_file" && unzip -d "$dir" "$temp_file"; then
             echo "📦 Downloaded and extracted $asset_url"
+            rm "$temp_file"
             _flatten_dir
         else
             echo "❌ Failed to extract $asset_url" >&2
+            rm -f "$temp_file"
             return 1
         fi
     elif curl --fail -L "$asset_url" | tar --strip-components=1 -xzf - -C "$dir"; then
