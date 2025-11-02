@@ -12,9 +12,9 @@
 # 4. OS-specific packages or defaults
 #
 # Installation order (after priority selection):
-# 1. OS packages (native system packages)
-# 2. Flatpak packages
-# 3. Snap packages
+# 1. Flatpak packages
+# 2. Snap packages
+# 3. OS packages (native system packages)
 # 4. GitHub releases
 #
 # Usage Examples:
@@ -47,6 +47,7 @@ typeset -i _installer_verbose=0
 _installer_get_packages_for_pkg_mgr() {
     local manager=$1
     local app_filter=$2
+    local current_os=$(_os_detect_os_family)
 
     # Special handling for dependencies
     if [[ $app_filter == "__deps__" ]]; then
@@ -70,8 +71,12 @@ _installer_get_packages_for_pkg_mgr() {
     local packages=()
     for app in ${(k)apps}; do
         local pkg=""
-        local has_snap_pkg=$(( $+commands[snap] && ${#_installer_app_mappings[${app}:snap]} > 0 ? 1 : 0 ))
         local has_flatpak_pkg=$(( $+commands[flatpak] && ${#_installer_app_mappings[${app}:flatpak]} > 0 ? 1 : 0 ))
+        local has_snap_pkg=$(( $+commands[snap] && ${#_installer_app_mappings[${app}:snap]} > 0 ? 1 : 0 ))
+        local has_os_pkg=$(( ${#_installer_app_mappings[${app}:${current_os}]} > 0 ? 1 : 0 ))
+        local has_default_pkg=$(( ${#_installer_app_mappings[${app}:default]} > 0 ? 1 : 0 ))
+        local has_github_pkg=$(( ${#_installer_app_mappings[${app}:github]} > 0 ? 1 : 0 ))
+
         case $manager in
             flatpak|macos-brew|macos-cask)
                 if [[ -n ${_installer_app_mappings[${app}:${manager}]} ]]; then
@@ -79,7 +84,8 @@ _installer_get_packages_for_pkg_mgr() {
                 fi
                 ;;
             github)
-                if [[ -n ${_installer_app_mappings[${app}:${manager}]} ]]; then
+                # Only include GitHub packages if no OS/default packages are available
+                if [[ -n ${_installer_app_mappings[${app}:${manager}]} ]] && [[ $has_os_pkg -eq 0 ]] && [[ $has_default_pkg -eq 0 ]]; then
                     pkg="$app:${_installer_app_mappings[${app}:${manager}]}"
                 fi
                 ;;
@@ -299,7 +305,23 @@ _installer_install() {
     _events_trigger "installer_pre_install" "$os"
 
     echo ""
-    # Install packages for each package manager (OS first, then alternatives)
+    # Install packages for each package manager (flatpak/snap first, then OS, then GitHub)
+    if [ ${#flatpak_packages[@]} -gt 0 ]; then
+        echo "📦 Installing flatpak packages: ${flatpak_packages[*]}"
+        if ! flatpak install -y "${flatpak_packages[@]}"; then
+            echo "❌ Flatpak install failed" >&2
+            return 1
+        fi
+    fi
+
+    if [ ${#snap_packages[@]} -gt 0 ]; then
+        echo "📦 Installing snap packages: ${snap_packages[*]}"
+        if ! snap install "${snap_packages[@]}"; then
+            echo "❌ Snap install failed" >&2
+            return 1
+        fi
+    fi
+
     if [[ $os == "macos" ]]; then
         if ! (( $+commands[brew] )); then
             echo "❌ Homebrew not found. Please install Homebrew first." >&2
@@ -318,22 +340,6 @@ _installer_install() {
     elif [ ${#os_packages[@]} -gt 0 ]; then
         echo "📦 Installing OS packages: ${os_packages[*]}"
         _installer_install_packages "$(_installer_get_pkg_mgr_for_os "$os")" "${os_packages[@]}"
-    fi
-
-    if [ ${#flatpak_packages[@]} -gt 0 ]; then
-        echo "📦 Installing flatpak packages: ${flatpak_packages[*]}"
-        if ! flatpak install -y "${flatpak_packages[@]}"; then
-            echo "❌ Flatpak install failed" >&2
-            return 1
-        fi
-    fi
-
-    if [ ${#snap_packages[@]} -gt 0 ]; then
-        echo "📦 Installing snap packages: ${snap_packages[*]}"
-        if ! snap install "${snap_packages[@]}"; then
-            echo "❌ Snap install failed" >&2
-            return 1
-        fi
     fi
 
     echo ""
