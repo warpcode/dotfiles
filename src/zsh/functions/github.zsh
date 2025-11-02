@@ -215,17 +215,17 @@ _gh_extract_asset_to_install_dir() {
         return 1
     fi
 
-        # Ensure bin/ directory exists and contains symlinks to executables
-        if [[ ! -d "$dir/bin" ]]; then
-            mkdir -p "$dir/bin"
-            # Create symlinks to top-level executables in bin/
-            for exe in $(find "$dir" -maxdepth 1 -type f -executable); do
-                local basename=$(basename "$exe")
-                ln -sf "$exe" "$dir/bin/$basename"
-            done
-        fi
-        echo "$version" > "$dir/.version"
-        echo "✅ Successfully installed $app version $version"
+    # Ensure bin/ directory exists and contains symlinks to executables
+    if [[ ! -d "$dir/bin" ]]; then
+        mkdir -p "$dir/bin"
+        # Create symlinks to top-level executables in bin/
+        for exe in $(find "$dir" -maxdepth 1 -type f -executable); do
+            local basename=$(basename "$exe")
+            ln -sf "$exe" "$dir/bin/$basename"
+        done
+    fi
+    echo "$version" > "$dir/.version"
+    echo "✅ Successfully installed $app version $version"
 }
 
 # Compare versions and return the target version to use
