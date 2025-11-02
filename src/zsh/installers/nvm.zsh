@@ -1,3 +1,4 @@
+#!/usr/bin/env zsh
 # nvm.zsh - Node Version Manager installation
 #
 # Registers post-install hook to ensure nvm is installed
@@ -35,7 +36,7 @@ _installer_post_nvm() {
 
     # Install nvm using the official install script
     local install_url="https://raw.githubusercontent.com/nvm-sh/nvm/v${target_version#v}/install.sh"
-    if curl --fail -o- "$install_url" | bash; then
+    if env PROFILE=/dev/null bash -c "curl --fail -o- '$install_url' | bash"; then
         echo "✅ nvm $target_version installed successfully"
         # Note: Shell environment will be updated on next session via apps/nvm.zsh
     else
