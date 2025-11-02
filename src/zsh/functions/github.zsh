@@ -186,18 +186,24 @@ _gh_extract_asset_to_install_dir() {
     # Download and extract
     if [[ $asset_url =~ \.zip$ ]]; then
         if curl --fail -L "$asset_url" | unzip -d "$dir" -; then
-            # For zip, no strip-components equivalent, but flattening handles it
-            true
+            echo "📦 Downloaded and extracted $asset_url"
+            # Flattens top-level dirs for simpler structure
+            local subdirs=($(find "$dir" -mindepth 1 -maxdepth 1 -type d))
+            if [[ ${#subdirs[@]} -eq 1 ]]; then
+                local subdir=${subdirs[1]}
+                if [[ -d "$subdir/bin" || -d "$subdir/sbin" || -d "$subdir/usr" || -d "$subdir/lib" ]]; then
+                    setopt local_options dotglob
+                    mv "$subdir"/* "$dir"/ 2>/dev/null || true
+                    unsetopt dotglob
+                    rmdir "$subdir" 2>/dev/null || true
+                fi
+            fi
         else
             echo "❌ Failed to extract $asset_url" >&2
             return 1
         fi
     elif curl --fail -L "$asset_url" | tar --strip-components=1 -xzf - -C "$dir"; then
-        true
-    else
-        echo "❌ Failed to extract $asset_url" >&2
-        return 1
-    fi
+        echo "📦 Downloaded and extracted $asset_url"
         # Flattens top-level dirs for simpler structure
         local subdirs=($(find "$dir" -mindepth 1 -maxdepth 1 -type d))
         if [[ ${#subdirs[@]} -eq 1 ]]; then
@@ -209,6 +215,10 @@ _gh_extract_asset_to_install_dir() {
                 rmdir "$subdir" 2>/dev/null || true
             fi
         fi
+    else
+        echo "❌ Failed to extract $asset_url" >&2
+        return 1
+    fi
 
         # Ensure bin/ directory exists and contains symlinks to executables
         if [[ ! -d "$dir/bin" ]]; then
