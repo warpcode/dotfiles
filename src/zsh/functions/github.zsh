@@ -151,12 +151,12 @@ _gh_install_release() {
         os_patterns=("$os")
     fi
 
-    # Find compatible asset (only .tar.gz supported initially)
+    # Find compatible asset (.tar.gz and .zip supported)
     local os_regex="($(IFS='|'; echo "${os_patterns[*]}"))"
     local asset_url=$(
         _os_filter_by_arch "$(_gh_get_asset_url "$repo" "$target_version")" |
         grep -i -E "$os_regex" |
-        grep '\.tar\.gz$' |
+        grep -E '\.(tar\.gz|zip)$' |
         head -1
     )
 
@@ -184,7 +184,20 @@ _gh_extract_asset_to_install_dir() {
     mkdir -p "$dir"
 
     # Download and extract
-    if curl --fail -L "$asset_url" | tar --strip-components=1 -xzf - -C "$dir"; then
+    if [[ $asset_url =~ \.zip$ ]]; then
+        if curl --fail -L "$asset_url" | unzip -d "$dir" -; then
+            # For zip, no strip-components equivalent, but flattening handles it
+            true
+        else
+            echo "❌ Failed to extract $asset_url" >&2
+            return 1
+        fi
+    elif curl --fail -L "$asset_url" | tar --strip-components=1 -xzf - -C "$dir"; then
+        true
+    else
+        echo "❌ Failed to extract $asset_url" >&2
+        return 1
+    fi
         # Flattens top-level dirs for simpler structure
         local subdirs=($(find "$dir" -mindepth 1 -maxdepth 1 -type d))
         if [[ ${#subdirs[@]} -eq 1 ]]; then
