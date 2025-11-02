@@ -49,8 +49,6 @@ jobs:
       # Install dotfiles using make (as root)
       - name: Install dotfiles
         run: |
-          pwd
-          ls -al
           make install-generic
 
       # Install additional dependencies using df.install
