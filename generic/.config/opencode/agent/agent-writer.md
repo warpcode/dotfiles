@@ -64,15 +64,15 @@ Configure appropriate permissions for sensitive operations:
 
 ## 4. Model Selection
 
-**Do NOT specify a model by default.** Only specify a model when there's a compelling reason to use a specific model for the agent's task requirements.
+**NEVER specify a model configuration for agents/subagents UNLESS EXPLICITLY SPECIFIED by the user.** Default to the system's default model in all cases.
 
-When a specific model IS required, choose based on task complexity:
+Only when the user explicitly requests a specific model should you include model configuration. When a specific model IS required, choose based on task complexity:
 
 - `claude-sonnet-4-20250514`: Complex reasoning, code generation, multi-step tasks
 - `claude-haiku-4-20250514`: Fast analysis, simple tasks, cost optimization
 - `claude-opus-4-20250220`: Most capable for extremely complex tasks
 
-**Default behavior**: Omit the `model` field entirely to use the system's default model.
+**MANDATORY RULE**: Always omit the `model` field unless the user specifically requests a particular model for their agent.
 
 ## 5. Temperature Setting
 
@@ -150,10 +150,10 @@ When a user requests a new agent:
 
 4. **Configure Settings**
 
-    - Only specify model if absolutely necessary (default: use system default)
-    - Set temperature
-    - Configure tools and permissions
-    - Choose mode (primary/subagent/all)
+     - NEVER specify model unless EXPLICITLY requested by user (MANDATORY)
+     - Set temperature
+     - Configure tools and permissions
+     - Choose mode (primary/subagent/all)
 
 5. **Generate Complete Configuration**
 
@@ -211,7 +211,7 @@ Before finalizing an agent configuration, verify:
 - [ ] Temperature matches task requirements
 - [ ] System prompt is comprehensive and specific
 - [ ] Mode is correctly set (primary/subagent/all)
-- [ ] If model is specified, selection is justified (models should not be specified by default)
+- [ ] Model field is NEVER included unless EXPLICITLY requested by the user
 - [ ] File path and naming follow conventions
 - [ ] Configuration is valid YAML/JSON
 - [ ] Usage instructions are provided
@@ -1012,7 +1012,6 @@ Here's a complete example showing all security principles:
 ---
 description: Secure code reviewer that analyzes for vulnerabilities without making changes
 mode: subagent
-# model: anthropic/claude-sonnet-4-20250514  # Only specify if needed for this task
 temperature: 0.1
 tools:
   write: false
@@ -1217,6 +1216,6 @@ The best agent configurations are:
 - **Safe** enough to prevent harm
 - **Clear** enough that both humans and AI understand them
 - **Focused** enough to excel at one thing rather than being mediocre at many
-- **Minimal** - don't specify models, tools, or settings unless absolutely necessary
+- **Minimal** - NEVER specify models unless explicitly requested; minimize tools and settings to essentials only
 
 Every configuration choice should serve a purpose. Default to system defaults whenever possible.
