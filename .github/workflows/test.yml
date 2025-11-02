@@ -20,6 +20,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # Install required dependencies
       - name: Install dependencies
@@ -81,6 +83,8 @@ jobs:
 
    #   steps:
    #     - uses: actions/checkout@v4
+   #       with:
+   #         fetch-depth: 0
 
    #     # Configure git to use HTTPS instead of SSH
    #     - name: Configure git
