@@ -11,10 +11,11 @@ _os_detect_os_family() {
             [ -f /etc/os-release ] || { echo unknown; return; }
              . /etc/os-release
              case $ID in
-                 ubuntu|debian) echo debian ;;
-                  fedora|arch) echo "$ID" ;;
-                 *) echo unsupported ;;
-             esac
+                  ubuntu) echo ubuntu ;;
+                  debian) echo debian ;;
+                   fedora|arch) echo "$ID" ;;
+                  *) echo unsupported ;;
+              esac
             ;;
         *) echo unknown ;;
     esac
