@@ -21,14 +21,12 @@ jobs:
       # Install required dependencies
       - name: Install dependencies
         run: |
-          SUDO=""
-          if command -v sudo >/dev/null 2>&1; then SUDO="sudo"; fi
           if command -v apt-get >/dev/null 2>&1; then
-            $SUDO apt-get update -qq && \
-              $SUDO apt-get install -y -qq sudo zsh stow git jq wget curl make
+            apt-get update -qq && \
+              apt-get install -y -qq sudo zsh stow git jq wget curl make
           elif command -v dnf >/dev/null 2>&1; then
-            $SUDO dnf update -y -q && \
-              $SUDO dnf install -y -q sudo zsh stow git jq wget curl make
+            dnf update -y -q && \
+              dnf install -y -q sudo zsh stow git jq wget curl make
           elif command -v pacman >/dev/null 2>&1; then
             pacman -Syu --noconfirm --quiet sudo zsh stow git jq wget curl make
           else
