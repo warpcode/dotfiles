@@ -73,37 +73,37 @@ _installer_get_packages_for_pkg_mgr() {
         local pkg=""
         local has_flatpak_pkg=$(( $+commands[flatpak] && ${#_installer_app_mappings[${app}:flatpak]} > 0 ? 1 : 0 ))
         local has_snap_pkg=$(( $+commands[snap] && ${#_installer_app_mappings[${app}:snap]} > 0 ? 1 : 0 ))
-        local has_os_pkg=$(( ${#_installer_app_mappings[${app}:${current_os}]} > 0 ? 1 : 0 ))
+        local has_os_pkg=$(( ${#_installer_app_mappings[${app}:${current_os}]} > 0 || (${current_os} == "macos" && ${#_installer_app_mappings[${app}:macos-brew]} > 0) ? 1 : 0 ))
         local has_default_pkg=$(( ${#_installer_app_mappings[${app}:default]} > 0 ? 1 : 0 ))
         local has_github_pkg=$(( ${#_installer_app_mappings[${app}:github]} > 0 ? 1 : 0 ))
 
-        case $manager in
-            flatpak|macos-brew|macos-cask)
-                if [[ -n ${_installer_app_mappings[${app}:${manager}]} ]]; then
-                    pkg=${_installer_app_mappings[${app}:${manager}]}
-                fi
-                ;;
-            github)
-                # Only include GitHub packages if no OS/default packages are available
-                if [[ -n ${_installer_app_mappings[${app}:${manager}]} ]] && [[ $has_os_pkg -eq 0 ]] && [[ $has_default_pkg -eq 0 ]]; then
-                    pkg="$app:${_installer_app_mappings[${app}:${manager}]}"
-                fi
-                ;;
-            snap)
-                if [[ $has_snap_pkg -eq 1 ]] && [[ $has_flatpak_pkg -eq 0 ]]; then
-                    pkg=${_installer_app_mappings[${app}:snap]}
-                fi
-                ;;
-            *)
-                if [[ $has_snap_pkg -eq 0 ]] && [[ $has_flatpak_pkg -eq 0 ]]; then
-                    if [[ -n ${_installer_app_mappings[${app}:${manager}]} ]]; then
-                        pkg=${_installer_app_mappings[${app}:${manager}]}
-                    elif [[ -n ${_installer_app_mappings[${app}:default]} ]]; then
-                        pkg=${_installer_app_mappings[${app}:default]}
-                    fi
-                fi
-                ;;
-        esac
+        # Priority 1: Flatpak (containerized packages)
+        if [[ $manager == "flatpak" ]] && [[ $has_flatpak_pkg -eq 1 ]]
+        then
+            pkg=${_installer_app_mappings[${app}:${manager}]}
+        # Priority 2: macOS Cask (GUI apps)
+        elif [[ $manager == "macos-cask" ]] && [[ -n ${_installer_app_mappings[${app}:${manager}]} ]]
+        then
+            pkg=${_installer_app_mappings[${app}:${manager}]}
+        # Priority 3: Snap (if no flatpak available)
+        elif [[ $manager == "snap" ]] && [[ $has_snap_pkg -eq 1 ]] && [[ $has_flatpak_pkg -eq 0 ]]
+        then
+            pkg=${_installer_app_mappings[${app}:snap]}
+        # Priority 4: OS packages, defaults, or GitHub as last resort
+        elif [[ $has_snap_pkg -eq 0 ]] && [[ $has_flatpak_pkg -eq 0 ]]
+        then
+            if [[ -n ${_installer_app_mappings[${app}:${manager}]} ]]
+            then
+                pkg=${_installer_app_mappings[${app}:${manager}]}
+            elif [[ $has_default_pkg -eq 1 ]]
+            then
+                pkg=${_installer_app_mappings[${app}:default]}
+            # Absolute last priority: GitHub releases
+            elif [[ $manager == "github" ]] && [[ $has_github_pkg -eq 1 ]]
+            then
+                pkg="$app:${_installer_app_mappings[${app}:${manager}]}"
+            fi
+        fi
         if [[ -n $pkg ]]; then
             # Use robust splitting to handle potential edge cases (e.g., validate no colons in pkg if needed)
             packages+=("${(s: :)pkg}")
