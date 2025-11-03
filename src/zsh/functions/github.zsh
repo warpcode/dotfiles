@@ -207,7 +207,7 @@ _gh_extract_asset_to_install_dir() {
     fi
 
     if [[ $asset_url =~ \.zip$ ]]; then
-        if unzip -d "$dir" "$temp_file"; then
+        if cd "$dir" && unzip "$temp_file"; then
             echo "📦 Downloaded and extracted $asset_url"
             _flatten_dir
         else
@@ -215,7 +215,7 @@ _gh_extract_asset_to_install_dir() {
             return 1
         fi
     elif [[ $asset_url =~ \.tar\.gz$ ]]; then
-        if { tar --strip-components=1 -xzf "$temp_file" -C "$dir" 2>/dev/null || tar -xzf "$temp_file" -C "$dir"; }; then
+        if { cd "$dir" && tar --strip-components=1 -xzf "$temp_file" 2>/dev/null || cd "$dir" && tar -xzf "$temp_file"; }; then
             echo "📦 Downloaded and extracted $asset_url"
             _flatten_dir
         else
