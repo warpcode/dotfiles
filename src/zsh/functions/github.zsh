@@ -115,7 +115,6 @@ _gh_install_release() {
     if [[ -f "$dir/.version" ]]; then
         current_version=$(<"$dir/.version")
     fi
-
     # Get target version using comparison function
     local target_version=$(_gh_compare_versions "$repo" "$version" "$current_version")
     if [[ $? -ne 0 ]]; then
@@ -232,8 +231,9 @@ _gh_extract_asset_to_install_dir() {
     if [[ ! -d "$dir/bin" ]]; then
         mkdir -p "$dir/bin"
         # Create symlinks to top-level executables in bin/
-        # Use -perm +111 instead of -executable for cross-platform compatibility (macOS BSD find lacks -executable)
-        for exe in $(find "$dir" -maxdepth 1 -type f -perm +111); do
+        # Use -perm checks for cross-platform compatibility (macOS BSD find lacks -executable)
+        # -perm -100: owner execute, -perm -010: group execute, -perm -001: other execute
+        for exe in $(find "$dir" -maxdepth 1 -type f \( -perm -100 -o -perm -010 -o -perm -001 \)); do
             local basename=$(basename "$exe")
             ln -sf "$exe" "$dir/bin/$basename"
         done
