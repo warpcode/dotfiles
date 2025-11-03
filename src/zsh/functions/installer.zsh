@@ -71,41 +71,40 @@ _installer_get_packages_for_pkg_mgr() {
     local packages=()
     for app in ${(k)apps}; do
         local pkg=""
-        local has_flatpak_pkg=$(( $+commands[flatpak] && ${#_installer_app_mappings[${app}:flatpak]} > 0 ? 1 : 0 ))
-        local has_snap_pkg=$(( $+commands[snap] && ${#_installer_app_mappings[${app}:snap]} > 0 ? 1 : 0 ))
-        local has_os_pkg=$(( ${#_installer_app_mappings[${app}:${current_os}]} > 0 || (${current_os} == "macos" && ${#_installer_app_mappings[${app}:macos-brew]} > 0) ? 1 : 0 ))
+        local has_flatpak_pkg=$(( ${#_installer_app_mappings[${app}:flatpak]} > 0 ? 1 : 0 ))
+        local has_snap_pkg=$(( ${#_installer_app_mappings[${app}:snap]} > 0 ? 1 : 0 ))
+        local has_macos_cask_pkg=$(( ${#_installer_app_mappings[${app}:macos-cask]} > 0 ? 1 : 0 ))
+        local has_os_pkg=$(( ${#_installer_app_mappings[${app}:${current_os}]} > 0 ? 1 : 0 ))
         local has_default_pkg=$(( ${#_installer_app_mappings[${app}:default]} > 0 ? 1 : 0 ))
         local has_github_pkg=$(( ${#_installer_app_mappings[${app}:github]} > 0 ? 1 : 0 ))
 
-        # Priority 1: Flatpak (containerized packages)
-        if [[ $manager == "flatpak" ]] && [[ $has_flatpak_pkg -eq 1 ]]
-        then
-            pkg=${_installer_app_mappings[${app}:${manager}]}
-        # Priority 2: macOS Cask (GUI apps)
-        elif [[ $manager == "macos-cask" ]] && [[ -n ${_installer_app_mappings[${app}:${manager}]} ]]
-        then
-            pkg=${_installer_app_mappings[${app}:${manager}]}
-        # Priority 3: Snap (if no flatpak available)
-        elif [[ $manager == "snap" ]] && [[ $has_snap_pkg -eq 1 ]] && [[ $has_flatpak_pkg -eq 0 ]]
-        then
-            pkg=${_installer_app_mappings[${app}:snap]}
-        # Priority 4: OS packages, defaults, or GitHub as last resort
-        elif [[ $has_snap_pkg -eq 0 ]] && [[ $has_flatpak_pkg -eq 0 ]]
-        then
-            if [[ -n ${_installer_app_mappings[${app}:${manager}]} ]]
-            then
-                pkg=${_installer_app_mappings[${app}:${manager}]}
-            elif [[ $has_default_pkg -eq 1 ]]
-            then
-                pkg=${_installer_app_mappings[${app}:default]}
-            # Absolute last priority: GitHub releases
-            elif [[ $manager == "github" ]] && [[ $has_github_pkg -eq 1 ]]
-            then
-                pkg="$app:${_installer_app_mappings[${app}:${manager}]}"
+        if [[ $has_flatpak_pkg -eq 1 ]]; then
+            if [[ $manager == "flatpak" ]]; then
+                pkg=${_installer_app_mappings[${app}:flatpak]}
+            fi
+        elif [[ $has_snap_pkg -eq 1 ]]; then
+            if [[ $manager == "snap" ]]; then
+                pkg=${_installer_app_mappings[${app}:snap]}
+            fi
+        elif [[ $has_macos_cask_pkg -eq 1 ]]; then
+            if [[ $manager == "macos-cask" ]]; then
+                pkg=${_installer_app_mappings[${app}:macos-cask]}
+            fi
+        elif [[ $has_os_pkg -eq 1 ]] || [[ $has_default_pkg -eq 1 ]]; then
+            if [[ $manager == "$current_os" ]]; then
+                if [[ $has_os_pkg -eq 1 ]]; then
+                    pkg=${_installer_app_mappings[${app}:${manager}]}
+                elif [[ $has_default_pkg -eq 1 ]]; then
+                    pkg=${_installer_app_mappings[${app}:default]}
+                fi
+            fi
+        elif [[ $has_github_pkg -eq 1 ]]; then
+            if [[ $manager == "github" ]]; then
+                pkg="$app:${_installer_app_mappings[${app}:github]}"
             fi
         fi
+
         if [[ -n $pkg ]]; then
-            # Use robust splitting to handle potential edge cases (e.g., validate no colons in pkg if needed)
             packages+=("${(s: :)pkg}")
         fi
     done
@@ -277,7 +276,7 @@ _installer_install() {
     local brew_packages=()
     local cask_packages=()
     if [[ $os == "macos" ]]; then
-        brew_packages=($(_installer_get_packages_for_pkg_mgr macos-brew))
+        brew_packages=($(_installer_get_packages_for_pkg_mgr macos))
         cask_packages=($(_installer_get_packages_for_pkg_mgr macos-cask))
     else
         os_packages=($(_installer_get_packages_for_pkg_mgr "$os"))
