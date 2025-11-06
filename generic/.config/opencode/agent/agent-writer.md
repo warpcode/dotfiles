@@ -201,6 +201,26 @@ temperature: 0.3
 - **Haiku**: Speed/cost optimization, simple tasks
 - **Opus**: Maximum capability, extremely complex reasoning
 
+#### File Format Selection (CRITICAL RULE)
+
+**DEFAULT BEHAVIOR: ALWAYS USE .md EXTENSION FOR MARKDOWN**
+
+```yaml
+# CORRECT (99% of cases)
+filename: agent-writer.md  # ✅ Markdown format
+
+# INCORRECT - Don't do this
+filename: agent-writer.yaml  # ❌ Not markdown
+filename: agent-writer.json  # ❌ Not markdown
+```
+
+**Why**: OpenCode agents are designed to be human-readable and editable. Markdown provides rich formatting, comments, and structure that YAML/JSON cannot match for complex agent instructions.
+
+**ONLY use other formats when**:
+
+- User explicitly requests a different format
+- Integration with systems requiring specific formats
+
 ### Phase 3: Instruction Architecture
 
 #### The Layered Instruction Model
