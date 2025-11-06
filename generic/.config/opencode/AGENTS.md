@@ -12,3 +12,4 @@
 - **Permission Protocol:** Always ask permission before committing, propose the commit message first.
 - **Approval Mandate:** Do not commit unless user explicitly approves, even for additional changes or follow-ups.
 - **No Auto-Commits:** Strict prohibition on automatic commits; user consent is mandatory for every commit action.
+- **No Auto-Pushes:** AI must NEVER push git changes to remote repositories unless specifically requested by the user.
