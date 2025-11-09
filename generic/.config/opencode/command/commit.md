@@ -1,25 +1,25 @@
 ---
 description: >-
-  This guide provides a checklist of manual steps developers should follow before committing changes to ensure high-quality, intentional commits. It emphasizes reviewing staged changes, generating appropriate commit messages, and obtaining approval before proceeding with commits.
+  This procedure outlines the immediate steps to follow now before committing your current changes. It ensures high-quality, intentional commits by reviewing staged changes, generating appropriate commit messages, and obtaining approval before proceeding.
 ---
 
-# Pre-Commit Developer Checklist
+# Commit Procedure
 
-This guide outlines the essential steps developers should manually perform before committing changes to a git repository. These steps promote code quality, repository hygiene, and intentional version control practices.
+This procedure outlines the essential steps to perform now before committing your current changes to a git repository. Follow these steps to promote code quality, repository hygiene, and intentional version control practices.
 
 ## Key Principles
 
-- Always review changes before committing.
+- Review your changes now before committing.
 - Use AI assistance for commit message generation when available.
-- Never commit without explicit approval or verification.
+- Do not commit without explicit approval or verification.
 - Focus only on staged changes unless intentionally committing unstaged ones.
 - Respect repository state and avoid unintended modifications.
 
-## Pre-Commit Checklist
+## Commit Procedure Steps
 
-### 1. Determine the Scope of Changes
+### 1. Determine the Scope of Your Current Changes
 
-Before committing, manually assess what changes are ready to be committed:
+Now, assess what changes are ready to be committed:
 
 - Run `git diff --staged` to check for staged changes.
 - If no staged changes exist, stage the necessary files first using `git add`.
@@ -28,19 +28,19 @@ Before committing, manually assess what changes are ready to be committed:
 
 ### 2. Generate an Appropriate Commit Message
 
-Developers should create descriptive commit messages following project conventions:
+Now, create a descriptive commit message following project conventions:
 
-- Use the commit-message-writer agent (if available) to generate a commit message based on the staged changes.
+- Use the commit-message-writer agent (if available) to generate a commit message based on your staged changes.
 - Provide the agent with: the list of staged files, git diff output, project technology stack, and any commit message style guidelines.
 - Ensure the generated message follows conventional commit standards and project-specific conventions.
 - If AI generation is not available or suitable, manually craft a clear, descriptive message.
 
 ### 3. Review Changes and Obtain Approval
 
-Always perform a final verification before committing:
+Now, perform a final verification before committing:
 
 - Display and review the generated or crafted commit message.
-- Summarize the staged changes, including affected files and change types.
+- Summarize your staged changes, including affected files and change types.
 - Obtain explicit approval from yourself or team members before proceeding.
 - If using an AI assistant, confirm approval through the tool's interface.
 - If approval is not granted, do not commit and consider revising the changes or message.
@@ -55,7 +55,7 @@ Once all checks are complete and approval is obtained:
 
 ### 5. Handle Special Cases
 
-Be prepared for edge cases in the commit process:
+Be prepared for edge cases in the current commit process:
 
 - If the commit message generation fails or produces unsuitable results, manually create an appropriate message.
 - For dry-run scenarios, preview changes and messages without committing (e.g., using `git diff --staged` and message drafts).
@@ -64,7 +64,7 @@ Be prepared for edge cases in the commit process:
 
 ## Rationale
 
-Following this checklist ensures developers maintain high standards in version control:
+Following this procedure now ensures you maintain high standards in version control:
 
 - **Quality Assurance**: Thorough review prevents poor commits and maintains repository quality.
 - **Intentionality**: Manual steps encourage thoughtful consideration of changes.
@@ -76,7 +76,7 @@ This approach balances efficiency with careful oversight, leading to better vers
 
 ## Workflow Examples
 
-These examples illustrate how developers can apply this checklist in practice:
+These examples illustrate how to apply this procedure now:
 
 - **Standard Commit**: Stage changes, review with `git diff --staged`, generate message with AI, approve, then commit.
 - **Specific File Commit**: Stage only desired files, verify staging, generate targeted message, review, commit.
