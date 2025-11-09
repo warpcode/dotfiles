@@ -190,9 +190,11 @@ _installer_install_packages() {
             ;;
     esac
 
+
     case $pkg_mgr in
         apt)
-            if ! sudo apt update && sudo apt install -y "${packages[@]}"; then
+            sudo apt update
+            if ! sudo apt install -y "${packages[@]}"; then
                 echo "❌ apt install failed" >&2
                 return 1
             fi
