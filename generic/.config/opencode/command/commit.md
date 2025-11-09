@@ -1,70 +1,70 @@
 ---
 description: >-
-  This procedure outlines the immediate steps to follow now before committing your current changes. It ensures high-quality, intentional commits by reviewing staged changes, generating appropriate commit messages, and obtaining approval before proceeding.
+  IMMEDIATE COMMAND: Execute these steps right now to commit your current changes. This is not a reference document - it is an active procedure to follow immediately for high-quality, intentional commits.
 ---
 
-# Commit Procedure
+# Commit Command - Execute Immediately
 
-This procedure outlines the essential steps to perform now before committing your current changes to a git repository. Follow these steps to promote code quality, repository hygiene, and intentional version control practices.
+**IMMEDIATE ACTION REQUIRED:** This is a command to execute right now. Do not treat this as documentation - follow these steps immediately to commit your current changes. This ensures high-quality, intentional commits through immediate review, message generation, and approval.
 
-## Key Principles
+## Key Principles - Execute Immediately
 
-- Review your changes now before committing.
-- Use AI assistance for commit message generation when available.
-- Do not commit without explicit approval or verification.
-- Focus only on staged changes unless intentionally committing unstaged ones.
-- Respect repository state and avoid unintended modifications.
+- **IMMEDIATELY** review your changes before committing.
+- **RIGHT NOW** use AI assistance for commit message generation when available.
+- **DO NOT** commit without explicit approval or verification.
+- **FOCUS ONLY** on staged changes unless intentionally committing unstaged ones.
+- **RESPECT** repository state and avoid unintended modifications.
 
-## Commit Procedure Steps
+## Commit Command Steps - Execute Now
 
-### 1. Determine the Scope of Your Current Changes
+### 1. Determine the Scope of Your Current Changes - Do This Now
 
-Now, assess what changes are ready to be committed:
+**IMMEDIATELY** assess what changes are ready to be committed:
 
-- Run `git diff --staged` to check for staged changes.
-- If no staged changes exist, stage the necessary files first using `git add`.
-- Review the list of staged files and summarize the types of changes (additions, modifications, deletions).
-- If committing specific files, verify they are properly staged.
+- **RUN NOW:** `git diff --staged` to check for staged changes.
+- **IF NEEDED:** Stage the necessary files first using `git add`.
+- **REVIEW NOW:** The list of staged files and summarize the types of changes (additions, modifications, deletions).
+- **VERIFY NOW:** If committing specific files, ensure they are properly staged.
 
-### 2. Generate an Appropriate Commit Message
+### 2. Generate an Appropriate Commit Message - Do This Now
 
-Now, create a descriptive commit message following project conventions:
+**IMMEDIATELY** create a descriptive commit message following project conventions:
 
-- Use the commit-message-writer agent (if available) to generate a commit message based on your staged changes.
-- Provide the agent with: the list of staged files, git diff output, project technology stack, and any commit message style guidelines.
-- Ensure the generated message follows conventional commit standards and project-specific conventions.
-- If AI generation is not available or suitable, manually craft a clear, descriptive message.
+- **USE NOW:** The commit-message-writer agent (if available) to generate a commit message based on your staged changes.
+- **PROVIDE NOW:** The agent with: the list of staged files, git diff output, project technology stack, and any commit message style guidelines.
+- **ENSURE NOW:** The generated message follows conventional commit standards and project-specific conventions.
+- **IF NEEDED:** Manually craft a clear, descriptive message if AI generation is not available or suitable.
 
-### 3. Review Changes and Obtain Approval
+### 3. Review Changes and Obtain Approval - Do This Now
 
-Now, perform a final verification before committing:
+**IMMEDIATELY** perform a final verification before committing:
 
-- Display and review the generated or crafted commit message.
-- Summarize your staged changes, including affected files and change types.
-- Obtain explicit approval from yourself or team members before proceeding.
-- If using an AI assistant, confirm approval through the tool's interface.
-- If approval is not granted, do not commit and consider revising the changes or message.
+- **DISPLAY NOW:** And review the generated or crafted commit message.
+- **SUMMARIZE NOW:** Your staged changes, including affected files and change types.
+- **OBTAIN NOW:** Explicit approval from yourself or team members before proceeding.
+- **CONFIRM NOW:** Approval through the tool's interface if using an AI assistant.
+- **IF NOT APPROVED:** Do not commit and consider revising the changes or message.
 
-### 4. Execute the Commit
+### 4. Execute the Commit - Do This Now
 
-Once all checks are complete and approval is obtained:
+**ONCE APPROVED** and all checks are complete:
 
-- Run `git commit -m "your commit message"` with the approved message.
-- If using an AI tool, follow its commit execution process after approval.
-- Avoid automatic commits; always perform this step manually after verification.
+- **RUN NOW:** `git commit -m "your commit message"` with the approved message.
+- **FOLLOW NOW:** The AI tool's commit execution process after approval if using one.
+- **AVOID** automatic commits; always perform this step manually after verification.
 
-### 5. Handle Special Cases
+### 5. Handle Special Cases - Be Prepared Now
 
-Be prepared for edge cases in the current commit process:
+**IMMEDIATELY** be prepared for edge cases in the current commit process:
 
-- If the commit message generation fails or produces unsuitable results, manually create an appropriate message.
-- For dry-run scenarios, preview changes and messages without committing (e.g., using `git diff --staged` and message drafts).
-- If committing specific files, ensure only intended files are staged.
-- Respect any project-specific flags or workflows (e.g., pre-commit hooks, CI checks).
+- **IF MESSAGE GENERATION FAILS:** Manually create an appropriate message right away.
+- **FOR DRY-RUNS:** Preview changes and messages without committing (e.g., using `git diff --staged` and message drafts).
+- **FOR SPECIFIC FILES:** Ensure only intended files are staged immediately.
+- **RESPECT NOW:** Any project-specific flags or workflows (e.g., pre-commit hooks, CI checks).
 
-## Rationale
+## Rationale - Why Execute This Command Now
 
-Following this procedure now ensures you maintain high standards in version control:
+**EXECUTING THIS COMMAND NOW** ensures you maintain high standards in version control:
 
 - **Quality Assurance**: Thorough review prevents poor commits and maintains repository quality.
 - **Intentionality**: Manual steps encourage thoughtful consideration of changes.
@@ -74,9 +74,9 @@ Following this procedure now ensures you maintain high standards in version cont
 
 This approach balances efficiency with careful oversight, leading to better version control hygiene and project maintainability.
 
-## Workflow Examples
+## Workflow Examples - Execute These Patterns Now
 
-These examples illustrate how to apply this procedure now:
+**EXECUTE THESE EXAMPLES NOW** to apply this procedure:
 
 - **Standard Commit**: Stage changes, review with `git diff --staged`, generate message with AI, approve, then commit.
 - **Specific File Commit**: Stage only desired files, verify staging, generate targeted message, review, commit.
