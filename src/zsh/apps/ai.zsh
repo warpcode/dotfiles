@@ -1,7 +1,7 @@
 # AI Tools Configuration
 
 # LiteLLM API Configuration - only set when not at work
-export LITELLM_API_ENDPOINT="http://litellm.ai.localhost/v1"
+export LITELLM_API_ENDPOINT="http://litellm.ai.warpcode.co.uk/v1"
 export LITELLM_API_BASE="$LITELLM_API_ENDPOINT"
 export LITELLM_API_KEY="sk-1234"  # Local only, insecure storage is acceptable
 
