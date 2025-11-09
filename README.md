@@ -13,7 +13,7 @@ The following dependencies are required and will be installed automatically by t
 - **wget** - HTTP downloader
 - **curl** - HTTP client
 
-Additional tools like `fzf`, `uv`, `tmux`, and `rsync` can be installed using the dotfiles installer.
+Additional tools like `fzf`, `uv`, `tmux`, `rsync`, and `direnv` can be installed using the dotfiles installer.
 
 ## Features
 
