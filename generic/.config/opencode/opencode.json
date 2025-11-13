@@ -10,6 +10,7 @@
     "AI.md",
     ".github/copilot-instructions.md"
   ],
+  "plugin": ["opencode-skills"],
   "provider": {
     "litellm": {
       "npm": "@ai-sdk/openai-compatible",
