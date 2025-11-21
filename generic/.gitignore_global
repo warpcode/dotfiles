@@ -114,8 +114,9 @@ tags
 .svn/
 
 ### AI tools ###
-.aider*
-.crush*
+/.aider*
+/.crush*
 CRUSH.md
 GEMINI.md
 AGENTS.md
+/.opencode/
