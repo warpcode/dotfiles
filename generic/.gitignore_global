@@ -116,7 +116,8 @@ tags
 ### AI tools ###
 /.aider*
 /.crush*
+/.gemini/
+/.opencode/
 CRUSH.md
 GEMINI.md
 AGENTS.md
-/.opencode/
