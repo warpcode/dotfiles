@@ -1,3 +1,7 @@
+# XDG
+export XDG_CONFIG_HOME="$HOME/.config"
+
+
 # Setup default editor
 export EDITOR=nano
 if (( $+commands[nvim] )); then
