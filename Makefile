@@ -5,10 +5,10 @@ update-submodules:
 	git submodule update --init --remote
 
 install-generic: update-submodules
-	stow -R --no-folding -t ~/ generic
+	stow -R -t ~/ generic
 
 install-work: install-generic
-	stow -R --no-folding -t ~/ work
+	stow -R -t ~/ work
 
 uninstall-generic:
 	stow -D --no-folding -t ~/ generic
