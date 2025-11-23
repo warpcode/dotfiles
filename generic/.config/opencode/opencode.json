@@ -56,13 +56,6 @@
       ],
       "enabled": false
     },
-    "git": {
-      "type": "local",
-      "command": [
-        "uvx",
-        "mcp-server-git"
-      ]
-    },
     "figma": {
       "url": "https://mcp.figma.com/mcp",
       "type": "remote",
