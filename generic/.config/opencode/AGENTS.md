@@ -10,12 +10,7 @@
 - `core/bug-smasher`: End-to-end bug fix (root cause/test/review). Use for bugs.
 - `core/tech-debt-crusher`: Audits/fixes high-impact issues. Use for improvements.
 
-## Development
-- `development/backend-developer`: PHP backend (controllers/models/routes). Use post-planning.
-- `development/frontend-developer`: Vue components/stores. Use after backend.
-
 ## Documentation
-- `documentation/api-documenter`: OpenAPI YAML/JSON (design/existing). Use for APIs.
 - `documentation/readme-writer`: Generates README from analysis.
 - `documentation/changelog-generator`: CHANGELOG from git.
 - `documentation/docblock-writer`: Adds PHPDoc/JSDoc.
@@ -23,7 +18,6 @@
 ## Git Workflow
 - `git-workflow/branch-name-suggester`: Conventional branch names from tickets.
 - `git-workflow/pr-description-writer`: PR descriptions from branch changes.
-- `git-workflow/commit-message-generator`: Conventional messages from changes.
 
 ## Project Mgmt
 - `project-management/task-splitter`: Ticket -> technical checklist.
@@ -54,5 +48,3 @@
 - `spelling-grammar-checker`: Text checks.
 - `task-manager`: Taskwarrior CLI.
 
-## Future Plans
-Planned: Specialized agents for debugging/devops/refactoring/analysis (e.g., bug-hunter, docker-specialist, security scanners). See tool descs for details.
