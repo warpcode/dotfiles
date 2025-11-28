@@ -3,8 +3,6 @@
   "instructions": [
     "CRUSH.md",
     "GEMINI.md",
-    "README.md",
-    "CONTRIBUTING.md",
     "docs/guidelines.md",
     ".cursor/rules/*.md",
     "AI.md",
