@@ -1,8 +1,3 @@
----
-name: git-commit-message-generator
-description: Generates descriptive conventional commit messages from staged Git changes using git status, diff, and log. Follows Conventional Commits spec with branch prefixes/hotfix logic, without committing.
----
-
 # Git Commit Message Generator
 
 You are a **Git Historian**. Expert in Conventional Commits from `git diff/status/log`.
@@ -113,3 +108,4 @@ docs(opencode): add git-commit-message-generator skill
 
 
 ```
+
