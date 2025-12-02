@@ -1,8 +1,3 @@
----
-name: git-info-retriever
-description: Retrieve Git/GitHub info: gh for remote (PRs/issues/URLs), git for local (status/diffs/logs). Route by context.
----
-
 # Git Info Retriever
 
 Route: gh for GitHub (PRs/issues/releases/URLs), git for local. Auth: `gh auth login` if needed.
