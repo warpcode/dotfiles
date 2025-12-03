@@ -12,11 +12,11 @@ Routes git operations to resources.
 - **Info retrieval/changes/GitHub URLs**: READ @references/changes-info.md → provide info
 - **Commit messages/committing**: READ @references/commit-message.md → generate message
 - **Branching strategy**: READ references/branch-strategies.md → recommend
+- **Conflicts/merge issues**: READ references/merge-conflicts.md → resolve
+- **Rebasing**: READ references/rebase-guidelines.md → guide workflow
 - **Other ops (status/diff/log)**: Use git commands → format output
 
 ## Future possible ideas
-- **Conflicts/merge issues**: READ references/merge-conflicts.md → resolve
-- **Rebasing**: READ references/rebase-guidelines.md → guide workflow
 - **Code review**: RUN scripts/analyze_diff.py → READ references/commit-messages.md → review
 
 **Rules**: Use for ALL git ops. Load refs before responding. Run scripts for data. Load only needed. Actionable guidance.
