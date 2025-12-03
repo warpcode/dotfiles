@@ -16,7 +16,4 @@ Routes git operations to resources.
 - **Rebasing**: READ references/rebase-guidelines.md → guide workflow
 - **Other ops (status/diff/log)**: Use git commands → format output
 
-## Future possible ideas
-- **Code review**: RUN scripts/analyze_diff.py → READ references/commit-messages.md → review
-
-**Rules**: Use for ALL git ops. Load refs before responding. Run scripts for data. Load only needed. Actionable guidance.
+**Rules**: Use for ALL git ops. Load refs before responding. Run scripts for data. Load only needed. Actionable guidance. NEVER commit or push without EXPLICIT user permission.
