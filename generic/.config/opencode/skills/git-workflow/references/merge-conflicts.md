@@ -18,176 +18,60 @@ Their version of the code
 
 ## Resolution Strategy Framework
 
-### 1. Analyze the Conflict Type
+### 1. Analyze Conflict Type
 
-**Type A: Simple Line Changes**
-- Both sides modified the same line differently
-- Usually clear which version to keep
-
-**Type B: Logical Conflicts**
-- Changes are compatible syntactically but conflict logically
-- Requires understanding both changes' intent
-
-**Type C: Structural Conflicts**
-- One side renamed/moved, other side modified
-- Need to find the file and apply changes
-
-**Type D: Deletion Conflicts**
-- One side deleted, other side modified
-- Decide if modification should be preserved elsewhere
+**Line conflicts:** Same line modified differently → choose correct version  
+**Logical conflicts:** Compatible syntax but conflicting logic → understand intent  
+**Structural conflicts:** File renamed/moved vs modified → locate and apply changes  
+**Deletion conflicts:** File deleted vs modified → preserve if needed
 
 ### 2. Resolution Approaches
 
-**Accept Ours:**
-```bash
-git checkout --ours <file>
-git add <file>
-```
-Keep your version, discard theirs.
-
-**Accept Theirs:**
-```bash
-git checkout --theirs 
-git add 
-```
-Keep their version, discard yours.
-
-**Manual Merge:**
-Edit file to combine both changes appropriately.
-
-**Rewrite:**
-Discard both and write a better solution.
+**Accept ours:** `git checkout --ours <file> && git add <file>` - **ALWAYS ask for user approval**  
+**Accept theirs:** `git checkout --theirs <file> && git add <file>` - **ALWAYS ask for user approval**  
+**Manual merge:** Edit to combine both changes - **ALWAYS ask for user approval**  
+**Rewrite:** Discard both, create better solution - **ALWAYS ask for user approval**
 
 ### 3. Common Conflict Patterns
 
-**Pattern: Import Statement Conflicts**
-```python
-<<<<<<< HEAD
-import os
-import sys
-=======
-import sys
-import json
->>>>>>> feature
-```
+**Import conflicts:** Combine and sort imports alphabetically  
+**Config conflicts:** Merge all settings, prioritize newer values  
+**Function conflicts:** Combine parameter changes and logic modifications  
 
-**Resolution:** Combine and sort alphabetically
-```python
-import json
-import os
-import sys
-```
-
-**Pattern: Configuration Conflicts**
-```json
-<<<<<<< HEAD
-{
-  "timeout": 3000,
-  "retries": 3
-}
-=======
-{
-  "timeout": 5000,
-  "maxConnections": 10
-}
->>>>>>> feature
-```
-
-**Resolution:** Merge all settings
-```json
-{
-  "timeout": 5000,
-  "retries": 3,
-  "maxConnections": 10
-}
-```
-
-**Pattern: Function Modification Conflicts**
-```javascript
-<<<<<<< HEAD
-function calculate(x, y) {
-  return x + y + 10; // Added bonus
-}
-=======
-function calculate(x, y, z) {
-  return x + y + z; // Added third param
-}
->>>>>>> feature
-```
-
-**Resolution:** Combine both changes
-```javascript
-function calculate(x, y, z = 0) {
-  return x + y + z + 10; // Both changes applied
-}
-```
+*Example resolution strategy:* When both sides add value, combine changes rather than choosing one.
 
 ## Resolution Workflow
 
-1. **Understand both changes**
-   - Read the conflict markers
-   - Check commit messages: `git log --merge`
-   - See full diff: `git diff`
+1. **Understand:** Read markers, check `git log --merge`, review `git diff`
+2. **Decide:** Combine vs. choose one vs. rewrite - **ALWAYS ask for user approval**
+3. **Edit:** Remove markers, ensure valid syntax
+4. **Test:** Run tests, verify functionality
+5. **Complete:** `git add <files> && git commit`
 
-2. **Decide on approach**
-   - Can you combine both changes?
-   - Is one clearly correct?
-   - Do you need to rewrite?
+## Rebase Conflicts
 
-3. **Make the edit**
-   - Remove conflict markers
-   - Keep/combine/rewrite code
-   - Ensure syntax is valid
+**Key Differences from Merge Conflicts:**
+- Conflicts are resolved per-commit, not once
+- Use `git rebase --skip` to skip empty commits
+- Continue until all commits are replayed
 
-4. **Test the resolution**
-   - Run tests if available
-   - Verify functionality
-   - Check for logical errors
-
-5. **Complete the merge**
-   ```bash
-   git add <resolved-files>
-   git commit
-   # Default merge message is usually fine
-   ```
+**Resolution Process:**
+1. Resolve conflicts in current commit - **ALWAYS ask for user approval before resolving**
+2. `git add <resolved-files>`
+3. `git rebase --continue`
+4. Repeat for each conflicting commit
+5. Use `git rebase --abort` to cancel entire rebase
 
 ## Prevention Strategies
 
-**Keep branches short-lived:**
-- Merge frequently (daily if possible)
-- Smaller changes = fewer conflicts
-
-**Communicate:**
-- Tell team when working on shared files
-- Coordinate major refactors
-
-**Rebase regularly:**
-```bash
-git fetch origin
-git rebase origin/main
-```
-Stay up-to-date with main branch.
-
-**Use feature flags:**
-- Merge incomplete work behind flags
-- Avoid long-lived feature branches
+**Short-lived branches:** Merge frequently, smaller changes  
+**Communication:** Coordinate work on shared files  
+**Feature flags:** Merge incomplete work behind flags
 
 ## Abort Options
 
-**During merge:**
-```bash
-git merge --abort
-```
-
-**During rebase:**
-```bash
-git rebase --abort
-```
-
-**After partial resolution:**
-```bash
-git reset --hard HEAD
-```
+**During merge:** `git merge --abort`  
+**Partial resolution:** `git reset --hard HEAD`
 
 ## Advanced: 3-Way Merge Tool
 
@@ -195,19 +79,22 @@ git reset --hard HEAD
 git mergetool
 ```
 
-Shows three panes:
-- **LOCAL**: Your version (HEAD)
-- **BASE**: Common ancestor
-- **REMOTE**: Their version (incoming)
-
-Helps understand what each side changed from the original.
+Shows **LOCAL** (yours), **BASE** (common ancestor), **REMOTE** (theirs) to understand changes.
 
 ## When to Ask for Help
 
-- Conflicts in code you don't understand
-- Large-scale structural conflicts
-- Conflicts in generated files (consider regenerating)
-- Conflicts affecting critical systems
-- When unsure which version is correct
+- Code you don't understand
+- Large-scale structural conflicts  
+- Generated files (consider regenerating)
+- Critical system conflicts
+- Unsure which version is correct
 
-**Always:** Test after resolving. Conflicts can hide bugs.
+**Always:** Test after resolving - conflicts can hide bugs.  
+**IMPORTANT:** ALWAYS ask for user approval before resolving any merge conflicts.
+
+## Related Operations
+
+**For rebase-specific operations and prevention:**
+- See @references/rebase-guidelines.md for rebase workflows and safety
+- Rebase conflicts require per-commit resolution (see above)
+- Use rebase to prevent conflicts by staying up-to-date with main

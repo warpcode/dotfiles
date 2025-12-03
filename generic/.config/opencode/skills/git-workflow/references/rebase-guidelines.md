@@ -4,23 +4,12 @@ This file is loaded when Claude needs to advise on rebasing operations.
 
 ## What is Rebasing?
 
-Rebasing rewrites commit history by moving commits to a new base.
+Rebasing rewrites commit history by replaying commits on a new base.
 
-**Before rebase:**
-```
-      C---D  feature
-     /
-A---B---E---F  main
-```
+**Before:** `A---B---E---F main` + `C---D feature`  
+**After rebase:** `A---B---E---F---C'---D' feature`
 
-**After `git rebase main`:**
-```
-              C'---D'  feature
-             /
-A---B---E---F  main
-```
-
-Commits C and D are "replayed" on top of F.
+Commits C and D are replayed on top of F.
 
 ## When to Rebase
 
@@ -45,197 +34,88 @@ Commits C and D are "replayed" on top of F.
 ### Update Feature Branch
 
 ```bash
-# On feature branch
-git fetch origin
-git rebase origin/main
+git fetch origin && git rebase origin/main
 ```
 
-Replays your feature commits on top of latest main.
-
-**When conflicts occur:**
-1. Resolve conflicts in files
-2. `git add <resolved-files>`
-3. `git rebase --continue`
-4. Repeat until complete
-
-**To abort:**
-```bash
-git rebase --abort
-```
+**Conflicts:** `git add . && git rebase --continue` - **ALWAYS ask for user approval before resolving conflicts**  
+**Abort:** `git rebase --abort`
 
 ### Interactive Rebase (Clean History)
 
 ```bash
-git rebase -i HEAD~5
+git rebase -i HEAD~5  # Edit last 5 commits
 ```
 
-Opens editor with last 5 commits:
-```
-pick a1b2c3d Add feature X
-pick e4f5g6h Fix typo
-pick i7j8k9l WIP: debugging
-pick m0n1o2p Fix feature X
-pick q3r4s5t Update docs
-```
-
-**Commands:**
-- `pick` - Keep commit as-is
-- `reword` - Change commit message
-- `edit` - Pause to amend commit
-- `squash` - Combine with previous commit
-- `fixup` - Like squash but discard message
-- `drop` - Remove commit
+**Commands:** `pick` (keep), `reword` (msg), `edit` (amend), `squash`/`fixup` (combine), `drop` (remove)
 
 **Example cleanup:**
 ```
 pick a1b2c3d Add feature X
-fixup e4f5g6h Fix typo
-drop i7j8k9l WIP: debugging
-fixup m0n1o2p Fix feature X
+fixup e4f5g6h Fix typo          # Combine with previous
+drop i7j8k9l WIP: debugging      # Remove
+fixup m0n1o2p Fix feature X      # Combine
 pick q3r4s5t Update docs
 ```
-
-Results in 2 clean commits instead of 5.
+Result: 2 clean commits instead of 5.
 
 ### Squash All Commits
 
 ```bash
-# Squash all commits since branching from main
-git rebase -i $(git merge-base HEAD main)
+git rebase -i $(git merge-base HEAD main)  # Squash all since main branch
 ```
-
-Then use `squash` or `fixup` on all but the first commit.
 
 ### Change Old Commit
 
 ```bash
-git rebase -i HEAD~5
-# Change 'pick' to 'edit' for commit to modify
-# Save and close
-
-# Make your changes
-git add 
-git commit --amend
-
-# Continue rebase
+git rebase -i HEAD~5  # Mark commit as 'edit'
+git add . && git commit --amend  # Make changes
 git rebase --continue
 ```
 
 ## Rebase vs Merge
 
-**Merge:**
-```
-      C---D  feature
-     /     \
-A---B---E---F---G  main
-```
-- Preserves history
-- Shows when feature was integrated
-- Can be messy with many merges
+| Aspect | Merge | Rebase |
+|--------|-------|--------|
+| History | Preserves exact timeline | Linear, clean |
+| Context | Shows integration points | Loses merge context |
+| Use case | Public/shared branches | Personal feature cleanup |
+| Result | `A---B---E---F---G` (with merge) | `A---B---E---F---C'---D'` |
 
-**Rebase:**
-```
-A---B---E---F---C'---D'  main
-```
-- Linear history
-- Cleaner to read
-- Loses merge context
-
-**Choose Merge when:**
-- Working on public/shared branches
-- Want to preserve exact history
-- Multiple people working on branch
-
-**Choose Rebase when:**
-- Cleaning personal feature branch
-- Want linear project history
-- Updating feature with main changes
+**Choose Merge:** Public branches, team collaboration  
+**Choose Rebase:** Personal branches, linear history preferred
 
 ## Rebase Workflow
 
-### Daily: Keep Feature Updated
+### Common Workflows
 
+**Daily Update:**
 ```bash
-# Start of day
-git checkout feature
-git fetch origin
-git rebase origin/main
-
-# If conflicts
-# ... resolve conflicts
-git add 
-git rebase --continue
-
-# Force push (only if branch not shared!)
-git push --force-with-lease
+git fetch origin && git rebase origin/main
 ```
 
-### Before PR: Clean History
-
+**Before PR:**
 ```bash
-# Review commits
-git log --oneline
-
-# Interactive rebase
-git rebase -i origin/main
-
-# Squash WIP commits
-# Reword unclear messages
-# Drop debug commits
-
-# Force push
+git log --oneline  # Review
+git rebase -i origin/main  # Clean up
 git push --force-with-lease
 ```
 
 ## Safety Tips
 
-**1. Use `--force-with-lease` not `--force`:**
-```bash
-git push --force-with-lease
-```
-Fails if someone else pushed, preventing overwrites.
-
-**2. Create backup branch:**
-```bash
-git branch backup-feature
-git rebase -i HEAD~10
-# If disaster strikes: git reset --hard backup-feature
-```
-
-**3. Check what you're rebasing:**
-```bash
-git log origin/main..HEAD
-```
-Shows commits that will be rebased.
-
-**4. Use reflog to recover:**
-```bash
-git reflog
-git reset --hard HEAD@{5}  # Go back to previous state
-```
+**Abort:** `git rebase --abort`  
+**Force push:** `git push --force-with-lease` (safer than --force)  
+**Backup:** `git branch backup && git rebase -i HEAD~10`  
+**Check commits:** `git log origin/main..HEAD`  
+**Recover:** `git reflog` → `git reset --hard HEAD@{5}`
 
 ## Common Issues
 
-**Issue: Repeated conflicts on same file**
-- You're rebasing too many commits at once
-- Consider merge instead
-- Or break rebase into smaller chunks
+**Repeated conflicts:** Too many commits → use merge or smaller chunks  
+**Lost commits:** `git reflog` → `git cherry-pick <commit>`  
+**Accidental shared branch rebase:** Team must `git reset --hard origin/branch`  
+**Conflict resolution:** ALWAYS ask for user approval before resolving any conflicts
 
-**Issue: Lost commits after rebase**
-```bash
-git reflog
-git cherry-pick 
-```
 
-**Issue: Accidentally rebased shared branch**
-- Communicate with team immediately
-- Everyone must: `git reset --hard origin/branch`
-- Then `git pull` to get correct history
-
-**Issue: Merge conflicts during rebase**
-- Same resolution as merge conflicts
-- But resolved per commit, not once
-- Use `git rebase --skip` to skip empty commits
 
 ## Advanced: Autosquash
 
@@ -260,11 +140,16 @@ Automatically marks fixup commits for squashing.
 | Public history | ❌ | ✅ |
 | Private branch | ✅ | Either |
 
+## Related Operations
+
+**For general conflict resolution patterns:**
+- See @references/merge-conflicts.md for detailed conflict resolution strategies
+- Common conflict patterns and resolution approaches
+- Prevention strategies for avoiding conflicts
+
 ## Remember
 
-- Rebase rewrites history - it's powerful but dangerous
-- Never rebase published commits
+- Rebase rewrites history - never rebase published commits
 - Always test after rebasing
-- Use `--force-with-lease` when force pushing
-- Keep backups when learning
+- Use `--force-with-lease` for force pushes
 - When in doubt, merge instead
