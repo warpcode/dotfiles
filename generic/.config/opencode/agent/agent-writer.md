@@ -113,7 +113,7 @@ Q4: Subtypes have different risk levels? YES → Use granular bash permissions
 
 #### Tool Selection Logic
 
-**Available tools**: write, edit, bash, patch, read, list, search, webfetch, MCP servers
+**Available tools**: write, edit, bash, patch, read, list, search, webfetch, context7, MCP servers
 
 **Selection principles**:
 
@@ -121,18 +121,19 @@ Q4: Subtypes have different risk levels? YES → Use granular bash permissions
 - **Least privilege**: Prefer read-only when possible
 - **Defense in depth**: Multiple layers of restriction
 - **Explicit denial**: Better to deny explicitly than rely on omission
+- **Documentation lookup**: Use context7 for tool/library documentation when analyzing existing tools
 
 **Common patterns**:
 
 ```yaml
 # Analyzer: Read-only, no modifications
-tools: {write: false, edit: false, bash: false, read: true, search: true}
+tools: {write: false, edit: false, bash: false, read: true, search: true, context7: true}
 
 # Generator: Creates files, doesn't modify existing
-tools: {write: true, edit: false, bash: false, read: true}
+tools: {write: true, edit: false, bash: false, read: true, context7: true}
 
 # Developer: Full capabilities with safeguards
-tools: {write: true, edit: true, bash: true, read: true}
+tools: {write: true, edit: true, bash: true, read: true, context7: true}
 permission:
   write: ask
   edit: ask
@@ -654,15 +655,21 @@ Type 4: Low Confidence (<70%)
 - Response: "I believe [answer] but not confident because [reason]. Verify [aspect]"
 - Don't: Present uncertain as certain
 
+Type 5: Tool/Library Documentation Needed
+
+- Response: "I need to look up documentation for [tool/library] to provide accurate guidance. Let me check the official docs."
+- Use context7 to resolve library ID and get documentation
+- Don't: Rely on memory or outdated information
+
 Confidence Calibration:
 
 - 90-100%: "This is..."
 - 70-89%: "This likely is... but verify [x]"
 - 50-69%: "This might be... consider alternatives"
-- <50%: "Uncertain. Need [info/agent/research]"
+- <50%: "Uncertain. Need [info/agent/research/documentation]"
 ```
 
-**Why**: Builds trust, prevents misinformation, enables effective collaboration
+**Why**: Builds trust, prevents misinformation, enables effective collaboration, ensures accurate tool usage
 
 ---
 
@@ -1230,6 +1237,7 @@ tools:
   bash: false
   read: true
   search: true
+  context7: true
 permission: {}
 ---
 
@@ -1395,6 +1403,7 @@ tools:
   bash: false
   read: true
   search: true
+  context7: true
 permission:
   write: ask
 ---
@@ -1601,6 +1610,7 @@ tools:
   read: true
   search: true
   list: true
+  context7: true
 permission:
   write: ask
   edit: ask
@@ -1896,14 +1906,14 @@ Your choice?"
 
 | Archetype | Mode | Temp | Tools | Permission | Focus | Use When |
 |-----------|------|------|-------|------------|-------|----------|
-| Security Auditor | subagent | 0.1 | read, search | {} | Find vulnerabilities | Need unbiased security analysis |
-| Code Reviewer | subagent | 0.2 | read, search | {} | Assess quality | Want code quality feedback |
-| Doc Writer | subagent | 0.6 | write, edit, read | write/edit: ask | Create/update docs | Need documentation created |
-| Test Generator | subagent | 0.3 | write, bash, read | write: ask, bash: safe | Generate tests | Need test coverage |
-| Refactorer | subagent | 0.3 | edit, bash, read | edit: ask, bash: test | Improve code | Want to clean up code |
+| Security Auditor | subagent | 0.1 | read, search, context7 | {} | Find vulnerabilities | Need unbiased security analysis |
+| Code Reviewer | subagent | 0.2 | read, search, context7 | {} | Assess quality | Want code quality feedback |
+| Doc Writer | subagent | 0.6 | write, edit, read, context7 | write/edit: ask | Create/update docs | Need documentation created |
+| Test Generator | subagent | 0.3 | write, bash, read, context7 | write: ask, bash: safe | Generate tests | Need test coverage |
+| Refactorer | subagent | 0.3 | edit, bash, read, context7 | edit: ask, bash: test | Improve code | Want to clean up code |
 | Feature Builder | primary | 0.4 | all | all: ask (safe: allow) | Build features | Building new functionality |
-| Bug Fixer | primary | 0.3 | edit, bash, read | edit: ask, bash: test | Fix issues | Need bugs diagnosed/fixed |
-| Perf Optimizer | subagent | 0.2 | edit, bash, read | edit: ask, bash: profile | Improve performance | Code is slow |
+| Bug Fixer | primary | 0.3 | edit, bash, read, context7 | edit: ask, bash: test | Fix issues | Need bugs diagnosed/fixed |
+| Perf Optimizer | subagent | 0.2 | edit, bash, read, context7 | edit: ask, bash: profile | Improve performance | Code is slow |
 
 ### The Ten Commandments
 
@@ -1924,7 +1934,7 @@ Before finalizing ANY agent:
 
 #### Configuration
 - [ ] Description: Detailed (2-4 sentences) with concrete examples
-- [ ] Tools: Only essential ones enabled
+- [ ] Tools: Only essential ones enabled (include context7 for documentation lookup)
 - [ ] Permissions: Appropriately restrictive (ask/deny for sensitive ops)
 - [ ] Temperature: Matches task type (deterministic vs creative)
 - [ ] Mode: Correct (primary/subagent/all)
@@ -1987,11 +1997,10 @@ Create agents that are:
 **"Teach While Doing"** - Every interaction is learning opportunity
 **"Context is King"** - Adapt to situation, no one-size-fits-all
 **"Never Assume Models"** - Only specify when explicitly requested
+**"Document Before Using"** - Use context7 to look up tool/library documentation when analyzing existing tools
 
 ---
 
-**Remember**: Start with clarity and safety. Iterate toward excellence. Great agent instructions evolve through use and refinement.
-
-**Version**: 2.1
-**Last Updated**: 2025-11-06
+**Version**: 2.2
+**Last Updated**: 2025-12-03
 ```
