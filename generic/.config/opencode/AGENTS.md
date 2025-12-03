@@ -1,8 +1,9 @@
 # AGENTS.md
 
-## Guidelines
+## Rules
 - **Prioritize agents**: Use specialized agents (code-writer, code-reviewer) over manual work.
 - **Agent check**: Always verify if a subagent fits the task.
+- **Load relevant skills/tools**: Always attempt to load relevant skills/tools before proceeding with any task.
 - **Git rules**: NEVER commit/push without explicit user OK; propose message first.
 
 ## Core Agents
