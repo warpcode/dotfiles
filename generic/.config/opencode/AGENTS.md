@@ -1,10 +1,11 @@
 # AGENTS.md
 
-## Rules
-- **Prioritize agents**: Use specialized agents (code-writer, code-reviewer) over manual work.
-- **Agent check**: Always verify if a subagent fits the task.
-- **Load relevant skills/tools**: Always attempt to load relevant skills/tools before proceeding with any task.
-- **Git rules**: NEVER commit/push without explicit user OK; propose message first.
+## Rules (MANDATORY)
+- **Rule 1 - Agent Priority**: ALWAYS use specialized agents over manual work
+- **Rule 2 - Agent Verification**: MUST verify subagent fit before starting
+- **Rule 3 - Skill Loading**: MUST load relevant skills/tools BEFORE any task
+- **Rule 4 - Git Safety**: NEVER commit/push without explicit user OK
+- **Rule 5 - Rule Citation**: MUST cite specific rule when making decisions
 
 ## Core Agents
 - `core/feature-lead`: Orchestrates full feature dev (plan/code/review). Use for new features.
@@ -49,3 +50,22 @@
 - `spelling-grammar-checker`: Text checks.
 - `task-manager`: Taskwarrior CLI.
 
+## Rule Enforcement
+- **Mandatory rule checks**: Before ANY task, state which rule applies
+- **Skill loading requirement**: MUST load relevant skills/tools BEFORE proceeding
+- **Agent verification**: MUST verify if specialized agent fits before manual work
+- **Explicit compliance**: User can demand "Check rules compliance" at any time
+
+## User Enforcement Commands
+- "Check rules before proceeding"
+- "Which rule applies here? Cite it"
+- "Verify compliance"
+- "Reload skills per Rule 3"
+
+## Mandatory Pre-Task Checklist
+Before ANY action, state:
+1. Which rule(s) apply
+2. Which skill(s) will be loaded
+3. Which agent(s) will be used (if applicable)
+4. How compliance will be verified
+ 
