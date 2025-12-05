@@ -21,7 +21,7 @@ kp() {
     fi
 
     local cli_cmd
-    if ! cli_cmd=$(_keepassxc_get_cli); then
+    if ! cli_cmd=$(kp.cli); then
         echo "Error: keepassxc-cli not found. Please install KeePassXC." >&2
         return 1
     fi
@@ -39,7 +39,7 @@ kp() {
         return 0
     fi
 
-    _keepass_get_password || return 1
+    kp.login || return 1
 
     echo "$_KEEPASS_PASSWORD" | eval "$cli_cmd" "$cmd" "$KEEPASS_DB_PATH" "$@" -q
 }
@@ -51,7 +51,7 @@ kp() {
 #
 # @return string The CLI command to use, or empty string if not found
 ##
-_keepassxc_get_cli() {
+kp.cli() {
     if (( $+commands[keepassxc-cli] )); then
         echo "keepassxc-cli"
         return 0
@@ -75,6 +75,38 @@ _keepassxc_get_cli() {
 }
 
 ##
+# Get/prompt for password and store in global variable
+#
+# Prompts user for password if cache is invalid, validates it, and caches if successful
+#
+# @return 0 on success, 1 on failure
+##
+kp.login() {
+    _keepass_cache_valid && return 0
+
+    local cli_cmd
+    if ! cli_cmd=$(kp.cli); then
+        echo "Error: keepassxc-cli not found" >&2
+        return 1
+    fi
+
+    echo -n "Enter KeePassXC password: " >&2
+    read -s password
+    echo >&2
+
+    if echo "$password" | eval "$cli_cmd" db-info "$KEEPASS_DB_PATH" >/dev/null 2>&1; then
+        _KEEPASS_PASSWORD="$password"
+        _KEEPASS_TIMESTAMP=$(date +%s)
+        return 0
+    else
+        echo "Invalid password" >&2
+        _KEEPASS_PASSWORD=""
+        _KEEPASS_TIMESTAMP=0
+        return 1
+    fi
+}
+
+##
 # Check if cached password is still valid
 #
 # Verifies that the cached password exists and hasn't expired
@@ -90,38 +122,6 @@ _keepass_cache_valid() {
     if [[ $age -lt $KEEPASS_CACHE_DURATION ]]; then
         return 0
     else
-        _KEEPASS_PASSWORD=""
-        _KEEPASS_TIMESTAMP=0
-        return 1
-    fi
-}
-
-##
-# Get/prompt for password and store in global variable
-#
-# Prompts user for password if cache is invalid, validates it, and caches if successful
-#
-# @return 0 on success, 1 on failure
-##
-_keepass_get_password() {
-    _keepass_cache_valid && return 0
-
-    local cli_cmd
-    if ! cli_cmd=$(_keepassxc_get_cli); then
-        echo "Error: keepassxc-cli not found" >&2
-        return 1
-    fi
-
-    echo -n "Enter KeePassXC password: " >&2
-    read -s password
-    echo >&2
-
-    if echo "$password" | eval "$cli_cmd" db-info "$KEEPASS_DB_PATH" >/dev/null 2>&1; then
-        _KEEPASS_PASSWORD="$password"
-        _KEEPASS_TIMESTAMP=$(date +%s)
-        return 0
-    else
-        echo "Invalid password" >&2
         _KEEPASS_PASSWORD=""
         _KEEPASS_TIMESTAMP=0
         return 1
