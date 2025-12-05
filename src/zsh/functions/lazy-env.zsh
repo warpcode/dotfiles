@@ -28,10 +28,3 @@ _check_lazy_vars() {
 
 autoload -Uz add-zsh-hook
 add-zsh-hook preexec _check_lazy_vars
-
-# Also provide manual load function
-_load() {
-  for var in "$@"; do
-    _load_lazy $var
-  done
-}
