@@ -1,3 +1,6 @@
+# Global variable to cache KeePassXC password for the session
+typeset -g KP_PASSWORD
+
 ##
 # Main wrapper function for keepassxc-cli
 #
@@ -27,10 +30,11 @@ kp() {
         return 0
     fi
 
-    local password
-    password=$(kp.login) || return 1
+    if ! kp.login; then
+        return 1
+    fi
 
-    echo "$password" | eval "$cli_cmd" "$cmd" "$KEEPASS_DB_PATH" "$@" -q
+    echo "$KP_PASSWORD" | eval "$cli_cmd" "$cmd" "$KEEPASS_DB_PATH" "$@" -q
 }
 
 ##
@@ -66,11 +70,16 @@ kp.cli() {
 ##
 # Get/prompt for password
 #
-# Prompts user for password and validates it
+# Prompts user for password and validates it, caching for the session
 #
-# @return password on success, empty on failure
+# @return 0 on success, 1 on failure
 ##
 kp.login() {
+    # Return if password is already cached
+    if [[ -n "$KP_PASSWORD" ]]; then
+        return 0
+    fi
+
     local cli_cmd
     if ! cli_cmd=$(kp.cli); then
         echo "Error: keepassxc-cli not found" >&2
@@ -82,7 +91,8 @@ kp.login() {
     echo >&2
 
     if echo "$password" | eval "$cli_cmd" db-info "$KEEPASS_DB_PATH" >/dev/null 2>&1; then
-        echo "$password"
+        # Cache the password for the session
+        KP_PASSWORD="$password"
         return 0
     else
         echo "Invalid password" >&2
