@@ -1,11 +1,7 @@
-# Global variables for password caching
-typeset -g _KEEPASS_PASSWORD=""
-typeset -g _KEEPASS_TIMESTAMP=0
-
 ##
 # Main wrapper function for keepassxc-cli
 #
-# Provides a convenient interface to keepassxc-cli with password caching
+# Provides a convenient interface to keepassxc-cli
 #
 # @param string $1 Command (show, ls, search, etc.) or empty for help
 # @param mixed ... Additional arguments passed to keepassxc-cli
@@ -28,20 +24,13 @@ kp() {
 
     if [[ -z "$cmd" ]] || [[ "$cmd" == "help" ]]; then
         eval "$cli_cmd" --help
-        echo "Special: clear (clear password cache)"
         return 0
     fi
 
-    if [[ "$cmd" == "clear" ]]; then
-        _KEEPASS_PASSWORD=""
-        _KEEPASS_TIMESTAMP=0
-        echo "Cache cleared"
-        return 0
-    fi
+    local password
+    password=$(kp_get_password) || return 1
 
-    kp.login || return 1
-
-    echo "$_KEEPASS_PASSWORD" | eval "$cli_cmd" "$cmd" "$KEEPASS_DB_PATH" "$@" -q
+    echo "$password" | eval "$cli_cmd" "$cmd" "$KEEPASS_DB_PATH" "$@" -q
 }
 
 ##
@@ -75,15 +64,13 @@ kp.cli() {
 }
 
 ##
-# Get/prompt for password and store in global variable
+# Get/prompt for password
 #
-# Prompts user for password if cache is invalid, validates it, and caches if successful
+# Prompts user for password and validates it
 #
-# @return 0 on success, 1 on failure
+# @return password on success, empty on failure
 ##
-kp.login() {
-    _keepass_cache_valid && return 0
-
+kp_get_password() {
     local cli_cmd
     if ! cli_cmd=$(kp.cli); then
         echo "Error: keepassxc-cli not found" >&2
@@ -95,38 +82,15 @@ kp.login() {
     echo >&2
 
     if echo "$password" | eval "$cli_cmd" db-info "$KEEPASS_DB_PATH" >/dev/null 2>&1; then
-        _KEEPASS_PASSWORD="$password"
-        _KEEPASS_TIMESTAMP=$(date +%s)
+        echo "$password"
         return 0
     else
         echo "Invalid password" >&2
-        _KEEPASS_PASSWORD=""
-        _KEEPASS_TIMESTAMP=0
         return 1
     fi
 }
 
-##
-# Check if cached password is still valid
-#
-# Verifies that the cached password exists and hasn't expired
-#
-# @return 0 if cache is valid, 1 otherwise
-##
-_keepass_cache_valid() {
-    [[ -n "$_KEEPASS_PASSWORD" && $_KEEPASS_TIMESTAMP -ne 0 ]] || return 1
 
-    local current_time=$(date +%s)
-    local age=$((current_time - _KEEPASS_TIMESTAMP))
-
-    if [[ $age -lt $KEEPASS_CACHE_DURATION ]]; then
-        return 0
-    else
-        _KEEPASS_PASSWORD=""
-        _KEEPASS_TIMESTAMP=0
-        return 1
-    fi
-}
 
 ##
 # Tab completion for kp function
@@ -146,7 +110,6 @@ _kp_completion() {
         'add:Add new entry'
         'edit:Edit entry'
         'rm:Remove entry'
-        'clear:Clear password cache'
     )
     _describe 'keepass command' commands
 }
