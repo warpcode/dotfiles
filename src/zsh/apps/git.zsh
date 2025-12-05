@@ -1,6 +1,6 @@
 (( $+commands[git] )) || return
 
-alias git-zip="git archive --format=zip HEAD ':!*.gitignore' -o ${PWD##*/}.zip"
+alias git.zip="git archive --format=zip HEAD ':!*.gitignore' -o ${PWD##*/}.zip"
 
 # Ensure the defaults are loaded
 

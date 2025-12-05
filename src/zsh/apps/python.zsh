@@ -5,12 +5,12 @@
 [[ -z "$_W_PYTHON_COMMAND" ]] && return
 
 # Aliases using the detected Python command
-alias ipython="$_W_PYTHON_COMMAND -c 'import IPython; IPython.terminal.ipapp.launch_new_instance()'"
-alias pyserver="$_W_PYTHON_COMMAND -m http.server"
+alias python.ipython="$_W_PYTHON_COMMAND -c 'import IPython; IPython.terminal.ipapp.launch_new_instance()'"
+alias python.http="$_W_PYTHON_COMMAND -m http.server"
 
 # Function to activate a Python virtual environment
 # Usage: vrun [venv_path]
-function vrun() {
+function python.vrun() {
     local venvpath="${1:-.venv}"
     local name="$(basename "${1}")"
 
@@ -37,11 +37,11 @@ function vrun() {
 }
 
 # Function to automatically load Python venv when changing directories
-function load-venv {
+function python.load-venv {
     local venv_path="$(_fs_find_parent_path .venv)"
 
     if [ -n "$venv_path" ]; then
-        vrun "$venv_path"
+        python.vrun "$venv_path"
     elif [ -n "$VIRTUAL_ENV" ]; then
         echo "Deactivating virtual environment: $VIRTUAL_ENV"
         deactivate
@@ -50,5 +50,5 @@ function load-venv {
 
 # Set up automatic venv loading on directory change
 autoload -U add-zsh-hook
-add-zsh-hook chpwd load-venv
-load-venv
+add-zsh-hook chpwd python.load-venv
+python.load-venv
