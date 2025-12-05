@@ -3,7 +3,7 @@
 ## Rules (MANDATORY)
 - **Rule 1 - Agent Priority**: ALWAYS use specialized agents over manual work
 - **Rule 2 - Agent Verification**: MUST verify subagent fit before starting
-- **Rule 3 - Skill Loading**: MUST load relevant skills/tools BEFORE any task
+- **Rule 3 - Skill Loading**: MUST search for and load relevant skills/tools BEFORE any task
 - **Rule 4 - Git Safety**: NEVER commit/push without explicit user OK
 - **Rule 5 - Rule Citation**: MUST cite specific rule when making decisions
 
