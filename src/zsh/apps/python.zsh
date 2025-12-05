@@ -1,13 +1,8 @@
 # Python Configuration
 # Determine the Python command to use, preferring python3 over python
 
-if (( $+commands[python3] )); then
-    export _W_PYTHON_COMMAND="${_W_PYTHON_COMMAND:-python3}"
-elif (( $+commands[python] )); then
-    export _W_PYTHON_COMMAND="${_W_PYTHON_COMMAND:-python}"
-else
-    return
-fi
+# Return if _W_PYTHON_COMMAND is not set
+[[ -z "$_W_PYTHON_COMMAND" ]] && return
 
 # Aliases using the detected Python command
 alias ipython="$_W_PYTHON_COMMAND -c 'import IPython; IPython.terminal.ipapp.launch_new_instance()'"
