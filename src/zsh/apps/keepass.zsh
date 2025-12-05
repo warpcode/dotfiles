@@ -28,7 +28,7 @@ kp() {
     fi
 
     local password
-    password=$(kp_get_password) || return 1
+    password=$(kp.login) || return 1
 
     echo "$password" | eval "$cli_cmd" "$cmd" "$KEEPASS_DB_PATH" "$@" -q
 }
@@ -70,7 +70,7 @@ kp.cli() {
 #
 # @return password on success, empty on failure
 ##
-kp_get_password() {
+kp.login() {
     local cli_cmd
     if ! cli_cmd=$(kp.cli); then
         echo "Error: keepassxc-cli not found" >&2
