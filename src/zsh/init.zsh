@@ -23,10 +23,10 @@ fi
 
 local file
 local files_to_source=(
-    ~/.zshrc.before.d/*.zsh(Nn-)
-    ${0:A:h}/{functions,installers,config,apps,projects}/*.zsh(Nn-)
-    ~/.zshrc.{functions,installers,config,apps,projects}/*.zsh(Nn-)
-    ~/.zshrc.d/*.zsh(Nn-)
+    ~/.zshrc.before.d/**/*.zsh(Nn-)
+    ${0:A:h}/{functions,installers,config,apps,projects}/**/*.zsh(Nn-)
+    ~/.zshrc.{functions,installers,config,apps,projects}/**/*.zsh(Nn-)
+    ~/.zshrc.d/**/*.zsh(Nn-)
 )
 
 # Source all collected files
