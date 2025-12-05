@@ -33,7 +33,7 @@ function nvm.load-nvmrc {
 
 autoload -U add-zsh-hook
 add-zsh-hook chpwd nvm.load-nvmrc
-load-nvmrc
+nvm.load-nvmrc
 
 # Load nvm bash completion
 for nvm_completion in "$NVM_DIR/bash_completion" "$NVM_HOMEBREW/etc/bash_completion.d/nvm"; do
