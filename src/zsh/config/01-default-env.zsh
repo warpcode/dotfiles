@@ -1,13 +1,16 @@
 # XDG
-export XDG_CONFIG_HOME="$HOME/.config"
+export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 
 
 # Setup default editor
-export EDITOR=nano
-if (( $+commands[nvim] )); then
-    export EDITOR=nvim
-elif (( $+commands[vim] )); then
-    export EDITOR=vim
+if [[ -z "$EDITOR" ]]; then
+    if (( $+commands[nvim] )); then
+        export EDITOR=nvim
+    elif (( $+commands[vim] )); then
+        export EDITOR=vim
+    else
+        export EDITOR=nano
+    fi
 fi
 
 # Execute last command

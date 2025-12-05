@@ -24,7 +24,7 @@ HISTFILE=~/.zsh_history
 HIST_STAMPS="dd/mm/yyyy"
 
 # Allow large history
-export HISTFILESIZE=10000
+export HISTFILESIZE="${HISTFILESIZE:-10000}"
 
 # Shortcut to view the history
 alias h="history"

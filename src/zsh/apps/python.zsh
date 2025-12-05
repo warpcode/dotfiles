@@ -1,18 +1,20 @@
+# Python Configuration
+# Determine the Python command to use, preferring python3 over python
+
 if (( $+commands[python3] )); then
-    export _W_PYTHON_COMMAND=python3
+    export _W_PYTHON_COMMAND="${_W_PYTHON_COMMAND:-python3}"
 elif (( $+commands[python] )); then
-    export _W_PYTHON_COMMAND=python
+    export _W_PYTHON_COMMAND="${_W_PYTHON_COMMAND:-python}"
 else
     return
 fi
 
-# Run proper IPython regarding current virtualenv (if any)
+# Aliases using the detected Python command
 alias ipython="$_W_PYTHON_COMMAND -c 'import IPython; IPython.terminal.ipapp.launch_new_instance()'"
-
-# Share local directory as a HTTP server
 alias pyserver="$_W_PYTHON_COMMAND -m http.server"
 
-# Activate a venv
+# Function to activate a Python virtual environment
+# Usage: vrun [venv_path]
 function vrun() {
     local venvpath="${1:-.venv}"
     local name="$(basename "${1}")"
@@ -39,9 +41,8 @@ function vrun() {
     echo "Activated virtual environment ${VIRTUAL_ENV}"
 }
 
-# Autoload python venv
+# Function to automatically load Python venv when changing directories
 function load-venv {
-    # Find the nearest parent directory where the .venv exists
     local venv_path="$(_fs_find_parent_path .venv)"
 
     if [ -n "$venv_path" ]; then
@@ -52,6 +53,7 @@ function load-venv {
     fi
 }
 
+# Set up automatic venv loading on directory change
 autoload -U add-zsh-hook
 add-zsh-hook chpwd load-venv
 load-venv
