@@ -13,7 +13,7 @@ else
 fi
 
 # Autoload .nvmrc
-function load-nvmrc {
+function nvm.load-nvmrc {
     local node_version="$(nvm version)"
     local nvmrc_path="$(nvm_find_nvmrc)"
 
@@ -32,7 +32,7 @@ function load-nvmrc {
 }
 
 autoload -U add-zsh-hook
-add-zsh-hook chpwd load-nvmrc
+add-zsh-hook chpwd nvm.load-nvmrc
 load-nvmrc
 
 # Load nvm bash completion

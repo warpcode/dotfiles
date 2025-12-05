@@ -1,4 +1,4 @@
 (( $+commands[rsync] )) || return
 
 # Common rsync I use
-alias rsyncc="rsync -vhrlptD --progress"
+alias rsync.sync="rsync -vhrlptD --progress"
