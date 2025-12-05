@@ -34,7 +34,17 @@ kp() {
         return 1
     fi
 
-    echo "$KP_PASSWORD" | eval "$cli_cmd" "$cmd" "$KEEPASS_DB_PATH" "$@" -q
+    local -a cmd_array
+    if [[ $cli_cmd == *" "* ]]; then
+        cmd_array=(${(z)cli_cmd})
+    else
+        cmd_array=("$cli_cmd")
+    fi
+    local cmd_str="${cmd_array[1]}"
+    for arg in "${cmd_array[@]:1}" "$cmd" "$KEEPASS_DB_PATH" "$@" "-q"; do
+        cmd_str+=" "$(printf '%q' "$arg")
+    done
+    echo "$KP_PASSWORD" | eval "$cmd_str"
 }
 
 ##
