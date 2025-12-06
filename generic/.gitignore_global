@@ -118,6 +118,7 @@ tags
 /.crush*
 /.gemini/
 /.opencode/
+/.specify/
 CRUSH.md
 GEMINI.md
 AGENTS.md
