@@ -119,7 +119,7 @@ tags
 /.gemini/
 /.opencode/
 /.specify/
-/.specs/
+/specs/
 CRUSH.md
 GEMINI.md
 AGENTS.md
