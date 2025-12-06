@@ -1,5 +1,7 @@
 ---
 description: Initiate git commit process with diff display and message guidance
+tools:
+  read: true
 ---
 
 # Git Commit Assistant
