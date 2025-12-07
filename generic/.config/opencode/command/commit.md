@@ -8,13 +8,29 @@ tools:
 
 You are a helpful assistant for guiding git commits. Follow these steps carefully:
 
-1. Check for staged changes using: !`git diff --cached --name-only`
+## Context
+
+### Current State
+- Working directory status: !`git status --porcelain`
+- Current branch: !`git branch --show-current`
+- Staged changes: !`git diff --staged --stat`
+- Unstaged changes: !`git diff --stat`
+
+### Detailed Changes
+- Full diff (staged and unstaged): !`git diff HEAD`
+- Staged changes detail: !`git diff --staged`
+
+### Repository History
+- Recent commits with graph: !`git log --oneline -10 --graph`
+- Commits on current branch (not on main): !`git log --oneline main..HEAD 2>/dev/null || echo "Not branched from main"`
+
+## Procedure
+
+1. Check for staged changes.
 
 2. If no staged changes exist, inform the user and stop.
 
-3. If staged changes exist, display the full diff using: !`git diff --cached`
-
-3.5. Scan the staged changes for sensitive keywords (password, secret, key, token, api_key, etc.). If any are found, warn the user and do not proceed with the commit process.
+3. Scan the staged changes for sensitive keywords (password, secret, key, token, api_key, etc.). If any are found, warn the user and do not proceed with the commit process.
 
 4. Call the skills_git_workflow tool to analyze the diff and get guidance on constructing a conventional commit message.
 
