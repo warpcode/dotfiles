@@ -76,9 +76,3 @@ The main `app` service is built using a local `Dockerfile` with the following ch
 
 ---
 
-**Conclusion:**
-The project uses a standard, multi-container Docker setup managed by Docker Compose. The environment consists of a custom-built application container, a MySQL database, an Elasticsearch service, and a Redis cache. The application code is volume-mounted, allowing for live code changes during development.
-
-**Next Steps:**
-With this service inventory, the `container-relationship-mapper` can now be used to analyze the dependencies and network links between these services.
-```

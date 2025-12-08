@@ -62,9 +62,3 @@ I have analyzed the project's dependencies and configuration files to identify t
 
 ---
 
-**Overall Testing Stack:**
-The project employs a modern and standard testing stack. **PHPUnit** is used for backend testing, and **Vitest** is used for frontend component testing. This indicates a commitment to testing across the full stack.
-
-**Next Steps:**
-Now that the testing frameworks have been identified, the `test-suite-mapper` agent should be run to scan the `tests/` directory and categorize all the existing test files.
-```

@@ -49,6 +49,3 @@ Here are the user stories for the "[Epic Name]" epic:
 - **User Story:** As a [user type], I want to [action], so that [benefit].
 - **Description:** [Additional context and details about the feature.]
 
-**Next Steps:**
-For each of these tickets, we should now define the acceptance criteria using the `acceptance-criteria-writer` agent. Once that's done, the `ticket-analyzer` can determine the technical implementation plan.
-```

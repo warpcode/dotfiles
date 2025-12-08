@@ -66,9 +66,3 @@ The following Elasticsearch indexes have been identified:
 
 ---
 
-**Conclusion:**
-The application maintains **three** separate Elasticsearch indexes, each corresponding directly to a primary Eloquent model. This indicates that Elasticsearch is used as a secondary data store to provide advanced search capabilities for the data that is primarily stored in the MySQL database.
-
-**Next Steps:**
-Now that we have a complete list of the indexes, the `search-query-cataloger` agent can be run to find and analyze the specific queries the application builds to search this data.
-```

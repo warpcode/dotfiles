@@ -101,9 +101,3 @@ These are the named middleware that can be assigned to individual routes or rout
 
 ---
 
-**Conclusion:**
-The application has a robust and well-organized middleware stack. It correctly separates the concerns of its web and API interfaces and provides clear, named aliases for common security protections like authentication.
-
-**Next Steps:**
-With the middleware fully mapped, the `route-parameter-analyzer` can now be used to investigate the dynamic parts of the URI patterns themselves.
-```

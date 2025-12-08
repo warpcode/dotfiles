@@ -70,9 +70,3 @@ These mounts use Docker-managed volumes to persist data, ensuring that critical 
 
 ---
 
-**Conclusion:**
-The project uses a hybrid volume strategy. Bind mounts are used to provide a modern, live-reloading development experience for the application code, while named volumes are used to ensure that all stateful data from the backing services is safely persisted.
-
-**Next Steps:**
-With the volume mounts understood, the `network-topology-mapper` can be used to provide a final overview of the network configuration.
-```

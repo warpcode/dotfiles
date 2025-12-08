@@ -96,9 +96,3 @@ This pipeline processes the main CSS entry point and its imports.
 
 ---
 
-**Conclusion:**
-The project has two distinct, parallel pipelines for JavaScript and CSS. The process is optimized for both development speed (with source maps) and production performance (with minification and versioning).
-
-**Next Steps:**
-We now have a complete picture of _what_ is being built and _how_. The final step is to use the `script-analyzer` agent to understand _how these build processes are triggered_.
-```

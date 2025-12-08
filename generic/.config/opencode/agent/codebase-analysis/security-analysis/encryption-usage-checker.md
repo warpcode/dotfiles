@@ -85,9 +85,3 @@ I have performed an audit of the application's use of encryption to protect data
 
 ---
 
-**Conclusion:**
-The application has good measures for protecting data in transit (TLS enforcement) and uses a strong algorithm for its application-level encryption functions. However, it does not currently apply encryption at rest for any of its model attributes. This presents an opportunity for further security hardening if any sensitive data is identified in the database schema.
-
-**Next Steps:**
-With the encryption audit complete, the final step in the security analysis is to check the application's HTTP security headers using the `security-header-analyzer` agent.
-````

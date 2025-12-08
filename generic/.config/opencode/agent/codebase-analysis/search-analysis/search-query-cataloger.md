@@ -62,9 +62,3 @@ The application exclusively uses the **Laravel Scout** package to perform search
 
 ---
 
-**Conclusion:**
-The application's search functionality is well-abstracted through Laravel Scout. There are three primary locations where searches are performed, each targeting a different index. The searches range in complexity from simple keyword searches to more advanced queries with multiple filters. This indicates that Elasticsearch is a critical and actively used component of the application.
-
-**Next Steps:**
-Now that we have cataloged where searches are performed, the `search-integration-analyzer` can be used as a final step to understand how data is kept in sync between the primary MySQL database and the Elasticsearch indexes.
-```

@@ -70,9 +70,3 @@ I have analyzed the project's build process and source code to assess its image 
 
 ---
 
-**Conclusion:**
-The project's frontend performance is **significantly impacted by a lack of image optimization**. The absence of an automated compression step is a critical oversight. Implementing the recommended build step is a high-impact, low-effort task that will yield immediate performance gains.
-
-**Next Steps:**
-With image optimization analyzed, the next logical step is to check for another key frontend performance technique: lazy loading. The `lazy-loading-opportunity-finder` agent can be run to find images and components that could be deferred until they are needed.
-````

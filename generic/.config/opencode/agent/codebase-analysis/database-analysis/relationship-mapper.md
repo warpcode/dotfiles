@@ -95,9 +95,3 @@ The following relationships were discovered:
 
 ---
 
-**Conclusion:**
-The application's data model is highly relational and its structure has been successfully mapped from the model code. This provides a complete overview of the application's domain logic.
-
-**Next Steps:**
-The **Database Analysis** phase is now complete. We have a comprehensive understanding of the project's database connection, ORM, models, schema, and relationships. The next logical phase is to begin the **Search Analysis** to understand how the application interacts with Elasticsearch.
-```

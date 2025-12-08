@@ -85,9 +85,3 @@ I have performed a detailed analysis of the application's authorization system t
 
 ---
 
-**Conclusion:**
-The application's authorization system is well-implemented and secure. It leverages a trusted third-party library and correctly applies authorization checks in its controllers to prevent both unauthorized actions and data leakage via IDOR vulnerabilities.
-
-**Next Steps:**
-With authentication and authorization confirmed to be secure, the next logical step is to analyze how the application handles user-provided data using the `input-validation-checker` agent.
-````

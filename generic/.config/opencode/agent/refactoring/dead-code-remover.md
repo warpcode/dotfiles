@@ -75,6 +75,3 @@ As confirmed, I have removed the unused private methods from the following files
 
 The codebase is now cleaner and more maintainable.
 
-**Next Steps:**
-This task is complete. The next logical refactoring agent to run would be the `code-organizer` to improve the structure of the remaining code, or I can be configured to find other types of dead code (like unused variables).
-```

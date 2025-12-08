@@ -54,6 +54,3 @@ Based on a sprint capacity of **[Total Capacity] story points**, here is the pro
 - **Total Committed:** 19 / [Total Capacity] Story Points.
 - This plan is within capacity and leaves a small buffer for unexpected issues.
 
-**Next Steps:**
-Once you agree, I can save this sprint plan to your `TODO.md` file. The next step would be for a developer to pick up the first ticket and use the `task-splitter` or `adhd-task-adapter` to begin work.
-```

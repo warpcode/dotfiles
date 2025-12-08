@@ -68,9 +68,3 @@ While it uses the standard Laravel and Vue foundations, it has significant custo
 - A **custom base controller** that all developers must use.
 - A **custom service provider pattern** for modular features like "Billing."
 
-**Implication for Developers:**
-A new developer cannot rely solely on public Laravel documentation. They must first learn the project-specific patterns, particularly the role of the `BaseController` and the structure of custom modules.
-
-**Next Steps:**
-Now that we have identified these custom patterns, the `framework-convention-mapper` agent should be used to formally document the project's specific "way of doing things."
-```

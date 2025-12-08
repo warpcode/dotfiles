@@ -47,8 +47,3 @@ Here is a breakdown of the major epics for [Project Vision]:
 - **Epic 2: [Epic Name]**
   - _Description:_ [Brief, user-focused description of the epic.]
 
-**Next Steps:**
-I recommend we start by focusing on one epic. We can use the `ticket-creator` agent to break down "[Epic 1 Name]" into specific user stories.```
-```
-
-After presenting the plan, ask if the user wants to save this epic list to their `TODO.md` file.
