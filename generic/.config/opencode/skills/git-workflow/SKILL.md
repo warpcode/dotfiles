@@ -3,6 +3,7 @@ name: git-workflow
 description: Route ALL git operations to appropriate resources. Load reference files before responding. Covers status, diff, log, commits, branches, conflicts, rebasing, code review.
 tools:
   read: true
+  bash: ask
 ---
 
 # Git Workflow Expert

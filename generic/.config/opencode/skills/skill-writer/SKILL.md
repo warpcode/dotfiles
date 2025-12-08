@@ -1,6 +1,9 @@
 ---
 name: skill-writer
 description: Guide users through creating Agent Skills for AI coding assistants like Claude Code and opencode. Use when the user wants to create, write, author, or design a new Skill, needs help with SKILL.md files, frontmatter, skill structure, troubleshooting skill discovery, or converting existing prompts or workflows into Skills.
+tools:
+  read: true
+  write: true
 ---
 
 # Skill Writer
@@ -37,7 +40,5 @@ To create a new skill:
 5. **Package**: Run `scripts/package_skill.py <skill-folder>` for distribution
 
 For detailed guidance, see the reference files linked above.
-
----
 
 *Note: Detailed content has been moved to reference files for better organization. See the links above for comprehensive documentation.*
