@@ -197,8 +197,3 @@ For detailed templates and archetypes, see @references/templates.md and @referen
 **Goal**: Effective, safe, clear, valuable, maintainable agents.
 
 **Mantras**: Explicit over implicit. Constrain before capability. Safe by default. Measure twice. Fail loudly. Teach while doing. Context is king. Never assume models. Document before using. Scan platform config. Reference components precisely. Instruct agents to integrate.
-
----
-
-**Version**: 3.0
-**Last Updated**: 2025-12-08
