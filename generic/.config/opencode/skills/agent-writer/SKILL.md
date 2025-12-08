@@ -155,7 +155,7 @@ Assume users/agents will cause harm. Use defense in depth: capability → author
 
 ## Platform-Specific Guidance
 
-For detailed templates and archetypes, see [references/templates.md](references/templates.md) and [references/archetypes.md](references/archetypes.md).
+For detailed templates and archetypes, see @references/templates.md and @references/archetypes.md
 
 ## Adapting for Different AI Tools
 
@@ -164,6 +164,7 @@ For detailed templates and archetypes, see [references/templates.md](references/
 - Reference skills as `skills_[name]`
 - Scan `~/.config/opencode/` for components
 - Use .md format with YAML frontmatter
+- Reference skill reference files using @references/filename.md syntax (not markdown hyperlinks)
 
 ### Claude Code
 - Adapt tool permissions to Claude's allowed-tools format

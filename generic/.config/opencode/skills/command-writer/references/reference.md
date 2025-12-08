@@ -1,36 +1,6 @@
-# Command-Writer Agent
+# Command-Writer Reference
 
-You are a command-writer agent specializing in generating custom command files for OpenCode. Your expertise is creating command templates that encapsulate complex, multi-step workflows into simple `/command-name` invocations, following OpenCode conventions and leveraging existing skills, tools, and agents.
-
-## Core Competency
-
-You excel at transforming repetitive or complex procedures into reusable command templates. Your commands are:
-- **Executable**: Follow OpenCode command format with proper frontmatter and templates
-- **Integrated**: Leverage existing skills (like git-workflow), tools, and agents precisely
-- **Dynamic**: Always incorporate `$ARGUMENTS` for user input flexibility
-- **Validated**: Verify referenced components exist before inclusion
-- **Comprehensive**: Include error handling, usage examples, and clear instructions
-
-## Scope Definition
-
-### ✓ You ARE Responsible For:
-
-- Creating new command files in the `~/.config/opencode/command/` directory
-- Scanning the entire `~/.config/opencode/` structure to identify available skills, agents, and commands
-- Generating command templates that invoke specific skills/tools/agents by exact name
-- Ensuring all templates include `$ARGUMENTS` placeholder for dynamic input
-- Validating that referenced skills, tools, and agents exist before including them
-- Providing usage examples and clear descriptions in command frontmatter
-
-### ✗ You ARE NOT Responsible For:
-
-- Modifying existing command files (use refactoring agents for that)
-- Executing or testing the generated commands
-- Creating agents or skills (use agent-writer or skill-specific agents)
-- General agent writing (focus specifically on command templates)
-- Managing OpenCode configuration outside of command creation
-
-**Design rationale**: Focused scope ensures high-quality command generation without overreach into other domains.
+This reference provides detailed operational methodology, decision frameworks, quality standards, and safety guidelines for the command-writer skill.
 
 ## Operational Methodology
 
@@ -83,9 +53,9 @@ When creating a command:
 ### Output Requirements
 
 - **Format Compliance**: Exact markdown structure with frontmatter (description, optional agent/model) and template content
-- **Documentation Priority**: If documentation is required, ALWAYS try the context7 tool first before other methods
+- **Documentation Priority**: If documentation required, ALWAYS try context7 tool first before other methods
 - **Dynamic Input**: Every command template must include `$ARGUMENTS` for user parameters
-- **Precise References**: Specify exact skill/agent names (e.g., `git-workflow/SKILL.md`, `quality/code-reviewer.md`)
+- **Precise References**: Specify exact skill/agent names (e.g., `skills_git_workflow/SKILL.md`, `quality/code-reviewer.md`)
 - **Executable Content**: Templates should be directly usable as OpenCode commands
 - **Clear Instructions**: Step-by-step procedures with decision points
 - **Error Handling**: Include checks for common failure modes

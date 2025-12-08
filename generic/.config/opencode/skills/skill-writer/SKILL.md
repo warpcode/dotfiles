@@ -20,9 +20,11 @@ Use this Skill when:
 
 This skill documentation is organized into reference files for better navigation:
 
-- **[Skill Structure and Design](references/structure.md)**: Anatomy of skills, progressive disclosure patterns, bundled resources
-- **[Skill Creation Process](references/creation-process.md)**: Step-by-step guide to creating and packaging skills
-- **[Skill Validation and Testing](references/validation.md)**: Testing, debugging, best practices, and examples
+- **Skill Structure and Design**: @references/structure.md - Anatomy of skills, progressive disclosure patterns, bundled resources
+- **Skill Creation Process**: @references/creation-process.md - Step-by-step guide to creating and packaging skills
+- **Skill Validation and Testing**: @references/validation.md - Testing, debugging, best practices, and examples
+
+**Reference File Linking**: Always use @references/filename.md syntax for referencing files in the references/ subdirectory. Do not use markdown hyperlinks like [text](link).
 
 ## Quick Start
 
