@@ -64,9 +64,3 @@ The following ports are mapped from services inside the Docker environment to `l
 
 ---
 
-**Conclusion:**
-The network topology is straightforward and secure. Key services are exposed on standard ports for easy development access, while all inter-service communication happens on an isolated, private Docker network. This is a conventional and robust setup for a local development environment.
-
-**Next Steps:**
-With the network topology mapped, the `server-config-analyzer` can be used as a final step to inspect any web server configuration files (like `.htaccess`) that control how requests are handled _inside_ the `app` container.
-```

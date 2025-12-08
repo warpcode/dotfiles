@@ -69,12 +69,3 @@ The custom server-side `.tpl` templating system is used for simpler, content-foc
 
 ---
 
-**Conclusion:**
-The project has a clear and logical separation of concerns.
-
-- **Vue.js** is used for complex, data-driven, and stateful "application-like" interfaces (the dashboard and admin panel).
-- The **Custom Templating System** is used for simpler, largely static "document-like" pages and emails where the overhead of a full SPA is unnecessary.
-
-**Next Steps:**
-Now that we have mapped the usage of both systems, the `component-discovery-agent` can be run to create a detailed catalog of the building blocks used within the Vue.js parts of the application.
-```

@@ -66,9 +66,3 @@ I have analyzed the project's codebase to identify the technologies used for ren
 
 ---
 
-**Conclusion:**
-The project employs a **hybrid frontend architecture**. It uses both the modern Vue.js framework for rich, interactive UIs and a separate, custom server-side templating system for other parts of the application.
-
-**Next Steps:**
-Now that we have confirmed the use of two separate rendering systems, the `multi-template-mapper` agent should be run to determine which parts of the application are rendered by which system.
-```

@@ -62,6 +62,3 @@ Here are the acceptance criteria for the user story: "[User Story Title]"
 - **Then** I should see an error message stating "File size cannot exceed 5MB."
 - **And** my profile picture should not have changed.
 
-**Next Steps:**
-These acceptance criteria are ready. The `ticket-analyzer` can now use this detailed definition to investigate the codebase and create a technical plan.
-```

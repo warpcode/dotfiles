@@ -79,9 +79,3 @@ These routes are typically stateful (using sessions and cookies) and handle the 
 
 ---
 
-**Conclusion:**
-The application has a clear separation between its API and web routes. A total of **8 API endpoints** and **7 web routes** have been identified. This list represents the complete surface area of the application that is accessible via HTTP.
-
-**Next Steps:**
-Now that we have a complete list of all routes, the `route-type-classifier` agent can be used to further analyze and categorize these routes based on their purpose and protections.
-```

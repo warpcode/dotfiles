@@ -62,11 +62,3 @@ I have analyzed the application's middleware and frontend code to audit its defe
 
 ---
 
-**Conclusion:**
-The application has **robust protection against Cross-Site Request Forgery**.
-
-It correctly implements the double-submit cookie pattern, which is the industry standard for protecting SPAs. The backend enforces token validation on all web routes via middleware, and the frontend is correctly configured to send the token with every state-changing request.
-
-**Next Steps:**
-With CSRF protection verified, the next logical step is to scan the project for any accidentally committed secrets or credentials using the `secret-leak-detector` agent.
-```

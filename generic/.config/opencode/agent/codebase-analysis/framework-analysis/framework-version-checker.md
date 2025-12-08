@@ -62,9 +62,3 @@ I have analyzed the project's lock files to determine the exact installed versio
 
 ---
 
-**Conclusion:**
-The project is built on up-to-date, actively supported major versions of both its backend and frontend frameworks. This indicates a healthy and well-maintained codebase.
-
-**Next Steps:**
-With the frameworks and their versions identified, the next step is to use the `bespoke-framework-analyzer` to check for any significant customizations or deviations from the standard framework structure.
-```

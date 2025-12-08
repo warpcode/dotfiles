@@ -68,9 +68,3 @@ The application's default database connection is configured as follows:
 
 ---
 
-**Conclusion:**
-The application is configured to connect to a **MySQL** database service named `mysql`, which aligns perfectly with the services discovered during the infrastructure analysis. The use of the `.env` file for credentials follows security best practices.
-
-**Next Steps:**
-Now that we have confirmed the database technology, the `orm-detector` agent can be used to identify the specific Object-Relational Mapper (ORM) library the application uses to interact with this database.
-```

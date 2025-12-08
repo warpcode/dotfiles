@@ -82,9 +82,3 @@ This directory contains the top-level components that represent full pages or vi
 
 ---
 
-**Conclusion:**
-A total of **16 Vue components** have been identified. The project has a clean and logical component architecture, with a clear separation between small, reusable UI elements (in `components/`) and larger, page-level views (in `views/`). This is a scalable and maintainable structure.
-
-**Next Steps:**
-Now that we have a complete inventory of the UI components, the `asset-usage-analyzer` can be run to determine how other assets, like images and fonts, are used within these components.
-```

@@ -70,9 +70,3 @@ The following classes were found to extend `Illuminate\Database\Eloquent\Model` 
 
 ---
 
-**Conclusion:**
-The project's models follow the conventions of the **Eloquent ORM**. A total of **7 models** have been discovered. This list provides a complete inventory of the application's core data entities.
-
-**Next Steps:**
-Now that we have a complete and verified list of the models, the `migration-analyzer` agent should be used to inspect the `database/migrations/` directory. This will allow us to understand the database schema (the tables and columns) that these models interact with.
-```

@@ -73,12 +73,4 @@ The dominant data access pattern in this project is **Direct Model Usage in Cont
 
 ### **3. Implications for Developers**
 
-- **For Simple CRUD:** When working with entities like `Product` or `Category`, developers should expect to write Eloquent queries directly within the controller methods.
-- **For Complex Domains:** When working on features related to billing or orders, developers should look for and use the existing `BillingService` instead of putting logic in the controller.
-- **Consistency:** The project does not strictly enforce a single pattern. Developers should be mindful of this hybrid approach.
 
----
-
-**Next Steps:**
-Now that we understand the primary data access patterns, the `query-pattern-analyzer` agent can be run to perform a more granular analysis of the _types_ of queries being built.
-```

@@ -76,9 +76,3 @@ The `depends_on` configuration defines the startup order. A service will not be 
 
 ---
 
-**Conclusion:**
-The architecture follows a standard "star" pattern, where the central **`app`** service depends on several backing data services (`mysql`, `elasticsearch`, `redis`). The data services are independent of each other. Communication is handled via Docker's built-in service discovery, allowing the application to use service names as hostnames.
-
-**Next Steps:**
-With the service relationships mapped, the `volume-mount-analyzer` can now be used to understand how data is persisted and how local code is shared with the containers.
-```

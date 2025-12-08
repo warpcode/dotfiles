@@ -70,9 +70,3 @@ This feature requires changes across the full stack. The core work involves crea
 
 ---
 
-**4. Recommended Next Steps**
-This analysis provides a clear picture of the required work.
-
-- To create a developer-ready checklist from this plan, use the **`task-splitter`** agent.
-- To get a size estimate for sprint planning, use the **`estimation-helper`** agent with this analysis as context.
-```

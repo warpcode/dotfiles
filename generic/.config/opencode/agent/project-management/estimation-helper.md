@@ -68,9 +68,3 @@ This estimate is based on the following analysis of the technical plan:
   - The patterns for creating new API endpoints and Vue components are well-established in this codebase, so there are few technical unknowns.
   - The acceptance criteria are clear, reducing the risk of requirement changes.
 
-**Conclusion:**
-A 3-point estimate would under-represent the effort required to build and test across the full stack. An 8-point estimate would be too high given the low level of uncertainty and the use of existing patterns. Therefore, **5 story points** is an appropriate size for this task.
-
-**Next Steps:**
-This estimated ticket is now ready for the `ticket-prioritizer` to help decide where it fits in the backlog.
-```

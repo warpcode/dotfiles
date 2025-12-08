@@ -65,9 +65,3 @@ The application's Elasticsearch client is configured with the following default 
 
 ---
 
-**Conclusion:**
-The application is configured to connect to the `elasticsearch` service provided in the Docker environment. The configuration is straightforward and follows best practices by abstracting the host details into the `.env` file.
-
-**Next Steps:**
-Now that we understand how the application connects to Elasticsearch, the `index-mapper` agent can be run to discover the specific indexes that the application interacts with.
-```

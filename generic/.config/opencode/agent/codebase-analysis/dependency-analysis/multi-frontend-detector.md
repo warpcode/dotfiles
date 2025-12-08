@@ -60,9 +60,3 @@ This is not a standard single-page application. The development team must be awa
 - **Potential for Different Technologies:** This structure allows the "admin panel" to potentially use a different version of Vue, or even a different framework entirely, from the main application.
 - **Increased Complexity:** Onboarding and CI/CD processes will be more complex, as they need to handle multiple `npm install` and build steps.
 
-**Conclusion:**
-The project's frontend is composed of at least two separate applications. This is a deliberate architectural choice that allows for strong separation between different parts of the UI.
-
-**Next Steps:**
-With this architectural pattern identified, the `vendor-analyzer` can now be run to provide a high-level summary of the installed dependencies in each `node_modules` directory.
-```
