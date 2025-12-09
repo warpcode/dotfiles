@@ -206,26 +206,31 @@ _gh_extract_asset_to_install_dir() {
         return 1
     fi
 
+    cd "$dir"
     if [[ $asset_url =~ \.zip$ ]]; then
-        if cd "$dir" && unzip "$temp_file"; then
+        if unzip "$temp_file"; then
             echo "📦 Downloaded and extracted $asset_url"
             _flatten_dir
         else
+            cd -
             echo "❌ Failed to extract $asset_url" >&2
             return 1
         fi
     elif [[ $asset_url =~ \.tar\.gz$ ]]; then
-        if { cd "$dir" && tar --strip-components=1 -xzf "$temp_file" 2>/dev/null || cd "$dir" && tar -xzf "$temp_file"; }; then
+        if { tar --strip-components=1 -xzf "$temp_file" 2>/dev/null || tar -xzf "$temp_file"; }; then
             echo "📦 Downloaded and extracted $asset_url"
             _flatten_dir
         else
+            cd -
             echo "❌ Failed to extract $asset_url" >&2
             return 1
         fi
     else
+        cd -
         echo "❌ Unsupported archive format" >&2
         return 1
     fi
+    cd -
 
     # Ensure bin/ directory exists and contains symlinks to executables
     if [[ ! -d "$dir/bin" ]]; then
