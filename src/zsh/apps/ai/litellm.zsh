@@ -1,8 +1,49 @@
 ai.litellm.models() {
-    if ! curl --fail -s "$LITELLM_API_ENDPOINT/models" -H "Authorization: Bearer $LITELLM_API_KEY" -H "Content-Type: application/json" | jq -r ".data[].id" 2>/dev/null; then
+    local raw_models
+    raw_models=$(curl --fail -s "$LITELLM_API_ENDPOINT/models" \
+        -H "Authorization: Bearer $LITELLM_API_KEY" \
+        -H "Content-Type: application/json" | jq -r ".data[].id" 2>/dev/null)
+
+    if [[ $? -ne 0 || -z "$raw_models" ]]; then
         echo "❌ Failed to fetch LiteLLM models from $LITELLM_API_ENDPOINT" >&2
         return 1
     fi
+
+    # Filter out models matching name/* and those ending with -YYYY-MM-DD
+    local filtered_models
+    filtered_models=$(echo "$raw_models" \
+        | grep -vE "^[^/]+/\*$" \
+        | grep -vE "\-[0-9]{4}\-?[0-9]{2}\-?[0-9]{2}(:[^:]+)?$" \
+        | grep -vE "\-[0-9]{2}\-202[0-9](:[^:]+)?$" \
+        | grep -vE "\-[0-9]{2}\-[0-9]{2}(:[^:]+)?$" \
+        | grep -vE "\-preview(\-|$)" )
+
+    # Separate and sort: models without "/" prefix first (original order), then models with "/" prefix sorted
+    local non_prefixed_models prefixed_models
+    non_prefixed_models=$(echo "$filtered_models" | grep -v '/')
+    prefixed_models=$(echo "$filtered_models" | grep '/' | sort)
+
+    echo "$non_prefixed_models"
+    echo "$prefixed_models"
+}
+
+ai.openrouter.models.free() {
+    if [[ -z "$OPENROUTER_API_KEY" ]]; then
+        echo "❌ OPENROUTER_API_KEY is not set" >&2
+        return 1
+    fi
+
+    local raw_models
+    raw_models=$(curl --fail -s "https://openrouter.ai/api/v1/models" \
+        -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+        -H "Content-Type: application/json" | jq -r '.data[] | select(.pricing.prompt == "0" and .pricing.completion == "0") | .id' 2>/dev/null)
+
+    if [[ $? -ne 0 || -z "$raw_models" ]]; then
+        echo "❌ Failed to fetch free OpenRouter models" >&2
+        return 1
+    fi
+
+    echo "$raw_models"
 }
 
 ai.opencode.configure.litellm() {
