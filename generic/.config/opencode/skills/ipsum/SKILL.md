@@ -22,8 +22,9 @@ When the user activates this skill (e.g., "generate ipsum", "give me placeholder
 ## Generation Rules
 
 1.  **Content Safety:** The text must be strictly Safe For Work (SFW) and Family Friendly. No politics, no profanity, no NSFW topics.
-2.  **Style:** Grammatically correct but nonsensical or highly satirical. Flowery language is encouraged.
-3.  **Strict Limits:**
+2.  **Completeness:** Any story or text generated must be a complete, self-contained narrative or passage. Do not provide half a story or incomplete text, regardless of length constraint. If a character or word limit is specified, ensure the text forms a satisfying, coherent whole within that limit.
+3.  **Style:** Grammatically correct but nonsensical or highly satirical. Flowery language is encouraged.
+4.  **Strict Limits:**
     *   **Words/Paragraphs:** Meet the count exactly.
     *   **Characters:** Generate slightly more text than needed, then strictly truncate to the exact character count, ending with an ellipsis `...` if it cuts a sentence mid-flow.
 
