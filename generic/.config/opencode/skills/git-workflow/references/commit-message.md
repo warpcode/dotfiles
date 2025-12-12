@@ -45,6 +45,8 @@ feat(zsh): add installer
 Closes #456
 ```
 
+Note: Suggested commit messages MUST be shown inside a code block (triple backticks) for easier reading by the user.
+
 **Use:** `git commit -m "..." -m "body"`
 
 ## Examples
@@ -58,4 +60,5 @@ Closes #456
 - Proactive (prompt `git add` if no staged).
 - Match history.
 - Prefer single-line for simple changes.
+- Show suggested commit messages inside a code block for readability.
 
