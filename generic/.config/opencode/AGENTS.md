@@ -8,6 +8,7 @@
 - **Rule 5 - Rule Citation**: MUST cite specific rule when making decisions
 - **Rule 6 - Skill Prompt Fidelity**: If a skill/tool is loaded and it returns a prompt or instruction, the agent MUST read and fully understand that prompt before acting. If the skill recommends another file for more information, the agent MUST load and read that file using the Read tool before proceeding.
 - **Rule 7 - Reference Verification**: MUST explicitly load and read any referenced skill/docs (using the Read tool) before acting on that skill's guidance; log the exact file paths read and cite them when making decisions.
+- **Rule 8 - Concise Responses**: ALWAYS reply concisely; avoid unnecessary repetition, filler words, and verbose explanations unless the user explicitly asks for more detail.
 
 ## Core Agents
 - `core/feature-lead`: Orchestrates full feature dev (plan/code/review). Use for new features.
@@ -67,7 +68,7 @@
 - "Show refs read"
 
 ## Mandatory Pre-Task Checklist
-Before ANY action, state:
+Before ANY action, state concisely:
 1. Which rule(s) apply
 2. Which skill(s) will be loaded
 3. Which agent(s) will be used (if applicable)
