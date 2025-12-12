@@ -2,7 +2,7 @@
 # IS_WORK is set to 1 when running in a work environment
 
 # Define default models
-local work_model="github-copilot/gpt-4.1"
+local work_model="github-copilot/gpt-5-mini"
 local personal_model="opencode/grok-code-fast"
 
 if [[ "$IS_WORK" == "1" ]]; then
