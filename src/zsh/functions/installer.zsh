@@ -20,13 +20,14 @@
 # Usage Examples:
 #   _installer_package "default" tmux              # tmux on all OSes
 #   _installer_package "debian" tmux tmux-tiny     # tmux-tiny on Debian
+#   _installer_package "termux" tmux tmux-tiny     # tmux-tiny on Termux
 #   _installer_package "flatpak" discord com.discordapp.Discord  # Discord via Flatpak
 #   _installer_package "snap" discord              # Discord via Snap
 #   _installer_package "github" fzf "junegunn/fzf@v0.66.1"  # GitHub release
 #   _installer_install                             # Install collected packages
 #   _installer_get_packages_for_pkg_mgr flatpak         # Get flatpak packages
 #
-# Supports apt, dnf, pacman, brew, flatpak, snap, github
+# Supports apt, dnf, pacman, brew, pkg (Termux), flatpak, snap, github
 # GitHub releases support .tar.gz archives with automatic OS/arch detection and executable symlinking
 
 # Global app mappings (set by apps at load time)
@@ -74,6 +75,7 @@ _installer_get_packages_for_pkg_mgr() {
         local has_flatpak_pkg=$(( ${#_installer_app_mappings[${app}:flatpak]} > 0 ? 1 : 0 ))
         local has_snap_pkg=$(( ${#_installer_app_mappings[${app}:snap]} > 0 ? 1 : 0 ))
         local has_macos_cask_pkg=$(( ${#_installer_app_mappings[${app}:macos-cask]} > 0 ? 1 : 0 ))
+        local has_termux_pkg=$(( ${#_installer_app_mappings[${app}:termux]} > 0 ? 1 : 0 ))
         local has_os_pkg=$(( ${#_installer_app_mappings[${app}:${current_os}]} > 0 ? 1 : 0 ))
         local has_default_pkg=$(( ${#_installer_app_mappings[${app}:default]} > 0 ? 1 : 0 ))
         local has_github_pkg=$(( ${#_installer_app_mappings[${app}:github]} > 0 ? 1 : 0 ))
@@ -89,6 +91,10 @@ _installer_get_packages_for_pkg_mgr() {
         elif [[ $has_macos_cask_pkg -eq 1 ]]; then
             if [[ $manager == "macos-cask" ]]; then
                 pkg=${_installer_app_mappings[${app}:macos-cask]}
+            fi
+        elif [[ $has_termux_pkg -eq 1 ]]; then
+            if [[ $manager == "termux" ]]; then
+                pkg=${_installer_app_mappings[${app}:termux]}
             fi
         elif [[ $has_os_pkg -eq 1 ]] || [[ $has_default_pkg -eq 1 ]]; then
             if [[ $manager == "$current_os" ]]; then
@@ -163,6 +169,7 @@ _installer_get_pkg_mgr_for_os() {
         fedora) echo dnf ;;
         arch) echo pacman ;;
         macos) echo brew ;;
+        termux) echo pkg ;;
         *) echo unknown ;;
     esac
 }
@@ -223,6 +230,12 @@ _installer_install_packages() {
                 return 1
             fi
             ;;
+        pkg)
+            if ! pkg install -y "${packages[@]}"; then
+                echo "❌ pkg install failed" >&2
+                return 1
+            fi
+            ;;
         *)
             echo "❌ Unsupported package manager: $pkg_mgr" >&2
             return 1
@@ -277,9 +290,12 @@ _installer_install() {
     local os_packages=()
     local brew_packages=()
     local cask_packages=()
+    local termux_packages=()
     if [[ $os == "macos" ]]; then
         brew_packages=($(_installer_get_packages_for_pkg_mgr macos))
         cask_packages=($(_installer_get_packages_for_pkg_mgr macos-cask))
+    elif [[ $os == "termux" ]]; then
+        termux_packages=($(_installer_get_packages_for_pkg_mgr termux))
     else
         os_packages=($(_installer_get_packages_for_pkg_mgr "$os"))
     fi
@@ -338,6 +354,9 @@ _installer_install() {
             echo "📦 Installing Homebrew cask packages: ${cask_packages[*]}"
             _installer_install_packages brew-cask "${cask_packages[@]}"
         fi
+    elif [ ${#termux_packages[@]} -gt 0 ]; then
+        echo "📦 Installing Termux packages: ${termux_packages[*]}"
+        _installer_install_packages pkg "${termux_packages[@]}"
     elif [ ${#os_packages[@]} -gt 0 ]; then
         echo "📦 Installing OS packages: ${os_packages[*]}"
         _installer_install_packages "$(_installer_get_pkg_mgr_for_os "$os")" "${os_packages[@]}"
