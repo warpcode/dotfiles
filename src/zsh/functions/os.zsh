@@ -1,3 +1,16 @@
+#!/usr/bin/env zsh
+
+# Function to detect if the system is Termux
+_os_is_termux() {
+    if [[ -n "$TERMUX_VERSION" ]] && [[ -n "$PREFIX" && -d "$PREFIX" ]]; then
+        echo "true"
+        return 0
+    else
+        echo "false"
+        return 1
+    fi
+}
+
 # OS detection utilities
 # Functions for detecting operating system and architecture
 
@@ -8,6 +21,10 @@ _os_detect_os_family() {
     case $OSTYPE in
         darwin*) echo macos ;;
         linux*)
+            if _os_is_termux; then
+                echo "termux"
+                return
+            fi
             [ -f /etc/os-release ] || { echo unknown; return; }
              . /etc/os-release
              case $ID in
