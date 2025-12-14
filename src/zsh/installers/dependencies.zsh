@@ -1,13 +1,13 @@
 # Common dependencies required for repository setup and package installation
-
-# Debian/Ubuntu prerequisites for adding repositories and installing packages
-_installer_dependencies "debian" ca-certificates curl gnupg jq unzip
-
-# Fedora prerequisites for package management
-_installer_dependencies "fedora" dnf-plugins-core unzip
-
-# Arch Linux prerequisites
-_installer_dependencies "arch" unzip
-
-# macOS prerequisites (via Homebrew)
-_installer_dependencies "macos" unzip
+#
+_packages_register_app ca-certificates apt:ca-certificates :dep
+_packages_register_app curl apt:curl :dep
+_packages_register_app dnf-plugins-core dnf:dnf-plugins-core :dep
+_packages_register_app gnupg apt:gnupg :dep
+_packages_register_app jq apt:jq :dep
+_packages_register_app unzip \
+    apt:unzip \
+    dnf:unzip \
+    pacman:unzip \
+    brew:unzip \
+    :dep

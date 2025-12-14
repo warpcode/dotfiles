@@ -1,4 +1,8 @@
-_installer_package "default" git
+_packages_register_app git \
+    apt:git \
+    brew:git \
+    dnf:git \
+    pacman:git
 
 # Function to set global git config
 _installer_post_git_config() {

@@ -1,2 +1,3 @@
 # Ensure uv (and uvx) is installed
-_installer_package "github" uv "astral-sh/uv@latest"
+_packages_register_app uv \
+    github:"uv:astral-sh/uv@latest"

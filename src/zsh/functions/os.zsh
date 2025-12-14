@@ -3,10 +3,8 @@
 # Function to detect if the system is Termux
 _os_is_termux() {
     if [[ -n "$TERMUX_VERSION" ]] && [[ -n "$PREFIX" && -d "$PREFIX" ]]; then
-        echo "true"
         return 0
     else
-        echo "false"
         return 1
     fi
 }
