@@ -1,1 +1,5 @@
-_installer_package "default" rsync
+_packages_register_app rsync \
+    apt:rsync \
+    brew:rsync \
+    dnf:rsync \
+    pacman:rsync

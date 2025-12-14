@@ -2,4 +2,5 @@
 #
 # Registers GitHub CLI package for installation from GitHub releases
 
-_installer_package "github" github-cli "cli/cli@latest"
+_packages_register_app github-cli \
+    github:"github-cli:cli/cli@latest"

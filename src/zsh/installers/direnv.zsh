@@ -1,1 +1,5 @@
-_installer_package "default" direnv
+_packages_register_app direnv \
+    apt:direnv \
+    brew:direnv \
+    dnf:direnv \
+    pacman:direnv

@@ -124,15 +124,15 @@ _gh_install_release() {
 
     # If versions match, skip
     if [[ "$target_version" == "$current_version" ]]; then
-        echo "🔄 $app is already installed ($current_version)"
+        echo "    🔄 $app is already installed ($current_version)"
         return 0
     fi
 
     # Install/update
     if [[ -n "$current_version" ]]; then
-        echo "📦 $app version mismatch (installed: $current_version, target: $target_version). Installing..."
+        echo "    📦 $app version mismatch (installed: $current_version, target: $target_version). Installing..."
     else
-        echo "📦 Installing $app version $target_version from $repo"
+        echo "    📦 Installing $app version $target_version from $repo"
     fi
     echo "⚠️ WARNING: No signature verification performed - manually verify $repo releases for security" >&2
 
@@ -209,7 +209,7 @@ _gh_extract_asset_to_install_dir() {
     cd "$dir"
     if [[ $asset_url =~ \.zip$ ]]; then
         if unzip "$temp_file"; then
-            echo "📦 Downloaded and extracted $asset_url"
+            echo "    📦 Downloaded and extracted $asset_url"
             _flatten_dir
         else
             cd -
@@ -218,7 +218,7 @@ _gh_extract_asset_to_install_dir() {
         fi
     elif [[ $asset_url =~ \.tar\.gz$ ]]; then
         if { tar --strip-components=1 -xzf "$temp_file" 2>/dev/null || tar -xzf "$temp_file"; }; then
-            echo "📦 Downloaded and extracted $asset_url"
+            echo "    📦 Downloaded and extracted $asset_url"
             _flatten_dir
         else
             cd -
@@ -244,7 +244,7 @@ _gh_extract_asset_to_install_dir() {
         done
     fi
     echo "$version" > "$dir/.version"
-    echo "✅ Successfully installed $app version $version"
+    echo "    ✅ Successfully installed $app version $version"
 }
 
 # Compare versions and return the target version to use
