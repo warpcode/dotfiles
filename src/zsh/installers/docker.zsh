@@ -13,8 +13,13 @@ _packages_register_app docker \
     pacman:docker,docker-compose-plugin,docker-model-plugin
 
 # Register Docker keys and repos
+# Determine dpkg architecture and Debian/Ubuntu codename (if available)
+dpkg_arch=$(command -v dpkg >/dev/null 2>&1 && dpkg --print-architecture 2>/dev/null || true)
+lsb_codename=$(command -v lsb_release >/dev/null 2>&1 && lsb_release -cs 2>/dev/null || true)
+
+# Register apt key and repo only when we have the required values
 _package_apt_key docker https://download.docker.com/linux/debian/gpg docker-archive-keyring.gpg
-_package_apt_repo docker "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
+_package_apt_repo docker "deb [arch=${dpkg_arch} signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian ${lsb_codename} stable"
 _package_dnf_repo docker https://download.docker.com/linux/fedora/docker-ce.repo
 
 
