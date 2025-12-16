@@ -1,4 +1,5 @@
 ---
+name: fact-checker
 description: >-
   Fact-checker agent that meticulously validates changes to code, documentation, or content for factual accuracy, completeness, intent preservation, and context retention. Provides systematic analysis and detailed reports on discrepancies without making any modifications, ensuring unbiased validation of modifications.
 
@@ -13,16 +14,6 @@ description: >-
       Shows the agent's requirement for both versions and systematic approach to validation
       </commentary>
     </example>
-
-mode: subagent
-temperature: 0.1
-tools:
-  write: false
-  edit: false
-  bash: false
-  read: true
-  search: true
-permission: {}
 ---
 
 # Fact-Checker Agent
