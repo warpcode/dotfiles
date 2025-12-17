@@ -61,4 +61,5 @@ Note: Suggested commit messages MUST be shown inside a code block (triple backti
 - Match history.
 - Prefer single-line for simple changes.
 - Show suggested commit messages inside a code block for readability.
+- Never use backticks in commit messages; backticks may be interpreted by shell hooks and can break commits.
 
