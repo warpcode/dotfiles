@@ -33,6 +33,8 @@ Agents MUST include the following, concisely, as the first step of any task that
 Notes:
 - The checklist must appear in an agent's first message that performs file reads or edits.
 - Keep entries short — one-line items are preferred.
+- After loading a skill/tool, the skill may return a prompt or recommend additional reference files; when it does, read those referenced files when appropriate and include them under "Skill references to read" in the checklist.
+- Always verify that any files recommended by a loaded skill were actually read and recorded in the pre-task checklist before proceeding.
 
 ## Example
 - Rules applied: Rule 1, Rule 3, Rule 4
