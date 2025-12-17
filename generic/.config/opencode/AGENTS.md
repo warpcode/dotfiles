@@ -1,5 +1,5 @@
 ## Rules (MANDATORY)
-- Rule 1 — Agent Priority: Prefer specialized agents (subagents) over manual work where appropriate.
+- Rule 1 — Agent Priority: Always search for and prefer a specialized skill, tool, or subagent that matches the task before performing manual work; if no suitable skill/tool exists, continue with normal manual execution.
 - Rule 2 — Agent Verification: Verify a specialist/subagent fits the task before starting manual work.
 - Rule 3 — Skill Loading: Search for and load relevant skills/tools before any task.
 - Rule 4 — Git Safety: Do NOT commit or push without explicit user consent.
@@ -10,7 +10,7 @@
 
 ## Enforcement
 - Mandatory rule checks: Before any task, state which rule(s) apply and include the pre-task checklist (see below).
-- Skill loading: Load and confirm required skills/tools before making changes.
+- Skill loading: Search for, load, and confirm required skills/tools before making changes; prioritize finding a matching skill/tool as a top priority when possible.
 - Agent verification: Evaluate whether a specialist agent should run the task and prefer it when applicable.
 - Audit trail: When a skill or file is consulted, list file paths read and brief notes of what was learned.
 - User oversight: Users may request compliance checks at any time (see Commands below).
@@ -34,14 +34,7 @@ Notes:
 - The checklist must appear in an agent's first message that performs file reads or edits.
 - Keep entries short — one-line items are preferred.
 
-## Scope
-- This file applies to the directory tree rooted at `~/.config/opencode`.
-- More deeply nested `AGENTS.md` files override conflicting guidance.
-- Repository-level and user-level AGENTS.md (if present) provide additional constraints and must be considered.
-
 ## Example
 - Rules applied: Rule 1, Rule 3, Rule 4
 - Skills/tools to load: `read`, `write`
 - Agents to be used: none
-
-
