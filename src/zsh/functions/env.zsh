@@ -1,13 +1,20 @@
 typeset -gA _ENV_LAZY_VARS
 typeset -gA _ENV_LAZY_LOADED
 
+_env_kv() {
+    local key=$1; shift
+    local val="$*"
+    # printf %q escapes for shell-safe representation; to write raw literal, use proper quoting
+    printf '%s=%q\n' "$key" "$val"
+}
+
 ##
 # Prints the values of environment variables.
 # @param ... Variable names to print
 ##
 _env_print() {
     for var in "$@"; do
-        echo "$var=${(P)var}"
+        _env_kv "$var" "${(P)var}"
     done
 }
 
@@ -16,7 +23,7 @@ _env_print() {
 # @param ... Variable names to export
 ##
 _env_export() {
-    _env_print "$@" > .env
+    _env_print $@ > .env
 }
 
 ##
