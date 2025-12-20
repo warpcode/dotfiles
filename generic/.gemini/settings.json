@@ -1,0 +1,18 @@
+{
+  "general": {
+    "preferredEditor": "neovim",
+    "previewFeatures": true
+  },
+  "security": {
+    "auth": {
+      "selectedType": "oauth-personal"
+    }
+  },
+  "mcpServers": {
+    "skillport": {
+      "command": "uvx",
+      "args": ["skillport"],
+      "env": { "SKILLPORT_SKILLS_DIR": "~/.config/opencode/skills" }
+    }
+  }
+}

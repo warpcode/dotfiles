@@ -8,9 +8,6 @@
     "AI.md",
     ".github/copilot-instructions.md"
   ],
-  "plugin": [
-    "opencode-skills"
-  ],
   "provider": {
     "litellm": {
       "npm": "@ai-sdk/openai-compatible",
@@ -55,6 +52,14 @@
   },
   "model": "{env:OPENCODE_MODEL}",
   "mcp": {
+    "skillport": {
+      "type": "local",
+      "command": [
+        "uvx",
+        "skillport"
+      ],
+      "environment": { "SKILLPORT_SKILLS_DIR": "~/.config/opencode/skills" }
+    },
     "browsermcp": {
       "type": "local",
       "command": [

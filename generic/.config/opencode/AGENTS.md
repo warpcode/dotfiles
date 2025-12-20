@@ -1,7 +1,7 @@
 ## Rules (MANDATORY)
-- Rule 1 — Agent Priority: Always search for and prefer a specialized skill, tool, or subagent that matches the task before performing manual work; if no suitable skill/tool exists, continue with normal manual execution.
+- Rule 1 — Agent Priority: Always search for and prefer a specialized skill (using the skillport tool), tool, or subagent that matches the task before performing manual work; if no suitable skill/tool exists, continue with normal manual execution.
 - Rule 2 — Agent Verification: Verify a specialist/subagent fits the task before starting manual work.
-- Rule 3 — Skill Loading: Search for and load relevant skills/tools before any task.
+- Rule 3 — Skill Loading: Search for and load relevant skills/tools before any task; when loading skills/tools, always check the skillport tool first.
 - Rule 4 — Git Safety: Do NOT commit or push without explicit user consent.
 - Rule 5 — Rule Citation: Cite the specific rule(s) relied upon when making decisions.
 - Rule 6 — Skill Prompt Fidelity: If a loaded skill returns a prompt/instruction, read and understand it before acting; follow any referenced file-read instructions.
