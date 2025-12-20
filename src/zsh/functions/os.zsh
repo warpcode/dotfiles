@@ -45,6 +45,32 @@ _os_detect_arch() {
     esac
 }
 
+# Check if the current environment has a GUI
+# Returns 0 (true) if GUI detected, 1 (false) otherwise
+_os_has_gui() {
+    # macOS is assumed to be GUI unless strictly SSH without X11 forwarding
+    if [[ "$OSTYPE" == darwin* ]]; then
+        [[ -z "$SSH_CONNECTION" ]] && return 0
+    fi
+
+    # Linux/BSD: Check for X11 or Wayland display variables
+    if [[ -n "$DISPLAY" ]] || [[ -n "$WAYLAND_DISPLAY" ]]; then
+        return 0
+    fi
+
+    # Default to no GUI
+    return 1
+}
+
+# Check if the current environment is headless (CLI only)
+_os_is_headless() {
+    if _os_has_gui; then
+        return 1
+    else
+        return 0
+    fi
+}
+
 # Filter input lines by architecture patterns
 # @param input Text to filter
 # @return Filtered lines matching current architecture
