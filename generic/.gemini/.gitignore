@@ -1,0 +1,5 @@
+/tmp
+/installation_id
+/*.json
+/*.json.orig
+!/settings.json
