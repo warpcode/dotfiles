@@ -73,4 +73,8 @@ Technical Checklist:
 Dependencies: [Notes]
 ```
 
+## ADHD Task Breakdowns
+
+For ADHD-friendly task planning and decomposition, reference these files as needed: references/adhd-task-strategies.md for universal strategies (e.g., Pomodoro, time estimates); references/adhd-technical-task-breakdowns.md for code-related tasks; references/adhd-real-world-task-breakdowns.md for non-technical tasks. Load only when breaking down complex tasks to reduce overwhelm.
+
 Use this skill after ticket creation to plan implementation.
