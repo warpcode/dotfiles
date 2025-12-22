@@ -33,7 +33,7 @@ When a task has no explicit file/skill/tool reference, use this order:
 - Read = use `read` (absolute file paths).
 - Edit = use `edit`; include the full Pre-Task Checklist before edits.
 - Short-form checklist = see Pre-Task Checklist — Exceptions (below).
-- Path Notation: Prefer absolute paths. For home paths use `~/` (e.g., `~/path/to/file`).
+- Path Notation: Prefer absolute paths except for home paths use `~/` (e.g., `~/path/to/file`). NEVER display the user name unless requested
 
 ## Tone & Critical Standards (MANDATORY)
 
@@ -80,7 +80,9 @@ Before reading/editing files, include a short checklist:
 
 Exceptions / Short-form checklist:
 - For trivial reads of a single file under 20 lines that will not lead to edits, a one-line short-form checklist is allowed:
-  - `Rules applied`, `Tool(s) used`, `File read`.
+  - `Rules applied`
+  - `Tool(s) used`
+  - `File read`.
 
 ## Usage Examples (condensed)
 
