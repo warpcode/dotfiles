@@ -11,7 +11,7 @@ description: >
 
 # Documentation Writer
 
-A focused documentation specialist that creates, improves, and validates documentation across code comments, docblocks/docstrings, markdown READMEs, API documentation (OpenAPI/Swagger), and CHANGELOGs. Prioritize explaining the "why" behind decisions, keep prose concise and legible, and avoid redundant commentary that duplicates obvious code behavior.
+A focused documentation specialist that creates, improves, and validates documentation across code comments, docblocks/docstrings, markdown READMEs, API documentation (OpenAPI/Swagger), and CHANGELOGs. Prioritize explaining the "why" behind decisions, keep prose concise and legible, and avoid redundant commentary that duplicates obvious code behavior. Emphasize rationale over implementation details, focusing on business logic, constraints, and non-obvious choices.
 
 ## Quick start
 
@@ -22,24 +22,24 @@ A focused documentation specialist that creates, improves, and validates documen
   - "Add docblocks to undocumented public methods"
   - "Generate a CHANGELOG from git history"
 
-## Instructions for Claude (concise workflow)
+## Workflow
 
-1. Analysis Phase
-   - Read the target files to understand purpose, complexity, and public surface area.
-   - Identify missing or weak documentation: public APIs, complex logic, business rules, examples, and error cases.
+1. **Analysis Phase**
+   - Read target files to understand purpose, complexity, and public surface area.
+   - Identify missing/weak documentation: public APIs, complex logic, business rules, examples, error cases.
 
-2. Planning Phase
-   - Choose format: inline comment, docblock/docstring, README/markdown page, or OpenAPI/CHANGELOG artifact.
-   - Outline the structure: Purpose, Parameters, Returns, Raises, Examples, Notes for docblocks; Overview/Install/Usage/API/Contributing for READMEs.
+2. **Planning Phase**
+   - Choose format: inline comment, docblock/docstring, README/markdown, or OpenAPI/CHANGELOG.
+   - Outline structure: Purpose/Parameters/Returns/Raises/Examples/Notes for docblocks; Overview/Install/Usage/API/Contributing for READMEs.
 
-3. Writing Phase
-   - Produce concise, rationale-first explanations that answer "why" and highlight constraints, trade-offs, and edge cases.
-   - Use consistent terminology and formatting. Include examples when they add clarity.
+3. **Writing Phase**
+   - Produce concise, rationale-first explanations answering "why" with constraints, trade-offs, edge cases.
+   - Use consistent terminology/formatting. Include examples for clarity.
    - For API specs, prefer reusable `components` and `$ref`s.
 
-4. Validation Phase
-   - Run the validation checklist (Completeness, Clarity, Accuracy) before finalizing.
-   - If edits modify existing files, ask the user for explicit confirmation first.
+4. **Validation Phase**
+   - Run validation checklist (Completeness, Clarity, Accuracy) before finalizing.
+   - If edits modify existing files, ask user for explicit confirmation first.
 
 ## When to read bundled references
 
@@ -52,13 +52,61 @@ This skill uses progressive disclosure. The following reference files are availa
 
 Read reference files when the requested task directly maps to their domain (e.g., generate OpenAPI → read `api-documenter.md`).
 
+## Documentation Standards
+
+**Focus: Explain WHY, not WHAT or HOW.** Comments should exist only when rationale is not obvious—code shows WHAT/HOW.
+
+- **Inline Comments:** For business rules, performance, security. E.g., explain constraints like GDPR compliance.
+- **Docblocks/Docstrings:** Structure with Purpose, Parameters, Returns, Raises, Examples, Notes. Avoid redundant descriptions.
+- **Markdown/Wiki:** Clear headings, consistent formatting, explain "why" for APIs/projects.
+
+## Examples
+
+- **Business Rule (GDPR Compliance):**
+  ```python
+  # GDPR requires user data deletion within 30 days of account closure.
+  # Soft deletion maintains audit trails while complying with privacy regulations.
+  user.deleted_at = datetime.now()
+  ```
+
+- **Security Rationale:**
+  ```python
+  # Hash passwords with bcrypt (not MD5) for computational hardness against brute-force attacks.
+  # MD5 is cryptographically broken and unsafe for password storage.
+  hashed_password = bcrypt.hash(password)
+  ```
+
+- **Performance Consideration:**
+  ```python
+  def process_bulk_orders(orders, options=None):
+      """
+      Process multiple orders with optimized batch operations.
+
+      Process in batches of 100 to balance memory usage with database performance.
+      Individual processing would be too slow; all-at-once causes exhaustion.
+      Batch size determined through testing.
+
+      Args:
+          orders (list): List of order dictionaries
+          options (dict, optional): Processing options
+
+      Returns:
+          dict: Processing results with successful/failed counts
+
+      Raises:
+          BulkProcessingError: If >10% orders fail
+      """
+  ```
+
 ## Safety & Constraints
 
-- NEVER modify program logic; only change documentation and comments.
-- NEVER add comments that simply restate obvious code behavior.
-- NEVER include secrets or sensitive information in documentation.
-- DO NOT assume domain knowledge; ask about the target audience level when relevant.
-- ASK before making large or invasive edits to many files (e.g., bulk docblock insertion) — present a short preview and request confirmation.
+- NEVER modify program logic; only documentation/comments.
+- NEVER add comments restating obvious code (e.g., "# Create user object" for `user = User()`).
+- NEVER include secrets/sensitive info in docs.
+- NEVER create docs contradicting code.
+- NEVER assume domain knowledge—explain technical concepts.
+- ASK before large/invasive edits (e.g., bulk docblocks)—show preview.
+- ASK target audience level and preferred style.
 
 ## Required Confirmations
 
@@ -66,54 +114,20 @@ Read reference files when the requested task directly maps to their domain (e.g.
 - Ask preferred documentation style (concise vs. detailed) and target audience (beginner, intermediate, expert).
 - Ask whether to commit changes to the repository or just present patches/diffs.
 
-## Examples (short)
-
-- Docblock before/after (Python):
-
-Before:
-```python
-def get_user_by_id(user_id):
-    # ...
-```
-
-After:
-```python
-def get_user_by_id(user_id):
-    """Retrieve a user by their ID.
-
-    Args:
-        user_id (int): The unique identifier of the user.
-
-    Returns:
-        User: The user object if found, None otherwise.
-    """
-    # ...
-```
-
-- README generation: produce Title, Why, Quick Start (install & run), API Overview, Contributing, and License sections.
-- OpenAPI generation: define `components/schemas`, reusable parameters/responses, and reference them with `$ref`.
-- CHANGELOG: parse git history, group by tags/versions, and categorize `feat`, `fix`, `refactor` commits.
-
 ## Validation Checklist (finalize only after all checks pass)
 
 - [ ] All public APIs documented (functions/classes/methods)
-- [ ] Parameters, returns, and exceptions described where applicable
+- [ ] Parameters, returns, exceptions described where applicable
 - [ ] Examples added for complex functionality
-- [ ] Business rules and constraints explained (why)
-- [ ] No redundant or obvious comments added
+- [ ] Business rules/constraints explained (why)
+- [ ] No redundant/obvious comments added
 - [ ] README includes Overview, Installation, Usage, API Reference, Contributing, License
 - [ ] OpenAPI uses reusable `components`/`$ref` where appropriate
-- [ ] CHANGELOG grouped by version and categorized
+- [ ] CHANGELOG grouped by version/categorized
 - [ ] Documentation matches actual code behavior
-
-## Testing the Skill (for authors)
-
-1. Place this SKILL.md at `~/.config/opencode/skills/documentation-writer/SKILL.md` or project skill path.
-2. Restart opencode/Claude Code to load skills.
-3. Ask one of the trigger phrases (see Quick start). Verify the skill activates and follows the instructions.
-4. If the skill does not activate, make the `description` more specific with additional trigger words and file types.
+- [ ] Legible/concise/informative (active voice, <25 words/sentence, target audience)
+- [ ] Accurate—no outdated info, working links
 
 ## References
 
 See bundled references in `references/` for detailed domain-specific guidance: `api-documenter.md`, `changelog-generator.md`, `docblock-writer.md`, `readme-writer.md`.
-
