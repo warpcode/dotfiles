@@ -1,100 +1,159 @@
 # Merge Conflict Resolution
 
-This file is loaded when Claude needs to help resolve merge conflicts.
+<rules>
+## Phase 1: Clarification
+IF conflict_type.ambiguous -> Ask(user: describe conflict) -> Wait(User_Input)
 
-## Understanding Conflict Markers
+## Phase 2: Planning
+Analyze(markers + log + diff) -> Propose(Resolution) -> **ALWAYS** Wait(User_Confirm)
+
+## Phase 3: Execution
+Resolve(edit/accept) -> Test -> Commit
+
+## Phase 4: Validation
+Syntax valid? Tests pass? IF Fail -> Debug/Retry
+</rules>
+
+<context>
+**Dependencies**: git (CLI), tests (project-specific)
+
+**Threat Model**:
+- Input -> Sanitize(shell_escapes) -> Validate(file_paths) -> Execute
+- **CRITICAL**: User_Confirm == TRUE for ALL resolution operations
+</context>
+
+## Conflict Markers
 
 ```
-<<<<<<< HEAD (current change)
-Your version of the code
+<<<<<<< HEAD (current)
+Your version
 =======
-Their version of the code
->>>>>>> branch-name (incoming change)
+Their version
+>>>>>>> branch-name (incoming)
 ```
 
-- **HEAD**: Your current branch's version
-- **=======**: Separator between versions
-- **branch-name**: The branch you're merging in
+## Resolution Matrix
 
-## Resolution Strategy Framework
+| Approach | Command | Use Case | Confirm? |
+|----------|---------|----------|----------|
+| Accept ours | `git checkout --ours <file> && git add <file>` | Your version correct | Y |
+| Accept theirs | `git checkout --theirs <file> && git add <file>` | Their version correct | Y |
+| Manual merge | Edit file, `git add <file>` | Combine both | Y |
+| Rewrite | Edit file, `git add <file>` | Better solution | Y |
 
-### 1. Analyze Conflict Type
+## Conflict Types
 
-**Line conflicts:** Same line modified differently → choose correct version  
-**Logical conflicts:** Compatible syntax but conflicting logic → understand intent  
-**Structural conflicts:** File renamed/moved vs modified → locate and apply changes  
-**Deletion conflicts:** File deleted vs modified → preserve if needed
+| Type | Pattern | Resolution |
+|------|---------|------------|
+| Line | Same line modified | Choose correct version |
+| Logical | Syntax OK, logic conflicts | Understand intent, combine |
+| Structural | Renamed vs modified | Locate, apply changes |
+| Deletion | Deleted vs modified | Preserve if needed |
 
-### 2. Resolution Approaches
+## Common Patterns
 
-**Accept ours:** `git checkout --ours <file> && git add <file>` - **ALWAYS ask for user approval**  
-**Accept theirs:** `git checkout --theirs <file> && git add <file>` - **ALWAYS ask for user approval**  
-**Manual merge:** Edit to combine both changes - **ALWAYS ask for user approval**  
-**Rewrite:** Discard both, create better solution - **ALWAYS ask for user approval**
+```
+# Import conflicts
+Combine + Sort alphabetically
 
-### 3. Common Conflict Patterns
+# Config conflicts  
+Merge all settings, prioritize newer
 
-**Import conflicts:** Combine and sort imports alphabetically  
-**Config conflicts:** Merge all settings, prioritize newer values  
-**Function conflicts:** Combine parameter changes and logic modifications  
+# Function conflicts
+Combine parameter changes + logic
+```
 
-*Example resolution strategy:* When both sides add value, combine changes rather than choosing one.
+## Workflow
 
-## Resolution Workflow
-
-1. **Understand:** Read markers, check `git log --merge`, review `git diff`
-2. **Decide:** Combine vs. choose one vs. rewrite - **ALWAYS ask for user approval**
-3. **Edit:** Remove markers, ensure valid syntax
-4. **Test:** Run tests, verify functionality
-5. **Complete:** `git add <files> && git commit`
+```
+1. Understand
+   -> Read markers
+   -> Check: git log --merge
+   -> Review: git diff
+   
+2. Decide
+   -> Combine OR choose OR rewrite
+   -> **ALWAYS** Wait(User_Confirm)
+   
+3. Edit
+   -> Remove markers
+   -> Ensure valid syntax
+   
+4. Test
+   -> Run tests
+   -> Verify functionality
+   
+5. Complete
+   -> git add <files>
+   -> git commit
+```
 
 ## Rebase Conflicts
 
-**Key Differences from Merge Conflicts:**
-- Conflicts are resolved per-commit, not once
-- Use `git rebase --skip` to skip empty commits
-- Continue until all commits are replayed
+**Difference**: Per-commit resolution (not once)
 
-**Resolution Process:**
-1. Resolve conflicts in current commit - **ALWAYS ask for user approval before resolving**
-2. `git add <resolved-files>`
-3. `git rebase --continue`
-4. Repeat for each conflicting commit
-5. Use `git rebase --abort` to cancel entire rebase
-
-## Prevention Strategies
-
-**Short-lived branches:** Merge frequently, smaller changes  
-**Communication:** Coordinate work on shared files  
-**Feature flags:** Merge incomplete work behind flags
+```
+FOR each conflicting commit:
+  1. Resolve - **ALWAYS** Wait(User_Confirm)
+  2. git add <resolved-files>
+  3. git rebase --continue
+  
+Abort: git rebase --abort
+```
 
 ## Abort Options
 
-**During merge:** `git merge --abort`  
-**Partial resolution:** `git reset --hard HEAD`
+| Scenario | Command |
+|----------|---------|
+| During merge | `git merge --abort` |
+| Partial resolution | `git reset --hard HEAD` |
+| Rebase cancel | `git rebase --abort` |
 
-## Advanced: 3-Way Merge Tool
+## Prevention Strategies
+
+- **Short-lived branches**: Merge frequently
+- **Communication**: Coordinate shared files
+- **Feature flags**: Merge incomplete work behind flags
+
+## 3-Way Merge Tool
 
 ```bash
 git mergetool
 ```
 
-Shows **LOCAL** (yours), **BASE** (common ancestor), **REMOTE** (theirs) to understand changes.
+Shows: **LOCAL** (yours), **BASE** (ancestor), **REMOTE** (theirs)
 
-## When to Ask for Help
+## Decision Guide
 
-- Code you don't understand
-- Large-scale structural conflicts  
-- Generated files (consider regenerating)
-- Critical system conflicts
-- Unsure which version is correct
-
-**Always:** Test after resolving - conflicts can hide bugs.  
-**IMPORTANT:** ALWAYS ask for user approval before resolving any merge conflicts.
+| Situation | Ask Help? |
+|-----------|-----------|
+| Code you don't understand | Y |
+| Large structural conflicts | Y |
+| Generated files | Y (regenerate?) |
+| Critical system conflicts | Y |
+| Unsure which version | Y |
 
 ## Related Operations
 
-**For rebase-specific operations and prevention:**
-- See @references/rebase-guidelines.md for rebase workflows and safety
-- Rebase conflicts require per-commit resolution (see above)
-- Use rebase to prevent conflicts by staying up-to-date with main
+- @references/rebase-guidelines.md for rebase workflows
+- Common patterns + prevention strategies
+
+## Examples
+
+<example>
+Conflict: Import order
+Analysis: Both added same import
+Resolution: Combine, sort alphabetically
+</example>
+
+<example>
+Conflict: Function signature
+Analysis: Parameter types differ
+Resolution: Understand intent, combine parameters
+</example>
+
+<example>
+Conflict: Deleted file
+Analysis: Branch A deleted, Branch B modified
+Resolution: Preserve if needed, ask user
+</example>
