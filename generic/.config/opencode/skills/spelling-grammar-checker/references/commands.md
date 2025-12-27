@@ -1,22 +1,48 @@
-Recommended external commands to run locally (do NOT execute inside Claude):
+# EXTERNAL TOOL COMMANDS (Run Locally - NOT by the agent)
 
-codespell (fast typo fixer):
-- Install: `pip install codespell`
-- Run: `codespell README.md` or `codespell --ignore-words-list=words.txt docs/`
+## CODESPELL (Fast Typo Fixer)
+- **Install**: `pip install codespell`
+- **Basic Usage**: `codespell README.md`
+- **Directory**: `codespell --ignore-words-list=words.txt docs/`
+- **Custom Dictionary**: `codespell --dictionary custom_dict.txt file.txt`
+- **Batch**: `find . -name "*.md" -exec codespell {} \;`
 
-cspell (configurable spell checker for code/docs):
-- Install: `npm install -g cspell` or use `npx`
-- Run: `npx cspell "docs/**/*.md" "**/*.md"`
-- Add custom dictionary via `cspell.json` or `.cspell.json` in repo root.
+## CSPELL (Configurable Spell Checker for Code/Docs)
+- **Install**: `npm install -g cspell` OR use `npx`
+- **Basic**: `npx cspell "docs/**/*.md" "**/*.md"`
+- **Config**: Add `cspell.json` or `.cspell.json` in repo root for custom dictionary
+- **Project**: Configure project-specific terms to avoid false positives
 
-LanguageTool (grammar & style):
-- Install (CLI): see https://languagetool.org
-- Run: `languagetool -l en-US docs/guide.md`
+## LANGUAGETOOL (Grammar & Style)
+- **Install (CLI)**: https://languagetool.org
+- **Run**: `languagetool -l en-US docs/guide.md`
+- **Use Case**: Deep grammar and style checking
 
-Vale (prose linter):
-- Install: https://docs.errata.ai/vale/about
-- Run: `vale --config .vale.ini docs/`
+## VALE (Prose Linter)
+- **Install**: https://docs.errata.ai/vale/about
+- **Run**: `vale --config .vale.ini docs/`
+- **Config**: Style guide enforcement for documentation
 
-Notes:
-- Provide custom dictionaries and terminology files to avoid false positives for technical terms.
-- For CI integration, run `codespell` and `cspell` as part of the docs pipeline, and run `languagetool` or `vale` as a staged check.
+## ASPELL (Traditional Spell Checker)
+- **Install**: `apt-get install aspell` (Linux), `brew install aspell` (macOS)
+- **Run**: `aspell check README.md`
+
+## HUNSPELL (Enhanced Spell Checker)
+- **Install**: `apt-get install hunspell` (Linux), `brew install hunspell` (macOS)
+- **Run**: `hunspell -l file.txt`
+
+## ALEX (Inclusive Language Checker)
+- **Install**: `npm install -g alex` OR use `npx`
+- **Run**: `npx alex docs/README.md`
+- **Use Case**: Detect non-inclusive language patterns
+
+## CI INTEGRATION NOTES
+- **Pipeline**: Run `codespell` and `cspell` as part of docs pipeline
+- **Staged**: Run `languagetool` or `vale` as staged checks (pre-commit)
+- **Custom Dictionaries**: Provide custom dictionaries/terminology files to avoid false positives for technical terms
+
+## CUSTOMIZATION RECOMMENDATIONS
+- Add technical terms to project-specific dictionaries
+- Configure tool exclusions for code blocks, code comments
+- Set severity thresholds appropriate for project needs
+- Integrate with pre-commit hooks for automated checking

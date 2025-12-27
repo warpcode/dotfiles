@@ -1,44 +1,104 @@
 ---
 name: spelling-grammar-checker
-description: >-
-  Spelling & grammar checker skill: analyze documentation, UI strings,
-  comments, and other user-facing text for spelling, grammar, clarity, and
-  style. Produce a structured validation report with severity, location,
-  original/corrected text, and a short rationale. Recommend external tooling
-  invocations when automated checks are suggested.
+description: Analyze documentation, UI strings, comments, and user-facing text for spelling, grammar, clarity, and style. Produce structured validation report with severity, location, original/corrected text, and rationale. Recommend external tooling invocations when automated checks are suggested. Triggers: "check spelling", "grammar", "proofread", "review text", "validate documentation".
 ---
 
-You are a language-quality specialist. Follow these concise steps:
+# SPELLING_GRAMMAR_CHECKER
 
-1. Input: accept a file path or pasted text. Prioritize user-visible content (docs, UI strings). Ignore code blocks unless user explicitly requests them.
-2. Extract natural-language text and identify line numbers for each excerpt.
-3. Automated recommendations: suggest external invocations of `codespell`, `cspell`, `languagetool`, and `vale` with exact command examples. Do not execute external tools yourself.
-4. Manual checks: validate subject-verb agreement, tense, pronoun clarity, parallel structure, punctuation, run-on sentences, passive/active voice appropriateness, and clarity/jargon.
-5. Classify each finding as `HIGH` (affects comprehension), `MEDIUM`, or `LOW` and prioritize user-visible items first.
-6. Output: return a structured report using the exact schema in the "Output schema (exact)" section below. If the user requests automatic fixes, provide patch suggestions (diffs) but do NOT modify files.
+## EXECUTION PHASES
 
-Examples
-- User: `Review README.md for spelling and grammar.`
-  - Output: a JSON-serializable report with `HIGH` items first and a human-readable report using the schema below.
-- User: `Summarize clarity issues in docs/guide.md.`
-  - Output: top 3 clarity issues with suggested rewrites and short rationales.
+### Phase 1: Clarification (Ask)
+**Logic**: Input_Requirement != Complete -> Stop && Ask.
+- IF File_Path_Missing AND Text_Pasted_Missing -> Request(Input)
+- IF Content_Type_Ambiguous -> Confirm(Docs vs UI vs Code_Comments)
+- IF Output_Format_Unclear -> Confirm(Report vs Fix_Suggestions vs Diff)
 
-Common Spelling Errors:
+### Phase 2: Planning (Think)
+**Logic**: Task -> Plan -> Approval.
+- Identify: File_Paths OR Pasted_Text
+- Determine: Content_Type (Docs/UI/Comments)
+- Validate: User_Intent (Review vs Auto_Fix)
+- IF Impact > Low -> Propose(Files + Changes) -> Wait(Confirmation)
 
-```text
-WRONG: recieve → CORRECT: receive
-WRONG: seperate → CORRECT: separate
-WRONG: accomodate → CORRECT: accommodate
-WRONG: definately → CORRECT: definitely
-WRONG: occured → CORRECT: occurred
-WRONG: priviledge → CORRECT: privilege
-WRONG: recomend → CORRECT: recommend
-WRONG: sucess → CORRECT: success
+### Phase 3: Execution (Do)
+**Logic**: Step_1 -> Verify -> Step_2.
+
+**Step 1: Extraction**
+- Input -> Read_File OR Parse_Pasted_Text
+- Extract: Natural_Language_Excerpts + Line_Numbers
+- Priority: Docs > UI > Comments > Code_Blocks (unless Explicit_Request)
+
+**Step 2: Automated Tool Recommendations**
+- Suggest: `codespell`, `cspell`, `languagetool`, `vale`, `aspell`, `hunspell`, `alex`
+- Format: Exact_Command_Examples + Installation_Instructions
+- **CRITICAL**: DO NOT EXECUTE external tools (run NOT by the agent)
+- Action: READ FILE: `@references/commands.md`
+
+**Step 3: Manual Validation**
+- Check: Subject-Verb_Agreement, Tense, Pronoun_Clarity, Parallel_Structure, Punctuation
+- Validate: Run-on_Sentences, Passive/Active_Voice, Clarity, Jargon_Context
+- Verify: Technical_Accuracy (do NOT change validated terms without confirmation)
+- Assess: Style_Consistency across document
+
+**Step 4: Classification**
+- Priority: User_Visible > Internal
+- Assign: HIGH/MEDIUM/LOW Severity
+- HIGH: Comprehension_Issues (Misspelled_Terms, Grammar_Errors, Incorrect_Technical_Terms)
+- MEDIUM: Professionalism_Issues (Typos, Minor_Grammar, Inconsistent_Style)
+- LOW: Minor_Issues (Style_Improvements, Very_Minor_Typos, Word_Choice_Alternatives)
+
+**Step 5: Output Generation**
+- Format: Structured_Report (Schema below)
+- IF User_Requests_Fixes -> Provide: Diff_Suggestions
+- **CONSTRAINT**: DO NOT modify files
+
+### Phase 4: Validation (Check)
+**Logic**: Result -> Checklist -> Done.
+- [ ] Text_Extracted
+- [ ] Tool_Commands_Generated
+- [ ] Grammar_Rules_Validated
+- [ ] Style_Consistency_Checked
+- [ ] Technical_Terms_Verified
+- [ ] Severity_Assigned_Correctly
+- [ ] Output_Matches_Schema
+
+## OUTPUT SCHEMA (Exact)
+```
+[SEVERITY] Issue Type
+
+Description: Clear explanation of error and impact.
+
+Location: file_path:line_number
+
+Original Text:
+```
+problematic text here
 ```
 
-Grammar Anti-patterns:
+Corrected Text:
+```
+corrected text here
+```
 
-```text
+Explanation: Brief rationale for correction.
+```
+
+## COMMON ERRORS (Reference)
+
+### Spelling
+```
+recieve → receive
+seperate → separate
+accomodate → accommodate
+definately → definitely
+occured → occurred
+priviledge → privilege
+recomend → recommend
+sucess → success
+```
+
+### Grammar Anti-patterns
+```
 # Subject-verb disagreement
 WRONG: The list of items contain errors.
 CORRECT: The list of items contains errors.
@@ -60,9 +120,8 @@ WRONG: Running down the street, the trees were beautiful.
 CORRECT: Running down the street, I saw that the trees were beautiful.
 ```
 
-Clarity Issues:
-
-```text
+### Clarity Issues
+```
 # Ambiguous pronoun
 UNCLEAR: John told Mike he was wrong. (Who is "he"?)
 CLEAR: John told Mike that Mike was wrong.
@@ -76,95 +135,41 @@ UNCLEAR: The report was completed by the team.
 CLEAR: The team completed the report on Tuesday.
 ```
 
-Output schema (exact)
-[SEVERITY] Issue Type
+## CRITICAL RULES
+- Priority: Docs/UI > Comments > Code_Blocks (unless Explicit)
+- Context_Aware: Do NOT flag validated technical terms as errors without confirmation
+- Tone: Professional. Preserve project-specific terminology when appropriate
+- Consistency: Ensure terminology/style used consistently across document
+- Accuracy: Confirm technical terms/statements factually correct before changing
 
-Description: Clear explanation of the error and its impact.
+## REVIEW GUIDELINES
+1. Use appropriate tools for content_type (docs vs comments)
+2. Consider audience - technical docs use different conventions than user-facing content
+3. Respect project conventions - specific terminology/style preferences
+4. Check false positives - technical terms may appear as spelling errors
+5. Prioritize user-visible text - docs, UI, comments over internal code
+6. Maintain consistency - corrections must align with existing document style
 
-Location: file_path:line_number
+## SECURITY CONSIDERATIONS
+- **Input Sanitization**: Validate file paths, prevent directory traversal
+- **Path Safety**: Absolute paths only, whitelist allowed directories
+- **Command Execution**: NEVER execute suggested external tools directly
+- **Error Handling**: Sanitized error messages, no path exposure in failures
+- **File Operations**: Require explicit user confirmation for any file modifications
 
-Original Text:
-```
-problematic text here
-```
+## EXAMPLES
 
-Corrected Text:
-```
-corrected text here
-```
+<example>
+User: Review README.md for spelling and grammar.
+Agent: [Output: JSON-serializable report with HIGH items first + human-readable report using schema above]
+</example>
 
-Explanation: Brief rationale for the correction.
+<example>
+User: Summarize clarity issues in docs/guide.md.
+Agent: [Output: Top 3 clarity issues + suggested rewrites + short rationales]
+</example>
 
-Severity Levels (definitions)
-
-**HIGH** - Errors that affect comprehension:
-- Misspelled critical terms or proper nouns
-- Grammatical errors causing confusion
-- Incorrect technical terminology
-
-**MEDIUM** - Errors that reduce professionalism:
-- Common typos in visible text
-- Minor grammatical issues
-- Inconsistent style
-
-**LOW** - Minor issues:
-- Optional style improvements
-- Very minor typos in comments
-- Alternative word choices
-
-Notes (external commands - run outside Claude)
-- `codespell` example: `codespell README.md`
-- `cspell` example: `npx cspell "docs/**/*.md"`
-- `languagetool` example: `languagetool -l en-US docs/guide.md`
-- `vale` example: `vale --config .vale.ini docs/`
-- `aspell` example: `aspell check README.md`
-- `hunspell` example: `hunspell -l file.txt`
-- `alex` example (inclusive language checks): `npx alex docs/README.md`
-
-Example Usage (additional)
-
-```bash
-# Check spelling in markdown files
-find . -name "*.md" -exec codespell {} \;
-
-# Custom dictionary for technical terms
-codespell --dictionary custom_dict.txt file.txt
-```
-
-References
-- Include concise references for running the suggested commands locally and any custom dictionaries to use with `codespell`/`cspell`.
-
-Packaging / Validation
-- To package and validate the skill locally, use the upstream tooling (example):
-  - `python scripts/package_skill.py <path/to/skill-folder>`
-
-Critical rules
-- Prioritize user-visible content (docs/UI) over internal comments.
-- Use context-aware checking: do not flag validated technical terms as errors without confirmation.
-- Maintain professional tone and preserve project-specific terminology when appropriate.
-- Check for consistency: ensure terminology and style choices are used consistently across the document.
-- Validate technical accuracy: confirm that technical terms and statements are factually correct before changing.
-
-Review Guidelines
-
-When conducting reviews:
-
-1. **Use appropriate tools** for the content type (documentation vs. code comments)
-2. **Consider the audience** - technical documentation may use different conventions than user-facing content
-3. **Respect project conventions** - some projects have specific terminology or style preferences
-4. **Check for false positives** - technical terms may appear as spelling errors
-5. **Prioritize user-visible text** - focus on documentation, UI strings, and comments over internal code
-6. **Maintain consistency** - ensure corrections align with existing style in the document
-
-Final Checklist
-
-Before completing your review:
-- [ ] Text content extracted from relevant files
-- [ ] Automated spell checking completed
-- [ ] Grammar rules validated manually
-- [ ] Style consistency assessed
-- [ ] Technical terminology verified
-- [ ] Audience-appropriate language confirmed
-- [ ] Corrections prioritized by severity and visibility
-
----
+<example>
+User: Check UI strings in src/components/ for typos.
+Agent: [Output: Priority on UI strings, code comments secondary, unless code explicitly requested]
+</example>
