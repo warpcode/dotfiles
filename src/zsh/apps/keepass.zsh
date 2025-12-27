@@ -137,11 +137,29 @@ kp.search() {
     fi
 
     if [[ -z "$output" ]]; then
-        echo "No entries found for '$1'" >&2
+        echo "No entries found matching '$1'" >&2
         return 1
     fi
 
-    echo "$output"
+    # Filter for exact match (case-insensitive) on the entry name or path suffix
+    local query_l="${1:l}"
+    local line
+    local matches=()
+    while IFS= read -r line; do
+        if [[ -n "$line" ]]; then
+            local line_l="${line:l}"
+            if [[ "$line_l" == "$query_l" || "$line_l" == */"$query_l" ]]; then
+                matches+=("$line")
+            fi
+        fi
+    done <<< "$output"
+
+    if [[ ${#matches[@]} -eq 0 ]]; then
+        echo "No exact match found for '$1'" >&2
+        return 1
+    fi
+
+    printf '%s\n' "${matches[@]}"
 }
 
 ##
