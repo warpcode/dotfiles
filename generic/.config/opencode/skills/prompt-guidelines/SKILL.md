@@ -129,8 +129,19 @@ description: Mandatory protocols for high-fidelity, token-efficient AI prompts. 
 - **Instruction**: "Ref [Term] == [Definition_Block]."
 
 ## ROUTING (Progressive Disclosure)
+### Critical Instruction for LLMs
+**Rule**: You **MUST** read the specific reference file below **IMMEDIATELY** when the User's intent matches the Task. Do not proceed without this context.
+
+- **IF** User Intent == "Create Skill" OR "Edit Skill" OR "Write Skill"
+  - **ACTION** -> READ FILE: `@references/skills.md`
+  - **WHY**: Contains the strict schema and template for Skills.
+
+- **IF** User Intent == "Create Agent" OR "Edit Agent" OR "Design Agent"
+  - **ACTION** -> READ FILE: `@references/agents.md`
+  - **WHY**: Contains the Agent Manifest schema and orchestration patterns.
+
+- **IF** User Intent == "Create Command" OR "Edit Command" OR "New Command"
+  - **ACTION** -> READ FILE: `@references/commands.md`
+  - **WHY**: Contains the Command definition schema and execution logic.
+
 - **Constraint**: GLOBAL RULES (Above) == Mandatory for ALL tasks.
-- **Task** == Create/Edit Skills -> Read: `./references/skills.md`
-- **Task** == Create/Edit Agents -> Read: `./references/agents.md` (See Agent Orchestration Patterns)
-- **Task** == Create/Edit Commands -> Read: `./references/commands.md`
-- **Routing Patterns**: `IF [Condition] → [Action] ELSE [Fallback]`, `Check → Validate → Execute`, `Task_Type → Component_Reference → Execution_Path`

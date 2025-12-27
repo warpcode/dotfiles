@@ -29,18 +29,21 @@ skill-name/
 4. **Pkg**: `scripts/package_skill.py`.
 
 ## RESOURCE MANAGEMENT
-- **Scripts**: Deterministic tasks (PDF rotate, Data processing).
-- **References**: Heavy context (API Docs, Schemas). Load on demand.
-- **Assets**: Output artifacts (Logos, Templates).
-- **Rule**: `Ref == @references/filename.md`. No MD links.
+- **Scripts**: Deterministic tasks (PDF rotate, Data processing). Path: `@scripts/`.
+- **References**: Heavy context (API Docs, Schemas). Path: `@references/`.
+- **Rule**: You **MUST** load resources **IMMEDIATELY** when the task requires specialized knowledge. Use the directive: `ACTION -> READ FILE: @references/filename.md`.
+- **Constraint**: ALL `@` paths (references, scripts, assets) MUST be relative to the skill's main `SKILL.md` file.
+- **Assets**: Output artifacts (Logos, Templates). Path: `@assets/`.
+- **Syntax**: `Ref == @path/to/file`. No MD links.
 
 ## BEST PRACTICES
 - **Tone**: Imperative. "Do X. Check Y."
+- **Routing**: Explicitly instruct the LLM to read reference files based on intent (e.g., "IF [Condition] -> READ FILE: @references/[file].md").
 - **Context**: Assume LLM intelligence. Don't explain *why*, just *what*.
 - **Triggers**: Description must contain specific keywords/filetypes.
 - **Validation**:
   - YAML valid?
-  - Paths relative?
+  - Paths relative (using `@` syntax)?
   - Dependencies listed?
 
 ## SECURITY CONSIDERATIONS (MANDATORY)
@@ -65,7 +68,7 @@ description: [Action] on [Target]. Use when [Trigger].
 
 ## INSTRUCTIONS
 1. Step_1: Input -> Process.
-2. Step_2: Use `@references/guide.md` if complex.
+2. Step_2: **MANDATORY** -> IF complex_logic == TRUE -> READ FILE: `@references/guide.md`.
 3. Step_3: Output format.
 
 ## EXAMPLES
