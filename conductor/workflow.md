@@ -46,7 +46,12 @@ All tasks follow a strict lifecycle:
 
 8. **Commit Code Changes:**
    - Stage all code changes related to the task.
-   - Propose a clear, concise commit message e.g, `feat(ui): Create basic HTML structure for calculator`.
+   - **CRITICAL:** Follow the **Git Commit Message Generator** guidelines from the `git-workflow` skill.
+   - **Format:** `[branch] type(scope): subject` (if off-main) or `type(scope): subject` (if on main).
+   - **Types:** `feat`, `fix` (use `hotfix` if on main/master), `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`, `revert`.
+   - **Subject:** Imperative, <50 chars.
+   - **Body:** Bullet points, <72 chars.
+   - **Example:** `[feat/ui] feat(ui): Create basic HTML structure`
    - Perform the commit.
 
 9. **Attach Task Summary with Git Notes:**
@@ -234,31 +239,47 @@ Before requesting review:
 
 ## Commit Guidelines
 
+### Git Commit Message Generator
+Adhere strictly to the **Git Workflow Skill** guidelines.
+
+### Process
+1. **Context**: Check Branch `git branch --show-current`, Status `git status --porcelain`, Staged `git diff --staged --stat`.
+2. **Type/Scope**:
+   - `feat`: New feature
+   - `fix`/`hotfix`: Bug fix
+   - `docs`: Documentation
+   - `style`: Formatting
+   - `refactor`: Code restructuring
+   - `perf`: Performance
+   - `test`: Tests
+   - `chore`: Maintenance
+   - `ci`: CI configuration
+   - `revert`: Revert changes
+   - **Scope**: `(module)` from paths.
+   - **Prefix**: `[branch]` if not on main/master.
+   - **Hotfix**: Use `hotfix` instead of `fix` if on main/master.
+
+### Algorithm
+```
+branch = git branch --show-current
+if branch in ["main","master"] and type=="fix": type="hotfix"
+format = [branch] type(scope): subject (off-main) else type(scope): subject
+```
+
 ### Message Format
 ```
-<type>(<scope>): <description>
+[optional branch] <type>(<scope>): <subject>
 
-[optional body]
+- <body bullet>
+- <body bullet>
 
-[optional footer]
+<footer (e.g., Fixes #123)>
 ```
-
-### Types
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation only
-- `style`: Formatting, missing semicolons, etc.
-- `refactor`: Code change that neither fixes a bug nor adds a feature
-- `test`: Adding missing tests
-- `chore`: Maintenance tasks
 
 ### Examples
-```bash
-git commit -m "feat(auth): Add remember me functionality"
-git commit -m "fix(posts): Correct excerpt generation for short posts"
-git commit -m "test(comments): Add tests for emoji reaction limits"
-git commit -m "style(mobile): Improve button touch targets"
-```
+- `[feat/ui] feat(ui): Create basic HTML structure`
+- `hotfix(script): Fix validation logic`
+- `docs(skill): Add generator documentation`
 
 ## Definition of Done
 
