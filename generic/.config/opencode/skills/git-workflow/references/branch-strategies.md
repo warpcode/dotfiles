@@ -1,183 +1,251 @@
 # Branch Management Strategies
 
-**Git Branch Strategy Expert**. Recommend branch strategies and branch namings for new features/bugs.
+<rules>
+## Phase 1: Clarification
+IF strategy.ambiguous -> Ask(user: team size, release model, CI/CD) -> Wait(User_Input)
+
+## Phase 2: Planning
+Analyze(repo structure + team + workflow) -> Recommend(strategy) -> Explain(rationale)
+
+## Phase 3: Execution
+Provide(naming conventions + workflow steps)
+
+## Phase 4: Validation
+Strategy matches constraints? IF Fail -> Suggest(alternative)
+</rules>
+
+<context>
+**Dependencies**: git (CLI), repository structure
+
+**Threat Model**:
+- Input -> Sanitize(branch_names) -> Validate(no_special_chars) -> Execute
+- Rule: Enforce naming conventions before branch creation
+</context>
+
+## Strategy Decision Logic
+
+```
+# Get current git username
+user = git config user.name
+
+IF user == "Warpcode":
+  IF develop branch exists:
+    -> Use Git Flow
+  ELSE:
+    -> Use GitHub Flow
+
+ELSE IF user != "Warpcode":
+  IF $IS_WORK == 1:
+    -> Use Work-Based Strategy
+  ELSE:
+    -> Fallback to GitHub Flow
+```
+
+**Note**: "user" refers to `git config user.name` (git username)
 
 ## Git Flow
 
-**Best for:** Projects with scheduled releases, multiple versions in production
+**Best for**: Scheduled releases, multiple production versions
 
-**Structure:**
-- `main` - Production-ready code
-- `develop` - Integration branch for features
-- `feature/*` - New features (branch from develop)
-- `release/*` - Release preparation (branch from develop)
-- `hotfix/*` - Emergency fixes (branch from main)
+**Structure**:
+```
+main     - Production-ready
+develop  - Integration branch
+feature/* - New features (from develop)
+release/* - Release prep (from develop)
+hotfix/*  - Emergency fixes (from main)
+```
 
-**Workflow:**
-1. Create feature branch from develop
-2. Merge feature to develop when complete
-3. Create release branch when ready to ship
-4. Merge release to both main and develop
-5. Tag main with version number
+**Workflow**:
+1. Create feature from develop
+2. Merge feature to develop
+3. Create release from develop
+4. Merge release to main + develop
+5. Tag main with version
 
-**Pros:** Clear structure, supports multiple releases
-**Cons:** Complex, overhead for small teams
+**Pros**: Clear structure, supports releases
+**Cons**: Complex, overhead for small teams
+
+**Choose IF**:
+- Multiple production versions
+- Scheduled releases
+- Large team (10+)
 
 ## Trunk-Based Development
 
-**Best for:** CI/CD environments, fast iteration, experienced teams
+**Best for**: CI/CD, fast iteration, experienced teams
 
-**Structure:**
-- `main` - Always deployable
-- `feature/*` - Short-lived (1-2 days max)
+**Structure**:
+```
+main     - Always deployable
+feature/* - Short-lived (1-2 days max)
+```
 
-**Workflow:**
-1. Branch from main for small changes
-2. Merge to main frequently (daily)
-3. Use feature flags for incomplete work
+**Workflow**:
+1. Branch from main
+2. Merge frequently (daily)
+3. Use feature flags for WIP
 4. Deploy from main automatically
 
-**Pros:** Simple, fast feedback, less merge pain
-**Cons:** Requires discipline, good CI/CD, feature flags
+**Pros**: Simple, fast feedback, less merge pain
+**Cons**: Requires discipline, good CI/CD, feature flags
+
+**Choose IF**:
+- Continuous deployment
+- Mature CI/CD pipeline
+- Small, experienced team
+- Fast iteration
 
 ## GitHub Flow
 
-**Best for:** Web applications, continuous deployment
+**Best for**: Web apps, continuous deployment
 
-**Structure:**
-- `main` - Always deployable
-- `feature/*` - Any new work
+**Structure**:
+```
+main     - Always deployable
+feature/* - Any new work
+```
 
-**Workflow:**
+**Workflow**:
 1. Branch from main
-2. Make changes and commit
-3. Open pull request for discussion
+2. Make changes + commit
+3. Open PR for discussion
 4. Deploy from branch to test
-5. Merge to main after approval
+5. Merge after approval
 6. Deploy immediately
 
-**Pros:** Simple, works with CD, good for small teams
-**Cons:** Can get messy with long-lived branches
+**Pros**: Simple, works with CD, good for small teams
+**Cons**: Messy with long-lived branches
+
+**Choose IF**:
+- Web application
+- Single production version
+- Medium team (3-10)
+- Want simplicity
 
 ## Work-Based Strategy
 
-**Best for:** Corporate environments, strict naming conventions
+**Best for**: Corporate, strict naming, JIRA
 
-**Structure:**
-- `main`/`master` - Production-ready code
-- No separate develop branch
-- Branches based on JIRA tickets or epics
+**Structure**:
+```
+main/master  - Production-ready
+[No separate develop]
+```
 
-**Branch Naming Rules:**
-- **ONLY** lowercase letters, numbers, and hyphens
-- No uppercase letters, underscores, or special characters
-- **Main Epic:** Use JIRA epic ticket (e.g., `tic-6482`)
-- **Epic with Sub-tickets:** `epic-ticket-subticket` (e.g., `tic-3456-tic3457`)
-- **Descriptive with Ticket:** `description-ticket` (e.g., `new-admin-page-tic-4567`)
-- **Hotfix:** Always `hotfix-tiny-descriptive-name` (e.g., `hotfix-login-bug`, `hotfix-api-timeout`)
-- Examples: `tic-6482`, `tic-3456-tic3457`, `new-admin-page-tic-4567`, `hotfix-login-bug`
+**Branch Naming**:
+- **ONLY**: lowercase, numbers, hyphens
+- **NO**: uppercase, underscores, special chars
+- **Main Epic**: JIRA epic (e.g., `tic-6482`)
+- **Epic + Sub**: `epic-ticket-subticket` (e.g., `tic-3456-tic3457`)
+- **Descriptive**: `description-ticket` (e.g., `new-admin-page-tic-4567`)
+- **Hotfix**: `hotfix-tiny-descriptive-name` (e.g., `hotfix-login-bug`)
 
-**Commit Message Rules:**
-- If NOT on main/master branch: Prefix with `[branch-name]`
-- Format: `[branch-name] commit message`
+**Commit Messages**:
+- Off main/master: `[branch-name] message`
 - Example: `[abc-123] fix login validation`
 
-**Workflow:**
-1. ALWAYS request JIRA ticket link or name when creating branches
-2. If branching from main/master: Create branch with JIRA-based naming
-3. If branching from non-main/master branch: Use source branch as prefix + JIRA info
-4. Work on feature/fix
-5. Prefix commits with branch name when not on main/master
-6. Merge following company approval process
+**Workflow**:
+1. Request JIRA ticket link/name
+2. Branch from main/master with JIRA naming
+3. Prefix commits with branch name (off main)
+4. Merge per approval process
 
-**Pros:** Consistent naming, traceable commits, corporate compliance
-**Cons:** Restrictive, requires discipline, manual prefixing
+**Pros**: Consistent naming, traceable, corporate compliance
+**Cons**: Restrictive, requires discipline, manual prefixing
+
+**Choose IF**:
+- Corporate environment
+- Strict naming required
+- JIRA integration
+- User != Warpcode && $IS_WORK == 1
 
 ## Ship/Show/Ask
 
-**Best for:** Open source, teams with varying experience levels
+**Best for**: Open source, mixed experience
 
-**Three types of changes:**
-- **Ship:** Merge without review (typos, config)
-- **Show:** Merge then notify team (refactoring)
-- **Ask:** Request review before merge (features, breaking changes)
+**Change Types**:
+- **Ship**: Merge without review (typos, config)
+- **Show**: Merge then notify (refactoring)
+- **Ask**: Review before merge (features, breaking)
 
-**Workflow:**
-1. Assess change impact
-2. Choose appropriate level
-3. Follow that level's process
+**Workflow**:
+1. Assess impact
+2. Choose level
+3. Follow process
 
-**Pros:** Flexible, reduces review burden
-**Cons:** Requires judgment, cultural buy-in
+**Pros**: Flexible, reduces review burden
+**Cons**: Requires judgment, cultural buy-in
 
-## General Branch Naming Conventions
+**Choose IF**:
+- Open source project
+- Mixed experience levels
+- Reduce review overhead
+- Trust-based culture
 
-**Format:** `/-`
+## General Naming
 
-Examples:
+**Format**: `type/description-ticket`
+
+**Types**:
+- `feature` - New functionality
+- `fix` - Bug fixes
+- `docs` - Documentation
+- `refactor` - Code restructuring
+- `test` - Test additions
+- `chore` - Build/tooling
+- `hotfix` - Production emergency
+
+**Examples**:
 - `feature/AUTH-123-oauth-login`
 - `fix/CART-456-price-calculation`
 - `docs/update-api-guide`
 - `refactor/payment-service`
 - `hotfix/security-patch`
 
-**Types:**
-- feature - New functionality
-- fix - Bug fixes
-- docs - Documentation
-- refactor - Code restructuring
-- test - Test additions/changes
-- chore - Build/tooling changes
-- hotfix - Production emergency fixes
-
-**Note:** Work-Based Strategy has its own specific naming rules that take priority when that strategy is selected.
+**Note**: Work-Based Strategy has its own rules (above)
 
 ## Decision Guide
 
-### Warpcode User Logic
+### Warpcode Logic
 
-**If current user is Warpcode:**
-- Check if `develop` branch exists:
-  - If `develop` exists → Use **Git Flow**
-  - If `develop` doesn't exist → Use **GitHub Flow**
+| Condition | Strategy |
+|-----------|----------|
+| Warpcode + develop exists | Git Flow |
+| Warpcode + no develop | GitHub Flow |
 
-**If current user is NOT Warpcode:**
-- Check if $IS_WORK environment variable is 1:
-  - If $IS_WORK = 1 → Use **Work-Based Strategy**
-  - If $IS_WORK ≠ 1 → TODO: Add fallback strategy
+### Non-Warpcode Logic
 
-### Standard Decision Criteria
+| Condition | Strategy |
+|-----------|----------|
+| $IS_WORK == 1 | Work-Based |
+| $IS_WORK ≠ 1 | GitHub Flow (fallback) |
 
-**Choose Git Flow if:**
-- Multiple production versions maintained
-- Scheduled release cycles
-- Need formal release process
-- Large team (10+)
-- **OR:** Warpcode user + develop branch exists
+### Standard Criteria
 
-**Choose Trunk-Based if:**
-- Continuous deployment
-- Mature CI/CD pipeline
-- Small, experienced team
-- Need fast iteration
+| Choose Git Flow IF | Choose Trunk-Based IF | Choose GitHub Flow IF | Choose Work-Based IF | Choose Ship/Show/Ask IF |
+|--------------------|-----------------------|-----------------------|----------------------|-------------------------|
+| Multiple production versions | Continuous deployment | Web application | Corporate environment | Open source project |
+| Scheduled releases | Mature CI/CD | Single production version | Strict naming | Mixed experience |
+| Formal release process | Small experienced team | Medium team (3-10) | JIRA integration | Reduce review overhead |
+| Large team (10+) | Fast iteration | Want simplicity | User != Warpcode + IS_WORK | Trust-based culture |
 
-**Choose GitHub Flow if:**
-- Web application
-- Single production version
-- Want simplicity
-- Medium team (3-10)
-- **OR:** Warpcode user + no develop branch
+## Examples
 
-**Choose Work-Based Strategy if:**
-- User is NOT Warpcode
-- $IS_WORK = 1
-- Corporate environment
-- Need strict naming conventions
-- JIRA integration required
+<example>
+Context: Warpcode, develop branch exists
+Strategy: Git Flow
+Workflow: feature from develop, merge to develop, release to main
+</example>
 
-**Choose Ship/Show/Ask if:**
-- Open source project
-- Mixed experience levels
-- Want to reduce review overhead
-- Trust-based culture
-```
+<example>
+Context: Corporate, JIRA tickets
+Strategy: Work-Based
+Naming: `tic-6482`, `new-admin-page-tic-4567`, `hotfix-login-bug`
+</example>
+
+<example>
+Context: Web startup, CD pipeline
+Strategy: GitHub Flow
+Workflow: branch from main, PR, merge, deploy
+</example>
