@@ -1,34 +1,74 @@
 ---
 name: username-generator
-description: Generate clever, witty, and original usernames based on user input keywords or theme. Outputs a markdown bullet list of 20 usernames (unless specified), each ≤ 20 characters, using only alphanumeric characters and either hyphens or underscores. Prioritizes humor, originality, and safety for all audiences.
-author: 
-tags: [creative, username, generator, humor, safe]
+description: Generate clever, witty, and original usernames based on user input keywords or theme. Use when user requests username generation, creative usernames, or thematically relevant usernames. Outputs markdown bullet list of 20 usernames (unless specified), each ≤ 20 characters, using only alphanumeric characters and either hyphens or underscores.
+allowed-tools: []
 ---
 
-# Username Generator Skill
+# Username Generator
 
-## Overview
-Generates a list of clever, witty, and original usernames based on user-provided keywords or themes. Designed for social media, gaming, and creative platforms, this skill produces usernames that are unique, memorable, and thematically relevant, with a playful and universally appropriate tone.
+## COMPONENTS
+- **Dependencies**: None (LLM-generated)
+- **Context**: User-provided keywords/themes
 
-## Usage Instructions
-- **Input:** Provide keywords or a theme (e.g., "space", "cats", "coding"). Optionally specify the number of usernames desired.
-- **Output:** Markdown bullet list (• item) of usernames.
+## INSTRUCTIONS
 
-## Constraints
-- **Format:** Markdown bullet list (• item).
-- **Quantity:** 20 usernames, unless user specifies a different number.
-- **Length:** Each username ≤ 20 characters.
-- **Character Set:** Only alphanumeric characters (A–Z, a–z, 0–9), and either hyphens (-) or underscores (_), but not both in the same list.
-- **Tone:** Clever, witty, playful — use light humor or puns where appropriate.
-- **Language:** English only.
-- **Originality:** Avoid common or overused usernames.
-- **Puns:** If the user provides a topic, include clever or humorous puns related to it.
-- **Do NOT:** Include profanity, sexual references, hate speech, brand names, or culturally insensitive jokes.
-- **Positive Guidance:** Prioritize creativity, readability, and humor that's universally appropriate.
+### Phase 1: Clarification
+**Logic**: Ambiguity > 0 -> Stop && Ask.
 
-## Example
-**Input:** "space"
-**Output:**
+Input Requirements:
+- Keywords OR theme [Required]
+- Quantity [Optional: Default=20]
+- Format preference [Optional: hyphen OR underscore]
+
+**IF** Missing keywords/theme OR Ambiguous intent:
+- List: [What theme/keywords?, How many usernames (default 20)?]
+
+Wait(User_Input).
+
+### Phase 2: Planning
+**Logic**: Theme -> Plan -> Approval.
+
+**IF** Theme == Inappropriate/Hateful/Explicit:
+- Output: "I'm sorry, but I can't generate usernames based on that theme."
+- Stop.
+
+Else:
+- Parse keywords/theme
+- Apply constraints:
+  - Length: ≤ 20 chars/username
+  - Charset: [A-Za-z0-9] + (hyphen OR underscore, not both)
+  - Quantity: User_Specified OR 20
+  - Tone: Clever, witty, playful
+  - Safety: No profanity, sexual refs, hate speech, brand names, culturally insensitive jokes
+  - Originality: Unique, not common/overused
+- Generate puns/humor IF topic provided
+
+### Phase 3: Execution
+**Logic**: Step_1 -> Verify -> Step_2.
+
+1. Extract keywords from user input.
+2. Generate username list meeting ALL constraints.
+3. Apply validation: Each username ≤ 20 chars, alphanumeric + ONE separator type.
+4. Format: Markdown bullet list (• item).
+
+### Phase 4: Validation
+**Logic**: Result -> Checklist -> Done.
+
+**Final_Checklist**:
+- [ ] Exact requested quantity (default 20)?
+- [ ] Each username ≤ 20 chars?
+- [ ] Alphanumeric + ONE separator (hyphen OR underscore, not both)?
+- [ ] Original, relevant, witty, safe for all audiences?
+- [ ] Puns included IF topic provided?
+
+**IF** Fail(Any):
+- Self_Correct: Regenerate failing entries.
+
+## EXAMPLES
+
+<example>
+User: "space"
+Agent:
 • AstroNutz
 • OrbitWit
 • CosmicComic
@@ -49,22 +89,57 @@ Generates a list of clever, witty, and original usernames based on user-provided
 • GalacticGig
 • VoidVoyager
 • AstroGiggle
+</example>
 
-## Optional Negative Example
-**Bad Output:** "DarkHole69"
-**Why It Fails:** Inappropriate tone, sexualized number, and not witty — violates originality and safety constraints.
+<example>
+User: "cats, with underscores, 10 usernames"
+Agent:
+• Purr_Fect
+• Meow_Wits
+• Cat_Comic
+• Kitty_Jokes
+• Feline_Fun
+• Paw_Puns
+• Whisker_Wit
+• Meow_Mirth
+• Claw_Humor
+• Purr_Funny
+</example>
 
-## Evaluation Criteria
-1. Exactly 20 usernames (unless user requests otherwise).
-2. Each username ≤ 20 characters.
-3. Only alphanumeric + either hyphens OR underscores (not both).
-4. All usernames are original, relevant, witty, and safe for all audiences.
-5. Puns are encouraged when a topic is provided.
+<example>
+User: "inappropriate theme"
+Agent:
+I'm sorry, but I can't generate usernames based on that theme.
+</example>
 
-## Safety Guidance
-If the user requests usernames involving inappropriate, hateful, or explicit themes, respond with:
-> "I'm sorry, but I can't generate usernames based on that theme."
-Ensure all usernames are inclusive, neutral, and suitable for a general audience.
+<anti-example>
+INCORRECT:
+• DarkHole69
+• SpaceMaster3000
+• Cool-Guy
+• Hot_Babe
 
-## References
-See @references/structure.md in skill-writer for skill anatomy and best practices.
+**FAIL REASONS**:
+- DarkHole69: Sexualized number, not witty, inappropriate
+- SpaceMaster3000: Generic/overused, not original
+- Cool-Guy, Hot_Babe: Boring, Hot_Babe inappropriate
+</anti-example>
+
+## VALIDATION PROTOCOL
+
+**Security & Safety**:
+- **Input_Sanitize**: Strip profanity, hate speech, sexual content
+- **Output_Validate**: Verify format, length, charset constraints
+- **Safety_Check**: Ensure all usernames inclusive, neutral, universally appropriate
+
+**Failure Modes**:
+- Theme = Explicit/Hateful -> Refuse with standard message
+- Constraints_Violated -> Regenerate until pass
+- Low_Creativity -> Increase pun/wordplay density
+
+## ANCHORING
+
+**Ref**:
+- Clever == Original + Witty + Playful
+- Safe == No profanity, hate speech, sexual refs, brand names, culturally insensitive content
+- Separator == Hyphen (-) OR Underscore (_), mutually exclusive per output list
