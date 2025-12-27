@@ -129,7 +129,7 @@ kp.search() {
     local output
     local exit_code
     
-    output=$(kp search -p "$1")
+    output=$(kp search "$1")
     exit_code=$?
 
     if [[ $exit_code -ne 0 ]]; then
