@@ -4,13 +4,15 @@ This is a personal collection of dotfiles for \*nix systems, designed to create 
 
 ## Requirements
 
-The following dependencies are required and will be installed automatically by the installer:
+The following dependencies are required:
+
+- **stow** - Symlink management (must be installed manually before running `make install-generic`)
+- **zsh** - Shell (pre-installed on macOS, required to run the installer)
+
+These will be installed automatically by the installer:
 
 - **git** - Version control
-- **stow** - Symlink management
-- **zsh** - Shell (pre-installed on macOS)
 - **jq** - JSON processor
-- **wget** - HTTP downloader
 - **curl** - HTTP client
 
 Additional tools like `fzf`, `uv`, `tmux`, `rsync`, and `direnv` can be installed using the dotfiles installer.
@@ -24,7 +26,7 @@ This dotfiles repository comes with a wide range of features to enhance your she
 -   **Oh My Zsh Integration:** Includes the popular [Oh My Zsh](https://github.com/ohmyzsh/ohmyzsh) framework for themes and plugins.
 -   **AI Command-Line Tools:** A suite of aliases is provided for interacting with various AI services directly from the command line, including:
     -   `ai.chat`: A wrapper for the `aichat` tool.
-    -   `ai.code` / `ai.opencode`: For code generation with OpenCode.
+    -   `ai.code` (alias for `ai.opencode`): For code generation with OpenCode.
     -   `ai.crush`: To use the crush.dev CLI.
     -   `ai.gemini`: To use the Google Gemini CLI.
 -   **Automatic Python Virtualenv:** Automatically activates and deactivates Python virtual environments (`.venv`) as you navigate your filesystem.
@@ -32,7 +34,7 @@ This dotfiles repository comes with a wide range of features to enhance your she
 -   **FZF Integration:** Integrates [fzf](https://github.com/junegunn/fzf) for powerful fuzzy history search.
 -   **Neovim Support:** Includes Neovim in the automatic package installation system.
 -   **Automatic PATH management:** Automatically scans `/opt/` and `~/.local/opt/` for subdirectories containing `bin`, `sbin`, `usr/bin`, `usr/sbin`, `usr/local/bin`, and `usr/local/sbin`, and adds them to PATH.
--   **GitHub Release Installer:** Automatically downloads and installs applications directly from GitHub releases. Supports OS and architecture detection, version management, and creates executable symlinks in a `bin/` directory. Configurable installation directory via `INSTALLER_OPT_DIR` environment variable (defaults to `~/.local/opt`).
+-   **GitHub Release Installer:** Automatically downloads and installs applications directly from GitHub releases. Supports OS and architecture detection, version management, and creates executable symlinks in a `bin/` directory. Configurable installation directory via `GITHUB_RELEASES_INSTALL_DIR` environment variable (defaults to `~/.local/opt`).
 
 ## Installation
 
@@ -70,9 +72,9 @@ The installer supports downloading applications directly from GitHub releases wi
    _installer_install
    ```
 
-This will:
+ This will:
 - Download the appropriate `.tar.gz` asset for your OS and architecture
-- Extract it to `~/.local/opt/appname/` (configurable via `INSTALLER_OPT_DIR`)
+- Extract it to `~/.local/opt/appname/` (configurable via `GITHUB_RELEASES_INSTALL_DIR`)
 - Automatically flatten top-level directories containing `bin/`, `sbin/`, `usr/`, or `lib/`
 - Create symlinks to all executable files in `bin/` for PATH access
 - Track versions in `.version` files to avoid unnecessary re-downloads
@@ -102,6 +104,7 @@ make update-submodules
 - Ensure your OS is supported (macOS, Debian/Ubuntu, Fedora, Arch Linux)
 - Check that you have `sudo` access for system package installation
 - For GitHub releases, ensure `curl` and `tar` are available
+- Ensure `stow` is installed before running `make install-generic` (e.g., `brew install stow` on macOS, `apt install stow` on Debian/Ubuntu)
 
 ### Conflicts with existing configuration?
 - The dotfiles use `stow` to manage symlinks, which won't overwrite existing files
@@ -112,7 +115,7 @@ make update-submodules
 - Add personal aliases/functions to `~/.zshrc.d/`
 - Override app configurations in `~/.zshrc.apps/`
 - Add project-specific settings to `~/.zshrc.projects/`
-- Modify `INSTALLER_OPT_DIR` to change where GitHub releases are installed
+- Modify `GITHUB_RELEASES_INSTALL_DIR` to change where GitHub releases are installed
 
 ## Customization
 

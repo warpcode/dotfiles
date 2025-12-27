@@ -14,5 +14,22 @@
       "args": ["skillport"],
       "env": { "SKILLPORT_SKILLS_DIR": "~/.config/opencode/skills" }
     }
+  },
+  "context": {
+    "fileName": [
+      "AGENTS.md",
+      "CRUSH.md",
+      "GEMINI.md",
+      "docs/guidelines.md",
+      "AI.md",
+      ".github/copilot-instructions.md"
+    ],
+    "includeDirectories": [
+      "~/.config/opencode"
+    ],
+    "loadFromIncludeDirectories": true
+  },
+  "telemetry": {
+    "enabled": false
   }
 }
