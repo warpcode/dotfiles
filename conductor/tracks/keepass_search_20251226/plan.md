@@ -9,7 +9,7 @@
   - [ ] Sub-task: If `kp` failed, return its exit code.
   - [ ] Sub-task: If `kp` succeeded but output is empty, print "No entries found" to stderr and return 1.
   - [ ] Sub-task: Print output on success.
-- [ ] Task: Implement `kp.search.first` in `src/zsh/apps/keepass.zsh`
+- [x] Task: Implement `kp.search.first` in `src/zsh/apps/keepass.zsh` <!-- 43bf84b -->
   - [ ] Sub-task: Define `kp.search.first()` as a Zsh function.
   - [ ] Sub-task: Add argument check: if `$#` is 0, print usage to stderr and return 1.
   - [ ] Sub-task: Call `kp.search "$1"` and capture output/exit code.
