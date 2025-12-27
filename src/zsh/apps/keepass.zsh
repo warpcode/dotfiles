@@ -110,7 +110,39 @@ kp.login() {
     fi
 }
 
+##
+# Search for KeePass entries and return paths
+#
+# @param string $1 Search query
+# @return 0 on success, 1 on error/no results
+##
+kp.search() {
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: kp.search <query>" >&2
+        return 1
+    fi
 
+    if ! kp.login; then
+        return $?
+    fi
+
+    local output
+    local exit_code
+    
+    output=$(kp search -p "$1")
+    exit_code=$?
+
+    if [[ $exit_code -ne 0 ]]; then
+        return $exit_code
+    fi
+
+    if [[ -z "$output" ]]; then
+        echo "No entries found for '$1'" >&2
+        return 1
+    fi
+
+    echo "$output"
+}
 
 ##
 # Tab completion for kp function
