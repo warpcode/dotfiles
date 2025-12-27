@@ -9,113 +9,61 @@ description: >
     add documentation, improve documentation, write docs, edit docs, validate docs.
 ---
 
-# Documentation Writer
+<rules>
+## CORE_RULES
+- Logic: Explain WHY (rationale), NOT WHAT/HOW (code shows this)
+- Constraint: Documentation != Code Logic Modification
+- Constraint: Redundant Comments == FALSE (e.g., "# Create user" for `user = User()`)
+- Constraint: Secrets in Docs == FALSE
+- Constraint: Docs contradicting Code == FALSE
+- Rule: Destructive_Edit (bulk/invasive) -> User_Confirm
+- Rule: Target_Audience_Ask (beginner/intermediate/expert)
+- Rule: Style_Preference_Ask (concise/detailed)
 
-A focused documentation specialist that creates, improves, and validates documentation across code comments, docblocks/docstrings, markdown READMEs, API documentation (OpenAPI/Swagger), and CHANGELOGs. Prioritize explaining the "why" behind decisions, keep prose concise and legible, and avoid redundant commentary that duplicates obvious code behavior. Emphasize rationale over implementation details, focusing on business logic, constraints, and non-obvious choices.
+## EXECUTION_PHASES
+### Phase_1: Clarification (Ask)
+- Logic: Ambiguity > 0 -> Stop && Ask
+- Required_Questions:
+  - Target_Audience?
+  - Preferred_Style?
+  - Commit_Changes?
 
-## Quick start
+### Phase_2: Planning (Think)
+- Logic: Task -> Plan -> Approval
+- Output: Plan (Files + Impacts + Steps)
+- Constraint: Impact > Low -> User_Confirm
 
-- User prompts that should trigger this skill:
-  - "Add documentation to this function"
-  - "Generate a README.md for this repo"
-  - "Create an OpenAPI spec for my API"
-  - "Add docblocks to undocumented public methods"
-  - "Generate a CHANGELOG from git history"
+### Phase_3: Execution (Do)
+- Logic: Step_1 -> Verify -> Step_2
+- Atomic: Execute && Validate EACH step
 
-## Workflow
+### Phase_4: Validation (Check)
+- Logic: Result -> Checklist -> Done
+- Fail: Self_Correct
 
-1. **Analysis Phase**
-   - Read target files to understand purpose, complexity, and public surface area.
-   - Identify missing/weak documentation: public APIs, complex logic, business rules, examples, error cases.
+## SECURITY_FRAMEWORK
+- Threat_Model: Input == Malicious
+- Validation_Layers:
+  1. Input: Type check, sanitize (strip escapes, command injection, path traversal)
+  2. Context: Verify permissions, check dependencies
+  3. Execution: Confirm intent, check destructiveness
+  4. Output: Verify format, redact secrets
+- Error_Handling: Define failure modes, never expose secrets
+- Destructive_Ops: rm, sudo, push -f, chmod 777 -> User_Confirm
 
-2. **Planning Phase**
-   - Choose format: inline comment, docblock/docstring, README/markdown, or OpenAPI/CHANGELOG.
-   - Outline structure: Purpose/Parameters/Returns/Raises/Examples/Notes for docblocks; Overview/Install/Usage/API/Contributing for READMEs.
+## DOCUMENTATION_STANDARDS
+### Inline_Comments
+- Use_Case: Business rules, performance, security
+- Example: GDPR compliance rationale
 
-3. **Writing Phase**
-   - Produce concise, rationale-first explanations answering "why" with constraints, trade-offs, edge cases.
-   - Use consistent terminology/formatting. Include examples for clarity.
-   - For API specs, prefer reusable `components` and `$ref`s.
+### Docblocks/Docstrings
+- Schema: Purpose, Parameters, Returns, Raises, Examples, Notes
+- Constraint: No redundant descriptions
 
-4. **Validation Phase**
-   - Run validation checklist (Completeness, Clarity, Accuracy) before finalizing.
-   - If edits modify existing files, ask user for explicit confirmation first.
+### Markdown/Wiki
+- Schema: Clear headings, consistent formatting, "why" explanations
 
-## When to read bundled references
-
-This skill uses progressive disclosure. The following reference files are available under `references/` and should be loaded only when needed:
-
-- `references/api-documenter.md` — Guidance: Generate OpenAPI/Swagger specs; use when user asks to design or document APIs, prefers reusable `components` and `$ref` for schemas and parameters.
-- `references/changelog-generator.md` — Guidance: Create `CHANGELOG.md` from git history; use when user asks to generate or update changelogs, parse Conventional Commits and group by tags/versions.
-- `references/docblock-writer.md` — Guidance: Add docblocks/docstrings and inline code comments; use when user asks to add or improve docblocks/docstrings across PHP/Python/JS/Java; includes examples and edit workflow.
-- `references/readme-writer.md` — Guidance: Synthesize `README.md` from codebase analysis; use when user asks for README generation, onboarding docs, or Quick Start sections.
-
-Read reference files when the requested task directly maps to their domain (e.g., generate OpenAPI → read `api-documenter.md`).
-
-## Documentation Standards
-
-**Focus: Explain WHY, not WHAT or HOW.** Comments should exist only when rationale is not obvious—code shows WHAT/HOW.
-
-- **Inline Comments:** For business rules, performance, security. E.g., explain constraints like GDPR compliance.
-- **Docblocks/Docstrings:** Structure with Purpose, Parameters, Returns, Raises, Examples, Notes. Avoid redundant descriptions.
-- **Markdown/Wiki:** Clear headings, consistent formatting, explain "why" for APIs/projects.
-
-## Examples
-
-- **Business Rule (GDPR Compliance):**
-  ```python
-  # GDPR requires user data deletion within 30 days of account closure.
-  # Soft deletion maintains audit trails while complying with privacy regulations.
-  user.deleted_at = datetime.now()
-  ```
-
-- **Security Rationale:**
-  ```python
-  # Hash passwords with bcrypt (not MD5) for computational hardness against brute-force attacks.
-  # MD5 is cryptographically broken and unsafe for password storage.
-  hashed_password = bcrypt.hash(password)
-  ```
-
-- **Performance Consideration:**
-  ```python
-  def process_bulk_orders(orders, options=None):
-      """
-      Process multiple orders with optimized batch operations.
-
-      Process in batches of 100 to balance memory usage with database performance.
-      Individual processing would be too slow; all-at-once causes exhaustion.
-      Batch size determined through testing.
-
-      Args:
-          orders (list): List of order dictionaries
-          options (dict, optional): Processing options
-
-      Returns:
-          dict: Processing results with successful/failed counts
-
-      Raises:
-          BulkProcessingError: If >10% orders fail
-      """
-  ```
-
-## Safety & Constraints
-
-- NEVER modify program logic; only documentation/comments.
-- NEVER add comments restating obvious code (e.g., "# Create user object" for `user = User()`).
-- NEVER include secrets/sensitive info in docs.
-- NEVER create docs contradicting code.
-- NEVER assume domain knowledge—explain technical concepts.
-- ASK before large/invasive edits (e.g., bulk docblocks)—show preview.
-- ASK target audience level and preferred style.
-
-## Required Confirmations
-
-- Ask before editing existing documentation in-place.
-- Ask preferred documentation style (concise vs. detailed) and target audience (beginner, intermediate, expert).
-- Ask whether to commit changes to the repository or just present patches/diffs.
-
-## Validation Checklist (finalize only after all checks pass)
-
+## VALIDATION_CHECKLIST
 - [ ] All public APIs documented (functions/classes/methods)
 - [ ] Parameters, returns, exceptions described where applicable
 - [ ] Examples added for complex functionality
@@ -127,7 +75,75 @@ Read reference files when the requested task directly maps to their domain (e.g.
 - [ ] Documentation matches actual code behavior
 - [ ] Legible/concise/informative (active voice, <25 words/sentence, target audience)
 - [ ] Accurate—no outdated info, working links
+</rules>
 
-## References
+<context>
+## SCOPE
+Create, improve, validate documentation across:
+- Inline comments
+- Docblocks/docstrings
+- README/markdown files
+- API documentation (OpenAPI/Swagger)
+- CHANGELOGs
 
-See bundled references in `references/` for detailed domain-specific guidance: `api-documenter.md`, `changelog-generator.md`, `docblock-writer.md`, `readme-writer.md`.
+## WORKFLOW
+1. **Analysis**: Read target files, identify missing/weak documentation
+2. **Planning**: Choose format, outline structure
+3. **Writing**: Produce rationale-first explanations, consistent formatting
+4. **Validation**: Run checklist, verify accuracy
+
+## REFERENCES (Progressive_Disclosure)
+- `@references/api-documenter.md` — OpenAPI/Swagger spec generation
+- `@references/changelog-generator.md` — CHANGELOG from git history
+- `@references/docblock-writer.md` — Docblocks/docstrings + inline comments
+- `@references/readme-writer.md` — README synthesis from codebase
+
+Read reference when task maps to domain (e.g., "generate OpenAPI" -> `@references/api-documenter.md`)
+</context>
+
+<examples>
+### Business_Rule (GDPR Compliance)
+```python
+# GDPR requires user data deletion within 30 days of account closure.
+# Soft deletion maintains audit trails while complying with privacy regulations.
+user.deleted_at = datetime.now()
+```
+
+### Security_Rationale
+```python
+# Hash passwords with bcrypt (not MD5) for computational hardness against brute-force attacks.
+# MD5 is cryptographically broken and unsafe for password storage.
+hashed_password = bcrypt.hash(password)
+```
+
+### Performance_Consideration
+```python
+def process_bulk_orders(orders, options=None):
+    """
+    Process multiple orders with optimized batch operations.
+
+    Process in batches of 100 to balance memory usage with database performance.
+    Individual processing would be too slow; all-at-once causes exhaustion.
+    Batch size determined through testing.
+
+    Args:
+        orders (list): List of order dictionaries
+        options (dict, optional): Processing options
+
+    Returns:
+        dict: Processing results with successful/failed counts
+
+    Raises:
+        BulkProcessingError: If >10% orders fail
+    """
+```
+</examples>
+
+<execution_protocol>
+1. Load `@references/skills.md` for schema compliance
+2. Clarify: Ask target audience, style preference, commit intent
+3. Plan: Outline files, impacts, steps; get approval if impact > low
+4. Execute: Read files, generate documentation, apply changes
+5. Validate: Run checklist, self-correct if fails
+6. Output: Summary of changes with file paths and line numbers
+</execution_protocol>
