@@ -122,9 +122,7 @@ kp.search() {
         return 1
     fi
 
-    if ! kp.login; then
-        return $?
-    fi
+    kp.login || return $?
 
     local output
     local exit_code
