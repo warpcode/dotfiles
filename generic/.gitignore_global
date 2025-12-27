@@ -114,6 +114,7 @@ tags
 .svn/
 
 ### AI tools ###
+/conductor/
 /.aider*
 /.crush*
 /.gemini/
