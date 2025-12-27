@@ -145,6 +145,31 @@ kp.search() {
 }
 
 ##
+# Search for KeePass entries and return the first path found
+#
+# @param string $1 Search query
+# @return 0 on success, 1 on error/no results
+##
+kp.search.first() {
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: kp.search.first <query>" >&2
+        return 1
+    fi
+
+    local output
+    local exit_code
+    
+    output=$(kp.search "$1")
+    exit_code=$?
+
+    if [[ $exit_code -ne 0 ]]; then
+        return $exit_code
+    fi
+
+    echo "$output" | head -n 1
+}
+
+##
 # Tab completion for kp function
 #
 # Provides tab completion for keepassxc-cli commands
