@@ -16,7 +16,10 @@ ai.litellm.models() {
         | grep -vE "\-[0-9]{4}\-?[0-9]{2}\-?[0-9]{2}(:[^:]+)?$" \
         | grep -vE "\-[0-9]{2}\-202[0-9](:[^:]+)?$" \
         | grep -vE "\-[0-9]{2}\-[0-9]{2}(:[^:]+)?$" \
-        | grep -vE "\-preview(\-|$)" )
+        | grep -vE "\-[0-9]{3,4}$" \
+        | grep -vE "\/[0-9]{3,4}\-?x\-?[0-9]{3,4}\/" \
+        | grep -vE "\-preview\-"
+    )
 
     # Separate and sort: models without "/" prefix first (original order), then models with "/" prefix sorted
     local non_prefixed_models prefixed_models
