@@ -1,6 +1,7 @@
 # Dependency directories
 node_modules/
 php_modules/
+vendor/
 
 # Optional npm cache directory/files
 .npm
