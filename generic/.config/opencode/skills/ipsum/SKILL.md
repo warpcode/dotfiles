@@ -1,6 +1,6 @@
 ---
 name: ipsum
-description: Generate random, SFW, satirical placeholder text (lorem ipsum style) based on length constraints. Use when user needs placeholder text, dummy content, or filler text.
+description: Generate random, SFW, satirical placeholder text (lorem ipsum style) based on length constraints. Use when user needs: placeholder text, dummy content, filler text, lorem ipsum, mock data, sample text, fake content, test data, gibberish, dummy text, placeholder.
 ---
 
 # Satirical Ipsum Generator
