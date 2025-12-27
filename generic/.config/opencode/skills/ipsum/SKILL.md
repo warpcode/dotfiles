@@ -1,43 +1,69 @@
 ---
 name: ipsum
-description: Generates random, SFW, satirical placeholder text (lorem ipsum style) based on length and theme constraints.
+description: Generate random, SFW, satirical placeholder text (lorem ipsum style) based on length constraints. Use when user needs placeholder text, dummy content, or filler text.
 ---
 
 # Satirical Ipsum Generator
 
-This skill generates "Lorem Ipsum" style placeholder text, but instead of Latin, it produces work-friendly, satirical English text based on a theme.
+## QUICK START
+- Example: "Generate 20 words of ipsum about space pirates"
 
-## Input Handling
+## STRUCTURE
 
-When the user activates this skill (e.g., "generate ipsum", "give me placeholder text"), analyze their request for two variables:
+### Phase 1: Clarification
+- **Logic**: Missing_Constraint == TRUE -> Ask && Wait
+- **Rule**: Constraint (Required) + Theme (Optional)
+- **Check**: If length unspecified -> "Specify length: words/paragraphs/chars?"
 
-1.  **Constraint** (Required):
-    *   Look for: Character limit, Word limit, or Paragraph limit.
-    *   *If missing:* Ask the user specifically: "Do you have a length preference? (e.g., 50 words, 2 paragraphs, or 200 characters)" and wait for response.
+### Phase 2: Planning
+- **Logic**: Input -> Plan -> Execute
+- **Variables**:
+  - `Constraint`: {Words | Paragraphs | Characters}
+  - `Theme`: User_Specified | Generated_Random
 
-2.  **Theme** (Optional):
-    *   Look for a specific topic (e.g., "about marketing", "medieval knights").
-    *   *If missing:* Randomly invent a satirical story theme on the fly (do not use a static or pregenerated list). The theme should be original, surprising, and lend itself to a playful or absurd narrative. Satirical stories are preferred.
+### Phase 3: Execution
 
-## Generation Rules
+#### Input Parsing
+- **Constraint** (Required):
+  - Detect: `{N} words`, `{N} paragraphs`, `{N} chars`
+  - If missing -> Phase_1 (Clarification)
 
-1.  **Content Safety:** The text must be strictly Safe For Work (SFW) and Family Friendly. No politics, no profanity, no NSFW topics.
-2.  **Completeness:** Any story or text generated must be a complete, self-contained narrative or passage. Do not provide half a story or incomplete text, regardless of length constraint. If a character or word limit is specified, ensure the text forms a satisfying, coherent whole within that limit.
-3.  **Style:** Grammatically correct but nonsensical or highly satirical. Flowery language is encouraged.
-4.  **Strict Limits:**
-    *   **Words/Paragraphs:** Meet the count exactly.
-    *   **Characters:** Generate slightly more text than needed, then strictly truncate to the exact character count, ending with an ellipsis `...` if it cuts a sentence mid-flow.
+- **Theme** (Optional):
+  - User specified: Use input
+  - Missing: Generate random satirical theme
+  - **Rule**: Theme != Static/Predefined. Original + Absurd Narrative.
 
-## Output Format
+#### Generation Rules
+- **Safety**: SFW + Family_Friendly ONLY. No politics, profanity, NSFW.
+- **Completeness**: Complete narrative. No half-stories.
+- **Style**: Grammatically correct + Nonsensical/Satirical. Flowery == GOOD.
+- **Precision**:
+  - Words/Paragraphs: Exact count.
+  - Characters: Generate > N -> Truncate to N -> Append `...` if mid-sentence.
 
-Return *only* the generated text block. Do not wrap it in quotes unless requested. Do not add introductory filler like "Here is your text:".
+### Phase 4: Validation
+- **Check 1**: Constraint met exactly?
+- **Check 2**: SFW verified?
+- **Check 3**: Complete narrative?
+- **Check 4**: Theme consistent?
 
-### Examples
+## OUTPUT
+- **Format**: Text block only. No quotes, no intro.
+- **Rule**: Direct output == Required.
 
-**User:** "Generate 20 words of ipsum about space pirates."
-**Output:**
-The galactic tax returns were overdue, prompting the laser parrots to mutiny against the bureaucratic void of the nebulous accounting department.
+## EXAMPLES
 
-**User:** "Placeholder text, 100 characters."
-**Output:**
-Leveraging the synergistic bagel output requires a deep dive into the granular muffin metrics w...
+<example>
+User: "Generate 20 words of ipsum about space pirates."
+Output: The galactic tax returns were overdue, prompting the laser parrots to mutiny against the bureaucratic void of the nebulous accounting department.
+</example>
+
+<example>
+User: "Placeholder text, 100 characters."
+Output: Leveraging the synergistic bagel output requires a deep dive into the granular muffin metrics w...
+</example>
+
+## SECURITY
+- **Input Validation**: Sanitize all user inputs. Filter malicious patterns.
+- **Threat Model**: Assume input == Malicious.
+- **Validation**: Content -> Filter_SFW -> Verify -> Output.
