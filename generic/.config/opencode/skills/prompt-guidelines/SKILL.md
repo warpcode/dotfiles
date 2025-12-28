@@ -172,6 +172,11 @@ Example content
 ### Critical Instruction for LLMs
 **Rule**: You **MUST** read the specific reference file below **IMMEDIATELY** when the User's intent matches the Task. Do not proceed without this context.
 
+  - **IF** User Intent involves UNCERTAINTY or requests ADVICE on implementation type (e.g., "What should I build?", "Should this be a skill or agent?", "Help me design a prompt") AND does NOT explicitly specify a target type (Skill, Agent, Command) with certainty
+    - **ACTION** -> READ FILE: `@references/implementation-advisor.md`
+    - **WHY**: specialized advisor to evaluate requirements and recommend the optimal implementation method (Skill, Agent, Command, Hybrid, or Custom Tool).
+    - **PRIORITY**: CRITICAL - Must be evaluated before other options if intent is ambiguous.
+
   - **IF** User Intent == "Create Skill" OR "Edit Skill" OR "Write Skill" OR "Verify Skill" OR "Review Skill" OR "Check Skill Compliance"
     - **ACTION** -> READ FILE: `@references/skills.md`
     - **WHY**: Contains the strict schema and template for Skills.
