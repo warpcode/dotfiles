@@ -1,6 +1,0 @@
-model: litellm:gemini-2.5-pro
-clients:
-- type: openai-compatible
-  name: litellm
-  models:
-  - name: gemini-2.5-pro
