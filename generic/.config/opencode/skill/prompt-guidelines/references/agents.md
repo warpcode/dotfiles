@@ -9,7 +9,7 @@
 ### Configuration
 - **Format**: `.md` with YAML frontmatter.
 - **Fields**:
-  - `mode`: `subagent` (Specialist) || `primary` (Generalist).
+  - `mode`: `subagent` (Specialist) || `primary` (Generalist) || `all` (Hybrid: both subagent and primary).
   - `temperature`: `0.0-0.2` (Deterministic) || `0.3-0.5` (Balanced) || `0.6-0.8` (Creative).
   - `tools`: `read`, `search`, `context7` (Base). `write`, `edit`, `bash` (Privileged).
   - `permission`: `{}` (None) || `ask` (Confirm) || `allow` (Trust).
@@ -31,6 +31,12 @@
 | Refactor | sub | 0.3 | edit, bash | ask | Optimization |
 | Builder | prim | 0.4 | all | ask | Features |
 | Fixer | prim | 0.3 | edit, bash | ask | Debugging |
+| Advisor | all | 0.2 | read, search | {} | Advisory/Planning |
+
+### Mode Types
+- **`subagent`**: Specialist agent invoked via task tool for specific tasks
+- **`primary`**: Generalist agent for broad feature work and complex multi-step operations
+- **`all`**: Hybrid agent capable of functioning as both subagent (specialised advisory) and primary (general planning/scoping) depending on context
 
 ## SECURITY & GUARDRAILS
 ### Permission Tiers
@@ -88,7 +94,7 @@
 description: >-
   [Type] agent for [Domain].
   [When to use].
-mode: subagent
+mode: subagent | primary | all
 temperature: 0.1
 tools:
   read: true
