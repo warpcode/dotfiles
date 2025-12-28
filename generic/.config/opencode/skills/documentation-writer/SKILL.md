@@ -102,22 +102,25 @@ Read reference when task maps to domain (e.g., "generate OpenAPI" -> `@reference
 </context>
 
 <examples>
-### Business_Rule (GDPR Compliance)
-```python
+<example>
+User: Add documentation for GDPR compliance
+Agent:
 # GDPR requires user data deletion within 30 days of account closure.
 # Soft deletion maintains audit trails while complying with privacy regulations.
 user.deleted_at = datetime.now()
-```
+</example>
 
-### Security_Rationale
-```python
+<example>
+User: Document password security rationale
+Agent:
 # Hash passwords with bcrypt (not MD5) for computational hardness against brute-force attacks.
 # MD5 is cryptographically broken and unsafe for password storage.
 hashed_password = bcrypt.hash(password)
-```
+</example>
 
-### Performance_Consideration
-```python
+<example>
+User: Add docstring for batch processing function
+Agent:
 def process_bulk_orders(orders, options=None):
     """
     Process multiple orders with optimized batch operations.
@@ -136,7 +139,7 @@ def process_bulk_orders(orders, options=None):
     Raises:
         BulkProcessingError: If >10% orders fail
     """
-```
+</example>
 </examples>
 
 <execution_protocol>

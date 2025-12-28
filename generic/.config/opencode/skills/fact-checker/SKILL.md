@@ -116,7 +116,7 @@ description: Validate changes for factual accuracy, completeness, and intent pre
 User: "Check if this refactored function preserves all original behavior"
 [Provides original function and refactored version]
 
-Output:
+Agent:
 **Summary**: PARTIAL - Core logic preserved, but edge case handling missing
 
 **Critical Issues**: 0
@@ -135,7 +135,7 @@ Output:
 <example>
 User: "Validate this documentation update for factual accuracy"
 
-Output:
+Agent:
 **Summary**: PASS - All facts preserved, no changes to technical details
 
 **Critical Issues**: 0

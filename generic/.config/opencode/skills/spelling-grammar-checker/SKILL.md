@@ -63,7 +63,7 @@ description: Analyze documentation, UI strings, comments, and user-facing text f
 - [ ] Output_Matches_Schema
 
 ## OUTPUT SCHEMA (Exact)
-```
+
 [SEVERITY] Issue Type
 
 Description: Clear explanation of error and impact.
@@ -71,17 +71,12 @@ Description: Clear explanation of error and impact.
 Location: file_path:line_number
 
 Original Text:
-```
 problematic text here
-```
 
 Corrected Text:
-```
 corrected text here
-```
 
 Explanation: Brief rationale for correction.
-```
 
 ## COMMON ERRORS (Reference)
 
