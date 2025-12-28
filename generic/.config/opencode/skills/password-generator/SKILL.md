@@ -1,6 +1,7 @@
 ---
 name: password-generator
-description: Generate secure and memorable passwords that are grammatically correct sentences or phrases. Use when user needs: password, passphrase, secure password, memorable password, password generation, create password, generate password.
+description: >-
+  Generate secure and memorable passwords that are grammatically correct sentences or phrases. Use when user needs: password, passphrase, secure password, memorable password, password generation, create password, generate password.
 ---
 
 # PASSWORD_GENERATOR

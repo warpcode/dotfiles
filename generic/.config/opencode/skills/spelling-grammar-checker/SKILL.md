@@ -1,6 +1,7 @@
 ---
 name: spelling-grammar-checker
-description: Analyze documentation, UI strings, comments, and user-facing text for spelling, grammar, clarity, and style. Produce structured validation report with severity, location, original/corrected text, and rationale. Recommend external tooling invocations when automated checks are suggested. Triggers: "check spelling", "grammar", "proofread", "review text", "validate documentation".
+description: >-
+  Analyze documentation, UI strings, comments, and user-facing text for spelling, grammar, clarity, and style. Produce structured validation report with severity, location, original/corrected text, and rationale. Recommend external tooling invocations when automated checks are suggested. Triggers: "check spelling", "grammar", "proofread", "review text", "validate documentation".
 ---
 
 # SPELLING_GRAMMAR_CHECKER
