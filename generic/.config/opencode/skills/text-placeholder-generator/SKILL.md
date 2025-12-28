@@ -1,6 +1,7 @@
 ---
 name: text-placeholder-generator
-description: Generate satirical placeholder text (lorem ipsum style) and satirical news articles. Use when user needs: placeholder text, dummy content, filler text, lorem ipsum, mock data, sample text, gibberish, dummy text, placeholder, parody article, satirical news, onion style, fake news story.
+description: >-
+  Generate satirical placeholder text (lorem ipsum style) and satirical news articles. Use when user needs: placeholder text, dummy content, filler text, lorem ipsum, mock data, sample text, gibberish, dummy text, placeholder, parody article, satirical news, onion style, fake news story.
 ---
 
 # TEXT_PLACEHOLDER_GENERATOR

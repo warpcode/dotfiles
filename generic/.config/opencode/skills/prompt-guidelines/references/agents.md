@@ -85,7 +85,9 @@
 ## TEMPLATE: UNIVERSAL AGENT
 ```yaml
 ---
-description: [Type] agent for [Domain]. [When to use].
+description: >-
+  [Type] agent for [Domain].
+  [When to use].
 mode: subagent
 temperature: 0.1
 tools:

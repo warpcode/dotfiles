@@ -217,7 +217,8 @@ DATA=!`sh -c 'cat file.json | jq -r ".items[].value" 2>/dev/null | head -5 || ec
 
 <example>
 ---
-description: Review code
+description: >-
+  Review code
 agent: quality/code-reviewer
 ---
 

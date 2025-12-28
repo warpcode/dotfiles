@@ -58,7 +58,9 @@ skill-name/
 ```yaml
 ---
 name: skill-name
-description: [Action] on [Target]. Use when [Trigger].
+description: >-
+  [Action] on [Target].
+  Use when [Trigger].
 ---
 
 # [Skill Name]
