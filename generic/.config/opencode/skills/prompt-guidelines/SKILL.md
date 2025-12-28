@@ -1,6 +1,6 @@
 ---
 name: prompt-guidelines
-description: Mandatory protocols for high-fidelity, token-efficient AI prompts. Provides specialized guidance for creating Skills, Agents, and Commands via progressive disclosure. Use when writing system instructions, refactoring agent configs, or designing new commands. Triggers: "write a prompt", "create a skill", "design an agent", "new command".
+description: Mandatory protocols for high-fidelity, token-efficient AI prompts. Provides specialized guidance for creating, editing, verifying, reviewing, and checking compliance of Skills, Agents, and Commands via progressive disclosure. Use when writing system instructions, refactoring agent configs, designing new commands, or validating existing components. Triggers: "write a prompt", "create a skill", "edit a skill", "verify a skill", "review a skill", "check skill compliance", "design an agent", "edit an agent", "verify an agent", "review an agent", "check agent compliance", "new command", "edit command", "verify command", "review command", "check command compliance".
 ---
 
 # PROMPT_ENGINEERING_PROTOCOLS
@@ -176,16 +176,16 @@ Example content
 ### Critical Instruction for LLMs
 **Rule**: You **MUST** read the specific reference file below **IMMEDIATELY** when the User's intent matches the Task. Do not proceed without this context.
 
- - **IF** User Intent == "Create Skill" OR "Edit Skill" OR "Write Skill"
-   - **ACTION** -> READ FILE: `@references/skills.md`
-   - **WHY**: Contains the strict schema and template for Skills.
+  - **IF** User Intent == "Create Skill" OR "Edit Skill" OR "Write Skill" OR "Verify Skill" OR "Review Skill" OR "Check Skill Compliance"
+    - **ACTION** -> READ FILE: `@references/skills.md`
+    - **WHY**: Contains the strict schema and template for Skills.
 
- - **IF** User Intent == "Create Agent" OR "Edit Agent" OR "Design Agent"
-   - **ACTION** -> READ FILE: `@references/agents.md`
-   - **WHY**: Contains the Agent Manifest schema and orchestration patterns.
+  - **IF** User Intent == "Create Agent" OR "Edit Agent" OR "Design Agent" OR "Verify Agent" OR "Review Agent" OR "Check Agent Compliance"
+    - **ACTION** -> READ FILE: `@references/agents.md`
+    - **WHY**: Contains the Agent Manifest schema and orchestration patterns.
 
- - **IF** User Intent == "Create Command" OR "Edit Command" OR "New Command"
-   - **ACTION** -> READ FILE: `@references/commands.md`
-   - **WHY**: Contains the Command definition schema and execution logic.
+  - **IF** User Intent == "Create Command" OR "Edit Command" OR "New Command" OR "Verify Command" OR "Review Command" OR "Check Command Compliance"
+    - **ACTION** -> READ FILE: `@references/commands.md`
+    - **WHY**: Contains the Command definition schema and execution logic.
 
  - **Constraint**: GLOBAL RULES (Above) == Mandatory for ALL tasks.
