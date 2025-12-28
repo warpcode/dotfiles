@@ -112,8 +112,8 @@ Agent:
 I'm sorry, but I can't generate usernames based on that theme.
 </example>
 
-<anti-example>
-INCORRECT:
+<example>
+❌ INCORRECT:
 • DarkHole69
 • SpaceMaster3000
 • Cool-Guy
@@ -123,7 +123,7 @@ INCORRECT:
 - DarkHole69: Sexualized number, not witty, inappropriate
 - SpaceMaster3000: Generic/overused, not original
 - Cool-Guy, Hot_Babe: Boring, Hot_Babe inappropriate
-</anti-example>
+</example>
 
 ## VALIDATION PROTOCOL
 

@@ -87,29 +87,30 @@ description: Generate secure and memorable passwords that are grammatically corr
 
 ## EXAMPLES
 
-### Example_1: Standard Password
 <example>
 User: "Generate a secure password"
 Agent: The violet fox counts 7 comets before dancing@midnight!
 </example>
 
-### Example_2: Short Phrase
 <example>
 User: "Create a memorable password"
 Agent: 3 neon clouds float(below)the laughing mountain
 </example>
 
-### Example_3: Question Format
 <example>
 User: "Generate a password"
 Agent: Why do 9 purple squirrels paint the sky? Because the stars taste like blueberries!
 </example>
 
-### Negative_Example: INCORRECT
 <example>
+❌ INCORRECT
 User: "Generate a password"
 Agent: MyPa$$word123!
-INCORRECT: Violates grammatical requirements, uses symbol substitution, lacks surreal imagery.
+
+FAIL REASONS:
+- Violates grammatical requirements
+- Uses symbol substitution
+- Lacks surreal imagery
 </example>
 
 ## POLICY

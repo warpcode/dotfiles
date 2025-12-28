@@ -139,7 +139,6 @@ description: Mandatory protocols for high-fidelity, token-efficient AI prompts. 
 - **Constraint**: Use semantic tags, NOT markdown code blocks
 
 <example>
-<example>
 ---
 description: Example description
 ---
@@ -147,14 +146,12 @@ description: Example description
 Step 1: Action
 Step 2: Verify
 </example>
-</example>
 
 ### Anti-Examples (Negative)
 - **Directive**: Define failure states.
 - **Action**: Show common error -> Label "INCORRECT" -> Explain fix.
 - **Structure**: Use same `<example>` tag format for clarity
 
-<example>
 <example>
 ❌ INCORRECT: Using markdown code blocks
 ```markdown
@@ -164,7 +161,6 @@ Example content
 ✓ CORRECT: Using semantic example tags
 <example>
 Example content
-</example>
 </example>
 </example>
 
