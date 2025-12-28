@@ -16,7 +16,14 @@ description: Mandatory protocols for high-fidelity, token-efficient AI prompts. 
 
 ### Semantic Enclosure (XML)
 - **Directive**: Wrap ALL distinct contexts in semantic tags.
-- **Schema**: `<rules>`, `<context>`, `<user_input>`, `<examples>`.
+- **Global Schema**: `<rules>`, `<context>`, `<examples>`, `<execution>`, `<example>`.
+- **Global Tags**:
+  - `<rules>`: Execution phases, logic gates, and procedural instructions
+  - `<context>`: Dependencies, threat models, references, and environment setup
+  - `<examples>`: Collection of example demonstrations
+  - `<execution>`: Main execution steps and operational procedures
+  - `<example>`: Individual example block for illustration
+- **Component-Specific Tags**: Documented in each component's reference file (@references/skills.md, @references/agents.md, @references/commands.md)
 
 ### Variable Binding
 - **Mode A (Structured)**: Enforce strict schema (JSON/YAML). "Keys == Immutable."
@@ -69,6 +76,14 @@ description: Mandatory protocols for high-fidelity, token-efficient AI prompts. 
 - **Syntax**: `Ref == @path/to/file`.
 - **Constraint**: Markdown Links `[text](path)` == FORBIDDEN.
 
+### Skill Loading Syntax
+- **In Skill Reference Files**: Use `@` syntax for internal references
+  - Example: `@references/commit-message.md` within git-workflow skill
+- **In Commands**: Use `skill(skill_id)` to load and execute
+  - **Load**: `skill(git-workflow)` -> Load instructions and execute
+  - **Example**: `skill(git-workflow)` (not `@skills/git-workflow`)
+- **Constraint**: Never use `@skills/name` in commands - always use skill() function
+
 ### Documentation Priority
 - **Logic**: Need_Docs -> `tool(context7)` -> Fallback(Search).
 
@@ -119,10 +134,39 @@ description: Mandatory protocols for high-fidelity, token-efficient AI prompts. 
 ## ANCHORING
 ### Few-Shot (Positive)
 - **Directive**: Provide labeled examples wrapped in `<example>`.
+- **Structure**: `<example> -> Content -> </example>`
+- **Purpose**: Demonstrate correct implementation patterns
+- **Constraint**: Use semantic tags, NOT markdown code blocks
+
+<example>
+<example>
+---
+description: Example description
+---
+
+Step 1: Action
+Step 2: Verify
+</example>
+</example>
 
 ### Anti-Examples (Negative)
 - **Directive**: Define failure states.
 - **Action**: Show common error -> Label "INCORRECT" -> Explain fix.
+- **Structure**: Use same `<example>` tag format for clarity
+
+<example>
+<example>
+❌ INCORRECT: Using markdown code blocks
+```markdown
+Example content
+```
+
+✓ CORRECT: Using semantic example tags
+<example>
+Example content
+</example>
+</example>
+</example>
 
 ### Reference Anchoring
 - **Directive**: Bind terms to definitions.
@@ -132,16 +176,16 @@ description: Mandatory protocols for high-fidelity, token-efficient AI prompts. 
 ### Critical Instruction for LLMs
 **Rule**: You **MUST** read the specific reference file below **IMMEDIATELY** when the User's intent matches the Task. Do not proceed without this context.
 
-- **IF** User Intent == "Create Skill" OR "Edit Skill" OR "Write Skill"
-  - **ACTION** -> READ FILE: `@references/skills.md`
-  - **WHY**: Contains the strict schema and template for Skills.
+ - **IF** User Intent == "Create Skill" OR "Edit Skill" OR "Write Skill"
+   - **ACTION** -> READ FILE: `@references/skills.md`
+   - **WHY**: Contains the strict schema and template for Skills.
 
-- **IF** User Intent == "Create Agent" OR "Edit Agent" OR "Design Agent"
-  - **ACTION** -> READ FILE: `@references/agents.md`
-  - **WHY**: Contains the Agent Manifest schema and orchestration patterns.
+ - **IF** User Intent == "Create Agent" OR "Edit Agent" OR "Design Agent"
+   - **ACTION** -> READ FILE: `@references/agents.md`
+   - **WHY**: Contains the Agent Manifest schema and orchestration patterns.
 
-- **IF** User Intent == "Create Command" OR "Edit Command" OR "New Command"
-  - **ACTION** -> READ FILE: `@references/commands.md`
-  - **WHY**: Contains the Command definition schema and execution logic.
+ - **IF** User Intent == "Create Command" OR "Edit Command" OR "New Command"
+   - **ACTION** -> READ FILE: `@references/commands.md`
+   - **WHY**: Contains the Command definition schema and execution logic.
 
-- **Constraint**: GLOBAL RULES (Above) == Mandatory for ALL tasks.
+ - **Constraint**: GLOBAL RULES (Above) == Mandatory for ALL tasks.

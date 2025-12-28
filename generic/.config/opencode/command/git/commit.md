@@ -1,64 +1,88 @@
 ---
-description: Initiate git commit process with diff display and message guidance
-tools:
-  read: true
+description: >-
+  Interactive git commit assistant.
+  Analyzes staged changes, performs security scans, and generates conventional commit messages via git-workflow skill.
 ---
 
-# Git Commit Assistant
+<rules>
+## Phase 1: Clarification (Ask)
+IF $ARGUMENTS.ambiguous != FALSE -> List(Questions) -> Wait(User_Input)
 
-You are a helpful assistant for guiding git commits. Follow these steps carefully:
+## Phase 2: Planning (Think)
+Plan: Verify staged changes -> Security scan -> Load git-workflow -> Generate message -> Request approval -> Execute
 
-## Context
+## Phase 3: Execution (Do)
+Execute atomic steps. Validate result after EACH step.
 
-### Current State
-- Working directory status: !`git status --porcelain`
-- Current branch: !`git branch --show-current`
-- Staged changes: !`git diff --staged --stat`
-- Unstaged changes: !`git diff --stat`
+## Phase 4: Validation (Check)
+Final_Checklist: Commit message format? User approved? Success?
+</rules>
 
-### Detailed Changes
-- Full diff (staged and unstaged): !`git diff HEAD`
-- Staged changes detail: !`git diff --staged`
+<context>
+**Dependencies**: git (CLI), skill(git-workflow), Bash (git commands)
 
-### Repository History
-- Recent commits with graph: !`git log --oneline -10 --graph`
-- Commits on current branch (not on main): !`git log --oneline main..HEAD 2>/dev/null || echo "Not branched from main"`
+**Threat Model**:
+- Input -> Sanitize(shell_escapes) -> Validate(Safe) -> Execute
+- Destructive_Op(commit) -> User_Confirm == TRUE
+- Secret_Scan: Check for password/secret/key/token/api_key patterns
 
-## Procedure
+**Reference**: Load git-workflow skill -> Read @references/commit-message.md
+</context>
 
-1. Check for staged changes.
+<user>
+    <default>
+        Auto-generate from staged changes
+    </default>
+    <input>
+        $ARGUMENTS
+    </input>
+</user>
 
-2. If no staged changes exist, inform the user and stop.
+<execution>
+**CRITICAL**: Execute steps 1-4 IN ORDER. IF step 2 OR step 4 triggers termination -> STOP IMMEDIATELY. NO git commands, NO skill loads, NO continuation beyond step 4.
 
-3. Scan the staged changes for sensitive keywords (password, secret, key, token, api_key, etc.). If any are found, warn the user and do not proceed with the commit process.
+**Step 1**: STAGED=!`git status --short | grep '^[MADRC]' || echo "none"`
 
-4. Call the skills_git_workflow tool to analyze the diff and get guidance on constructing a conventional commit message.
+**Step 2**: IF $STAGED == "none" -> Report(No staged changes. Stage using `git add`) -> TERMINATE
 
-5. Based on the tool's guidance, suggest a commit message in the format: type(scope): description
+**Step 3**: SECRETS=!`sh -c 'git diff --staged | grep -Ei "password|secret|key|token|api_key" 2>/dev/null || echo "safe"'`
 
-6. Present the suggested commit message to the user clearly.
+**Step 4**: IF $SECRETS != "safe" -> Warning(Sensitive data detected. Commit aborted) -> TERMINATE
 
-7. Ask the user for explicit approval: "Do you approve this commit message? Reply 'yes' to proceed or suggest changes."
+**Step 5**: Context_Gather:
+  - BRANCH=!`git branch --show-current`
+  - DEFAULT=!`sh -c 'git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed "s|^origin/||" || { git rev-parse --verify main >/dev/null 2>/dev/null && echo main; } || echo master'`
+  - CHANGES=!`git diff --staged --stat`
+  - DIFF=!`git diff --staged`
+  - HISTORY=!`git log --oneline -5 --graph`
 
-8. Do NOT execute any git commands yet. Wait for user response.
+**Step 6**: skill(git-workflow)
 
-9. If the user approves (says 'yes' or similar), execute the commit using the bash tool: git commit -m "suggested message"
+**Step 7**: Analyze:
+  - Review $DIFF + $HISTORY
+  - Apply git-workflow conventions -> Draft commit message
+  - Incorporate custom context if provided
 
-10. If the user suggests changes, incorporate the feedback, update the message, and repeat steps 6-8.
+**Step 8**: Display drafted message -> Request User_Confirm
 
-11. If the user declines or provides unclear feedback, ask for clarification and do not proceed.
+**Step 9**: IF approved -> Execute `git commit -m "approved_message"` -> Report success
+        ELSE -> Request feedback -> Refine -> Return to Step 8
 
-Ensure that under NO circumstances do you execute a git commit command without explicit user approval in the conversation. Always prioritize user control and safety.
+**Step 10**: IF commit fails -> Report error -> STOP
+</execution>
 
-## Error Handling
+<examples>
+<example>
+User: /commit
+STAGED=M  generic/.config/opencode/command/git/commit.md
+SECRETS=safe
+Result: Generates commit message -> Displays to user -> Waits approval
+</example>
 
-- If not in a git repository, inform the user and stop.
-- If git commands fail, provide clear error messages and stop.
-- If the skills_git_workflow tool fails to generate a message, suggest manual commit.
-- If user provides invalid input, ask for clarification.
-- Never proceed with commit on any error condition.
-
-## Performance
-
-- Complete the entire process within 30 seconds for typical repository sizes.
-- Stream diff output to avoid memory issues with large changes.
+<example>
+User: /commit "fix login bug"
+STAGED=M  src/auth/login.py
+SECRETS=safe
+Result: Generates "fix(auth): resolve login timeout" -> Displays -> Waits approval
+</example>
+</examples>
