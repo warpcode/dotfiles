@@ -11,8 +11,8 @@
   "mcpServers": {
     "skillport": {
       "command": "uvx",
-      "args": ["skillport"],
-      "env": { "SKILLPORT_SKILLS_DIR": "~/.config/opencode/skills" }
+      "args": ["skillport-mcp"],
+      "env": { "SKILLPORT_SKILLS_DIR": "~/.config/opencode/skill" }
     }
   },
   "context": {
