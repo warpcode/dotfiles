@@ -15,17 +15,6 @@ description: >-
 - **Directive**: Use symbols for relationships.
 - **Map**: `->` (Causes), `=>` (Implies), `!=` (Not), `&&` (AND), `||` (OR).
 
-### Semantic Enclosure (XML)
-- **Directive**: Wrap ALL distinct contexts in semantic tags.
-- **Global Schema**: `<rules>`, `<context>`, `<examples>`, `<execution>`, `<example>`.
-- **Global Tags**:
-  - `<rules>`: Execution phases, logic gates, and procedural instructions
-  - `<context>`: Dependencies, threat models, references, and environment setup
-  - `<examples>`: Collection of example demonstrations
-  - `<execution>`: Main execution steps and operational procedures
-  - `<example>`: Individual example block for illustration
-- **Component-Specific Tags**: Documented in each component's reference file (@references/skills.md, @references/agents.md, @references/commands.md)
-
 ### Variable Binding
 - **Mode A (Structured)**: Enforce strict schema (JSON/YAML). "Keys == Immutable."
 - **Mode B (Conversational)**: Enforce Tone/Style. "Explanation == Concise && Technical."
@@ -52,7 +41,7 @@ description: >-
 ## COGNITIVE PROCESS
 ### Chain of Thought (CoT)
 - **Directive**: Mandate planning phase.
-- **Instruction**: "Open `<thinking>` tag. Plan steps && checks. Close tag, THEN output."
+- **Instruction**: "Plan steps && checks before output. Document reasoning process."
 
 ### The Critic (Role-Based)
 - **Directive**: Force self-correction.
@@ -134,36 +123,33 @@ description: >-
 
 ## ANCHORING
 ### Few-Shot (Positive)
-- **Directive**: Provide labeled examples wrapped in `<example>`.
-- **Structure**: `<example> -> Content -> </example>`
+- **Directive**: Provide labeled examples using markdown code blocks.
+- **Structure**: ```language
+Content
+```
 - **Purpose**: Demonstrate correct implementation patterns
-- **Constraint**: Use semantic tags, NOT markdown code blocks
 
-<example>
+```markdown
 ---
 description: Example description
 ---
 
 Step 1: Action
 Step 2: Verify
-</example>
+```
 
 ### Anti-Examples (Negative)
 - **Directive**: Define failure states.
 - **Action**: Show common error -> Label "INCORRECT" -> Explain fix.
-- **Structure**: Use same `<example>` tag format for clarity
+- **Structure**: Use markdown code blocks for clarity
 
-<example>
-❌ INCORRECT: Using markdown code blocks
 ```markdown
-Example content
-```
+❌ INCORRECT: Poor example structure
+Bad pattern example
 
-✓ CORRECT: Using semantic example tags
-<example>
-Example content
-</example>
-</example>
+✓ CORRECT: Clear markdown formatting
+Good pattern example
+```
 
 ### Reference Anchoring
 - **Directive**: Bind terms to definitions.
