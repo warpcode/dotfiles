@@ -74,20 +74,6 @@
 - **Syntax**: Execute `@quality/code-reviewer` on `[files]`
 - **Example**: `Execute @development/backend-developer for database tasks`
 
-## AGENT-SPECIFIC SEMANTIC TAGS
-
-### `<scope>`
-- **Purpose**: Define agent capabilities and restrictions (used instead of `<rules>` in agents)
-- **Structure**: Contains `✓ CAN` and `✗ CANNOT` sections
-- **Usage**: Explicitly defines what agent can and cannot do
-- **Example**:
-```xml
-<scope>
-✓ CAN: Read files, search codebase, analyze patterns
-✗ CANNOT: Write files, execute bash, modify code
-</scope>
-```
-
 ## TEMPLATE: UNIVERSAL AGENT
 ```yaml
 ---
@@ -109,10 +95,8 @@ Role: [Specific Role].
 Goal: [Specific Outcome].
 
 ## Capabilities
-<scope>
 ✓ CAN: [List Safe Actions]
 ✗ CANNOT: [List Restrictions]
-</scope>
 
 ## Methodology
 1. [Phase 1]: Input -> Process.
@@ -120,8 +104,6 @@ Goal: [Specific Outcome].
 3. [Phase 3]: Validate -> Output.
 
 ## Constraints
-<rules>
 1. [Constraint 1]
 2. [Constraint 2]
-</rules>
 ```

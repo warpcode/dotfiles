@@ -74,8 +74,7 @@ description: >-
 3. Step_3: Output format.
 
 ## EXAMPLES
-<example>
+```markdown
 User: [Trigger]
 Agent: [Response]
-</example>
 ```

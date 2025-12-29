@@ -4,21 +4,22 @@ description: >-
   Reference for creating, validating, and optimising OpenCode commands.
 ---
 
-<rules>
-## Phase 1: Clarification (Ask)
+## PHASES
+
+### Phase 1: Clarification (Ask)
 IF intent.ambiguous != FALSE -> List(Questions) -> Wait(User_Input)
 
-## Phase 2: Planning (Think)
+### Phase 2: Planning (Think)
 Plan: Analyze command requirements -> Identify dependencies -> Generate template -> Validate
 
-## Phase 3: Execution (Do)
+### Phase 3: Execution (Do)
 Generate command following schema -> Validate references -> Test execution
 
-## Phase 4: Validation (Check)
+### Phase 4: Validation (Check)
 Final_Checklist: Schema valid? Dependencies exist? Security checks present?
-</rules>
 
-<context>
+## CONTEXT
+
 **Dependencies**: Bash (shell), YAML (frontmatter), Markdown
 
 **Threat Model**:
@@ -31,9 +32,7 @@ Final_Checklist: Schema valid? Dependencies exist? Security checks present?
 2. Context: Verify permissions, check dependencies
 3. Execution: Confirm intent, check for destructiveness
 4. Output: Verify format, redact secrets
-</context>
 
-<execution>
 ## CORE FUNCTION
 - **Goal**: Encapsulate workflows -> Simple `/command` invocation
 - **Scope**: Reusable templates, multi-step processes, ecosystem integration
@@ -45,8 +44,8 @@ Final_Checklist: Schema valid? Dependencies exist? Security checks present?
 
 ### 2. Template Generation
 - **Format**: Markdown with YAML frontmatter
-- **Input**: `<user>$ARGUMENTS</user>` == MANDATORY
-- **Constraint**: Wrap ALL user input in `<user>` tags
+- **Input**: User Input section with Default and Input subsections == MANDATORY
+- **Constraint**: Input subsection MUST contain `$ARGUMENTS` placeholder for command parser
 - **Ref**: Use exact names (`skill(skill_id)`, `@agent/name`)
 
 ### 3. Validation
@@ -62,65 +61,22 @@ description: >-
 agent: [Optional: @agent/name]
 ---
 
-<user>
-    <default>
-        [Default behavior when no arguments provided]
-    </default>
-    <input>
-        $ARGUMENTS
-    </input>
-</user>
+## User Input
+
+**Default**: [Default behavior when no arguments provided]
+
+**Input**: $ARGUMENTS
 
 1. Step_1: Action
 2. Step_2: Verify(Result)
 3. Step_3: Error_Handle -> Fallback
 ```
 
-**User Input Block (MANDATORY)**: All commands MUST include a `<user>` section
-- Defines default behavior and input context separately from execution
-- Do NOT use `<user>$ARGUMENTS</user>` inline in execution steps
+**User Input Section (MANDATORY)**: All commands MUST include a User Input section
+- **Default**: Document behavior when no arguments provided
+- **Input**: MUST contain `$ARGUMENTS` placeholder for command parser substitution
+- Do NOT reference $ARGUMENTS inline in execution steps
 - Reference user intent naturally in execution (e.g., "Incorporate provided context if available")
-
-## COMMAND-SPECIFIC SEMANTIC TAGS
-
-### `<user>`
-- **Purpose**: Define user input context and default behavior
-- **Structure**: Contains `<default>` and `<input>` child tags
-- **Usage**: Separates user intent from execution logic
-- **Constraint**: Do NOT reference inline in execution steps
-- **Example**:
-```xml
-<user>
-    <default>
-        Today's date (auto-generated)
-    </default>
-    <input>
-        $ARGUMENTS
-    </input>
-</user>
-```
-
-### `<default>` (child of `<user>`)
-- **Purpose**: Default behavior when no arguments provided
-- **Structure**: Plain text description
-- **Usage**: Documents fallback behavior
-- **Example**:
-```xml
-<default>
-    Auto-generate from staged changes
-</default>
-```
-
-### `<input>` (child of `<user>`)
-- **Purpose**: Defines what arguments are expected
-- **Structure**: `$ARGUMENTS` placeholder
-- **Usage**: Documents argument format/structure
-- **Example**:
-```xml
-<input>
-    $ARGUMENTS
-</input>
-```
 
 ## INLINE COMMAND EXECUTION
 - **Syntax**: `!`command` for shell output in command context
@@ -152,7 +108,7 @@ agent: [Optional: @agent/name]
 
 ## ERROR HANDLING PATTERNS
 
-<example>
+```markdown
 # Pattern 1: Simple error handling (no pre-check needed)
 1. PRS=!`gh pr list --state merged --search "merged:$(date +%Y-%m-%d)" --json title,body 2>/dev/null || echo "none"`
 2. IF $PRS == "none" -> Report(No merged PRs today)
@@ -172,7 +128,7 @@ agent: [Optional: @agent/name]
 # Pattern 5: External CLI with auth check
 1. PRS=!`gh pr list --state merged --search "merged:$(date +%Y-%m-%d)" --json title,body 2>/dev/null || echo "none"`
 2. IF $PRS == "none" -> Report(No merged PRs or auth failed) -> EXIT
-</example>
+```
 
 ## COMPLEX COMMANDS
 - **Issue**: Commands with pipes (`|`), subshells `()`, complex conditionals, multiple redirections (`2>/dev/null`) may fail during interpolation
@@ -185,7 +141,7 @@ agent: [Optional: @agent/name]
 
 ### Complex Command Examples
 
-<example>
+```markdown
 # Simple command (no sh -c needed)
 BRANCH=!`git rev-parse --abbrev-ref HEAD`
 
@@ -197,7 +153,7 @@ DEFAULT=!`sh -c 'git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null |
 
 # Multiple pipes and operators (sh -c required)
 DATA=!`sh -c 'cat file.json | jq -r ".items[].value" 2>/dev/null | head -5 || echo "none"'`
-</example>
+```
 
 ## SECURITY & VALIDATION (MANDATORY)
 - **Prohibition**: Hardcoded credentials == FORBIDDEN
@@ -215,45 +171,39 @@ DATA=!`sh -c 'cat file.json | jq -r ".items[].value" 2>/dev/null | head -5 || ec
 
 ### Basic Command
 
-<example>
+```markdown
 ---
 description: >-
   Review code
 agent: quality/code-reviewer
 ---
 
-<user>
-    <default>
-        No file specified
-    </default>
-    <input>
-        $ARGUMENTS
-    </input>
-</user>
+## User Input
+
+**Default**: No file specified
+
+**Input**: $ARGUMENTS
 
 1. Check: FILE_CHECK=!`test -f "$ARGUMENTS" && echo "exists" || echo "missing"`
 2. IF $FILE_CHECK == "missing" -> Error(File not found) -> EXIT
 3. Analyze: Provided file
 4. Report: Issues + Fixes
-</example>
+```
 
 ### Complex Command
 
-<example>
+```markdown
 ---
 description: >-
   Deploy feature with comprehensive validation
   Requires testing and git workflow integration
 ---
 
-<user>
-    <default>
-        Deploy current branch
-    </default>
-    <input>
-        $ARGUMENTS
-    </input>
-</user>
+## User Input
+
+**Default**: Deploy current branch
+
+**Input**: $ARGUMENTS
 
 1. Environment: IS_WORK=!`echo ${IS_WORK:-0}`
 2. Current branch: BRANCH=!`git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "no-git"`
@@ -263,25 +213,24 @@ description: >-
 6. IF success -> Execute(deployment) -> ELSE Report(Error)
 7. skill(git-workflow)
 8. Merge_Request
-</example>
+```
 
 ### Command with Routing
 
-<example>
+```markdown
 ---
 description: >-
   Analyze git status and route to appropriate action
   Uses inline commands for context
 ---
 
-<user>
-    <default>
-        Auto-generate commit message
-    </default>
-    <input>
-        $ARGUMENTS
-    </input>
-</user>
+## User Input
+
+**Default**: Auto-generate commit message
+
+**Input**: $ARGUMENTS
+
+## Execution
 
 1. Git status: STATUS=!`git status --porcelain 2>/dev/null || echo "not-in-git"`
 2. IF $STATUS == "not-in-git" -> Error(Git not installed) -> EXIT
@@ -290,11 +239,11 @@ description: >-
 5. IF empty($STAGED) -> Exit(No changes to commit)
 6. IF conflicts -> Read(@references/merge-conflicts.md) -> Resolve
 7. skill(git-workflow)
-</example>
+```
 
 ### External CLI Integration
 
-<example>
+```markdown
 ---
 description: >-
   Fetch and summarise GitHub pull requests merged today
@@ -306,7 +255,7 @@ description: >-
 3. IF $PRS == "none" -> Report(No merged PRs today) -> EXIT
 4. Transform: Each PR -> Business-friendly summary
 5. Output: Bullet list with emojis
-</example>
+```
 
 
 ## BEST PRACTICES
@@ -319,17 +268,16 @@ description: >-
 - Simple command execution with error fallback
 - Single commands where error handling covers missing tool + execution failure
 
-<example>
+```markdown
 ❌ Over-engineered:
 PRS=!`command -v gh && gh pr list --state merged 2>/dev/null || echo "none"`
 
 ✓ Simpler:
 PRS=!`gh pr list --state merged 2>/dev/null || echo "none"`
-</example>
+```
 
-<example>
+```markdown
 ✓ Necessary (conditional logic):
 HAS_GIT=!`command -v git && echo "yes" || echo "no"`
 IF $HAS_GIT == "yes" -> Execute_Git_Ops ELSE Warn(Git not installed)
-</example>
-</execution>
+```
