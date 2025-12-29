@@ -6,14 +6,110 @@
 - **Limit**: `SKILL.md` < 500 lines. Else -> Split to `@references/`.
 
 ## STRUCTURE
-### Directory Layout
+### Directory Layout (Recommended)
+
+#### Minimal Structure
 ```text
 skill-name/
-├── SKILL.md (Required)
-├── scripts/ (Optional: Python/Bash)
-├── references/ (Optional: Docs/Schemas)
-└── assets/ (Optional: Templates)
+├── SKILL.md (Required - main skill file)
+└── references/ (Optional - progressive disclosure)
 ```
+
+#### Recommended Structure
+```text
+skill-name/
+├── SKILL.md (Required - main skill file)
+├── references/ (Optional - progressive disclosure)
+│   ├── modes/        # Mode-specific behavioral extensions
+│   ├── intents/      # Intent-specific workflows
+│   ├── contexts/     # Context/environment-specific patterns
+│   ├── domains/      # Domain expertise (security, database, api, etc.)
+│   └── schemas/     # Data schemas, API specs, configuration formats
+├── templates/       # Optional - Output templates, prompt templates
+├── scripts/         # Optional - Python/Bash scripts for deterministic tasks
+└── assets/          # Optional - Logos, icons, file templates, example files
+```
+
+#### Flexible Organization
+**Rule**: Reference folder naming is FLEXIBLE. Use structure that fits your skill's needs.
+
+**Alternative**: Flat structure at root level
+```text
+skill-name/
+├── SKILL.md
+├── review-mode.md        # Mode-specific at root
+├── skill-creation.md    # Intent-specific at root
+├── python-patterns.md    # Context-specific at root
+└── owasp-top10.md       # Domain-specific at root
+```
+
+**Alternative**: All in references/ without subdirectories
+```text
+skill-name/
+├── SKILL.md
+└── references/
+    ├── review-mode.md
+    ├── skill-creation.md
+    ├── python-patterns.md
+    └── owasp-top10.md
+```
+
+### Directory Purposes
+
+#### SKILL.md (Required)
+- **Purpose**: Main skill file with frontmatter, instructions, routing logic
+- **Constraint**: Must be < 500 lines. Use references/ for detailed content
+- **Format**: YAML frontmatter + Markdown body
+
+#### references/ (Optional but Recommended)
+- **Purpose**: Progressive disclosure for heavy context, specialized knowledge
+- **Use Cases**:
+  - API documentation
+  - Domain expertise (security, database, patterns)
+  - Framework-specific patterns
+  - Configuration schemas
+- **Routing**: Load based on mode, intent, context, or keywords
+
+#### references/modes/ (Optional)
+- **Purpose**: Mode-specific behavioral extensions
+- **Use Cases**: Adapt generic mode frameworks for specific domains
+- **Example**: references/modes/review.md extends review mode with security-specific validation
+
+#### references/intents/ (Optional)
+- **Purpose**: Intent-specific workflow guidance
+- **Use Cases**: Step-by-step workflows for specific tasks
+- **Example**: references/intents/skill-creation.md provides detailed skill creation process
+
+#### references/contexts/ (Optional)
+- **Purpose**: Context or environment-specific patterns
+- **Use Cases**: Language-specific, framework-specific, platform-specific patterns
+- **Example**: references/contexts/python.md provides Python coding patterns
+
+#### references/domains/ (Optional)
+- **Purpose**: Domain expertise and specialized knowledge
+- **Use Cases**: Security, database, API, performance, testing domains
+- **Example**: references/domains/security.md contains OWASP patterns
+
+#### references/schemas/ (Optional)
+- **Purpose**: Data schemas, API specifications, configuration formats
+- **Use Cases**: JSON schemas, OpenAPI specs, database schemas
+- **Example**: references/schemas/api-response.json defines response format
+
+#### templates/ (Optional)
+- **Purpose**: Reusable templates for outputs, prompts, files
+- **Use Cases**: Code templates, response templates, prompt templates
+- **Example**: templates/python-class.md for Python class generation
+
+#### scripts/ (Optional)
+- **Purpose**: Deterministic tasks that require external execution
+- **Use Cases**: File processing, data transformation, API calls
+- **Languages**: Python, Bash, or any executable
+- **Example**: scripts/rotate_pdf.py for PDF rotation
+
+#### assets/ (Optional)
+- **Purpose**: Static assets, templates, examples
+- **Use Cases**: Logos, icons, file templates, example files
+- **Example**: assets/logo.png or assets/example-config.yaml
 
 ### SKILL.md Format
 - **Frontmatter**:
