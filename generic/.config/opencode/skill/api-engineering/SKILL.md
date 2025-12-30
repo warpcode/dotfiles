@@ -33,20 +33,6 @@ Load comprehensive checklists:
 - IF security review requested -> Load `@security/API-SECURITY.md`
 - IF design review requested -> Load `@rest/RESTFUL-DESIGN.md`, `@graphql/GRAPHQL-PATTERNS.md`
 
-## CONTENT STRUCTURE
-```
-api-engineering/
-├── rest/
-│   └── RESTFUL-DESIGN.md
-├── graphql/
-│   └── GRAPHQL-PATTERNS.md
-├── documentation/
-│   └── OPENAPI.md
-└── security/
-    └── API-SECURITY.md
-```
-
-## ROUTING LOGIC
 ### Progressive Loading (Write Mode)
 - **IF** request mentions "REST", "RESTful", "endpoint", "resource" -> READ FILE: `@rest/RESTFUL-DESIGN.md`
 - **IF** request mentions "GraphQL", "query", "mutation", "schema" -> READ FILE: `@graphql/GRAPHQL-PATTERNS.md`
@@ -116,13 +102,13 @@ api-engineering/
 
 ## EXECUTION PROTOCOL
 
-### Phase 1: Analysis
+### Phase 1: Clarification
 1. **Detect Mode**: WRITE vs REVIEW based on keywords
 2. **Detect Context**: API style (REST/GraphQL), framework, protocol
 3. **Load Patterns**: Progressive (write) or Exhaustive (review)
 4. **Detect Multi-Domain**: Check if additional skills needed (database, security, performance)
 
-### Phase 2: Execution (Write Mode)
+### Phase 2: Planning
 1. Load relevant API pattern references
 2. Design API according to REST/GraphQL best practices
 3. Implement authentication/authorization
@@ -131,7 +117,7 @@ api-engineering/
 6. Provide OpenAPI/Swagger documentation
 7. Follow framework conventions (Express, NestJS, Django REST, Laravel)
 
-### Phase 3: Execution (Review Mode)
+### Phase 3: Execution
 1. Load all API checklist references
 2. Systematically check each category:
    - REST/GraphQL design issues
@@ -150,37 +136,6 @@ api-engineering/
 - Validate documentation completeness
 - Check for cross-references (MUST be within skill only)
 
-## MULTI-DOMAIN LOADING
-### When to Load Additional Skills
-
-**Context Detection Triggers**:
-- **Database Operations**: If database queries or ORM usage in endpoints -> LOAD: `@database-engineering/SKILL.md`
-- **Security Concerns**: If authentication, authorization, or security mentioned -> LOAD: `@secops-engineering/SKILL.md`
-- **Performance Issues**: If slow endpoints, N+1 queries, or performance mentioned -> LOAD: `@performance-engineering/SKILL.md`
-- **Code Architecture**: If refactoring or code quality mentioned -> LOAD: `@software-engineering/SKILL.md`
-
-**Detection Rules**:
-1. **Analyze Request**: Scan for keywords and file types
-2. **Determine Context**: Identify primary domain (API) and secondary domains
-3. **Load Primary Skill**: This skill (api-engineering) with appropriate patterns
-4. **Load Secondary Skills**: If secondary domain detected, load relevant skill from that skill's SKILL.md
-
-**Example Scenario**:
-```
-User: "Review this REST API endpoint for SQL injection and performance issues"
-
-Analysis:
-- Primary: api (REST API)
-- Secondary 1: database (SQL injection)
-- Secondary 2: performance (performance issues)
-
-Load:
-1. api-engineering/SKILL.md (RESTFUL-DESIGN.md, API-SECURITY.md)
-2. database-engineering/SKILL.md (SQL-INJECTION.md, INDEXING.md)
-3. performance-engineering/SKILL.md (QUERY-OPTIMIZATION.md, PROFILING.md)
-```
-
-## OUTPUT FORMAT
 
 ### Write Mode Output
 ```markdown
@@ -268,9 +223,3 @@ Load:
 3. [Performance optimization]
 4. [Documentation improvement]
 
-### Related Skills
-- @database-engineering/SKILL.md (for SQLi, N+1, query optimization)
-- @secops-engineering/SKILL.md (for OWASP Top 10, security best practices)
-- @software-engineering/SKILL.md (for code quality issues)
-- @performance-engineering/SKILL.md (for performance profiling, optimization)
-```

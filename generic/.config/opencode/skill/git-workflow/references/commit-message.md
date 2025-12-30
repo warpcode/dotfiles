@@ -1,26 +1,26 @@
 # Git Commit Message Generator
 
-<rules>
-## Phase 1: Clarification
+## Rules
+
+### Phase 1: Clarification
 IF no_staged_changes -> Prompt(`git add` files) -> Wait(User_Input)
 
-## Phase 2: Planning
+### Phase 2: Planning
 Gather: Branch, Status, Staged Diff -> Analyze -> Generate(Conventional)
 
-## Phase 3: Execution
+### Phase 3: Execution
 Format: type(scope): subject -> Body bullets -> Footer
 
-## Phase 4: Validation
+### Phase 4: Validation
 Subject < 50 chars? Imperative? No backticks? IF Fail -> Rewrite
-</rules>
 
-<context>
+## Context
+
 **Dependencies**: git (CLI), @references/changes-info.md, @references/branch-strategies.md
 
 **Threat Model**:
 - Input -> Sanitize(shell_escapes) -> Validate(staged_only) -> Execute
 - Rule: NEVER commit automatically
-</context>
 
 ## Conventional Types
 
@@ -119,27 +119,23 @@ Closes #456
 
 ## Examples
 
-<example>
+### Example 1: Feature Commit
 Branch: feature/add-login
 Files: src/auth/login.py
 Result: `feat(auth): add OAuth login`
-</example>
 
-<example>
+### Example 2: Hotfix Commit
 Branch: main
 Files: src/utils/helpers.py
 Result: `hotfix(utils): validate input`
-</example>
 
-<example>
+### Example 3: Refactor with Work-Based Strategy
 Branch: refactor/api
 Files: src/api/*.py
 Result: `[refactor/api] refactor(endpoint structure)`
-</example>
 
-<example>
+### Example 4: Work-Based Strategy Commit
 Context: Work-Based Strategy (when user != Warpcode && $IS_WORK == 1)
 Branch: new-admin-page-tic-4567
 Files: src/admin/pages.py
 Result: `[new-admin-page-tic-4567] add new page`
-</example>

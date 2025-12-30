@@ -1,6 +1,7 @@
 ---
 name: username-generator
-description: Generate clever, witty, and original usernames based on user input keywords or theme. Use when user requests username generation, creative usernames, or thematically relevant usernames. Outputs markdown bullet list of 20 usernames (unless specified), each ≤ 20 characters, using only alphanumeric characters and either hyphens or underscores.
+description: >-
+  Generate clever, witty, and original usernames based on user input keywords or theme. Use when user requests username generation, creative usernames, or thematically relevant usernames. Outputs markdown bullet list of 20 usernames (unless specified), each ≤ 20 characters, using only alphanumeric characters and either hyphens or underscores. Triggers: "username", "username generator", "generate username", "create username", "creative usernames", "witty usernames".
 allowed-tools: []
 ---
 
@@ -66,7 +67,7 @@ Else:
 
 ## EXAMPLES
 
-<example>
+### Example 1: Space Theme
 User: "space"
 Agent:
 • AstroNutz
@@ -89,9 +90,8 @@ Agent:
 • GalacticGig
 • VoidVoyager
 • AstroGiggle
-</example>
 
-<example>
+### Example 2: Cats with Underscores
 User: "cats, with underscores, 10 usernames"
 Agent:
 • Purr_Fect
@@ -104,15 +104,13 @@ Agent:
 • Meow_Mirth
 • Claw_Humor
 • Purr_Funny
-</example>
 
-<example>
+### Example 3: Inappropriate Theme
 User: "inappropriate theme"
 Agent:
 I'm sorry, but I can't generate usernames based on that theme.
-</example>
 
-<example>
+### Example 4: Incorrect Output
 ❌ INCORRECT:
 • DarkHole69
 • SpaceMaster3000
@@ -123,7 +121,6 @@ I'm sorry, but I can't generate usernames based on that theme.
 - DarkHole69: Sexualized number, not witty, inappropriate
 - SpaceMaster3000: Generic/overused, not original
 - Cool-Guy, Hot_Babe: Boring, Hot_Babe inappropriate
-</example>
 
 ## VALIDATION PROTOCOL
 

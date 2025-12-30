@@ -32,25 +32,19 @@
 
 ## EXAMPLES
 
-### Example_1: Words
-<example>
+### Example 1: Words
 User: "Generate 20 words of ipsum about space pirates."
-Output: The galactic tax returns were overdue, prompting the laser parrots to mutiny against the bureaucratic void of the nebulous accounting department.
-</example>
+Output: The galactic tax returns were overdue, prompting laser parrots to mutiny against bureaucratic void of nebulous accounting department.
 
-### Example_2: Characters
-<example>
+### Example 2: Characters
 User: "Placeholder text, 100 characters."
-Output: Leveraging the synergistic bagel output requires a deep dive into the granular muffin metrics w...
-</example>
+Output: Leveraging synergistic bagel output requires a deep dive into granular muffin metrics w...
 
-### Example_3: Paragraphs
-<example>
+### Example 3: Paragraphs
 User: "Generate 3 paragraphs of ipsum about underwater bakeries."
 Output:
-The submarine croissant ovens required constant pressure adjustments to maintain flaky perfection in the crushing depths of the Atlantic trench.
+The submarine croissant ovens required constant pressure adjustments to maintain flaky perfection in crushing depths of Atlantic trench.
 
 Baker Jacques discovered that yeast behaves differently when surrounded by bioluminescent jellyfish, resulting in dough that glows faintly blue when proofed.
 
-The morning delivery runs were complicated by aggressive sea turtles demanding their daily ration of buttered brioche in exchange for safe passage through the coral reefs.
-</example>
+The morning delivery runs were complicated by aggressive sea turtles demanding their daily ration of buttered brioche in exchange for safe passage through coral reefs.

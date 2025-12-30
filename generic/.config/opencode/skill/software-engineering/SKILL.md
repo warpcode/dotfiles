@@ -35,30 +35,6 @@ Load comprehensive checklists:
 - IF security review -> Load `@security/CODE-INJECTION.md`
 - IF performance review -> Load `@performance/COMMON-ISSUES.md`
 
-## CONTENT STRUCTURE
-```
-software-engineering/
-├── principles/
-│   └── SOLID.md
-├── patterns/
-│   ├── DESIGN-PATTERNS.md
-│   ├── ANTI-PATTERNS.md
-│   └── CODE-SMELLS.md
-├── architecture/
-│   └── CLEAN-ARCHITECTURE.md
-├── design/
-│   └── DESIGN-VIOLATIONS.md
-├── security/
-│   └── CODE-INJECTION.md
-├── performance/
-│   └── COMMON-ISSUES.md
-└── refactoring/
-    ├── CODE-MODERNIZATION.md
-    ├── DEPRECATED-API-REPLACEMENTS.md
-    └── MODERN-LANGUAGE-FEATURES.md
-```
-
-## ROUTING LOGIC
 ### Progressive Loading (Write Mode)
 - **IF** request mentions "SOLID", "principles", "clean code" -> READ FILE: `@principles/SOLID.md`
 - **IF** request mentions specific pattern ("factory", "strategy", "observer") -> READ FILE: `@patterns/DESIGN-PATTERNS.md`
@@ -181,19 +157,19 @@ software-engineering/
 
 ## EXECUTION PROTOCOL
 
-### Phase 1: Analysis
+### Phase 1: Clarification
 1. **Detect Mode**: WRITE vs REVIEW based on keywords
 2. **Detect Context**: Language, framework, specific patterns mentioned
 3. **Load Patterns**: Progressive (write) or Exhaustive (review)
 
-### Phase 2: Execution (Write Mode)
+### Phase 2: Planning
 1. Load relevant pattern references
 2. Implement according to pattern guidelines
 3. Apply SOLID principles
 4. Consider security implications
 5. Provide code examples in detected language
 
-### Phase 3: Execution (Review Mode)
+### Phase 3: Execution
 1. Load all checklist references
 2. Systematically check each category:
    - Code smells (long methods, deep nesting, duplicate code)
@@ -209,38 +185,6 @@ software-engineering/
 - Ensure examples use detected language/framework
 - Validate security best practices applied
 
-## MULTI-DOMAIN LOADING
-### When to Load Additional Skills
-
-**Context Detection Triggers**:
-- **Database Queries**: If SQL queries, database operations, or data persistence mentioned -> LOAD: `@database-engineering/SKILL.md`
-- **Performance Concerns**: If slow queries, performance issues, or timeouts mentioned -> LOAD: `@performance-engineering/performance/RESOURCE-LEAKS.md`
-- **Security Concerns**: If SQLi, injection vulnerabilities, or security mentioned -> LOAD: `@secops-engineering/owasp/OWASP-TOP10.md`, `@secops-engineering/security/INPUT-VALIDATION.md`
-- **Code Quality**: If refactoring, modernization, or code quality mentioned -> LOAD: `@software-engineering/patterns/CODE-SMELLS.md` (internal reference)
-- **Architecture**: If database architecture, data modeling, or system design mentioned -> LOAD: `@software-engineering/architecture/CLEAN-ARCHITECTURE.md`
-
-**Detection Rules**:
-1. **Analyze Request**: Scan for keywords and file types
-2. **Determine Context**: Identify primary domain (software) and secondary domains
-3. **Load Primary Skill**: This skill (software-engineering) with appropriate patterns
-4. **Load Secondary Skills**: If secondary domain detected, load relevant skill from that skill's SKILL.md
-
-**Example Scenario**:
-```
-User: "Review this PHP code for SQL injection and performance issues"
-
-Analysis:
-- Primary: software (PHP code review)
-- Secondary 1: database (SQL injection)
-- Secondary 2: performance (performance issues)
-
-Load:
-1. software-engineering/SKILL.md (REVIEW-MODE)
-2. database-engineering/SKILL.md (SQL-INJECTION.md)
-3. performance-engineering/SKILL.md (RESOURCE-LEAKS.md)
-```
-
-## OUTPUT FORMAT
 
 ### Write Mode Output
 ```markdown

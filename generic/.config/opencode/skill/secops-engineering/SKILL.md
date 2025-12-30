@@ -38,23 +38,6 @@ Load comprehensive checklists:
 - IF vulnerability scan requested -> Load `@vulnerability/VULNERABILITY-SCANNING.md` + OWASP patterns
 - IF compliance audit requested -> Load `@compliance/SOC2-GDPR.md` + security patterns
 
-## CONTENT STRUCTURE
-```
-secops-engineering/
-├── owasp/
-│   └── OWASP-TOP10.md
-├── security/
-│   ├── AUTHENTICATION.md
-│   ├── INPUT-VALIDATION.md
-│   ├── FILE-UPLOAD.md
-│   └── SECURITY-HEADERS.md
-├── compliance/
-│   └── SOC2-GDPR.md
-└── vulnerability/
-    └── VULNERABILITY-SCANNING.md
-```
-
-## ROUTING LOGIC
 ### Progressive Loading (Write Mode)
 - **IF** request mentions "authentication", "login", "OAuth", "JWT", "SAML", "OIDC" -> READ FILE: `@security/AUTHENTICATION.md`
 - **IF** request mentions "input validation", "SQL injection", "XSS", "CSRF" -> READ FILE: `@security/INPUT-VALIDATION.md`
@@ -193,19 +176,19 @@ secops-engineering/
 
 ## EXECUTION PROTOCOL
 
-### Phase 1: Analysis
+### Phase 1: Clarification
 1. **Detect Mode**: WRITE vs REVIEW based on keywords
 2. **Detect Context**: Language, framework, specific security concerns
 3. **Load Patterns**: Progressive (write) or Exhaustive (review)
 
-### Phase 2: Execution (Write Mode)
+### Phase 2: Planning
 1. Load relevant security pattern references
 2. Implement security controls according to OWASP/industry standards
 3. Apply defense in depth
 4. Provide framework-specific examples
 5. Validate implementation against security best practices
 
-### Phase 3: Execution (Review Mode)
+### Phase 3: Execution
 1. Load all security checklist references
 2. Systematically check each category:
    - Authentication (weak passwords, session management, OAuth2/JWT issues)
@@ -226,37 +209,6 @@ secops-engineering/
 - Ensure compliance with relevant regulations (SOC2, GDPR, PCI-DSS)
 - Validate no security trade-offs (no "it's fine, it's internal")
 
-## MULTI-DOMAIN LOADING
-### When to Load Additional Skills
-
-**Context Detection Triggers**:
-- **Database Operations**: If SQL queries, schema changes, or data persistence mentioned -> LOAD: `@database-engineering/SKILL.md`
-- **Performance Issues**: If slow queries, resource exhaustion, or timeouts mentioned -> LOAD: `@performance-engineering/performance/RESOURCE-LEAKS.md`
-- **Security Vulnerabilities**: If authentication, authorization, or security concerns mentioned -> LOAD: `@secops-engineering/owasp/OWASP-TOP10.md`, `@secops-engineering/security/INPUT-VALIDATION.md`
-- **Code Quality**: If refactoring, modernization, or code quality mentioned -> LOAD: `@software-engineering/patterns/CODE-SMELLS.md` (internal reference)
-
-**Detection Rules**:
-1. **Analyze Request**: Scan for keywords and file types
-2. **Determine Context**: Identify primary domain (secops) and secondary domains
-3. **Load Primary Skill**: This skill (secops-engineering) with appropriate patterns
-4. **Load Secondary Skills**: If secondary domain detected, load relevant skill from that skill's SKILL.md
-
-**Example Scenario**:
-```
-User: "Review this PHP code for SQL injection and file upload vulnerabilities"
-
-Analysis:
-- Primary: security (PHP code review)
-- Secondary 1: database (SQL injection)
-- Secondary 2: software (PHP context)
-
-Load:
-1. secops-engineering/SKILL.md (REVIEW-MODE)
-2. database-engineering/SKILL.md (SQL-INJECTION.md)
-3. software-engineering/SKILL.md (for PHP-specific context)
-```
-
-## OUTPUT FORMAT
 
 ### Write Mode Output
 

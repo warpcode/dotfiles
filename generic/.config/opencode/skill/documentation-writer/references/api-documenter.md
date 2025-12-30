@@ -1,14 +1,12 @@
-<rules>
 ## CORE_RULES
 - Golden_Rule: Aggressively use reusable `components` + `$ref` (DRY principle)
 - Constraint: Same schema/parameter > 1 location == FALSE
 - Output_Format: yaml (default) OR json (user_preference)
 - Security: Validate all user inputs before API design
-</rules>
 
-<context>
-## MODES
-### Workflow_1: Design_First (New API)
+## CONTEXT: MODES
+
+### Workflow 1: Design First (New API)
 1. Identify Resources (e.g., Posts, Users, Products)
 2. Define Reusable Schemas (`components/schemas`) — FIRST STEP
 3. Define Reusable Parameters/Responses (`components/parameters`, `components/responses`)
@@ -16,18 +14,18 @@
 5. Reference Components (use `$ref` in operations)
 6. Generate File (`write` -> `swagger.yaml`)
 
-### Workflow_2: Code_First (Existing API)
+### Workflow 2: Code First (Existing API)
 1. Announce Analysis Phase
 2. Leverage Codebase Context:
-   - Search for available tools/skills/agents/subagents that can analyze routing/endpoints, methods, URL params, middleware
-   - Search for available tools/skills/agents/subagents that can analyze model/database schemas for property definitions
-   - Extract existing docblocks for endpoint descriptions (see `@references/docblock-writer.md`)
+    - Search for available tools/skills/agents/subagents that can analyze routing/endpoints, methods, URL params, middleware
+    - Search for available tools/skills/agents/subagents that can analyze model/database schemas for property definitions
+    - Extract existing docblocks for endpoint descriptions (see `@references/docblock-writer.md`)
 3. Synthesize/Structure: Apply Golden_Rule, define repeated structures ONCE in `components/schemas`
 4. Generate File (`write` -> `swagger.yaml`)
-</context>
 
-<examples>
-### OpenAPI_3.0_Structure
+## EXAMPLES
+
+### OpenAPI 3.0 Structure
 ```yaml
 openapi: 3.0.0
 info:
@@ -84,9 +82,8 @@ components:
     NotFound:
       description: The specified resource was not found.
 ```
-</examples>
 
-<execution_protocol>
+## EXECUTION PROTOCOL
 1. Determine Mode (Design_First OR Code_First)
 2. Design_First:
    - Identify resources

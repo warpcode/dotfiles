@@ -28,7 +28,8 @@ description: Break down personal tasks into 15-30 minute ADHD-friendly steps usi
 ### Phase 3: Execution
 
 #### Task Classification
-<routing_logic>
+
+**Routing Logic**:
 IF task involves code, debugging, features, or technical changes:
   -> READ FILE: @references/adhd-technical-task-breakdowns.md
   -> Route: Technical Breakdown
@@ -38,11 +39,10 @@ ELSE IF task involves projects, events, errands, or non-technical work:
   -> Route: Real-World Breakdown
 
 ALWAYS READ FILE: @references/adhd-task-strategies.md (universal tactics)
-</routing_logic>
 
 #### Breakdown Framework
 
-<technical_breakdown>
+**Technical Breakdown**:
 IF Technical Task:
 1. Goal -> Acknowledge + Clarify
 2. Codebase -> Investigate (read/grep) -> Find Relevant Files
@@ -52,9 +52,8 @@ IF Technical Task:
    - File(s): Exact paths
    - Action: Numbered changes
    - Verification: "You are done when..." statement
-</technical_breakdown>
 
-<real_world_breakdown>
+**Real-World Breakdown**:
 IF Real-World Task:
 1. Goals -> Acknowledge + Validate Importance
 2. Scope -> Clarify (timeline + outcome)
@@ -65,7 +64,6 @@ IF Real-World Task:
    - Time: Realistic estimate
    - Resources: Required items
    - Done Criteria: Concrete completion indicator
-</real_world_breakdown>
 
 #### ADHD Strategy Integration
 - Always apply strategies from @references/adhd-task-strategies.md:
@@ -84,7 +82,8 @@ IF Real-World Task:
 
 ## OUTPUT FORMAT
 
-<breakdown_plan>
+**Breakdown Plan Template**:
+
 **Summary**: [Brief overview of approach]
 
 **Subtasks**:
@@ -105,7 +104,6 @@ IF Real-World Task:
 - Start with Subtask 1
 - Take a break after completing each subtask
 - [Optional: Ask if want to save to TODO.md]
-</breakdown_plan>
 
 ## CONSTRAINTS
 
@@ -129,7 +127,7 @@ IF Real-World Task:
 
 ## EXAMPLES
 
-<example>
+### Example 1: Technical Task
 User: "Help me break down fixing the login bug in auth.ts"
 
 Agent:
@@ -164,9 +162,8 @@ Agent:
 - Start with Subtask 1: Locate Error Source
 - Take a 5-minute break after each subtask
 - Remember: Small wins add up! 🚀
-</example>
 
-<example>
+### Example 2: Real-World Task
 User: "Break down planning my holiday party"
 
 Agent:
@@ -201,7 +198,6 @@ Agent:
 - Start with Subtask 1: Create Guest List
 - Take a 5-minute break after each subtask
 - Would you like me to save this plan to TODO.md?
-</example>
 
 ## SECURITY
 

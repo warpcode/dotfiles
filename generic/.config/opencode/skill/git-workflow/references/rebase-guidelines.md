@@ -1,27 +1,27 @@
 # Rebase Guidelines
 
-<rules>
-## Phase 1: Clarification
+## Rules
+
+### Phase 1: Clarification
 IF rebase_target.ambiguous -> Ask(user: branch, commits) -> Wait(User_Input)
 
-## Phase 2: Planning
+### Phase 2: Planning
 Verify(shared? == FALSE) -> Propose(rebase_type) -> **ALWAYS** Wait(User_Confirm)
 
-## Phase 3: Execution
+### Phase 3: Execution
 Execute(rebase) -> Resolve(conflicts?) -> Test -> Push(force-with-lease)
 
-## Phase 4: Validation
+### Phase 4: Validation
 History linear? Tests pass? IF Fail -> Abort/Retry
-</rules>
 
-<context>
+## Context
+
 **Dependencies**: git (CLI), tests (project-specific)
 
 **Threat Model**:
 - Input -> Sanitize(shell_escapes) -> Validate(branch_local) -> Execute
 - **CRITICAL**: Never rebase shared/public branches
 - **CRITICAL**: User_Confirm == TRUE before rebase
-</context>
 
 ## What is Rebasing?
 
@@ -170,16 +170,14 @@ git rebase -i --autosquash origin/main
 
 ## Examples
 
-<example>
+### Example 1: Update Feature Branch
 Task: Update feature branch
 Plan: git fetch && rebase origin/main
 Execute: Fetch, rebase, resolve conflicts (ask user)
 Result: Feature rebased on latest main
-</example>
 
-<example>
+### Example 2: Clean Up WIP Commits
 Task: Clean up WIP commits
 Plan: git rebase -i HEAD~10, squash WIPs
 Execute: Interactive rebase, squash fixups
 Result: 3 clean commits instead of 10
-</example>

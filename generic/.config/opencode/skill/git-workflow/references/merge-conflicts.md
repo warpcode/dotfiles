@@ -1,26 +1,26 @@
 # Merge Conflict Resolution
 
-<rules>
-## Phase 1: Clarification
+## Rules
+
+### Phase 1: Clarification
 IF conflict_type.ambiguous -> Ask(user: describe conflict) -> Wait(User_Input)
 
-## Phase 2: Planning
+### Phase 2: Planning
 Analyze(markers + log + diff) -> Propose(Resolution) -> **ALWAYS** Wait(User_Confirm)
 
-## Phase 3: Execution
+### Phase 3: Execution
 Resolve(edit/accept) -> Test -> Commit
 
-## Phase 4: Validation
+### Phase 4: Validation
 Syntax valid? Tests pass? IF Fail -> Debug/Retry
-</rules>
 
-<context>
+## Context
+
 **Dependencies**: git (CLI), tests (project-specific)
 
 **Threat Model**:
 - Input -> Sanitize(shell_escapes) -> Validate(file_paths) -> Execute
 - **CRITICAL**: User_Confirm == TRUE for ALL resolution operations
-</context>
 
 ## Conflict Markers
 
@@ -140,20 +140,17 @@ Shows: **LOCAL** (yours), **BASE** (ancestor), **REMOTE** (theirs)
 
 ## Examples
 
-<example>
+### Example 1: Import Conflict
 Conflict: Import order
 Analysis: Both added same import
 Resolution: Combine, sort alphabetically
-</example>
 
-<example>
+### Example 2: Function Signature Conflict
 Conflict: Function signature
 Analysis: Parameter types differ
 Resolution: Understand intent, combine parameters
-</example>
 
-<example>
+### Example 3: Deleted File Conflict
 Conflict: Deleted file
 Analysis: Branch A deleted, Branch B modified
 Resolution: Preserve if needed, ask user
-</example>

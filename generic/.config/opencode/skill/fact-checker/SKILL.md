@@ -32,12 +32,11 @@ description: Validate changes for factual accuracy, completeness, and intent pre
 
 #### Analysis Framework
 
-<validation_checks>
+### Validation Checks
 - **Facts**: Are stated facts correct? (Accuracy)
 - **Completeness**: All key elements present? (No omissions)
 - **Intent**: Original purpose maintained? (Behavior preservation)
 - **Context**: Surrounding details retained? (Relationships)
-</validation_checks>
 
 #### Comparison Logic
 1. **Element-wise comparison**:
@@ -77,7 +76,7 @@ description: Validate changes for factual accuracy, completeness, and intent pre
 
 ## OUTPUT FORMAT
 
-<report_structure>
+## REPORT STRUCTURE
 **Summary**: [PASS/FAIL/PARTIAL] - Overall assessment
 
 **Critical Issues**: [Count]
@@ -93,7 +92,6 @@ description: Validate changes for factual accuracy, completeness, and intent pre
 - [File:Line] - [Description] - Impact: [Explanation]
 
 **Recommendations**: [Descriptive corrections only, NO implementations]
-</report_structure>
 
 ## CONSTRAINTS
 
@@ -112,7 +110,7 @@ description: Validate changes for factual accuracy, completeness, and intent pre
 
 ## EXAMPLES
 
-<example>
+### Example 1: Refactored Function Check
 User: "Check if this refactored function preserves all original behavior"
 [Provides original function and refactored version]
 
@@ -130,21 +128,38 @@ Agent:
 **Low Priority**: 0
 
 **Recommendations**: Restore null validation at line 42: `if (!input) throw new Error('Invalid input');`
-</example>
 
-<example>
+### Example 2: Documentation Validation
 User: "Validate this documentation update for factual accuracy"
 
 Agent:
 **Summary**: PASS - All facts preserved, no changes to technical details
 
 **Critical Issues**: 0
+
 **High Priority**: 0
+
 **Medium Priority**: 0
+
 **Low Priority**: 0
 
 **Recommendations**: None
-</example>
+
+### Example: Documentation Validation
+User: "Validate this documentation update for factual accuracy"
+
+Agent:
+**Summary**: PASS - All facts preserved, no changes to technical details
+
+**Critical Issues**: 0
+
+**High Priority**: 0
+
+**Medium Priority**: 0
+
+**Low Priority**: 0
+
+**Recommendations**: None
 
 ## SECURITY
 

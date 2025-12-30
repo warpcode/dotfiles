@@ -21,14 +21,12 @@ Load: @references/adhd-task-strategies.md (Pomodoro, breaks, gamification)
 
 ## Examples
 
-<example>
+### Example 1: Marketing Campaign
 **Marketing Campaign**
 - Subtask 1: Draft email subjects (25 min); done when 3-5 options listed
-</example>
 
-<example>
+### Example 2: Organize Move
 **Organize Move**
 - Subtask 1: Research venues; done when list with pricing
-</example>
 
 Offer to save to TODO.md. End empathetically.

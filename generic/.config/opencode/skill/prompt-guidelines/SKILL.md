@@ -905,6 +905,107 @@ END
 - **Multi-Mode**: Combine multiple mode Behavioral Frameworks if multiple modes detected
 - **Reference**: See "OPERATIONAL MODE FRAMEWORKS" section above for comprehensive guidance on all 7 dimensions per mode
 
+---
+
+## COMPONENT STRUCTURE STANDARDS
+
+### Mandatory Sections (All Action-Taking Components)
+- Purpose (1-sentence goal)
+- Execution Protocol (phases: Clarification, Planning, Execution, Validation)
+- Validation Checklist (verify task execution completed correctly)
+- Examples (clearly marked with `### Example [N]` headers)
+
+### Optional Sections (Use When Applicable)
+- Domain Expertise (domain skills only)
+- Mode Detection (multi-mode only)
+- Loading Strategy (has internal `@` references)
+- Routing Logic (progressive disclosure with `@` references)
+- Context Detection (framework/language detection)
+- When To Use (domain skills)
+- Output Format (complex output requirements)
+- Security Framework (security-sensitive)
+- Dependencies (external tools)
+- Environment Awareness (context-dependent)
+- Glossary (when abbreviations exist - recommended)
+
+### Section Ordering (Mandatory)
+
+#### Skills (Complex/Domain)
+1. Purpose [MANDATORY]
+2. Domain Expertise [OPTIONAL]
+3. Mode Detection [OPTIONAL - Multi-Mode Only]
+4. Loading Strategy [OPTIONAL - Has References]
+5. Routing Logic [OPTIONAL - Progressive Disclosure]
+6. Context Detection [OPTIONAL]
+7. When To Use [OPTIONAL - Domain Skills]
+8. Execution Protocol [MANDATORY]
+9. Output Format [OPTIONAL - Complex Output]
+10. Security Framework [OPTIONAL - Security-Sensitive]
+11. Dependencies [OPTIONAL - External Tools]
+12. Environment Awareness [OPTIONAL - Context-Dependent]
+13. Validation Checklist [MANDATORY]
+14. Examples [RECOMMENDED]
+15. Glossary [RECOMMENDED]
+
+#### Skills (Simple/Utility)
+1. Purpose [MANDATORY]
+2. Core Rules [OPTIONAL - Simple Skills]
+3. Character/Composition Rules [OPTIONAL - Generator Skills]
+4. Execution Protocol [MANDATORY]
+5. Security Framework [OPTIONAL - Security-Sensitive]
+6. Validation Checklist [MANDATORY]
+7. Examples [RECOMMENDED]
+8. Policy [OPTIONAL - Content Policy]
+9. Glossary [RECOMMENDED]
+
+#### Agents
+1. Identity [MANDATORY]
+2. Capabilities [OPTIONAL]
+3. Dependencies [OPTIONAL]
+4. Method [MANDATORY]
+   - Phase 1: Clarification [MANDATORY]
+   - Phase 2: Planning [MANDATORY]
+   - Phase 3: Execution [MANDATORY]
+   - Phase 4: Validation [MANDATORY]
+5. Cognitive Process [OPTIONAL]
+6. Security & Validation [OPTIONAL]
+7. Output Format [OPTIONAL]
+8. Constraints [OPTIONAL]
+9. Examples [RECOMMENDED]
+10. Glossary [RECOMMENDED]
+
+#### Commands
+1. Execution Protocol [MANDATORY]
+   - Phase 1: Clarification [MANDATORY]
+   - Phase 2: Planning [MANDATORY]
+   - Phase 3: Execution [MANDATORY]
+   - Phase 4: Validation [MANDATORY]
+2. Dependencies [OPTIONAL]
+3. Threat Model [OPTIONAL]
+4. User Input [OPTIONAL]
+5. Execution Steps [MANDATORY]
+6. Examples [RECOMMENDED]
+7. Glossary [RECOMMENDED]
+
+### Execution Phases
+- Phase 1: Clarification (research, ask questions, validate understanding)
+- Phase 2: Planning (propose approach, confirm if high-impact)
+- Phase 3: Execution (atomic steps, validate each step)
+- Phase 4: Validation (final checklist, self-correct if fails)
+
+### Critical Constraints
+- **NO XML-style tags**: Use markdown headers only
+- **Skills NEVER load other skills**: Only reference internal `@` files
+- **Agents/Commands CAN load skills**: Use `skill(skill-id)` syntax
+- **Validation Checklist**: Verify task execution, not file structure
+
+### Reference Template Locations
+- Skills: `prompt-guidelines/templates/skills-template.md`
+- Agents: `prompt-guidelines/templates/agents-template.md`
+- Commands: `prompt-guidelines/templates/commands-template.md`
+
+---
+
 ## GLOSSARY
 
 **STM**: Structured Telegraphic Markdown (concise, keyword-driven documentation format)  

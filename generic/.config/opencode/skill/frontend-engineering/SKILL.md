@@ -36,22 +36,6 @@ Load comprehensive checklists:
 - IF security review requested -> Load `@security/XSS-PROTECTION.md`
 - IF performance review requested -> Load all performance patterns
 
-## CONTENT STRUCTURE
-```
-frontend-engineering/
-├── architecture/
-│   └── COMPONENT-ARCHITECTURE.md
-├── state/
-│   └── STATE-MANAGEMENT.md
-├── accessibility/
-│   └── WCAG.md
-├── security/
-│   └── XSS-PROTECTION.md
-└── performance/
-    ├── LAZY-LOADING.md
-    └── ASSET-OPTIMIZATION.md
-```
-
 ## ROUTING LOGIC
 ### Progressive Loading (Write Mode)
 - **IF** request mentions "component", "UI", "interface" -> READ FILE: `@architecture/COMPONENT-ARCHITECTURE.md`
@@ -106,13 +90,13 @@ frontend-engineering/
 
 ## EXECUTION PROTOCOL
 
-### Phase 1: Analysis
+### Phase 1: Clarification
 1. **Detect Mode**: WRITE vs REVIEW based on keywords
 2. **Detect Context**: Framework (React/Vue/Angular), language (JavaScript/TypeScript), UI libraries
 3. **Load Patterns**: Progressive (write) or Exhaustive (review)
 4. **Detect Multi-Domain**: Check if additional skills needed (security, performance, API)
 
-### Phase 2: Execution (Write Mode)
+### Phase 2: Planning
 1. Load relevant frontend pattern references
 2. Implement component architecture according to framework conventions
 3. Apply state management best practices
@@ -121,7 +105,7 @@ frontend-engineering/
 6. Implement performance optimizations (lazy loading, code splitting)
 7. Provide framework-specific examples
 
-### Phase 3: Execution (Review Mode)
+### Phase 3: Execution
 1. Load all frontend checklist references
 2. Systematically check each category:
    - Component architecture (prop drilling, component coupling)
@@ -137,36 +121,6 @@ frontend-engineering/
 - Validate XSS prevention (sanitization, CSP)
 - Ensure performance optimizations applied
 - Check for cross-references (MUST be within skill only)
-
-## MULTI-DOMAIN LOADING
-### When to Load Additional Skills
-
-**Context Detection Triggers**:
-- **API Integration**: If fetching data from API -> LOAD: `@api-engineering/SKILL.md`
-- **Security Concerns**: If XSS, CSRF, or security mentioned -> LOAD: `@secops-engineering/SKILL.md`
-- **Performance Issues**: If frontend performance, bundle size, or load times mentioned -> LOAD: `@performance-engineering/SKILL.md`
-- **Code Quality**: If refactoring, modernization, or code quality mentioned -> LOAD: `@software-engineering/SKILL.md`
-
-**Detection Rules**:
-1. **Analyze Request**: Scan for keywords and file types
-2. **Determine Context**: Identify primary domain (frontend) and secondary domains
-3. **Load Primary Skill**: This skill (frontend-engineering) with appropriate patterns
-4. **Load Secondary Skills**: If secondary domain detected, load relevant skill from that skill's SKILL.md
-
-**Example Scenario**:
-```
-User: "Review this React component for XSS and performance issues"
-
-Analysis:
-- Primary: frontend (React component)
-- Secondary 1: security (XSS)
-- Secondary 2: performance (performance issues)
-
-Load:
-1. frontend-engineering/SKILL.md (REVIEW-MODE)
-2. secops-engineering/SKILL.md (OWASP-TOP10.md, INPUT-VALIDATION.md)
-3. performance-engineering/SKILL.md (RESOURCE-LEAKS.md, PROFILING.md)
-```
 
 ## OUTPUT FORMAT
 
@@ -248,9 +202,4 @@ Load:
 2. [Accessibility improvement]
 3. [Security improvement]
 4. [Performance optimization]
-
-### Related Skills
-- @api-engineering/SKILL.md (for API integration)
-- @secops-engineering/SKILL.md (for security beyond XSS)
-- @performance-engineering/SKILL.md (for performance profiling)
 ```

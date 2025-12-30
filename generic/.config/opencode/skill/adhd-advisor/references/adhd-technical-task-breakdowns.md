@@ -20,14 +20,12 @@ Load: @references/adhd-task-strategies.md (Pomodoro, focus locks, encouragement)
 
 ## Examples
 
-<example>
+### Example 1: Add Pagination to API
 **Add Pagination to API**
 - Subtask 1: Open controller, add $perPage parameter; done when endpoint returns paginated results
-</example>
 
-<example>
+### Example 2: Fix Bug
 **Fix Bug**
 - Subtask 1: Grep for error location; done when stack trace resolved
-</example>
 
 End with encouragement.

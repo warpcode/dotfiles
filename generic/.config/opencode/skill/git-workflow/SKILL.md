@@ -1,34 +1,36 @@
 ---
 name: git-workflow
-description: Route ALL git operations to appropriate resources. Load reference files before responding. Covers status, diff, log, commits, branches, conflicts, rebasing, code review.
+description: >-
+  Route ALL git operations to appropriate resources. Load reference files before responding. Covers status, diff, log, commits, branches, conflicts, rebasing, code review. Use when: git operations, checking status, viewing diffs, reviewing commits, managing branches, resolving conflicts, rebasing, code reviews. Triggers: "git", "status", "diff", "log", "commit", "branch", "merge", "conflict", "rebase", "review", "code review", "stash", "cherry-pick", "pull", "push", "fetch".
 ---
 
 # Git Workflow Orchestrator
 
-<rules>
-## Phase 1: Clarification (Ask)
+## EXECUTION PROTOCOL
+
+### Phase 1: Clarification
 IF query.ambiguous != FALSE -> List(Missing_Info) -> Wait(User_Input)
 
-## Phase 2: Planning (Think)
+### Phase 2: Planning
 Propose(Route: ref OR cmd + tools + impacts). IF impact > Low -> Wait(User_Confirm)
 
-## Phase 3: Execution (Do)
+### Phase 3: Execution
 Execute(Route: READ @references/* -> Parse -> Format). Validate EACH step.
 
-## Phase 4: Validation (Check)
+### Phase 4: Validation
 Final_Checklist: Correct? Safe? Complete? IF Fail -> Self_Correct.
-</rules>
 
-<context>
-**Dependencies**: git (CLI), gh (GitHub CLI - optional), Bash (ask)
+## DEPENDENCIES
+- git (CLI)
+- gh (GitHub CLI - optional)
+- Bash (ask)
 
-**Threat Model**:
+## SECURITY FRAMEWORK
 - Input -> Sanitize() -> Validate(Safe) -> Execute
 - Destructive_Op (push, force, reset) -> User_Confirm == TRUE
 - Rule: NEVER commit/push without EXPLICIT user permission
-</context>
 
-## Routing Logic
+## ROUTING LOGIC
 
 ```
 IF intent in ["status", "diff", "log", "changes", "info", "url"]:
@@ -55,7 +57,7 @@ ELSE:
   -> Execute(git cmd) -> Format(MD/bullets)
 ```
 
-## Operational Standards
+## OPERATIONAL STANDARDS
 
 1. **Load References**: READ @references/* before responding
 2. **Progressive Disclosure**: Main < 500 lines, Details -> @references/
@@ -63,22 +65,19 @@ ELSE:
 4. **Error Handling**: Suggest auth, fallback git, summarize large
 5. **Security**: Destructive ops -> User_Confirm (Y/N required)
 
-## Execution Examples
+## EXAMPLES
 
-<example>
+### Example 1
 User: "What's the status?"
 Plan: READ @references/changes-info.md -> git status -> format
 Result: Clean bullet list of changes
-</example>
 
-<example>
+### Example 2
 User: "Generate commit message"
 Plan: READ @references/commit-message.md -> git diff --staged -> generate
 Result: Code block with conventional commit
-</example>
 
-<example>
+### Example 3
 User: "Help with merge conflict"
 Plan: READ @references/merge-conflicts.md -> explain markers -> guide resolution -> confirm
 Result: Step-by-step resolution with approval required
-</example>
