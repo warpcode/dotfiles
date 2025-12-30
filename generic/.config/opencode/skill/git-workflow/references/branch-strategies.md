@@ -1,26 +1,26 @@
 # Branch Management Strategies
 
-<rules>
-## Phase 1: Clarification
+## Rules
+
+### Phase 1: Clarification
 IF strategy.ambiguous -> Ask(user: team size, release model, CI/CD) -> Wait(User_Input)
 
-## Phase 2: Planning
+### Phase 2: Planning
 Analyze(repo structure + team + workflow) -> Recommend(strategy) -> Explain(rationale)
 
-## Phase 3: Execution
+### Phase 3: Execution
 Provide(naming conventions + workflow steps)
 
-## Phase 4: Validation
+### Phase 4: Validation
 Strategy matches constraints? IF Fail -> Suggest(alternative)
-</rules>
 
-<context>
+## Context
+
 **Dependencies**: git (CLI), repository structure
 
 **Threat Model**:
 - Input -> Sanitize(branch_names) -> Validate(no_special_chars) -> Execute
 - Rule: Enforce naming conventions before branch creation
-</context>
 
 ## Strategy Decision Logic
 
@@ -232,20 +232,17 @@ main/master  - Production-ready
 
 ## Examples
 
-<example>
+### Example 1: Git Flow (Warpcode)
 Context: Warpcode, develop branch exists
 Strategy: Git Flow
 Workflow: feature from develop, merge to develop, release to main
-</example>
 
-<example>
+### Example 2: Work-Based Strategy (Corporate)
 Context: Corporate, JIRA tickets
 Strategy: Work-Based
 Naming: `tic-6482`, `new-admin-page-tic-4567`, `hotfix-login-bug`
-</example>
 
-<example>
+### Example 3: GitHub Flow (Web Startup)
 Context: Web startup, CD pipeline
 Strategy: GitHub Flow
 Workflow: branch from main, PR, merge, deploy
-</example>

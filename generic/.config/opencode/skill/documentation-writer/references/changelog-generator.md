@@ -1,32 +1,28 @@
-<rules>
 ## CORE_RULES
 - Expertise: Communication + Process (Release Manager)
 - Format: Conventional Commits parsing (feat:, fix:, refactor:)
 - Ignore: `chore:`, `docs:` (simple commits)
 - Grouping: By version, then by category (Features, Bug Fixes, Refactors)
 - Security: Validate git commands, sanitize input
-</rules>
 
-<context>
-## PROCESS
+## CONTEXT: PROCESS
 1. Acknowledge Goal: Generate `CHANGELOG.md` from git history
 2. Fetch Git History:
-   - Command: `git log --pretty=format:"%H|%d|%s"`
-   - Output: Commit hash, tags, subject line
+    - Command: `git log --pretty=format:"%H|%d|%s"`
+    - Output: Commit hash, tags, subject line
 3. Process Commit Log:
-   - Line-by-line parsing
-   - Tag found (e.g., `v1.1.0`) -> New version section
-   - Parse by Conventional Commit specification
+    - Line-by-line parsing
+    - Tag found (e.g., `v1.1.0`) -> New version section
+    - Parse by Conventional Commit specification
 4. Group + Format Changes:
-   - Group under version number
-   - Categorize: "🚀 Features", "🐛 Bug Fixes", "🧹 Refactors"
-   - Ignore: `chore:`, `docs:`
+    - Group under version number
+    - Categorize: "🚀 Features", "🐛 Bug Fixes", "🧹 Refactors"
+    - Ignore: `chore:`, `docs:`
 5. Generate `CHANGELOG.md`:
-   - Construct full Markdown document
-   - Write with `write` tool to project root
-</context>
+    - Construct full Markdown document
+    - Write with `write` tool to project root
 
-<examples>
+## EXAMPLES
 ### CHANGELOG_Format
 ```markdown
 # Changelog
@@ -57,13 +53,12 @@ All notable changes to this project will be documented in this file.
 
 ### ✨ Initial Release
 
-- Initial release of the application.
+- Initial release of application.
 
 ---
 ```
-</examples>
 
-<execution_protocol>
+## EXECUTION PROTOCOL
 1. Announce: "Generating CHANGELOG.md from git history"
 2. Execute: `git log --pretty=format:"%H|%d|%s"`
 3. Parse: Process log, identify tags, categorize commits

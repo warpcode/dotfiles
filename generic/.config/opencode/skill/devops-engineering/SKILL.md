@@ -36,21 +36,6 @@ Load comprehensive checklists:
 - IF security review requested -> Load `@security/CONTAINER-SECURITY.md` + security patterns
 - IF deployment issues -> Load `@release/RELEASE-STRATEGIES.md` + infrastructure patterns
 
-## CONTENT STRUCTURE
-```
-devops-engineering/
-├── infrastructure/
-│   ├── CI-CD.md
-│   ├── CONTAINERIZATION.md
-│   ├── IAC.md
-│   └── OBSERVABILITY.md
-├── security/
-│   └── CONTAINER-SECURITY.md
-└── release/
-    └── RELEASE-STRATEGIES.md
-```
-
-## ROUTING LOGIC
 ### Progressive Loading (Write Mode)
 - **IF** request mentions "CI", "CD", "pipeline", "build", "deploy" -> READ FILE: `@infrastructure/CI-CD.md`
 - **IF** request mentions "Docker", "container", "image" -> READ FILE: `@infrastructure/CONTAINERIZATION.md`
@@ -213,19 +198,19 @@ devops-engineering/
 
 ## EXECUTION PROTOCOL
 
-### Phase 1: Analysis
+### Phase 1: Clarification
 1. **Detect Mode**: WRITE vs REVIEW based on keywords
 2. **Detect Context**: Platform (Docker, K8s, Terraform), application type
 3. **Load Patterns**: Progressive (write) or Exhaustive (review)
 
-### Phase 2: Execution (Write Mode)
+### Phase 2: Planning
 1. Load relevant pattern references
 2. Implement infrastructure according to best practices
 3. Apply security hardening
 4. Consider observability (metrics, logs, traces)
 5. Provide platform-specific examples
 
-### Phase 3: Execution (Review Mode)
+### Phase 3: Execution
 1. Load all checklist references
 2. Systematically check each category:
    - Infrastructure (CI/CD, containers, IaC)
@@ -240,37 +225,6 @@ devops-engineering/
 - Ensure observability is comprehensive
 - Validate rollback mechanisms exist
 
-## MULTI-DOMAIN LOADING
-### When to Load Additional Skills
-
-**Context Detection Triggers**:
-- **Database Operations**: If database queries, schema changes, or data persistence mentioned -> LOAD: `@database-engineering/SKILL.md`
-- **Performance Issues**: If slow services, resource exhaustion, or infrastructure performance mentioned -> LOAD: `@performance-engineering/SKILL.md`
-- **Security Concerns**: If container security, secrets management, or security hardening mentioned -> LOAD: `@secops-engineering/SKILL.md`
-- **Code Quality**: If code architecture or refactoring mentioned -> LOAD: `@software-engineering/SKILL.md`
-
-**Detection Rules**:
-1. **Analyze Request**: Scan for keywords and file types
-2. **Determine Context**: Identify primary domain (devops) and secondary domains
-3. **Load Primary Skill**: This skill (devops-engineering) with appropriate patterns
-4. **Load Secondary Skills**: If secondary domain detected, load relevant skill from that skill's SKILL.md
-
-**Example Scenario**:
-```
-User: "Review this Dockerfile and MySQL configuration for security and performance"
-
-Analysis:
-- Primary: devops (Dockerfile, infrastructure)
-- Secondary 1: database (MySQL configuration)
-- Secondary 2: security (security review)
-
-Load:
-1. devops-engineering/SKILL.md (REVIEW-MODE)
-2. database-engineering/SKILL.md (SQL-INJECTION.md, INDEXING.md)
-3. secops-engineering/SKILL.md (CONTAINER-SECURITY.md)
-```
-
-## OUTPUT FORMAT
 
 ### Write Mode Output
 ```markdown

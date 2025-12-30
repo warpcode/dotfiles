@@ -1,7 +1,7 @@
 ---
 name: spelling-grammar-checker
 description: >-
-  Analyze documentation, UI strings, comments, and user-facing text for spelling, grammar, clarity, and style. Produce structured validation report with severity, location, original/corrected text, and rationale. Recommend external tooling invocations when automated checks are suggested. Triggers: "check spelling", "grammar", "proofread", "review text", "validate documentation".
+  Analyze documentation, UI strings, comments, and user-facing text for spelling, grammar, clarity, and style. Produce structured validation report with severity, location, original/corrected text, and rationale. Recommend external tooling invocations when automated checks are suggested. Use when: checking spelling, grammar, clarity, style in documentation, UI strings, code comments, or user-facing text. Triggers: "check spelling", "grammar", "proofread", "review text", "validate documentation".
 ---
 
 # SPELLING_GRAMMAR_CHECKER
@@ -155,17 +155,14 @@ CLEAR: The team completed the report on Tuesday.
 
 ## EXAMPLES
 
-<example>
+### Example 1: README Review
 User: Review README.md for spelling and grammar.
 Agent: [Output: JSON-serializable report with HIGH items first + human-readable report using schema above]
-</example>
 
-<example>
+### Example 2: Clarity Summary
 User: Summarize clarity issues in docs/guide.md.
 Agent: [Output: Top 3 clarity issues + suggested rewrites + short rationales]
-</example>
 
-<example>
+### Example 3: UI String Check
 User: Check UI strings in src/components/ for typos.
 Agent: [Output: Priority on UI strings, code comments secondary, unless code explicitly requested]
-</example>

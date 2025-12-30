@@ -1,26 +1,26 @@
 # Git Info Retrieval
 
-<rules>
-## Phase 1: Clarification
+## Rules
+
+### Phase 1: Clarification
 IF query.ambiguous -> List(Missing: local/remote, specific operation) -> Wait(User_Input)
 
-## Phase 2: Planning
+### Phase 2: Planning
 Route: gh (GitHub) OR git (local). IF auth_missing -> Suggest(`gh auth login`)
 
-## Phase 3: Execution
+### Phase 3: Execution
 Parse -> Execute -> Format(MD/bullets/KV)
 
-## Phase 4: Validation
+### Phase 4: Validation
 Output == Expected_Format? Auth_Valid? IF Fail -> Suggest/Fallback
-</rules>
 
-<context>
+## Context
+
 **Dependencies**: git (CLI), gh (GitHub CLI - optional)
 
 **Threat Model**:
 - Input -> Sanitize(shell_escapes) -> Validate(path_exists) -> Execute
 - Private repos: Verify auth before operations
-</context>
 
 ## Routing Logic
 
@@ -74,14 +74,12 @@ ELSE IF target == "local" (status/branches/commits):
 
 ## Examples
 
-<example>
+### Example 1: PR Status
 User: "Show PR status"
 Route: gh PR view -> Format metadata
 Result: PR #123 open, 3 files changed, 2 reviews
-</example>
 
-<example>
+### Example 2: Changed Files
 User: "What's changed?"
 Route: git status + diff -> Format bullets + MD diff
 Result: 2 modified files, 1 new feature
-</example>

@@ -33,18 +33,6 @@ Load comprehensive checklists:
 - IF middleware review requested -> Load `@middleware/MIDDLEWARE-ANALYSIS.md`
 - IF security review requested -> Load `@validation/PARAMETER-VALIDATION.md`
 
-## CONTENT STRUCTURE
-```
-routing-engineering/
-├── discovery/
-│   └── ROUTE-DISCOVERY.md
-├── middleware/
-│   └── MIDDLEWARE-ANALYSIS.md
-└── validation/
-    └── PARAMETER-VALIDATION.md
-```
-
-## ROUTING LOGIC
 ### Progressive Loading (Write Mode)
 - **IF** request mentions "route discovery", "find routes", "endpoint listing" -> READ FILE: `@discovery/ROUTE-DISCOVERY.md`
 - **IF** request mentions "middleware", "middleware chain", "request/response pipeline" -> READ FILE: `@middleware/MIDDLEWARE-ANALYSIS.md`
@@ -102,13 +90,13 @@ routing-engineering/
 
 ## EXECUTION PROTOCOL
 
-### Phase 1: Analysis
+### Phase 1: Clarification
 1. **Detect Mode**: WRITE vs REVIEW based on keywords
 2. **Detect Context**: Framework, API style, versioning strategy
 3. **Load Patterns**: Progressive (write) or Exhaustive (review)
 4. **Detect Multi-Domain**: Check if additional skills needed (database, security, API)
 
-### Phase 2: Execution (Write Mode)
+### Phase 2: Planning
 1. Load relevant routing pattern references
 2. Design routes according to framework conventions
 3. Apply parameter validation
@@ -117,7 +105,7 @@ routing-engineering/
 6. Follow framework-specific routing patterns
 7. Prevent URL injection vulnerabilities
 
-### Phase 3: Execution (Review Mode)
+### Phase 3: Execution
 1. Load all routing checklist references
 2. Systematically check each category:
    - Route discovery (missing routes, conflicts)
@@ -135,35 +123,6 @@ routing-engineering/
 - Check for URL injection vulnerabilities
 - Check for cross-references (MUST be within skill only)
 
-## MULTI-DOMAIN LOADING
-### When to Load Additional Skills
-
-**Context Detection Triggers**:
-- **Database Operations**: If route parameters used in queries -> LOAD: `@database-engineering/SKILL.md`
-- **Security Concerns**: If authentication, authorization, or URL injection mentioned -> LOAD: `@secops-engineering/SKILL.md`
-- **API Design**: If API structure, REST, or GraphQL mentioned -> LOAD: `@api-engineering/SKILL.md`
-- **Performance Issues**: If slow routing, middleware performance mentioned -> LOAD: `@performance-engineering/SKILL.md`
-
-**Detection Rules**:
-1. **Analyze Request**: Scan for keywords and file types
-2. **Determine Context**: Identify primary domain (routing) and secondary domains
-3. **Load Primary Skill**: This skill (routing-engineering) with appropriate patterns
-4. **Load Secondary Skills**: If secondary domain detected, load relevant skill from that skill's SKILL.md
-
-**Example Scenario**:
-```
-User: "Review this Laravel routing for middleware issues and SQL injection in route parameters"
-
-Analysis:
-- Primary: routing (Laravel routing)
-- Secondary 1: database (SQL injection)
-
-Load:
-1. routing-engineering/SKILL.md (MIDDLEWARE-ANALYSIS.md, PARAMETER-VALIDATION.md)
-2. database-engineering/SKILL.md (SQL-INJECTION.md)
-```
-
-## OUTPUT FORMAT
 
 ### Write Mode Output
 ```markdown
@@ -245,8 +204,3 @@ Load:
 3. [Parameter validation enhancement]
 4. [URL pattern improvement]
 
-### Related Skills
-- @database-engineering/SKILL.md (for SQLi, parameter usage in queries)
-- @secops-engineering/SKILL.md (for OWASP Top 10, security best practices)
-- @api-engineering/SKILL.md (for API design, versioning)
-```

@@ -7,7 +7,7 @@ description: >-
 ## PHASES
 
 ### Phase 1: Clarification (Ask)
-IF intent.ambiguous != FALSE -> List(Questions) -> Wait(User_Input)
+Check overall context ambiguity by default -> IF ambiguous != FALSE -> List(Questions) -> Wait(User_Input)
 
 ### Phase 2: Planning (Think)
 Plan: Analyze command requirements -> Identify dependencies -> Generate template -> Validate
@@ -17,6 +17,33 @@ Generate command following schema -> Validate references -> Test execution
 
 ### Phase 4: Validation (Check)
 Final_Checklist: Schema valid? Dependencies exist? Security checks present?
+
+**CRITICAL VARIABLE USAGE RULES**
+
+**$ARGUMENTS Variable**:
+- **Purpose**: Capture user input when command is invoked
+- **MUST Appear ONLY**: In the User Input section (`**Input**: $ARGUMENTS`)
+- **Forbidden Patterns**:
+  - NEVER use $ARGUMENTS in ANY phase (Phase 1, 2, 3, or 4)
+  - NEVER assign intermediate values to $ARGUMENTS
+  - NEVER reference $ARGUMENTS in execution steps
+  - NEVER use $ARGUMENTS for conditions or validation
+
+**Referencing User Input**:
+- To refer to user-provided data, use natural language references to "the user input section" or "provided context"
+- Example: "Incorporate provided context if available" (correct)
+- Example: "Use the date from user input" (correct)
+- Example: `IF $ARGUMENTS.ambiguous != FALSE` (WRONG - uses $ARGUMENTS)
+
+**Bash Variable Usage** (TODAY, PRS, etc.):
+- These ARE NOT $ARGUMENTS
+- These capture command outputs for later processing
+- Example: `TODAY=date +%Y-%m-%d`, `PRS=gh pr list ...` (correct - these are command outputs)
+
+**Violations Check**:
+- User Input section: MUST contain `**Input**: $ARGUMENTS`
+- All phases: MUST NOT contain $ARGUMENTS anywhere
+- Execution steps: MUST reference user input naturally, not via $ARGUMENTS
 
 ## CONTEXT
 

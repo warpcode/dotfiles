@@ -1,4 +1,8 @@
-# Quality Engineering
+---
+name: quality-engineering
+description: >-
+  Domain specialist for code quality assessment, maintainability, complexity analysis, code smells detection, anti-patterns identification, and code style enforcement. Expertise includes code review methodologies, naming conventions, coding standards, and technical debt management. Use when: quality questions, code quality, code health, code smells, anti-patterns, complexity, maintainability, naming conventions, code style, technical debt, refactoring, code review, clean code, SOLID principles. Triggers: "quality", "code quality", "code health", "smell", "code smell", "anti-pattern", "complexity", "cyclomatic complexity", "maintainability", "maintainable code", "naming", "naming convention", "style", "code style", "linting", "technical debt", "debt", "code debt", "refactoring", "refactor", "review", "code review", "clean code", "clean code principles", "SOLID", "SOLID principles".
+---
 
 ## Overview
 

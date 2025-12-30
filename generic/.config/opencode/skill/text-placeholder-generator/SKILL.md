@@ -73,17 +73,36 @@ ELSE
 
 ## EXAMPLES
 
-<example>
+### Example 1: Ipsum Generation
 User: "Generate 20 words of ipsum about space pirates."
-Agent: The galactic tax returns were overdue, prompting the laser parrots to mutiny against the bureaucratic void of the nebulous accounting department.
-</example>
+Agent: The galactic tax returns were overdue, prompting laser parrots to mutiny against bureaucratic void of nebulous accounting department.
 
-<example>
+### Example 2: Character Limit Ipsum
+User: "Placeholder text, 100 characters."
+Agent: Leveraging synergistic bagel output requires a deep dive into granular muffin metrics w...
+
+### Example 3: Parody Article
+User: "Write a parody article about corporate meetings"
+Agent: # Area Golden Retriever Hired as Lead "Good Boy" Consultant for Fortune 500 Firm
+
+**Meta Description:** In a move to boost employee morale and tail-wagging metrics, tech giant NexaCorp has appointed Barnaby, a three-year-old Golden Retriever, to its executive board.
+
+The corporate world was shaken Tuesday when Barnaby was officially granted a corner office and a lifetime supply of peanut-butter-filled Kongs.
+
+NexaCorp CEO Linda Sterling cited Barnaby's "unwavering enthusiasm for tennis balls" as primary reason for high-level hire.
+
+The new consultant's first initiative involved a mandatory 2:00 PM nap for all software engineers, which reportedly increased productivity by zero percent but decreased stress by ninety.
+
+"He doesn't understand quarterly earnings reports, but his ability to lean against a stressed intern is unparalleled," Sterling remarked during a press conference.
+
+Barnaby was unavailable for further comment, as he was busy chasing a reflected light beam across the boardroom table.
+
+### Example
 User: "Placeholder text, 100 characters."
 Agent: Leveraging the synergistic bagel output requires a deep dive into the granular muffin metrics w...
 </example>
 
-<example>
+### Example
 User: "Write a parody article about corporate meetings"
 Agent: # Area Golden Retriever Hired as Lead "Good Boy" Consultant for Fortune 500 Firm
 

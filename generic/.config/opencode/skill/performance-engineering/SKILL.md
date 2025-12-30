@@ -36,22 +36,6 @@ Load comprehensive checklists:
 - IF memory issues -> Load `@performance/RESOURCE-LEAKS.md`, `@profiling/PROFILING.md`
 - IF algorithm review -> Load `@profiling/ALGORITHM-COMPLEXITY.md`
 
-## CONTENT STRUCTURE
-```
-performance-engineering/
-├── profiling/
-│   ├── PROFILING.md
-│   └── ALGORITHM-COMPLEXITY.md
-├── caching/
-│   └── CACHING-STRATEGIES.md
-├── database/
-│   ├── CONNECTION-POOLING.md
-│   └── QUERY-OPTIMIZATION.md
-└── performance/
-    └── RESOURCE-LEAKS.md
-```
-
-## ROUTING LOGIC
 ### Progressive Loading (Write Mode)
 - **IF** request mentions "profile", "bottleneck", "slow" -> READ FILE: `@profiling/PROFILING.md`
 - **IF** request mentions "Big O", "complexity", "algorithm" -> READ FILE: `@profiling/ALGORITHM-COMPLEXITY.md`
@@ -118,12 +102,12 @@ performance-engineering/
 
 ## EXECUTION PROTOCOL
 
-### Phase 1: Analysis
+### Phase 1: Clarification
 1. **Detect Mode**: WRITE vs REVIEW based on keywords
 2. **Detect Context**: Language, framework, caching layer, database
 3. **Load Patterns**: Progressive (write) or Exhaustive (review)
 
-### Phase 2: Execution (Write Mode)
+### Phase 2: Planning
 1. Load relevant performance pattern references
 2. Profile application to identify bottlenecks
 3. Analyze algorithm complexity
@@ -132,7 +116,7 @@ performance-engineering/
 6. Tune connection pools
 7. Provide performance improvements
 
-### Phase 3: Execution (Review Mode)
+### Phase 3: Execution
 1. Load all performance checklist references
 2. Systematically check each category:
    - Profiling (bottlenecks, hot paths)
@@ -150,35 +134,6 @@ performance-engineering/
 - Ensure resource leaks fixed
 - Check for cross-references (MUST be within skill only)
 
-## MULTI-DOMAIN LOADING
-### When to Load Additional Skills
-
-**Context Detection Triggers**:
-- **Database Operations**: If SQL queries, ORM usage, or database tuning -> LOAD: `@database-engineering/SKILL.md`
-- **Security Concerns**: If performance optimizations cause security issues -> LOAD: `@secops-engineering/SKILL.md`
-- **Code Quality**: If refactoring for performance -> LOAD: `@software-engineering/SKILL.md`
-- **Infrastructure**: If scaling, load balancing, or infrastructure performance -> LOAD: `@devops-engineering/SKILL.md`
-
-**Detection Rules**:
-1. **Analyze Request**: Scan for keywords and file types
-2. **Determine Context**: Identify primary domain (performance) and secondary domains
-3. **Load Primary Skill**: This skill (performance-engineering) with appropriate patterns
-4. **Load Secondary Skills**: If secondary domain detected, load relevant skill from that skill's SKILL.md
-
-**Example Scenario**:
-```
-User: "Review this PHP application for performance issues and SQL queries"
-
-Analysis:
-- Primary: performance (PHP application)
-- Secondary: database (SQL queries)
-
-Load:
-1. performance-engineering/SKILL.md (REVIEW-MODE)
-2. database-engineering/SKILL.md (NPLUS1.md, INDEXING.md)
-```
-
-## OUTPUT FORMAT
 
 ### Write Mode Output
 ```markdown
@@ -230,8 +185,3 @@ Load:
 2. [Caching strategy]
 3. [Algorithm improvement]
 
-### Related Skills
-- @database-engineering/SKILL.md (for SQLi, N+1, query optimization)
-- @software-engineering/SKILL.md (for code quality issues)
-- @devops-engineering/SKILL.md (for infrastructure scaling)
-```

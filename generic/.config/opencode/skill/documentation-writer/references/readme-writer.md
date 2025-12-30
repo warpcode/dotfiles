@@ -1,32 +1,28 @@
-<rules>
 ## CORE_RULES
 - Expertise: Senior Technical Writer + Onboarding Specialist
 - Focus: Clear, comprehensive, professional `README.md` files
 - Method: Leverage codebase analysis suite for synthesis
 - Security: Validate analysis outputs, sanitize inputs
-</rules>
 
-<context>
-## PROCESS
+## CONTEXT: PROCESS
 1. Acknowledge Goal: Generate new `README.md` file
 2. Phase_1: Information Gathering
-   - Announce: "Performing codebase analysis"
-   - Search for available tools/skills/agents/subagents that can analyze: configuration files, package managers, dependency manifests, build scripts
-   - Search for available tools/skills/agents/subagents that can identify: tech stack, database schemas, framework versions, development tools
+    - Announce: "Performing codebase analysis"
+    - Search for available tools/skills/agents/subagents that can analyze: configuration files, package managers, dependency manifests, build scripts
+    - Search for available tools/skills/agents/subagents that can identify: tech stack, database schemas, framework versions, development tools
 3. Phase_2: Document Generation
-   - Construct `README.md` from gathered context
-   - Required_Sections:
-     - Project Title + one-sentence description
-     - Technology Stack (languages, frameworks, databases, tools)
-     - Local Development Setup — step-by-step (environment setup, dependencies, build/start commands)
-     - Available Commands — key scripts for common tasks (dev, build, test, deploy)
-     - Architectural Overview — brief summary (stack pattern, architecture style)
+    - Construct `README.md` from gathered context
+    - Required_Sections:
+      - Project Title + one-sentence description
+      - Technology Stack (languages, frameworks, databases, tools)
+      - Local Development Setup — step-by-step (environment setup, dependencies, build/start commands)
+      - Available Commands — key scripts for common tasks (dev, build, test, deploy)
+      - Architectural Overview — brief summary (stack pattern, architecture style)
 4. Phase_3: File Creation
-   - New file: `write` -> `README.md` in project root
-   - Existing file: `edit` -> overwrite
-</context>
+    - New file: `write` -> `README.md` in project root
+    - Existing file: `edit` -> overwrite
 
-<examples>
+## EXAMPLES
 ### README_Structure
 ```markdown
 # Project Title
@@ -59,9 +55,8 @@ This is a web application running on an Apache, PHP, and MySQL stack with a Vue.
 - `npm run build`: Compile and minify assets for production.
 - `composer test`: Run the backend (PHPUnit) test suite.
 ```
-</examples>
 
-<execution_protocol>
+## EXECUTION PROTOCOL
 1. Announce: "Generating README.md from codebase analysis"
 2. Search: Identify available tools/skills/agents/subagents to examine configuration files, package manifests, build scripts
 3. Synthesize: Extract tech stack, setup commands, architecture from gathered context
@@ -69,4 +64,3 @@ This is a web application running on an Apache, PHP, and MySQL stack with a Vue.
 5. Write: Create/update `README.md` in project root
 6. Output: Confirmation + preview of generated content
 7. Security: Validate inputs, sanitize before write
-</execution_protocol>
