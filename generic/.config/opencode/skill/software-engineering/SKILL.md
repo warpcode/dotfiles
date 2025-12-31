@@ -1,7 +1,10 @@
 ---
 name: software-engineering
 description: >-
-  Domain specialist for software architecture, design patterns, code quality, and refactoring. Expertise includes SOLID principles, GoF design patterns, anti-patterns, code smells, clean architecture, code injection vulnerabilities, performance issues, and modern language features. Use when: code architecture questions, design patterns, refactoring, code reviews, architectural decisions, modernization, clean code practices. Triggers: "SOLID", "design pattern", "refactor", "architecture", "code quality", "clean code", "factory", "singleton", "observer", "strategy", "dependency injection", "separation of concerns", "code smells", "anti-patterns", "modern PHP", "modern Python", "type hints", "async/await", "memory leak", "race condition".
+  Domain specialist for software architecture, design patterns, code quality, and refactoring.
+  Scope: SOLID principles, GoF design patterns, anti-patterns, code smells, clean architecture, code injection vulnerabilities, performance issues, modern language features.
+  Excludes: infrastructure configuration, security operations beyond code injection, database design, API design, performance testing.
+  Triggers: "SOLID", "design pattern", "refactor", "architecture", "code quality", "clean code", "factory", "singleton", "observer", "strategy", "dependency injection".
 ---
 
 # SOFTWARE_ENGINEERING
@@ -133,27 +136,6 @@ Load comprehensive checklists:
   - "Is this a web application, CLI tool, library, or other type?"
   - "Are there any specific frameworks or libraries involved?"
 - **Fallback Strategy**: Load language-specific generic patterns (e.g., generic PHP patterns if .php files detected) and request user confirmation
-
-## WHEN TO USE THIS SKILL
-✅ Use when:
-- Designing software architecture
-- Implementing design patterns (Factory, Strategy, Observer, etc.)
-- Refactoring existing code
-- Code review and quality assessment
-- Solving architectural problems
-- Addressing code smells and anti-patterns
-- Modernizing legacy code
-- Performance troubleshooting
-- Security vulnerability assessment
-- SOLID principle application
-- Clean code practices
-
-❌ Do NOT use when:
-- Infrastructure configuration (use devops-engineering)
-- Security operations beyond code injection (use secops-engineering)
-- Database design (use database-engineering)
-- API design (use api-engineering)
-- Performance testing (use performance-engineering)
 
 ## EXECUTION PROTOCOL
 

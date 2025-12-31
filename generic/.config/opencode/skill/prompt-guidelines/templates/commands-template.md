@@ -1,8 +1,7 @@
 ---
-description: >
-  Authoritative template for all command.md files.
-  Use this as reference when creating or standardising commands.
-  Do not use this file as an actual command.
+description: >-
+  [One-line purpose]
+  Scope: [areas covered]
 ---
 
 # COMMAND_NAME

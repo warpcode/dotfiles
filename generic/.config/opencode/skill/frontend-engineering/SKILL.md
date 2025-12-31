@@ -1,7 +1,10 @@
 ---
 name: frontend-engineering
 description: >-
-  Domain specialist for frontend architecture, state management, accessibility, and performance. Expertise includes component architecture, state management (Pinia, Vuex, Redux), accessibility (WCAG compliance), responsive design, lazy loading, asset optimization, XSS prevention, CSP, and frontend performance. Use when: frontend architecture questions, component design, state management implementation, accessibility compliance, performance optimization, XSS protection. Triggers: "frontend", "React", "Vue", "Angular", "component", "state management", "accessibility", "WCAG", "responsive", "lazy loading", "XSS", "CSP".
+  Domain specialist for frontend architecture, state management, accessibility, and performance.
+  Scope: component architecture, state management (Pinia, Vuex, Redux), accessibility (WCAG), responsive design, lazy loading, asset optimization, XSS prevention, CSP, frontend performance.
+  Excludes: backend code, infrastructure, API design, security beyond XSS, performance profiling beyond frontend.
+  Triggers: "frontend", "React", "Vue", "Angular", "component", "state management", "accessibility", "WCAG", "responsive", "XSS", "CSP".
 ---
 
 # FRONTEND_ENGINEERING
@@ -67,26 +70,6 @@ Load comprehensive checklists:
 - **Tailwind CSS**: tailwind.config.js, postcss.config.js
 - **Chakra UI**: package.json with "@chakra-ui/react"
 - **Ant Design**: package.json with "antd"
-
-## WHEN TO USE THIS SKILL
-✅ Use when:
-- Designing frontend component architecture
-- Implementing state management (Redux, Vuex, Pinia)
-- Ensuring accessibility compliance (WCAG)
-- Implementing responsive design
-- Optimizing frontend performance
-- Preventing XSS vulnerabilities
-- Implementing lazy loading
-- Optimizing bundle size
-- Server-side rendering (SSR)
-- Client-side rendering (CSR)
-
-❌ Do NOT use when:
-- Backend code (use software-engineering, database-engineering)
-- Infrastructure (use devops-engineering)
-- API design (use api-engineering)
-- Security operations beyond XSS (use secops-engineering)
-- Performance profiling beyond frontend (use performance-engineering)
 
 ## EXECUTION PROTOCOL
 

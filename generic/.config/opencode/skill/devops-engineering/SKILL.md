@@ -1,7 +1,10 @@
 ---
 name: devops-engineering
 description: >-
-  Domain specialist for infrastructure, CI/CD, containers, observability, and DevOps operations. Expertise includes CI/CD pipelines, containerization (Docker, Kubernetes), infrastructure as code (Terraform, Ansible), monitoring and observability, container security, release strategies (blue-green, canary), and infrastructure reliability patterns. Use when: infrastructure questions, CI/CD setup, Docker configuration, Kubernetes orchestration, monitoring/alerting, deployment strategies, infrastructure automation. Triggers: "CI/CD", "Docker", "Kubernetes", "K8s", "deployment", "pipeline", "monitoring", "observability", "Terraform", "Ansible", "infrastructure", "container", "containerization", "release", "blue-green", "canary", "rolling", "logging", "metrics", "tracing", "alerting".
+  Domain specialist for infrastructure, CI/CD, containers, observability, and DevOps operations.
+  Scope: CI/CD pipelines, containerization, infrastructure as code, monitoring and observability, container security, release strategies, infrastructure reliability patterns.
+  Excludes: code-level security, application architecture, database design, API design, performance profiling.
+  Triggers: "CI/CD", "Docker", "Kubernetes", "K8s", "deployment", "pipeline", "monitoring", "observability", "Terraform", "Ansible", "infrastructure".
 ---
 
 # DEVOPS_ENGINEERING
@@ -176,25 +179,6 @@ Load comprehensive checklists:
   - "What cloud provider (AWS, GCP, Azure, etc.) or on-premise infrastructure?"
   - "What configuration management tool (Ansible, Chef, Puppet, etc.)?"
 - **Fallback Strategy**: Load generic container/infrastructure patterns and request user confirmation
-
-## WHEN TO USE THIS SKILL
-✅ Use when:
-- Designing CI/CD pipelines
-- Creating Docker containers/images
-- Setting up Kubernetes deployments
-- Implementing infrastructure as code
-- Configuring monitoring, logging, alerting
-- Designing deployment strategies (blue-green, canary)
-- Container security hardening
-- Infrastructure reliability and observability
-- Release automation and rollback strategies
-
-❌ Do NOT use when:
-- Code-level security issues (use secops-engineering)
-- Application architecture (use software-engineering)
-- Database design (use database-engineering)
-- API design (use api-engineering)
-- Performance profiling (use performance-engineering)
 
 ## EXECUTION PROTOCOL
 

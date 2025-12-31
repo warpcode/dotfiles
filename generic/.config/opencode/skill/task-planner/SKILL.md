@@ -1,7 +1,9 @@
 ---
 name: task-planner
 description: >-
-  Guidelines for transforming descriptive tasks into technical breakdowns with main tasks (product-focused, well-formatted JIRA tickets) and subtasks (implementation-focused, technical chunks). Use when PM Technical Planner agent needs rules for task generation, consolidation, FE/BE separation, point estimation (0.1-5 scale), and acceptance criteria. Triggers: "task", "breakdown", "subtask", "main task", "ticket", "JIRA", "estimation", "point", "acceptance criteria", "task planning", "technical planning", "FE/BE separation", "task consolidation".
+  Guidelines for transforming descriptive tasks into technical breakdowns with main tasks (product-focused, well-formatted JIRA tickets) and subtasks (implementation-focused, technical chunks).
+  Scope: task generation, consolidation, FE/BE separation, point estimation (0.1-5 scale), acceptance criteria.
+  Triggers: "task", "breakdown", "subtask", "main task", "ticket", "JIRA", "estimation", "point".
 ---
 
 # Task Planner

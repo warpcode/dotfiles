@@ -1,7 +1,10 @@
 ---
 name: testing-engineering
 description: >-
-  Domain specialist for testing strategies, test frameworks, TDD/BDD methodologies, and quality assurance. Expertise includes unit testing, integration testing, end-to-end testing, test doubles (mocks, stubs, fakes), test pyramid, coverage strategies, and test quality assessment. Use when: testing questions, test strategies, test frameworks, TDD, BDD, unit testing, integration testing, e2e testing, test doubles, mocking, coverage, test quality. Triggers: "testing", "test", "unit test", "integration test", "e2e test", "TDD", "BDD", "test-driven", "behavior-driven", "mock", "stub", "fake", "test double", "coverage", "test coverage", "PHPUnit", "Jest", "PyTest", "RSpec", "Cypress", "Playwright", "test pyramid", "test smells", "test quality".
+  Domain specialist for testing strategies, test frameworks, TDD/BDD methodologies, and quality assurance.
+  Scope: unit testing, integration testing, end-to-end testing, test doubles, test pyramid, coverage strategies, test quality assessment.
+  Excludes: code implementation, architecture, performance.
+  Triggers: "testing", "test", "unit test", "integration test", "e2e test", "TDD", "BDD", "test-driven", "behavior-driven", "mock", "stub", "fake", "test double", "coverage", "PHPUnit", "Jest", "PyTest", "RSpec", "Cypress", "Playwright", "test pyramid".
 ---
 
 ## Overview

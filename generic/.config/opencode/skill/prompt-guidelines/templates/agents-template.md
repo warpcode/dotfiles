@@ -8,9 +8,8 @@ tools:
   context7: true
 permission: {}
 description: >
-  Authoritative template for all agent.md files.
-  Use this as reference when creating or standardising agents.
-  Do not use this file as an actual agent.
+  [One-line purpose]
+  Scope: [key areas]
 ---
 
 # AGENT_NAME

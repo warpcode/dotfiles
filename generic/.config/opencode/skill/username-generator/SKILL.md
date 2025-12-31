@@ -1,7 +1,9 @@
 ---
 name: username-generator
 description: >-
-  Generate clever, witty, and original usernames based on user input keywords or theme. Use when user requests username generation, creative usernames, or thematically relevant usernames. Outputs markdown bullet list of 20 usernames (unless specified), each ≤ 20 characters, using only alphanumeric characters and either hyphens or underscores. Triggers: "username", "username generator", "generate username", "create username", "creative usernames", "witty usernames".
+  Generate clever, witty, and original usernames based on user input keywords or theme.
+  Scope: Outputs markdown bullet list of 20 usernames (unless specified), each ≤ 20 characters, using only alphanumeric characters and either hyphens or underscores.
+  Triggers: "username", "username generator", "generate username", "create username", "creative usernames", "witty usernames".
 allowed-tools: []
 ---
 

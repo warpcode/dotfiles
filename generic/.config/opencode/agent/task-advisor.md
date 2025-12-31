@@ -9,10 +9,8 @@ tools:
   context7: true
 permission: {}
 description: >-
-  General task advisor specialising in creating, scoping, and structuring tasks. Provides
-  comprehensive task planning, scoping, and advisory services. Transforms concepts into
-  well-organised task structures and uses task-planner skill for specific JIRA formatting
-  and technical breakdowns when required.
+  General task advisor for creating, scoping, and structuring tasks.
+  Scope: comprehensive task planning, scoping, advisory services; transforms concepts into well-organised task structures.
 ---
 
 # Task Advisor

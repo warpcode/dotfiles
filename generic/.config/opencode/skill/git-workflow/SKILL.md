@@ -1,7 +1,9 @@
 ---
 name: git-workflow
 description: >-
-  Route ALL git operations to appropriate resources. Load reference files before responding. Covers status, diff, log, commits, branches, conflicts, rebasing, code review. Use when: git operations, checking status, viewing diffs, reviewing commits, managing branches, resolving conflicts, rebasing, code reviews. Triggers: "git", "status", "diff", "log", "commit", "branch", "merge", "conflict", "rebase", "review", "code review", "stash", "cherry-pick", "pull", "push", "fetch".
+  Route ALL git operations to appropriate resources. Load reference files before responding.
+  Scope: status, diff, log, commits, branches, conflicts, rebasing, code review.
+  Triggers: "git", "status", "diff", "log", "commit", "branch", "merge", "conflict", "rebase", "stash", "cherry-pick".
 ---
 
 # Git Workflow Orchestrator

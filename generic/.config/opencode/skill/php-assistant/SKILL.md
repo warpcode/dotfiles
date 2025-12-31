@@ -1,7 +1,9 @@
 ---
 name: php-assistant
 description: >-
-  PHP language specialist for framework-specific patterns, modern PHP features, and PHP best practices. Expertise includes Laravel patterns (Eloquent ORM, routing, middleware, services), Symfony patterns (Doctrine ORM, routing, Twig, services), Bespoke PHP patterns (MVC conventions, autoloading, PSR standards), modern PHP features (type hints, scalar types, return types, null coalescing, spread operator, attributes, properties, enums), deprecated API replacements, array syntax updates, and common PHP mistakes/platform errors. Use when: PHP code generation, framework-specific patterns, modern PHP syntax, PHP refactoring, Laravel/Symfony/Bespoke development. Triggers: "PHP", "Laravel", "Symfony", "Eloquent", "Blade", "Twig", "composer", "artisan", "type hints", "modern PHP", "PHP 8", "array syntax", "deprecated PHP", "MVC", "autoloading".
+  PHP language specialist for framework-specific patterns, modern PHP features, and PHP best practices.
+  Scope: Laravel patterns, Symfony patterns, Bespoke PHP patterns, modern PHP features, deprecated API replacements, array syntax updates, common PHP mistakes.
+  Triggers: "PHP", "Laravel", "Symfony", "Eloquent", "Blade", "Twig", "composer", "artisan", "type hints", "modern PHP", "PHP 8".
 ---
 
 # PHP_ASSISTANT
