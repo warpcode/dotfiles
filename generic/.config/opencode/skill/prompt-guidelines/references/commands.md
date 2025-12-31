@@ -83,8 +83,8 @@ Final_Checklist: Schema valid? Dependencies exist? Security checks present?
 ```markdown
 ---
 description: >-
-  [Multi-line description for context]
-  [Use >- for continuation]
+  [One-line purpose]
+  Scope: [areas covered]
 agent: [Optional: @agent/name]
 ---
 
