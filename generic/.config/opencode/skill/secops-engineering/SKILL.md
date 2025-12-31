@@ -1,7 +1,10 @@
 ---
 name: secops-engineering
 description: >-
-  Domain specialist for security operations, vulnerability management, compliance, and secure coding practices. Expertise includes OWASP Top 10, authentication (OAuth2, JWT, SAML, OIDC), input validation (SQLi, XSS, CSRF), secrets management, security headers, file upload security, vulnerability scanning, and compliance (SOC2, GDPR, PCI-DSS, HIPAA). Use when: security reviews, vulnerability assessments, authentication implementation, input validation, secrets management, compliance requirements, security headers, OWASP vulnerabilities, authorization/authorization. Triggers: "security", "OWASP", "authentication", "authorization", "OAuth", "JWT", "SAML", "OIDC", "SQL injection", "XSS", "CSRF", "input validation", "secrets management", "vulnerability scan", "compliance", "SOC2", "GDPR", "PCI-DSS", "security headers", "CSP", "HSTS", "file upload security".
+  Domain specialist for security operations, vulnerability management, compliance, and secure coding practices.
+  Scope: OWASP Top 10, authentication (OAuth2, JWT, SAML, OIDC), input validation (SQLi, XSS, CSRF), secrets management, security headers, file upload security, vulnerability scanning, compliance (SOC2, GDPR, PCI-DSS).
+  Excludes: code-level design patterns, infrastructure security, database design, performance optimization.
+  Triggers: "security", "OWASP", "authentication", "authorization", "OAuth", "JWT", "SAML", "OIDC", "SQL injection", "XSS", "CSRF", "input validation", "secrets management", "vulnerability scan", "compliance", "SOC2", "GDPR", "security headers".
 ---
 
 # SECOPS_ENGINEERING
@@ -152,27 +155,6 @@ Load comprehensive checklists:
   - "What security concerns do you have (SQL injection, XSS, CSRF, secrets)?"
   - "Are you subject to any compliance requirements (SOC2, GDPR, PCI-DSS, HIPAA)?"
 - **Fallback Strategy**: Load generic OWASP Top 10 patterns and security best practices, provide language-agnostic guidance, request user confirmation of implementation language
-
-## WHEN TO USE THIS SKILL
-✅ Use when:
-- Implementing authentication/authorization
-- Preventing injection attacks (SQLi, XSS, CSRF)
-- Implementing input validation
-- Securing file uploads
-- Adding security headers (CSP, HSTS)
-- Managing secrets/passwords
-- Conducting security audits
-- Vulnerability scanning and assessment
-- Compliance requirements (SOC2, GDPR, PCI-DSS)
-- OWASP Top 10 mitigation
-- API security (CORS, rate limiting)
-- Session management
-
-❌ Do NOT use when:
-- Code-level design patterns (use software-engineering)
-- Infrastructure security (use devops-engineering/security)
-- Database design (use database-engineering)
-- Performance optimization (use performance-engineering)
 
 ## EXECUTION PROTOCOL
 

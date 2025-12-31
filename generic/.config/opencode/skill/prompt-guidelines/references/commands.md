@@ -1,9 +1,3 @@
----
-description: >-
-  Command definition schema and execution protocols.
-  Reference for creating, validating, and optimising OpenCode commands.
----
-
 ## PHASES
 
 ### Phase 1: Clarification (Ask)

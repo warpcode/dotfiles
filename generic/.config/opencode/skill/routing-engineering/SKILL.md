@@ -1,7 +1,10 @@
 ---
 name: routing-engineering
 description: >-
-  Domain specialist for API routing, route discovery, middleware analysis, and parameter validation. Expertise includes route discovery patterns, automatic route detection, route mapping across frameworks, middleware analysis (middleware chain ordering, common middleware issues, request/response pipeline), URL patterns (RESTful URL conventions, query string best practices, slug generation), parameter validation (route parameter validation, type checking, sanitization rules, URL injection prevention). Use when: API routing questions, route discovery, middleware analysis, parameter validation, URL pattern questions. Triggers: "routing", "route", "URL pattern", "middleware", "parameter validation", "route discovery", "endpoint", "path", "slug".
+  Domain specialist for API routing, route discovery, middleware analysis, and parameter validation.
+  Scope: route discovery patterns, automatic route detection, route mapping, middleware analysis, URL patterns, parameter validation, URL injection prevention.
+  Excludes: backend business logic, database queries, security operations beyond URL injection, frontend routing.
+  Triggers: "routing", "route", "URL pattern", "middleware", "parameter validation", "route discovery", "endpoint", "path", "slug".
 ---
 
 # ROUTING_ENGINEERING
@@ -68,25 +71,6 @@ Load comprehensive checklists:
 - **URL Path Versioning**: /api/v1/users, /api/v2/users
 - **Header Versioning**: Accept: application/vnd.api.v1+json
 - **Query Parameter Versioning**: /api/users?version=1
-
-## WHEN TO USE THIS SKILL
-✅ Use when:
-- Designing API route structure
-- Implementing route discovery
-- Analyzing middleware chains
-- Validating route parameters
-- Creating URL patterns (slugs, RESTful URLs)
-- Solving routing conflicts
-- Parameter validation and sanitization
-- URL injection prevention
-- Route versioning strategies
-- Middleware ordering analysis
-
-❌ Do NOT use when:
-- Backend business logic (use software-engineering)
-- Database queries (use database-engineering)
-- Security operations beyond URL injection (use secops-engineering)
-- Frontend routing (use frontend-engineering)
 
 ## EXECUTION PROTOCOL
 

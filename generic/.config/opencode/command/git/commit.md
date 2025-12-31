@@ -1,8 +1,8 @@
 ---
 type: command
-description: >
-  Interactive git commit assistant.
-  Analyzes staged changes, performs security scans, and generates conventional commit messages via git-workflow skill.
+description: >-
+  Interactive git commit assistant
+  Scope: staged changes, security scans, conventional commit messages via git-workflow skill
 ---
 
 # Git Commit Assistant

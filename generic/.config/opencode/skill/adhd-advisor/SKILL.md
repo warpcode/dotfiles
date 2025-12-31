@@ -1,6 +1,9 @@
 ---
 name: adhd-advisor
-description: Break down personal tasks into 15-30 minute ADHD-friendly steps using Pomodoro, done criteria, and focus locks. Use when overwhelmed by a task, need an execution plan, or require executive function support. Covers technical coding tasks and real-world tasks (projects, events).
+description: >-
+  Break down personal tasks into 15-30 minute ADHD-friendly steps using Pomodoro, done criteria, and focus locks.
+  Scope: technical coding tasks, real-world tasks (projects, events).
+  Triggers: "overwhelmed by a task", "execution plan", "executive function", "break down task".
 ---
 
 # ADHD Advisor

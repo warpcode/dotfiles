@@ -1,7 +1,10 @@
 ---
 name: api-engineering
 description: >-
-  Domain specialist for API design, development, and best practices. Expertise includes RESTful API design, GraphQL, API documentation (OpenAPI/Swagger), versioning, authentication, authorization, rate limiting, CORS, error handling, pagination, filtering, HATEOAS, API testing, and API security. Use when: API design, REST API development, GraphQL implementation, API documentation, API security, API versioning, rate limiting, CORS configuration. Triggers: "API", "REST", "GraphQL", "endpoint", "OpenAPI", "Swagger", "API documentation", "CORS", "rate limiting", "API authentication", "API versioning".
+  Domain specialist for API design, development, and best practices.
+  Scope: RESTful API design, GraphQL, API documentation, authentication, authorization, rate limiting, CORS, error handling, pagination, filtering, HATEOAS, API testing, API security.
+  Excludes: database design, business logic, infrastructure, frontend, security beyond API.
+  Triggers: "API", "REST", "GraphQL", "endpoint", "OpenAPI", "Swagger", "CORS".
 ---
 
 # API_ENGINEERING
@@ -79,26 +82,6 @@ Load comprehensive checklists:
 - **Header Versioning**: `Accept: application/vnd.api.v1+json` (recommended)
 - **Query Parameter Versioning**: `/api/users?version=1` (not recommended)
 - **Content Negotiation**: Version in media type (recommended)
-
-## WHEN TO USE THIS SKILL
-✅ Use when:
-- Designing RESTful APIs
-- Implementing GraphQL schemas
-- Creating API documentation (OpenAPI/Swagger)
-- Implementing API authentication (JWT, OAuth2, API keys)
-- Adding CORS support
-- Implementing rate limiting
-- Handling API errors and status codes
-- API versioning strategies
-- Pagination, filtering, sorting
-- API testing and validation
-
-❌ Do NOT use when:
-- Backend business logic (use software-engineering)
-- Database design (use database-engineering)
-- Frontend API consumption (use frontend-engineering)
-- Infrastructure (use devops-engineering)
-- Security operations beyond API (use secops-engineering)
 
 ## EXECUTION PROTOCOL
 

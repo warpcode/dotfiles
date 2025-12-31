@@ -1,9 +1,8 @@
 ---
 type: command
-description: >
-  Summarise Pull Requests merged today into main/master branch.
-  Generates business-friendly bullet points with emojis.
-  Target audience: Non-technical business owners.
+description: >-
+  Summarise Pull Requests merged today into main/master branch
+  Scope: Pull Requests merged today, business-friendly bullet points with emojis
 ---
 
 # Git Today Assistant

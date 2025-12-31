@@ -1,7 +1,10 @@
 ---
 name: performance-engineering
 description: >-
-  Domain specialist for performance optimization, profiling, caching, and resource management. Expertise includes profiling tools, caching strategies (Redis, query cache), load testing, observability (metrics, tracing), N+1 query detection, algorithm complexity analysis, resource leak detection, connection pooling, query optimization, memory leaks, file handle leaks, connection leaks, and resource exhaustion patterns. Use when: performance troubleshooting, slow queries, memory issues, caching strategies, load testing, profiling, resource exhaustion. Triggers: "performance", "slow", "optimization", "profiling", "caching", "load test", "bottleneck", "resource leak", "N+1", "memory leak", "complexity", "Big O".
+  Domain specialist for performance optimization, profiling, caching, and resource management.
+  Scope: profiling tools, caching strategies, load testing, observability, N+1 query detection, algorithm complexity analysis, resource leak detection, connection pooling, query optimization, memory leaks, file handle leaks, connection leaks.
+  Excludes: code architecture, security operations, database design, infrastructure.
+  Triggers: "performance", "slow", "optimization", "profiling", "caching", "load test", "bottleneck", "resource leak", "N+1", "memory leak", "complexity".
 ---
 
 # PERFORMANCE_ENGINEERING
@@ -79,26 +82,6 @@ Load comprehensive checklists:
 - **Express**: Node.js caching, express-rate-limit
 - **React**: React performance, useMemo, useCallback
 - **Vue.js**: Vue.js performance, computed properties
-
-## WHEN TO USE THIS SKILL
-✅ Use when:
-- Performance troubleshooting and optimization
-- Profiling and bottleneck analysis
-- Caching strategies and implementation
-- Load testing and capacity planning
-- Memory leak detection
-- Resource leak detection (connections, file handles)
-- Database query optimization
-- Algorithm complexity analysis
-- Connection pooling configuration
-- N+1 query detection and fixing
-- Resource exhaustion prevention
-
-❌ Do NOT use when:
-- Code architecture (use software-engineering)
-- Security operations (use secops-engineering)
-- Database design (use database-engineering)
-- Infrastructure (use devops-engineering)
 
 ## EXECUTION PROTOCOL
 

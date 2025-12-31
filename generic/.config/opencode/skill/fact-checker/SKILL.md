@@ -1,6 +1,9 @@
 ---
 name: fact-checker
-description: Validate changes for factual accuracy, completeness, and intent preservation without modifications. Use when fact-checking, verifying refactors, validating imports, checking rewrites, comparing versions, or reviewing documentation changes.
+description: >-
+  Validate changes for factual accuracy, completeness, and intent preservation without modifications.
+  Scope: fact-checking, verifying refactors, validating imports, checking rewrites, comparing versions, reviewing documentation changes.
+  Triggers: "fact-check", "verify", "validate", "compare versions".
 ---
 
 # Fact-Checker

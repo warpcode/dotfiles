@@ -1,7 +1,9 @@
 ---
 name: prompt-guidelines
 description: >-
-  Mandatory protocols for high-fidelity, token-efficient AI prompts. Provides specialized guidance for creating, editing, verifying, reviewing, and checking compliance of Skills, Agents, and Commands via progressive disclosure. Use when writing system instructions, refactoring agent configs, designing new commands, or validating existing components. Triggers: "write a prompt", "create a skill", "edit a skill", "verify a skill", "review a skill", "check skill compliance", "design an agent", "edit an agent", "verify an agent", "review an agent", "check agent compliance", "new command", "edit command", "verify command", "review command", "check command compliance".
+  Mandatory protocols for high-fidelity, token-efficient AI prompts. Provides specialized guidance for creating, editing, verifying, reviewing, and checking compliance of Skills, Agents, and Commands via progressive disclosure.
+  Scope: system instructions, agent configs, commands, component validation.
+  Triggers: "write a prompt", "create a skill", "edit a skill", "verify a skill", "review a skill", "check skill compliance", "design an agent", "edit an agent", "verify an agent", "review an agent", "check agent compliance", "new command", "edit command", "verify command", "review command", "check command compliance".
 ---
 
 # PROMPT_ENGINEERING_PROTOCOLS

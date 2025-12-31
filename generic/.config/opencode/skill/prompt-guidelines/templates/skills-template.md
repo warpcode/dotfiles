@@ -1,9 +1,10 @@
 ---
 name: skill-template
 description: >
-  Authoritative template for all SKILL.md files.
-  Use this as reference when creating or standardising skills.
-  Do not use this file as an actual skill.
+  [One-line purpose]
+  Scope: [key capabilities]
+  Excludes: [exclusions - domain skills only]
+  Triggers: [keywords for routing]
 ---
 
 # SKILL_NAME
