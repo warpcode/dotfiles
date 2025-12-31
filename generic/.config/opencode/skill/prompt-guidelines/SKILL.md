@@ -23,6 +23,65 @@ description: >-
 - **Mode B (Conversational)**: Enforce Tone/Style. "Explanation == Concise && Technical."
 - **Constraint**: Define Output_Mode explicitly.
 
+### Description Format
+
+#### Skills
+```yaml
+description: >-
+  [One-line purpose]
+  Scope: [key capabilities]
+  Excludes: [exclusions - domain skills only]
+  Triggers: [keywords for routing]
+```
+- **Purpose**: One-sentence goal
+- **Scope**: Key capabilities (no redundancy)
+- **Excludes**: Domain skills only - topics NOT skill names (e.g., "database design", not "use database-engineering")
+- **Triggers**: Keywords for routing
+- **Token efficiency**: < 350 chars typical (1024 max)
+- **Formatting**: Single newlines only, no blank lines
+- **STM format**: Keywords only, no conversational filler
+
+#### Agents
+```yaml
+description: >-
+  [One-line purpose]
+  Scope: [key areas]
+```
+- **Purpose**: One sentence explaining what agent does
+- **Scope**: Key areas covered (no redundancy)
+- **Token efficiency**: < 250 chars preferred (1024 max)
+- **Formatting**: Single newlines only, no blank lines
+- **STM format**: Keywords only, no conversational filler
+
+#### Commands
+```yaml
+description: >-
+  [One-line purpose]
+  Scope: [areas covered]
+```
+- **Purpose**: One sentence explaining what command does
+- **Scope**: Areas covered (no redundancy)
+- **Token efficiency**: < 250 chars preferred (1024 max)
+- **Formatting**: Single newlines only, no blank lines
+- **STM format**: Keywords only, no conversational filler
+
+#### STM Examples
+
+❌ **Incorrect**: Conversational, verbose
+```yaml
+description: >-
+  This agent is designed to help you with exploring the codebase and
+  finding patterns. It can do things like searching for files,
+  analyzing code structure, and understanding architecture.
+```
+
+✓ **Correct**: STM format, concise
+```yaml
+description: >-
+  General-purpose agent for code exploration and analysis.
+  Scope: codebase search, pattern detection, file analysis, architecture understanding.
+```
+
 ## STRUCTURAL MANDATES (The "Brain" Architecture)
 - **Rule**: Generated prompts MUST include these execution phases:
 ### Phase 1: Clarification (Ask)
@@ -921,7 +980,6 @@ END
 - Loading Strategy (has internal `@` references)
 - Routing Logic (progressive disclosure with `@` references)
 - Context Detection (framework/language detection)
-- When To Use (domain skills)
 - Output Format (complex output requirements)
 - Security Framework (security-sensitive)
 - Dependencies (external tools)
@@ -937,15 +995,14 @@ END
 4. Loading Strategy [OPTIONAL - Has References]
 5. Routing Logic [OPTIONAL - Progressive Disclosure]
 6. Context Detection [OPTIONAL]
-7. When To Use [OPTIONAL - Domain Skills]
-8. Execution Protocol [MANDATORY]
-9. Output Format [OPTIONAL - Complex Output]
-10. Security Framework [OPTIONAL - Security-Sensitive]
-11. Dependencies [OPTIONAL - External Tools]
-12. Environment Awareness [OPTIONAL - Context-Dependent]
-13. Validation Checklist [MANDATORY]
-14. Examples [RECOMMENDED]
-15. Glossary [RECOMMENDED]
+7. Execution Protocol [MANDATORY]
+8. Output Format [OPTIONAL - Complex Output]
+9. Security Framework [OPTIONAL - Security-Sensitive]
+10. Dependencies [OPTIONAL - External Tools]
+11. Environment Awareness [OPTIONAL - Context-Dependent]
+12. Validation Checklist [MANDATORY]
+13. Examples [RECOMMENDED]
+14. Glossary [RECOMMENDED]
 
 #### Skills (Simple/Utility)
 1. Purpose [MANDATORY]

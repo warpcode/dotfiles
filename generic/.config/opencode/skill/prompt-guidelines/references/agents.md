@@ -78,8 +78,8 @@
 ```yaml
 ---
 description: >-
-  [Type] agent for [Domain].
-  [When to use].
+  [One-line purpose]
+  Scope: [key areas]
 mode: subagent | primary | all
 temperature: 0.1
 tools:

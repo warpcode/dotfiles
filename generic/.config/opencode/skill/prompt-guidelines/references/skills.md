@@ -114,7 +114,7 @@ skill-name/
 ### SKILL.md Format
 - **Frontmatter**:
   - `name`: [a-z0-9-] (Max 64 chars).
-  - `description`: [What] + [When] + [Triggers]. (Max 1024 chars).
+  - `description`: Purpose + Scope + Excludes (domain) + Triggers. (Max 1024 chars).
   - `allowed-tools`: [List] (Optional).
 - **Body**: STM Instructions + Examples + Requirements.
 
@@ -155,22 +155,38 @@ skill-name/
 ---
 name: skill-name
 description: >-
-  [Action] on [Target].
-  Use when [Trigger].
+  [One-line purpose]
+  Scope: [key capabilities]
+  Excludes: [exclusions - domain skills only]
+  Triggers: [keywords for routing]
 ---
 
 # [Skill Name]
 
-## QUICK START
-- Example: `[Command]`
+## PURPOSE
+[One-sentence description of skill's goal]
 
-## INSTRUCTIONS
-1. Step_1: Input -> Process.
-2. Step_2: **MANDATORY** -> IF complex_logic == TRUE -> READ FILE: `@references/guide.md`.
-3. Step_3: Output format.
+## EXECUTION PROTOCOL [MANDATORY]
 
-## EXAMPLES
+### Phase 1: Clarification
+IF requirements != complete -> List(Questions) -> Wait(User_Input)
+
+### Phase 2: Planning
+Propose plan -> IF impact > Low -> Wait(User_Confirm)
+
+### Phase 3: Execution
+Execute atomic steps. Validate result after EACH step.
+
+### Phase 4: Validation
+Final_Checklist: [Check items]. IF Fail -> Self_Correct.
+
+## VALIDATION CHECKLIST [MANDATORY]
+- [ ] [Check 1]
+- [ ] [Check 2]
+
+## EXAMPLES [RECOMMENDED]
 ```markdown
 User: [Trigger]
 Agent: [Response]
+```
 ```

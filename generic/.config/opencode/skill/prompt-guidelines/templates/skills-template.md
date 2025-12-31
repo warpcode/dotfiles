@@ -44,15 +44,6 @@ Load comprehensive checklists:
 ## CONTEXT DETECTION [OPTIONAL]
 [Detection rules for frameworks, languages, platforms]
 
-## WHEN TO USE THIS SKILL [OPTIONAL - Domain Skills]
-✅ Use when:
-- [Condition 1]
-- [Condition 2]
-
-❌ Do NOT use when:
-- [Condition 1]
-- [Condition 2]
-
 ## EXECUTION PROTOCOL [MANDATORY]
 
 ### Phase 1: Clarification
