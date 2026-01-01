@@ -14,6 +14,40 @@ description: >
 
 # AGENT_NAME
 
+## ROUTING_PROTOCOL
+
+### Mode Detection
+IF "analyze" OR "explain" OR "show" detected THEN
+  READ FILE: @references/modes/analyse.md
+END
+
+IF "create" OR "write" OR "edit" OR "update" detected THEN
+  READ FILE: @references/modes/write.md
+END
+
+IF "review" OR "check" OR "audit" OR "validate" OR "compliance" detected THEN
+  READ FILE: @references/modes/review.md
+END
+
+IF "plan" OR "design" OR "breakdown" OR "estimate" detected THEN
+  READ FILE: @references/modes/plan.md
+END
+
+IF "teach" OR "explain" OR "guide" OR "tutorial" detected THEN
+  READ FILE: @references/modes/teach.md
+END
+
+### Domain-Specific Routing
+IF [domain keyword 1] detected THEN
+  READ FILE: @references/domains/[domain1].md
+END
+
+### Security Context
+IF destructive OR "sudo" OR "rm" OR "security" detected THEN
+  READ FILE: @references/core/security.md
+  READ FILE: @references/core/validation.md
+END
+
 ## IDENTITY [MANDATORY]
 **Role**: [Agent role]
 **Goal**: [Agent goal]
@@ -23,63 +57,32 @@ description: >
 ✗ CANNOT: [Limitation 1, Limitation 2]
 
 ## DEPENDENCIES [OPTIONAL]
+
+### Skills
 - skill(skill-id): [purpose]
+
+### Tools
 - tool-name: [purpose]
 
-## METHOD [MANDATORY]
+### Dependency Validation
 
-### Phase 1: Clarification [MANDATORY]
-[Clarification logic]
-IF requirements != complete -> List(Questions) -> Wait(User_Input)
+IF skill required THEN
+  Load skill(skill-id)
+  Verify skill availability
+  Error if skill not found
+END
 
-### Phase 2: Planning [MANDATORY]
-[Planning logic with <thinking> tag usage]
-Propose plan -> IF impact > Low -> Wait(User_Confirm)
+IF tool required THEN
+  Check tool availability
+  Verify tool version
+  Warn if version mismatch
+END
 
-### Phase 3: Execution [MANDATORY]
-[Execution logic]
-Execute atomic steps. Validate result after EACH step.
-
-### Phase 4: Validation [MANDATORY]
-[Validation logic]
-Final_Checklist: [Check items]. IF Fail -> Self_Correct.
-
-## COGNITIVE PROCESS [OPTIONAL]
-
-### Chain of Thought
-[CoT rules]
-
-### The Critic
-[Critic role rules]
-
-### Variable Binding
-[Output mode and constraints]
-
-## SECURITY & VALIDATION [OPTIONAL]
-
-### Threat Model
-[Threat model rules]
-
-### Validation Layers
-[Validation layers 1-4]
-
-### Threat Controls
-[Control rules]
-
-## OUTPUT FORMAT [OPTIONAL]
-[Output format rules]
-
-## CONSTRAINTS [OPTIONAL]
-1. [Constraint 1]
-2. [Constraint 2]
-
-## EXAMPLES [RECOMMENDED]
-
-### Example 1: [Description]
-[Example details]
-
-### Example 2: [Description]
-[Example details]
+IF dependency missing THEN
+  Error(Dependency not available)
+  List missing dependency
+  Abort operation
+END
 
 ## GLOSSARY [RECOMMENDED when abbreviations exist]
 
