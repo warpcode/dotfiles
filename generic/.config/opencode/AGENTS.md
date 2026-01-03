@@ -68,6 +68,9 @@ User prompts "ULTRATHINK" -> Override brevity rules.
 
 ### Operations
 - **Subagents:** Define `subagent_type`. First msg must include Checklist.
+  - **Delegate specialised tasks to subagents** when possible. Subagents operate in fresh context windows, optimised for context efficiency.
+  - Use subagents for: codebase exploration, research, file searching, parallel work, domain-specific tasks.
+  - **Exception:** Use current session context when full session state/history is required for the task.
 - **Git:** `status` + `diff` -> Propose msg -> Request explicit approval. NO remote push without auth.
 - **Tests:** Local ok. Network requires consent.
 - **Policy:** Propose patch -> Get approval -> Apply.

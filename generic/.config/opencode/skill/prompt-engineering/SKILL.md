@@ -74,6 +74,88 @@ Extract quotes relevant to [task]. Analyze based on quotes.
 - **Example logic gates**: IF input_invalid THEN Validate ELSE Process END
 - **Example natural language**: Validate input before processing, or continue if already valid
 
+### Logic Design Philosophy: Explicit vs Implicit
+
+**Purpose**: Guide prompt designers on when to use explicit logic vs implicit understanding.
+
+#### When Explicit Logic Wins
+
+**Use Keywords/Logic Gates When**:
+- **Precision Required**: Exact, predictable behavior needed (routing, classification, validation)
+- **Testability Matters**: "Did 'skill' match?" is trivial to verify and debug
+- **Performance Critical**: O(1) matching vs LLM inference latency + cost
+- **Technical Tasks**: Developer tools where users are explicit ("create a skill", "validate schema")
+
+**Benefits of Explicit Logic**:
+- **Deterministic**: Same input always produces same output
+- **No Ambiguity**: Keywords are explicit; classification is probabilistic
+- **No Circular Dependency**: Using LLM to determine what to orchestrate creates confusion
+- **Instant**: No extra LLM call required
+
+**Examples of Explicit Logic**:
+```markdown
+IF "skill" OR "create.*skill" OR "new.*skill" detected THEN
+  Load skill-creation workflow
+END
+```
+
+#### When Implicit/Intent-Based Makes Sense
+
+**Use Natural Language/Intent When**:
+- **Ambiguity Expected**: Conversational AI, emotional support, vague queries
+- **Context Understanding Required**: "I'm feeling sad" → emotional support (not keyword matching)
+- **Natural Language Interfaces**: "Book a flight to Paris" → booking intent
+- **Creative/Exploratory**: Brainstorming, ideation, open-ended tasks
+
+**Benefits of Intent-Based**:
+- **Flexibility**: Handles variations and nuances in natural language
+- **User Experience**: More natural, less rigid than exact keyword matching
+- **Adaptive**: Can infer intent from context and partial information
+
+**Examples of Intent-Based**:
+```
+User: "I'm not sure what I need"
+System: Ask clarifying questions to understand intent
+```
+
+#### Decision Framework
+
+| Factor | Explicit Logic | Intent-Based |
+|--------|---------------|--------------|
+| **Precision** | High (deterministic) | Medium (probabilistic) |
+| **Performance** | Instant | Variable (LLM call) |
+| **Testability** | Trivial | Difficult |
+| **Flexibility** | Low (exact match) | High (variations ok) |
+| **Best For** | Technical tasks, routing, classification | Conversational AI, ambiguous queries |
+
+#### Hybrid Approach
+
+**Combine Both When**:
+- **Default**: Try explicit keyword matching first (fast, predictable)
+- **Fallback**: If no match, use intent classification (flexible, adaptive)
+- **Example**:
+  ```markdown
+  IF "skill" OR "create.*skill" detected THEN
+    Load skill-creation workflow
+  ELSE IF intent ambiguous THEN
+    Ask: "Are you working with skills, agents, or commands?"
+  END
+  ```
+
+#### Best Practices
+
+**For Explicit Logic (Keywords/Logic Gates)**:
+- Use specific verbs/nouns (create, edit, validate, database, api)
+- Expand with regex for flexibility (skill|create.*skill|new.*skill)
+- Log what matched for debugging
+- Provide fallback for unrecognized input
+
+**For Intent-Based Logic**:
+- Use for open-ended or conversational contexts only
+- Provide clear examples of expected inputs
+- Ask clarifying questions when intent uncertain
+- Avoid for technical task routing (use keywords instead)
+
 ### Symbols
 - `->` (Causes)
 - `=>` (Implies)
