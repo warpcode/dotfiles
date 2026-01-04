@@ -1,6 +1,5 @@
 ---
-type: agent
-mode: all
+mode: subagent
 temperature: 0.2
 tools:
   read: true
