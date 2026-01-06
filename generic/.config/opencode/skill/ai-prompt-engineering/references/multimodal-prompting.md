@@ -9,25 +9,74 @@ Structure prompts that effectively combine visual and textual information for co
 ### Visual Question Answering
 
 ```python
-def create_vqa_prompt(image_description: str, question: str) -> str:
-    """Create a prompt for visual question answering tasks."""
+from typing import Dict, List, Optional, Union
+import json
 
-    prompt = f"""
-Analyze this image and answer the question using both visual and contextual information.
+def create_vqa_prompt(image_description: str, question: str, context: Optional[str] = None) -> str:
+    """Create a prompt for visual question answering tasks with error handling."""
 
-Image Description: {image_description}
+    # Validate inputs
+    if not image_description or not image_description.strip():
+        raise ValueError("Image description cannot be empty")
+    if not question or not question.strip():
+        raise ValueError("Question cannot be empty")
 
-Question: {question}
+    # Build prompt with optional context
+    prompt_parts = [
+        "Analyze this image and answer the question using both visual and contextual information.",
+        "",
+        f"Image Description: {image_description.strip()}"
+    ]
 
-Provide a detailed answer that:
-1. Describes relevant visual elements
-2. Uses contextual reasoning
-3. Gives a clear, direct answer
-4. Explains your reasoning process
+    if context:
+        prompt_parts.extend(["", f"Additional Context: {context.strip()}"])
 
-Answer:"""
+    prompt_parts.extend([
+        "",
+        f"Question: {question.strip()}",
+        "",
+        "Provide a detailed answer that:",
+        "1. Describes relevant visual elements",
+        "2. Uses contextual reasoning",
+        "3. Gives a clear, direct answer",
+        "4. Explains your reasoning process",
+        "",
+        "Answer:"
+    ])
 
-    return prompt
+    return "\n".join(prompt_parts)
+
+# Usage with realistic examples
+try:
+    # Example 1: Basic VQA
+    basic_prompt = create_vqa_prompt(
+        image_description="A busy city street scene showing tall buildings, cars, pedestrians, and traffic lights. The sky is cloudy and there are several people walking on sidewalks.",
+        question="How many cars are visible in the image?"
+    )
+    print("Basic VQA Prompt:")
+    print(basic_prompt[:200] + "...")
+    # Expected output: Creates a well-structured prompt for visual analysis
+
+    # Example 2: VQA with context
+    context_prompt = create_vqa_prompt(
+        image_description="A family gathered around a dining table with plates of food, candles, and decorations. Everyone appears to be smiling and enjoying the meal.",
+        question="What type of event is happening?",
+        context="This is a photo from a family celebration in December"
+    )
+    print("\nContextual VQA Prompt:")
+    print("Includes additional context about the time of year")
+    # Expected output: Prompt includes December context for better reasoning
+
+    # Example 3: Error handling
+    try:
+        error_prompt = create_vqa_prompt("", "What is shown?")
+    except ValueError as e:
+        print(f"\nError handling: {e}")
+        # Expected output: Error handling: Image description cannot be empty
+
+except Exception as e:
+    print(f"Unexpected error: {e}")
+    # Handle any other errors gracefully
 ```
 
 ### Image Captioning with Context

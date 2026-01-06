@@ -9,10 +9,12 @@ Build robust evaluation pipelines for continuous prompt assessment.
 ### Test Suite Architecture
 
 ```python
-from typing import Dict, List, Any
-from dataclasses import dataclass
-import json
+import time
 import statistics
+import json
+from typing import Dict, List, Any, Optional
+from dataclasses import dataclass
+from collections import defaultdict
 
 @dataclass
 class TestCase:
@@ -111,6 +113,93 @@ class PromptEvaluator:
             'tokens_used': result.tokens_used,
             'metadata': result.metadata
         }
+
+# Usage example with realistic data
+@dataclass
+class TestCase:
+    id: str
+    input: str
+    expected_output: str
+    category: str
+    difficulty: str
+
+# Create realistic test cases
+test_cases = [
+    TestCase(
+        id="summary_q1",
+        input="Summarize the key findings from this quarterly sales report: Q3 showed 15% growth in digital sales, with mobile commerce increasing by 28%. Customer retention improved to 85%, and new customer acquisition costs decreased by 12%.",
+        expected_output="Q3 sales grew 15% with significant mobile commerce increase of 28%. Customer retention reached 85% and acquisition costs fell 12%.",
+        category="summarization",
+        difficulty="medium"
+    ),
+    TestCase(
+        id="sentiment_q1",
+        input="Analyze the sentiment of this customer review: 'The product arrived quickly and works perfectly. Great value for money!'",
+        expected_output="Positive",
+        category="sentiment_analysis",
+        difficulty="easy"
+    ),
+    TestCase(
+        id="code_gen_q1",
+        input="Write a Python function that calculates the factorial of a number using recursion.",
+        expected_output="""def factorial(n):
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)""",
+        category="code_generation",
+        difficulty="medium"
+    )
+]
+
+# Mock LLM function for demonstration
+def mock_llm_response(prompt: str) -> str:
+    """Mock LLM response for testing."""
+    if "summarize" in prompt.lower():
+        return "Q3 sales grew 15% with mobile commerce up 28%. Customer retention at 85%, acquisition costs down 12%."
+    elif "sentiment" in prompt.lower():
+        return "Positive"
+    elif "factorial" in prompt.lower():
+        return """def factorial(n):
+    if n <= 1:
+        return 1
+    else:
+        return n * factorial(n - 1)"""
+    else:
+        return "Mock response"
+
+# Run evaluation with error handling
+try:
+    evaluator = PromptEvaluator(test_cases)
+
+    def test_prompt(input_text: str) -> str:
+        """Test prompt function with error simulation."""
+        try:
+            # Simulate occasional failures
+            if "error" in input_text.lower():
+                raise Exception("Simulated LLM error")
+            return mock_llm_response(input_text)
+        except Exception as e:
+            print(f"LLM call failed: {e}")
+            return "Error: Unable to generate response"
+
+    results = evaluator.evaluate_prompt(test_prompt)
+
+    print("Evaluation Results:")
+    print(f"Total tests: {results['total_tests']}")
+    print(f"Average score: {results['average_score']:.3f}")
+    print(f"Average latency: {results['average_latency']:.3f}s")
+    print(f"Average tokens: {results['average_tokens']:.1f}")
+    # Expected output:
+    # Evaluation Results:
+    # Total tests: 3
+    # Average score: 0.889 (high similarity scores)
+    # Average latency: ~0.001s (very fast for mock)
+    # Average tokens: ~25.0
+
+except Exception as e:
+    print(f"Evaluation failed: {e}")
+    # Handle evaluation errors gracefully
+    results = {'error': str(e), 'total_tests': 0}
 ```
 
 ### Benchmark Dataset Management
