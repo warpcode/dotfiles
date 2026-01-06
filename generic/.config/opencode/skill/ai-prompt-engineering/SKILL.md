@@ -5,7 +5,7 @@ description: Master advanced prompt engineering techniques to maximize LLM perfo
 
 # Prompt Engineering Patterns
 
-Master advanced prompt engineering techniques to maximize LLM performance, reliability, and controllability.
+Master advanced prompt engineering techniques to maximize LLM performance, reliability, and controllability in production.
 
 ## When to Use This Skill
 
@@ -43,6 +43,10 @@ Use these guides based on your specific needs:
 - **"My prompts produce inconsistent results"** → Load `references/prompt-optimization.md` for systematic refinement workflows
 - **"I want to create reusable prompt templates"** → Load `references/prompt-templates.md` for variable interpolation and modular components
 - **"How do I design effective system prompts?"** → Load `references/system-prompts.md` for behavior specification and constraints
+- **"How do I ensure prompt safety and security?"** → Load `references/prompt-safety.md` for input validation and jailbreak prevention
+- **"I need to work with images or audio in prompts"** → Load `references/multimodal-prompting.md` for cross-modal reasoning techniques
+- **"How do I create multi-step workflows?"** → Load `references/prompt-chaining.md` for agent orchestration and complex chains
+- **"I want to evaluate and compare prompt performance"** → Load `references/evaluation-frameworks.md` for automated testing and A/B experimentation
 
 ## Best Practices
 
@@ -61,6 +65,15 @@ Use these guides based on your specific needs:
 
 ## Assets and Tools
 
+- **references/few-shot-learning.md**: Deep dive on example selection and construction
+- **references/chain-of-thought.md**: Advanced reasoning elicitation techniques
+- **references/prompt-optimization.md**: Systematic refinement workflows
+- **references/prompt-templates.md**: Reusable template patterns
+- **references/system-prompts.md**: System-level prompt design
+- **references/prompt-safety.md**: Input validation, jailbreak prevention, and content policies
+- **references/multimodal-prompting.md**: Image/text combinations and cross-modal reasoning
+- **references/prompt-chaining.md**: Multi-step workflows and agent orchestration
+- **references/evaluation-frameworks.md**: Automated testing, benchmarking, and A/B testing
 - **assets/prompt-template-library.md**: Ready-to-use prompt templates for common tasks
 - **assets/few-shot-examples.json**: Curated example datasets for various domains
 - **scripts/optimize-prompt.py**: Automated prompt optimization and evaluation tool
