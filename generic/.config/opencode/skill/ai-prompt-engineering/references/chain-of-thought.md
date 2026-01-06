@@ -375,21 +375,106 @@ def evaluate_cot_quality(reasoning_chain):
 - **Overcomplicated**: Adding unnecessary steps that confuse
 - **Inconsistent Format**: Changing step structure mid-reasoning
 
-## When to Use CoT
+## Advanced CoT Patterns
 
-**Use CoT for:**
-- Math and arithmetic problems
-- Logical reasoning tasks
-- Multi-step planning
-- Code generation and debugging
-- Complex decision making
+### Self-Consistency with Multiple Paths
+Generate multiple reasoning chains and use majority voting for improved accuracy:
 
-**Skip CoT for:**
-- Simple factual queries
-- Direct lookups
-- Creative writing
-- Tasks requiring conciseness
-- Real-time, latency-sensitive applications
+```python
+def self_consistent_cot(problem, num_samples=5, temperature=0.7):
+    """Generate multiple CoT paths and select most consistent answer."""
+    responses = []
+
+    for _ in range(num_samples):
+        prompt = f"{problem}\n\nLet's solve this step by step:"
+        response = call_llm(prompt, temperature=temperature)
+        final_answer = extract_final_answer(response)
+        responses.append((response, final_answer))
+
+    # Find most common final answer
+    from collections import Counter
+    answers = [ans for _, ans in responses]
+    most_common_answer = Counter(answers).most_common(1)[0][0]
+
+    # Return reasoning chain that led to most common answer
+    for reasoning, answer in responses:
+        if answer == most_common_answer:
+            return reasoning
+
+    return responses[0][0]  # Fallback
+```
+
+### Progressive CoT for Complex Problems
+Break extremely complex problems into hierarchical reasoning stages:
+
+```python
+def progressive_cot(complex_problem):
+    """Apply CoT at multiple levels of abstraction."""
+
+    # Level 1: Problem decomposition
+    decomposition_prompt = f"""
+    Break this complex problem into manageable sub-problems:
+
+    Problem: {complex_problem}
+
+    Sub-problems:
+    1."""
+
+    sub_problems = call_llm(decomposition_prompt)
+
+    # Level 2: Solve each sub-problem with CoT
+    solutions = []
+    for sub_problem in extract_sub_problems(sub_problems):
+        solution = zero_shot_cot(f"Solve: {sub_problem}")
+        solutions.append(solution)
+
+    # Level 3: Synthesize solutions
+    synthesis_prompt = f"""
+    Original problem: {complex_problem}
+
+    Sub-problem solutions:
+    {chr(10).join(f"- {sol}" for sol in solutions)}
+
+    Synthesize these into a comprehensive solution:"""
+
+    return call_llm(synthesis_prompt)
+```
+
+### CoT with External Tools
+Integrate tool usage within reasoning chains for enhanced capabilities:
+
+```python
+def tool_augmented_cot(problem, available_tools):
+    """Use CoT to decide when and how to use external tools."""
+
+    reasoning_prompt = f"""
+    Problem: {problem}
+
+    Available tools: {', '.join(available_tools.keys())}
+
+    Think step-by-step about how to solve this problem. At each step, decide:
+    1. What information you need
+    2. Whether to use a tool or reason further
+    3. Which tool to use and with what parameters
+
+    Reasoning and tool usage:"""
+
+    response = call_llm(reasoning_prompt)
+
+    # Parse tool usage from response and execute
+    tool_calls = extract_tool_calls(response)
+    results = execute_tool_calls(tool_calls, available_tools)
+
+    # Continue reasoning with tool results
+    final_prompt = f"""
+    Previous reasoning: {response}
+
+    Tool results: {results}
+
+    Complete the solution:"""
+
+    return call_llm(final_prompt)
+```
 
 ## Advanced Applications and Extensions
 
