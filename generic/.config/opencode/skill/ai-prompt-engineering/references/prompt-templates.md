@@ -461,6 +461,15 @@ Email:"""
 }
 ```
 
+## Advanced Template Applications
+
+Use these specialized guides for advanced template scenarios:
+
+- **"How do I optimize my template performance systematically?"** → Load `references/prompt-optimization.md` for template A/B testing, token optimization, and iterative refinement
+- **"I need automated testing and benchmarking for my templates"** → Load `references/evaluation-frameworks.md` for comprehensive template evaluation and performance metrics
+- **"How do I create multi-turn conversation templates?"** → Load `references/prompt-chaining.md` for complex multi-step template workflows
+- **"I want to include examples in my templates dynamically"** → Load `references/few-shot-learning.md` for dynamic example selection and template integration
+
 ## Performance Considerations
 
 - Pre-compile templates for repeated use

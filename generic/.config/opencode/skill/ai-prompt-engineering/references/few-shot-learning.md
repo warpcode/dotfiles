@@ -361,6 +361,15 @@ class AdaptiveExampleSelector:
 4. **Overfitting to Examples**: Model copies example patterns too literally
 5. **Ignoring Token Limits**: Running out of space for actual input/output
 
+## Advanced Applications and Extensions
+
+Use these specialized guides for advanced few-shot learning scenarios:
+
+- **"How do I evaluate and compare different few-shot approaches?"** → Load `references/evaluation-frameworks.md` for benchmarking few-shot performance and statistical validation
+- **"I need to optimize my few-shot prompts systematically"** → Load `references/prompt-optimization.md` for A/B testing example sets and performance improvement
+- **"How do I combine few-shot learning with multi-step reasoning?"** → Load `references/chain-of-thought.md` for few-shot CoT prompting and reasoning traces
+- **"I want to use few-shot learning with multimodal content"** → Load `references/multimodal-prompting.md` for cross-modal example selection and adaptation
+
 ## Resources
 
 - Example dataset repositories

@@ -165,6 +165,15 @@ Soft constraints (SHOULD follow):
 - **Over-Constraining**: Too many rules can make responses rigid
 - **Under-Specifying Format**: Missing output structure leads to inconsistency
 
+## Advanced System Prompt Applications
+
+Use these specialized guides for advanced system prompt scenarios:
+
+- **"How do I test and optimize my system prompts systematically?"** → Load `references/evaluation-frameworks.md` for automated system prompt evaluation and benchmarking
+- **"I need to create complex multi-role system prompt workflows"** → Load `references/prompt-chaining.md` for agent orchestration with system prompt management
+- **"How do I optimize system prompts for safety and security?"** → Load `references/prompt-safety.md` for secure system prompt design and jailbreak prevention
+- **"I want to combine system prompts with few-shot learning"** → Load `references/few-shot-learning.md` for dynamic example integration in system contexts
+
 ## Testing System Prompts
 
 ```python

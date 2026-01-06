@@ -1028,6 +1028,15 @@ Before: "Calculate..."
 After: "Calculate... Then verify your calculation is correct before responding."
 ```
 
+## Advanced Scenarios and Extensions
+
+Use these specialized guides for advanced optimization needs:
+
+- **"I need automated testing and benchmarking for my prompts"** → Load `references/evaluation-frameworks.md` for comprehensive evaluation pipelines, A/B testing frameworks, and performance metrics
+- **"How do I ensure safety during prompt optimization?"** → Load `references/prompt-safety.md` for input validation, jailbreak prevention, and content policy implementation
+- **"I want to create multi-step optimization workflows"** → Load `references/prompt-chaining.md` for agent orchestration and complex optimization chains
+- **"How do I optimize prompts with images or multimodal content?"** → Load `references/multimodal-prompting.md` for cross-modal optimization techniques
+
 ## Tools and Utilities
 
 - Prompt diff tools for version comparison
