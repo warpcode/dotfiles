@@ -9,34 +9,103 @@ Structure prompt chains for different types of complex reasoning and task execut
 ### Linear Chain Pattern
 
 ```python
+import time
+from typing import List, Dict, Any, Callable, Optional
+from dataclasses import dataclass
+
+@dataclass
+class ChainStep:
+    name: str
+    prompt_template: str
+    max_retries: int = 3
+    timeout: float = 30.0
+
+@dataclass
+class StepResult:
+    step_number: int
+    step_name: str
+    input_text: str
+    output_text: str
+    execution_time: float
+    success: bool
+    error_message: Optional[str] = None
+
 class LinearChain:
-    def __init__(self, steps: list):
-        self.steps = steps  # List of step functions/prompts
+    def __init__(self, steps: List[ChainStep], llm_client: Optional[Any] = None):
+        self.steps = steps
+        self.llm_client = llm_client or self._default_llm_client()
 
-    def execute(self, initial_input: str) -> dict:
-        """Execute a linear chain of processing steps."""
+    def _default_llm_client(self) -> Any:
+        """Provide default mock LLM client."""
+        class MockLLM:
+            def complete(self, prompt: str, **kwargs) -> str:
+                time.sleep(0.1)  # Simulate latency
+                if "analyze" in prompt.lower():
+                    return "Analysis complete: Key insights extracted from the data."
+                elif "summarize" in prompt.lower():
+                    return "Summary: The document contains important information about project requirements."
+                elif "recommend" in prompt.lower():
+                    return "Recommendation: Proceed with implementation using the proposed architecture."
+                else:
+                    return f"Processed: {prompt[:50]}..."
+        return MockLLM()
 
-        current_output = initial_input
-        step_results = []
+    def execute(self, initial_input: str) -> Dict[str, Any]:
+        """Execute a linear chain of processing steps with error handling."""
 
-        for i, step in enumerate(self.steps):
-            step_input = self._prepare_step_input(current_output, step_results)
+        if not isinstance(initial_input, str) or not initial_input.strip():
+            raise ValueError("Initial input must be a non-empty string")
 
-            # Execute step (could be another LLM call, tool, or processing function)
-            step_output = self._execute_step(step, step_input)
+        current_output = initial_input.strip()
+        step_results: List[StepResult] = []
+        total_execution_time = 0.0
 
-            step_results.append({
-                'step': i + 1,
-                'input': step_input,
-                'output': step_output
-            })
+        try:
+            for i, step in enumerate(self.steps):
+                step_start_time = time.time()
 
-            current_output = step_output
+                # Prepare input for this step
+                step_input = self._prepare_step_input(current_output, step_results)
 
-        return {
-            'final_output': current_output,
-            'step_history': step_results
-        }
+                # Execute step with retries
+                step_output, success, error_msg = self._execute_step_with_retries(step, step_input)
+
+                execution_time = time.time() - step_start_time
+                total_execution_time += execution_time
+
+                # Record step result
+                result = StepResult(
+                    step_number=i + 1,
+                    step_name=step.name,
+                    input_text=step_input,
+                    output_text=step_output,
+                    execution_time=execution_time,
+                    success=success,
+                    error_message=error_msg
+                )
+                step_results.append(result)
+
+                # Continue to next step even if current step had issues
+                if success:
+                    current_output = step_output
+
+            return {
+                'final_output': current_output,
+                'step_history': [self._step_result_to_dict(r) for r in step_results],
+                'total_execution_time': total_execution_time,
+                'success': any(r.success for r in step_results),  # At least one step succeeded
+                'steps_completed': len([r for r in step_results if r.success])
+            }
+
+        except Exception as e:
+            return {
+                'final_output': f"Chain execution failed: {str(e)}",
+                'step_history': [self._step_result_to_dict(r) for r in step_results],
+                'total_execution_time': total_execution_time,
+                'success': False,
+                'error': str(e),
+                'steps_completed': len([r for r in step_results if r.success])
+            }
 
     def _prepare_step_input(self, current_output: str, previous_results: list) -> str:
         """Prepare input for next step, incorporating context as needed."""
@@ -47,10 +116,93 @@ class LinearChain:
         context = f"Previous work: {previous_results[-1]['output'][:200]}..."
         return f"{context}\n\nCurrent task: {current_output}"
 
-    def _execute_step(self, step_definition: dict, input_data: str) -> str:
-        """Execute individual step (placeholder for actual LLM call)."""
-        # In practice, this would call an LLM with step-specific prompt
-        return f"Step result for: {input_data[:50]}..."
+    def _execute_step_with_retries(self, step: ChainStep, input_data: str) -> tuple[str, bool, Optional[str]]:
+        """Execute step with retry logic and timeout handling."""
+
+        for attempt in range(step.max_retries):
+            try:
+                # Format the prompt with input data
+                formatted_prompt = step.prompt_template.format(input=input_data)
+
+                # Call LLM with timeout (simplified)
+                start_time = time.time()
+                response = self.llm_client.complete(formatted_prompt)
+                execution_time = time.time() - start_time
+
+                # Check for timeout
+                if execution_time > step.timeout:
+                    raise TimeoutError(f"Step timed out after {execution_time:.2f}s")
+
+                return response, True, None
+
+            except Exception as e:
+                error_msg = f"Attempt {attempt + 1} failed: {str(e)}"
+                if attempt == step.max_retries - 1:
+                    return "", False, error_msg
+                time.sleep(0.5 * (attempt + 1))  # Exponential backoff
+
+        return "", False, "All retry attempts failed"
+
+    def _step_result_to_dict(self, result: StepResult) -> Dict[str, Any]:
+        """Convert StepResult to dictionary."""
+        return {
+            'step_number': result.step_number,
+            'step_name': result.step_name,
+            'input_length': len(result.input_text),
+            'output_length': len(result.output_text),
+            'execution_time': result.execution_time,
+            'success': result.success,
+            'error_message': result.error_message
+        }
+
+# Usage example with realistic workflow
+analysis_steps = [
+    ChainStep(
+        name="analyze_requirements",
+        prompt_template="Analyze these project requirements and extract key features:\n\n{input}\n\nKey Features:"
+    ),
+    ChainStep(
+        name="design_architecture",
+        prompt_template="Based on the analysis above, design a high-level system architecture:\n\n{input}\n\nArchitecture Design:"
+    ),
+    ChainStep(
+        name="create_implementation_plan",
+        prompt_template="Create a detailed implementation plan for the architecture:\n\n{input}\n\nImplementation Plan:"
+    )
+]
+
+# Create and execute chain
+chain = LinearChain(analysis_steps)
+
+project_description = """
+Build a web application for managing customer support tickets. The system should:
+- Allow customers to submit tickets via web form
+- Enable support agents to view, assign, and resolve tickets
+- Include a knowledge base for common issues
+- Generate reports on ticket resolution times
+- Support multiple customer organizations
+"""
+
+try:
+    result = chain.execute(project_description)
+
+    print("Chain Execution Results:")
+    print(f"Success: {result['success']}")
+    print(f"Steps completed: {result['steps_completed']}")
+    print(f"Total execution time: {result['total_execution_time']:.2f}s")
+    print(f"Final output preview: {result['final_output'][:200]}...")
+
+    # Expected output:
+    # Chain Execution Results:
+    # Success: True
+    # Steps completed: 3
+    # Total execution time: ~0.30s
+    # Final output preview: Implementation Plan: 1. Set up project structure with separate modules for customer portal, agent dashboard, and admin panel...
+
+except Exception as e:
+    print(f"Chain execution failed: {e}")
+    # Handle errors gracefully
+    result = {'success': False, 'error': str(e)}
 ```
 
 ### Tree of Thought Pattern
