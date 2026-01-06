@@ -76,7 +76,6 @@ Use these guides based on your specific needs:
 - **references/evaluation-frameworks.md**: Automated testing, benchmarking, and A/B testing
 - **assets/prompt-template-library.md**: Ready-to-use prompt templates for common tasks
 - **assets/few-shot-examples.json**: Curated example datasets for various domains
-- **scripts/optimize-prompt.py**: Automated prompt optimization and evaluation tool
 
 ## Success Metrics
 
