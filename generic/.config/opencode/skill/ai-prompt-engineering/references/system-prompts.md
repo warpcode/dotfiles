@@ -1,13 +1,132 @@
 # System Prompt Design
 
-## Core Principles
+## Advanced System Prompt Engineering
 
-System prompts set the foundation for LLM behavior. They define role, expertise, constraints, and output expectations.
+### Dynamic Role Adaptation
+Create system prompts that adapt their behavior based on context and user needs:
 
-## Effective System Prompt Structure
+```python
+def adaptive_system_prompt(base_role, user_context, task_complexity):
+    """Generate contextually adaptive system prompts."""
 
+    # Base role definition
+    prompt_parts = [f"You are {base_role}."]
+
+    # Adapt expertise based on context
+    if user_context.get('domain') == 'technical':
+        prompt_parts.append("You have deep expertise in software engineering, system design, and technical problem-solving.")
+    elif user_context.get('domain') == 'business':
+        prompt_parts.append("You excel at business analysis, strategic planning, and operational optimization.")
+
+    # Adjust communication style based on complexity
+    if task_complexity == 'simple':
+        prompt_parts.append("Communicate clearly and concisely. Use simple language and avoid technical jargon unless necessary.")
+    elif task_complexity == 'complex':
+        prompt_parts.append("Provide detailed, comprehensive responses. Include technical depth and consider edge cases.")
+
+    # Add adaptive behaviors
+    prompt_parts.extend([
+        "Adapt your communication style based on the user's apparent expertise level.",
+        "If a query is ambiguous, ask clarifying questions before proceeding.",
+        "Provide examples and analogies to illustrate complex concepts.",
+        "When appropriate, suggest alternative approaches or solutions."
+    ])
+
+    return "\n\n".join(prompt_parts)
 ```
-[Role Definition] + [Expertise Areas] + [Behavioral Guidelines] + [Output Format] + [Constraints]
+
+### Multi-Persona System Prompts
+Implement prompts that can switch between different personas or modes:
+
+```python
+class MultiPersonaPrompt:
+    def __init__(self):
+        self.personas = {
+            'mentor': {
+                'role': 'experienced mentor and teacher',
+                'style': 'supportive, encouraging, educational',
+                'focus': 'learning and skill development'
+            },
+            'expert': {
+                'role': 'senior domain specialist',
+                'style': 'authoritative, precise, technical',
+                'focus': 'accuracy and depth'
+            },
+            'collaborator': {
+                'role': 'creative problem-solving partner',
+                'style': 'engaging, innovative, exploratory',
+                'focus': 'creative solutions and brainstorming'
+            }
+        }
+
+    def generate_prompt(self, primary_persona, secondary_persona=None, context=None):
+        """Generate a multi-persona system prompt."""
+
+        prompt = f"You are a {self.personas[primary_persona]['role']}."
+
+        if secondary_persona:
+            prompt += f" You can also adopt a {self.personas[secondary_persona]['role']} perspective when helpful."
+
+        # Add behavioral guidelines
+        primary = self.personas[primary_persona]
+        prompt += f"\n\nCommunication style: {primary['style']}"
+        prompt += f"\nPrimary focus: {primary['focus']}"
+
+        if secondary_persona:
+            secondary = self.personas[secondary_persona]
+            prompt += f"\nSecondary style: {secondary['style']}"
+            prompt += f"\nAlternative focus: {secondary['focus']}"
+
+        # Add context-specific adaptations
+        if context:
+            prompt += f"\n\nCurrent context: {context}"
+            prompt += "\nAdapt your approach based on this context while maintaining your core persona."
+
+        return prompt
+```
+
+### Constraint Hierarchies
+Implement layered constraints for different types of boundaries:
+
+```python
+class ConstraintHierarchy:
+    def __init__(self):
+        self.constraint_levels = {
+            'ethical': [
+                'Never provide harmful, illegal, or unethical advice',
+                'Prioritize user safety and well-being',
+                'Respect privacy and confidentiality'
+            ],
+            'domain': [
+                'Stay within your defined area of expertise',
+                'Acknowledge limitations when encountering unfamiliar topics',
+                'Recommend external resources for specialized knowledge'
+            ],
+            'operational': [
+                'Provide responses within reasonable time limits',
+                'Use appropriate level of detail for the context',
+                'Maintain consistency across conversations'
+            ]
+        }
+
+    def build_constraint_prompt(self, active_levels=None):
+        """Build a hierarchical constraint system."""
+
+        if active_levels is None:
+            active_levels = ['ethical', 'domain', 'operational']
+
+        constraints = []
+        for level in active_levels:
+            if level in self.constraint_levels:
+                constraints.extend(self.constraint_levels[level])
+
+        prompt = "Critical constraints and guidelines:\n"
+        for i, constraint in enumerate(constraints, 1):
+            prompt += f"{i}. {constraint}\n"
+
+        prompt += "\nThese constraints are listed in priority order. Higher-numbered constraints can be relaxed if they conflict with lower-numbered (higher priority) constraints."
+
+        return prompt
 ```
 
 ### Example: Code Assistant
