@@ -20,6 +20,9 @@ Master advanced prompt engineering techniques to maximize LLM performance, relia
 - Updating existing skills with improved structure and content
 - Generating high-quality LLM commands using structured guidelines
 - Applying universal patterns for command consistency and reliability
+- Creating new agents using comprehensive guidelines and pattern frameworks
+- Updating existing agents with quality standards and validation checklists
+- Applying agent pattern selection for consistent agent architecture
 
 ## Core Capabilities
 
@@ -31,6 +34,7 @@ Master advanced prompt engineering techniques to maximize LLM performance, relia
 - **Skill Creation Frameworks**: Comprehensive guidelines for producing high-quality skills based on repository analysis
 - **Command Generation**: Structured frameworks for creating production-ready LLM commands with proper layout patterns and writing conventions
 - **Universal Pattern Integration**: Applying structural guidelines (progressive disclosure, quality assurance, cross-referencing) to prompt design for better reliability and maintainability
+- **Agent Creation Frameworks**: Comprehensive guidelines for producing high-quality agents based on repository analysis with pattern selection, quality assurance, and validation standards
 
 ## Quick Start
 
@@ -57,6 +61,14 @@ Use these guides based on your specific needs:
 - **"How do I integrate universal patterns into my prompts?"** → Load `references/prompt-templates.md` for structural guidelines and integration techniques
 - **"I need to create new skills"** → Load `references/skills/skill-creation-guidelines.md` for comprehensive skill development frameworks
 - **"How do I create new commands"** → Load `references/commands/command-creation-guidelines.md` for structured command generation with universal patterns
+- **"How do I select agent patterns"** → Load `references/agents/pattern-selection.md` for decision framework choosing agent structures
+- **"How do I create comprehensive agents"** → Load `references/agents/comprehensive-agent-guidelines.md` for complex multi-domain agent structure
+- **"How do I create simplified agents"** → Load `references/agents/simplified-agent-guidelines.md` for focused narrow-domain agent structure
+- **"How do I create specialized agents"** → Load `references/agents/specialized-agent-guidelines.md` for domain-specific workflow agent structure
+- **"How do I ensure agent quality"** → Load `references/agents/quality-assurance-checklist.md` for validation standards and checklists
+- **"How do I style agent specifications"** → Load `references/agents/writing-style-guidelines.md` for tone, voice, and formatting standards
+- **"How do I choose agent models"** → Load `references/agents/model-selection-guidelines.md` for complexity-based model selection
+- **"How do I write example interactions"** → Load `references/agents/example-interactions-guidelines.md` for representative user prompt guidelines
 
 ## Best Practices
 
@@ -86,6 +98,14 @@ Use these guides based on your specific needs:
 - **references/evaluation-frameworks.md**: Automated testing, benchmarking, and A/B testing
 - **references/skills/skill-creation-guidelines.md**: Comprehensive frameworks for creating high-quality skills
 - **references/commands/command-creation-guidelines.md**: Structured guidelines for generating production-ready LLM commands
+- **references/agents/pattern-selection.md**: Decision framework for selecting appropriate agent structural patterns
+- **references/agents/comprehensive-agent-guidelines.md**: Complete structure guidelines for complex multi-domain agents
+- **references/agents/simplified-agent-guidelines.md**: Structure guidelines for focused narrow-domain agents
+- **references/agents/specialized-agent-guidelines.md**: Structure guidelines for domain-specific workflow agents
+- **references/agents/quality-assurance-checklist.md**: Comprehensive validation standards for agent specifications
+- **references/agents/writing-style-guidelines.md**: Tone, voice, tense, and formatting standards for agents
+- **references/agents/model-selection-guidelines.md**: Complexity-based criteria for Claude model selection
+- **references/agents/example-interactions-guidelines.md**: Guidelines for creating representative user interaction examples
 - **assets/prompt-template-library.md**: Ready-to-use prompt templates for common tasks, including universal pattern integration
 - **assets/few-shot-examples.json**: Curated example datasets for various domains
 
