@@ -26,6 +26,7 @@ Master advanced prompt engineering techniques to maximize LLM performance, relia
 
 ## Core Capabilities
 
+- **STM Formatting**: Structured Telegraphic Markdown for clear, concise prompt construction
 - **Few-Shot Learning**: Dynamic example selection and construction
 - **Chain-of-Thought Prompting**: Structured reasoning elicitation
 - **Prompt Optimization**: Iterative refinement and performance measurement
@@ -43,12 +44,15 @@ Master advanced prompt engineering techniques to maximize LLM performance, relia
 prompt = "Convert this natural language query to SQL: Find all users who registered in the last 30 days"
 ```
 
+Use Structured Telegraphic Markdown (STM) for clear, concise prompt formatting.
+
 For advanced implementations with templates and examples, see the reference guides below.
 
 ## Available Resources
 
 Use these guides based on your specific needs:
 
+- **"How do I format prompts clearly and concisely?"** → Load `references/stm-format.md` for structured telegraphic markdown formatting
 - **"I need to implement few-shot learning"** → Load `references/few-shot-learning.md` for example selection strategies and dynamic retrieval
 - **"How do I add step-by-step reasoning to prompts?"** → Load `references/chain-of-thought.md` for CoT prompting techniques
 - **"My prompts produce inconsistent results"** → Load `references/prompt-optimization.md` for systematic refinement workflows
