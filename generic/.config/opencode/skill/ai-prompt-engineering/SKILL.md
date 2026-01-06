@@ -16,6 +16,8 @@ Master advanced prompt engineering techniques to maximize LLM performance, relia
 - Creating reusable prompt templates with variable interpolation
 - Debugging and refining prompts that produce inconsistent outputs
 - Implementing system prompts for specialized AI assistants
+- Creating new skills using comprehensive development frameworks
+- Updating existing skills with improved structure and content
 
 ## Core Capabilities
 
@@ -24,6 +26,7 @@ Master advanced prompt engineering techniques to maximize LLM performance, relia
 - **Prompt Optimization**: Iterative refinement and performance measurement
 - **Template Systems**: Reusable prompt components with variable interpolation
 - **System Prompt Design**: Model behavior and constraint specification
+- **Skill Creation Frameworks**: Comprehensive guidelines for producing high-quality skills based on repository analysis
 - **Universal Pattern Integration**: Applying structural guidelines (progressive disclosure, quality assurance, cross-referencing) to prompt design for better reliability and maintainability
 
 ## Quick Start
@@ -49,6 +52,7 @@ Use these guides based on your specific needs:
 - **"How do I create multi-step workflows?"** → Load `references/prompt-chaining.md` for agent orchestration and complex chains
 - **"I want to evaluate and compare prompt performance"** → Load `references/evaluation-frameworks.md` for automated testing and A/B experimentation
 - **"How do I integrate universal patterns into my prompts?"** → Load `references/prompt-templates.md` for structural guidelines and integration techniques
+- **"I need to create new skills"** → Load `references/skills/skill-creation-guidelines.md` for comprehensive skill development frameworks
 
 ## Best Practices
 
@@ -76,6 +80,7 @@ Use these guides based on your specific needs:
 - **references/multimodal-prompting.md**: Image/text combinations and cross-modal reasoning
 - **references/prompt-chaining.md**: Multi-step workflows and agent orchestration
 - **references/evaluation-frameworks.md**: Automated testing, benchmarking, and A/B testing
+- **references/skills/skill-creation-guidelines.md**: Comprehensive frameworks for creating high-quality skills
 - **assets/prompt-template-library.md**: Ready-to-use prompt templates for common tasks, including universal pattern integration
 - **assets/few-shot-examples.json**: Curated example datasets for various domains
 
