@@ -18,6 +18,8 @@ Master advanced prompt engineering techniques to maximize LLM performance, relia
 - Implementing system prompts for specialized AI assistants
 - Creating new skills using comprehensive development frameworks
 - Updating existing skills with improved structure and content
+- Generating high-quality LLM commands using structured guidelines
+- Applying universal patterns for command consistency and reliability
 
 ## Core Capabilities
 
@@ -27,6 +29,7 @@ Master advanced prompt engineering techniques to maximize LLM performance, relia
 - **Template Systems**: Reusable prompt components with variable interpolation
 - **System Prompt Design**: Model behavior and constraint specification
 - **Skill Creation Frameworks**: Comprehensive guidelines for producing high-quality skills based on repository analysis
+- **Command Generation**: Structured frameworks for creating production-ready LLM commands with proper layout patterns and writing conventions
 - **Universal Pattern Integration**: Applying structural guidelines (progressive disclosure, quality assurance, cross-referencing) to prompt design for better reliability and maintainability
 
 ## Quick Start
@@ -53,6 +56,7 @@ Use these guides based on your specific needs:
 - **"I want to evaluate and compare prompt performance"** → Load `references/evaluation-frameworks.md` for automated testing and A/B experimentation
 - **"How do I integrate universal patterns into my prompts?"** → Load `references/prompt-templates.md` for structural guidelines and integration techniques
 - **"I need to create new skills"** → Load `references/skills/skill-creation-guidelines.md` for comprehensive skill development frameworks
+- **"How do I create new commands"** → Load `references/commands/command-creation-guidelines.md` for structured command generation with universal patterns
 
 ## Best Practices
 
@@ -81,6 +85,7 @@ Use these guides based on your specific needs:
 - **references/prompt-chaining.md**: Multi-step workflows and agent orchestration
 - **references/evaluation-frameworks.md**: Automated testing, benchmarking, and A/B testing
 - **references/skills/skill-creation-guidelines.md**: Comprehensive frameworks for creating high-quality skills
+- **references/commands/command-creation-guidelines.md**: Structured guidelines for generating production-ready LLM commands
 - **assets/prompt-template-library.md**: Ready-to-use prompt templates for common tasks, including universal pattern integration
 - **assets/few-shot-examples.json**: Curated example datasets for various domains
 
