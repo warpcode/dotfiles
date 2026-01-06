@@ -391,6 +391,15 @@ def evaluate_cot_quality(reasoning_chain):
 - Tasks requiring conciseness
 - Real-time, latency-sensitive applications
 
+## Advanced Applications and Extensions
+
+Use these specialized guides for advanced chain-of-thought scenarios:
+
+- **"How do I evaluate CoT prompt performance systematically?"** → Load `references/evaluation-frameworks.md` for automated CoT evaluation, benchmarking, and performance metrics
+- **"I need to create complex multi-step CoT workflows"** → Load `references/prompt-chaining.md` for agent orchestration and advanced reasoning chains
+- **"How do I optimize CoT prompts for better performance?"** → Load `references/prompt-optimization.md` for systematic CoT refinement and A/B testing
+- **"I want to combine CoT with few-shot learning"** → Load `references/few-shot-learning.md` for CoT reasoning traces and dynamic example selection
+
 ## Resources
 
 - Benchmark datasets for CoT evaluation
