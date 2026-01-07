@@ -90,5 +90,8 @@
       "type": "remote",
       "enabled": false
     }
-  }
+  },
+  "plugin": [
+    "oh-my-opencode"
+  ]
 }
