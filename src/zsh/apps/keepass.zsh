@@ -44,7 +44,7 @@ kp() {
     for arg in "${cmd_array[@]:1}" "$cmd" "$KEEPASS_DB_PATH" "$@" "-q"; do
         cmd_str+=" "$(printf '%q' "$arg")
     done
-    echo "$KP_PASSWORD" | eval "$cmd_str"
+    printf '%s' "$KP_PASSWORD" | eval "$cmd_str"
 }
 
 ##
@@ -96,11 +96,12 @@ kp.login() {
         return 1
     fi
 
+    local password
     echo -n "Enter KeePassXC password: " >&2
-    read -s password
+    read -rs password
     echo >&2
 
-    if echo "$password" | eval "$cli_cmd" db-info "$KEEPASS_DB_PATH" >/dev/null 2>&1; then
+    if printf '%s' "$password" | eval "$cli_cmd" db-info "$KEEPASS_DB_PATH" >/dev/null 2>&1; then
         # Cache the password for the session
         KP_PASSWORD="$password"
         return 0
