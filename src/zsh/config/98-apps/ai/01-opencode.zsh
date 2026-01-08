@@ -3,7 +3,7 @@
 
 # Define default models
 local work_model="github-copilot/gpt-5-mini"
-local personal_model="opencode/grok-code-fast"
+local personal_model="opencode/glm-4.7-free"
 
 if [[ "$IS_WORK" == "1" ]]; then
     # Use GitHub Copilot model for work
