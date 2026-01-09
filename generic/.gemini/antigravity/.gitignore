@@ -1,0 +1,9 @@
+# Antigravity .gitignore
+# Ignore everything, then whitelist user-configurable files
+
+# Ignore all
+*
+
+# Preserve user configuration
+!.gitignore
+!mcp_config.json
