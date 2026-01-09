@@ -1,5 +1,3 @@
-/tmp
-/installation_id
-/*.json
-/*.json.orig
+/*
+!.gitignore
 !/settings.json
