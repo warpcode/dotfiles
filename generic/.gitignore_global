@@ -113,14 +113,69 @@ tags
 ### SVN ###
 .svn/
 
-### AI tools ###
-/conductor/
+### Agentic Coders ###
+
+# Aider
 /.aider*
+
+# Amazon Q
+/.amazonq/
+/.q/
+
+# Augment Code
+/.augment*
+
+# Claude Code (Anthropic)
+/.claude/
+/.claude_history
+
+# Cline
+/.cline/
+/.clinerules
+/.clineignore
+
+# Conductor
+/conductor/
+
+# Continue
+/.continue/
+/.continuerules
+/.continueignore
+
+# Crush
 /.crush*
+/CRUSH.md
+
+# Cursor
+/.cursor/
+/.cursorignore
+/.cursorrules
+
+# Gemini / Antigravity
 /.gemini/
+/GEMINI.md
+
+# GitHub Copilot
+/.copilot/
+/.github/copilot*
+
+# OpenCode
 /.opencode/
+
+# Roo Code
+/.roo/
+/.rooignore
+/.roomodes
+
+# Specify
 /.specify/
 /specs/
-CRUSH.md
-GEMINI.md
-AGENTS.md
+
+# Windsurf / Codeium
+/.codeium/
+/.windsurf/
+/.windsurfrules
+
+# Generic agent files
+/AGENTS.md
+/.agent/
