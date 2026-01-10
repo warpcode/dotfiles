@@ -20,29 +20,22 @@ function command_not_found_handler() {
             return $?
         fi
 
-        # 2. Check if we have a mapping for this command
-        # We assume packages.zsh is already sourced and _packages_get_app_by_command is available
-        local app=$(_packages_get_app_by_command "$cmd")
-        echo "Debug: app mapping for $cmd is '$app'" >&2
+        # 2. Check if we have a recipe for this command
+        local recipe_id=$(zinstall.recipe "$cmd")
         
-        if [[ -n "$app" ]]; then
-            echo "💡 Command '$cmd' not found, but can be installed via package '$app'." >&2
-            echo -n "   Install $app? [Y/n] " >&2
+        if [[ -n "$recipe_id" ]]; then
+            echo "💡 Command '$cmd' not found, but can be installed via package '$recipe_id'." >&2
+            echo -n "   Install $recipe_id? [Y/n] " >&2
             
             # Force read from /dev/tty to handle subshells/pipelines where stdin is redirected
             if read -q response < /dev/tty; then
                 echo "" >&2
-                _packages_install_app "$app" >&2
+                zinstall.install "$recipe_id" >&2
                 
-                # Rehash after installation
+                # Reload paths regardless of success
+                echo "🔄 Reloading paths..." >&2
+                [[ -f "$paths_config" ]] && source "$paths_config"
                 rehash
-
-                # If command is still not found, try reloading paths
-                if ! command -v "$cmd" >/dev/null 2>&1; then
-                    echo "🔄 Reloading paths..." >&2
-                    [[ -f "$paths_config" ]] && source "$paths_config"
-                    rehash
-                fi
                 
                 if command -v "$cmd" >/dev/null 2>&1; then
                     # Execute the original command, preserving arguments

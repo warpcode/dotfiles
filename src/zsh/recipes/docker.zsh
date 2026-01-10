@@ -1,32 +1,24 @@
-# docker.zsh - Docker installation and configuration
-#
-# Registers Docker package and pre-install hooks for adding official repositories
 
-# Docker MCP installation version
-DOCKER_MCP_INSTALL_VERSION="latest"
+typeset -A recipe=(
+    [name]="docker"
+    [provides]="docker"
+    # Defines package names for different managers
+    [brew-cask]="docker-desktop"
+    [apt]="docker-ce docker-compose-plugin docker-model-plugin"
+    [dnf]="docker-ce docker-compose-plugin docker-model-plugin"
+    [pacman]="docker docker-compose-plugin docker-model-plugin"
+    
+    # Repository setup
+    # Format: url|keyring|repo_line
+    # Tokens: %ARCH%, %KEYRING%, %CODENAME%, %DISTRO%
+    [apt_repo]="https://download.docker.com/linux/%DISTRO%/gpg|docker-archive-keyring.gpg|deb [arch=%ARCH% signed-by=%KEYRING%] https://download.docker.com/linux/%DISTRO% %CODENAME% stable"
+    [dnf_repo]="https://download.docker.com/linux/fedora/docker-ce.repo"
+    
+    # Custom hooks
+    [post_install]="_installer_post_docker_mcp"
+)
 
-# Register Docker packages
-_packages_register_app docker \
-    brew-cask:docker-desktop \
-    apt:docker-ce,docker-compose-plugin,docker-model-plugin \
-    dnf:docker-ce,docker-compose-plugin,docker-model-plugin \
-    pacman:docker,docker-compose-plugin,docker-model-plugin \
-    cmd:docker
-
-# Register Docker keys and repos
-# Determine dpkg architecture and Debian/Ubuntu codename (if available)
-dpkg_arch=$(command -v dpkg >/dev/null 2>&1 && dpkg --print-architecture 2>/dev/null || true)
-lsb_codename=$(command -v lsb_release >/dev/null 2>&1 && lsb_release -cs 2>/dev/null || true)
-
-# Register apt key and repo only when we have the required values
-_package_apt_key docker https://download.docker.com/linux/debian/gpg docker-archive-keyring.gpg
-_package_apt_repo docker "deb [arch=${dpkg_arch} signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian ${lsb_codename} stable"
-_package_dnf_repo docker https://download.docker.com/linux/fedora/docker-ce.repo
-
-
-# Function to install docker-mcp directly to CLI plugins directory
 _installer_post_docker_mcp() {
-    # Only run on Linux
     if [[ $OSTYPE != *linux* ]]; then
         return 0
     fi
@@ -42,6 +34,7 @@ _installer_post_docker_mcp() {
     fi
 
     # Get target version using comparison function
+    # Note: Assumes _gh_compare_versions, _gh_get_asset_url, and _os_filter_by_arch are available in the env
     local target_version=$(_gh_compare_versions "$repo" "$DOCKER_MCP_INSTALL_VERSION" "$current_version")
     if [[ $? -ne 0 ]]; then
         echo "❌ Failed to resolve docker-mcp version" >&2
@@ -86,6 +79,3 @@ _installer_post_docker_mcp() {
         return 1
     fi
 }
-
-# Register pre-install hooks for repo setup
-_events_add_hook "installer_post_install:docker" "_installer_post_docker_mcp"
