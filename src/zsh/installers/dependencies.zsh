@@ -12,6 +12,7 @@ _packages_register_app curl \
     dnf:curl \
     pacman:curl \
     brew:curl \
+    cmd:curl \
     :dep
 
 _packages_register_app dnf-plugins-core \
@@ -23,6 +24,7 @@ _packages_register_app gnupg \
     dnf:gnupg \
     pacman:gnupg \
     brew:gnupg \
+    cmd:gpg \
     :dep
 
 _packages_register_app jq \
@@ -30,6 +32,7 @@ _packages_register_app jq \
     dnf:jq \
     pacman:jq \
     brew:jq \
+    cmd:jq \
     :dep
 
 _packages_register_app unzip \
@@ -37,4 +40,5 @@ _packages_register_app unzip \
     dnf:unzip \
     pacman:unzip \
     brew:unzip \
+    cmd:unzip \
     :dep

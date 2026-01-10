@@ -36,6 +36,10 @@ declare -A _packages_key_mappings
 # Format: _packages_repo_mappings[repo_name:manager]=config_string
 declare -A _packages_repo_mappings
 
+# Global command-to-app mappings
+# Format: _packages_command_mappings[command]=app
+declare -A _packages_command_mappings
+
 # Manager priorities per OS (space-separated strings)
 declare -A _packages_os_priorities
 _packages_os_priorities[macos]="brew-cask brew github"
@@ -53,8 +57,16 @@ _packages_register_app() {
     for spec in "$@"; do
         if [[ $spec == :* ]]; then
             tag=${spec#:}
-            break
+            continue
         fi
+        
+        # Handle command mapping: cmd:command
+        if [[ $spec == cmd:* ]]; then
+            local cmd_name=${spec#cmd:}
+            _packages_command_mappings[$cmd_name]=$app
+            continue
+        fi
+
         # Parse manager:package1[=ver],package2,...
         local manager=${spec%%:*}
         local pkg_list=${spec#*:}
@@ -82,6 +94,14 @@ _packages_get_apps_by_tag() {
         [[ ${_packages_app_tags[$app]} == $tag ]] && apps+=($app)
     done
     echo "${(o)apps[*]}"
+}
+
+# Get app name by command
+# @param command The command name to look up
+# @return The app name if found, otherwise empty string
+_packages_get_app_by_command() {
+    local cmd=$1
+    echo "${_packages_command_mappings[$cmd]}"
 }
 
 # Register a repo config for a manager
@@ -151,6 +171,10 @@ _packages_install_app() {
                 local packages=(${(s: :)package})
                 if _packages_install_with_manager $manager "${packages[@]}"; then
                     echo "    ✅ Installed $app successfully"
+                    
+                    # Trigger app-specific post-install hook
+                    _events_trigger "installer_post_install:$app"
+                    
                     return 0
                 else
                     return 1

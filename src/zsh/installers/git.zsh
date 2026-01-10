@@ -2,7 +2,8 @@ _packages_register_app git \
     apt:git \
     brew:git \
     dnf:git \
-    pacman:git
+    pacman:git \
+    cmd:git
 
 # Function to set global git config
 _installer_post_git_config() {
@@ -12,4 +13,4 @@ _installer_post_git_config() {
 }
 
 # Register post-install hook for git config
-_events_add_hook "installer_post_install" "_installer_post_git_config"
+_events_add_hook "installer_post_install:git" "_installer_post_git_config"
