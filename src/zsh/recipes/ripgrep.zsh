@@ -6,6 +6,4 @@ typeset -A recipe=(
     [apt]="ripgrep"
     [dnf]="ripgrep"
     [pacman]="ripgrep"
-    [snap]="ripgrep"
-    [post_install]="rg --version && echo 'RG configured successfully'"
 )
