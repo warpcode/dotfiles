@@ -1,13 +1,9 @@
-#!/usr/bin/env zsh
-# nvm.zsh - Node Version Manager installation
-#
-# Registers post-install hook to ensure nvm is installed
+# nvm.zsh - Node Version Manager recipe
 
-# NVM version to install
-NVM_INSTALL_VERSION="0.40.2"
-
-# Function to ensure nvm is installed
 _installer_post_nvm() {
+    # NVM version to install
+    local NVM_INSTALL_VERSION="0.40.2"
+    
     # Check current installation
     local current_version=""
     if which nvm &>/dev/null; then
@@ -28,22 +24,25 @@ _installer_post_nvm() {
     fi
 
     # Install/update
-    if [[ -n "$current_version" ]]; then
-        echo "📦 nvm version mismatch (installed: $current_version, target: $target_version). Installing..."
-    else
-        echo "📦 Installing nvm $target_version..."
-    fi
+    echo "📦 Installing nvm $target_version..."
 
     # Install nvm using the official install script
     local install_url="https://raw.githubusercontent.com/nvm-sh/nvm/v${target_version#v}/install.sh"
     if env PROFILE=/dev/null bash -c "curl --fail -o- '$install_url' | bash"; then
         echo "✅ nvm $target_version installed successfully"
-        # Note: Shell environment will be updated on next session via apps/nvm.zsh
     else
         echo "❌ Failed to install nvm" >&2
         return 1
     fi
 }
 
-# Register post-install hook
-_events_add_hook "installer_post_install" "_installer_post_nvm"
+typeset -A recipe=(
+    [name]="nvm"
+    [provides]="nvm"
+    [depends]="curl"
+    [post_install]="_installer_post_nvm"
+    # nvm install is custom via post_install because it's a shell function, 
+    # and we want to ensure it's loaded. 
+    # We can use a dummy install_cmd if needed or just let post_install do it.
+    [install_cmd]="true" 
+)

@@ -32,9 +32,9 @@ local current_os=$(_os_detect_os_family)
 # 3. Build list of remaining modules
 local files_to_source=(
     ~/.zshrc.before.d/**/*.zsh(Nn-)
-    ${0:A:h}/{installers,config,apps,projects}/**/*.zsh(Nn-)
+    ${0:A:h}/{config,apps,projects}/**/*.zsh(Nn-)
     ${0:A:h}/platform/${current_os}/**/*.zsh(Nn-)
-    ~/.zshrc.{functions,installers,config,apps,projects}/**/*.zsh(Nn-)
+    ~/.zshrc.{functions,config,apps,projects}/**/*.zsh(Nn-)
     ~/.zshrc.d/**/*.zsh(Nn-)
 )
 
