@@ -10,7 +10,8 @@ _packages_register_app docker \
     brew-cask:docker-desktop \
     apt:docker-ce,docker-compose-plugin,docker-model-plugin \
     dnf:docker-ce,docker-compose-plugin,docker-model-plugin \
-    pacman:docker,docker-compose-plugin,docker-model-plugin
+    pacman:docker,docker-compose-plugin,docker-model-plugin \
+    cmd:docker
 
 # Register Docker keys and repos
 # Determine dpkg architecture and Debian/Ubuntu codename (if available)
@@ -87,4 +88,4 @@ _installer_post_docker_mcp() {
 }
 
 # Register pre-install hooks for repo setup
-_events_add_hook "installer_post_install" "_installer_post_docker_mcp"
+_events_add_hook "installer_post_install:docker" "_installer_post_docker_mcp"
