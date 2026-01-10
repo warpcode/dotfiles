@@ -99,6 +99,11 @@ _zinstall_resolve_method() {
         fi
     fi
 
+    # cargo fallback
+    if [[ -z "$resolved" && -n ${recipe[cargo]} ]]; then
+        resolved="cargo"
+    fi
+
     # GitHub release fallback
     if [[ -z "$resolved" && -n ${recipe[github]} ]]; then
         resolved="github"
@@ -225,6 +230,7 @@ _zinstall_run_installer() {
                 eval "${pkgs}"
             fi
             ;;
+        cargo)     cargo install ${=pkgs} ;;
         github)
             local app=${pkgs%%:*}
             local rest=${pkgs#*:}
