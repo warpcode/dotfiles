@@ -1,5 +1,11 @@
 [settings]
-idiomatic_version_file_enable_tools = ["node"]
+idiomatic_version_file_enable_tools = ["node", "python"]
+not_found_auto_install = true
+experimental = true
+
+[settings.python]
+venv_auto_create = false
+uv_venv_auto = true
 
 [tools]
 aichat = "latest"

@@ -4,9 +4,8 @@
 # Return if _W_PYTHON_COMMAND is not set
 [[ -z "$_W_PYTHON_COMMAND" ]] && return
 
-# Aliases using the detected Python command
-alias python.ipython="$_W_PYTHON_COMMAND -c 'import IPython; IPython.terminal.ipapp.launch_new_instance()'"
-alias python.http="$_W_PYTHON_COMMAND -m http.server"
+
+alias python.http="mise exec python@latest -- python -m http.server"
 
 # Function to activate a Python virtual environment
 # Usage: vrun [venv_path]
@@ -49,6 +48,6 @@ function python.load-venv {
 }
 
 # Set up automatic venv loading on directory change
-autoload -U add-zsh-hook
-add-zsh-hook chpwd python.load-venv
-python.load-venv
+#autoload -U add-zsh-hook
+#add-zsh-hook chpwd python.load-venv
+#python.load-venv
