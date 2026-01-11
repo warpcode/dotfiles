@@ -277,14 +277,19 @@ zinstall.install() {
         typeset -A recipe
         source "$recipe_file"
         
-        # 2. Idempotency Check (Assume if one command exists, the package is installed)
-        local cmd
-        for cmd in ${=recipe[provides]:-${recipe[name]}}; do
-            if command -v "$cmd" >/dev/null 2>&1; then
-                echo "✅ ${recipe[name]} is already installed (found '$cmd')."
-                return 0
-            fi
-        done
+        # 2. Idempotency Check
+        # Only check if 'provides' is set. Dependencies that don't provide a binary
+        # (e.g. libraries, meta-packages) should always proceed to the installer,
+        # which should itself be idempotent.
+        if [[ -n ${recipe[provides]} ]]; then
+            local cmd
+            for cmd in ${=recipe[provides]}; do
+                if command -v "$cmd" >/dev/null 2>&1; then
+                    echo "✅ ${recipe[name]} is already installed (found '$cmd')."
+                    return 0
+                fi
+            done
+        fi
 
         echo "   Installing ${recipe[name]}..."
         
