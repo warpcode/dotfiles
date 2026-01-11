@@ -1,0 +1,17 @@
+[settings]
+idiomatic_version_file_enable_tools = ["node"]
+
+[tools]
+aichat = "latest"
+direnv = "latest"
+fzf = "latest"
+gh = "latest"
+jq = "latest"
+neovim = "0.11.5"
+node = "latest"
+ripgrep = "latest"
+rust = "latest"
+tmux = "latest"
+uv = "latest"
+yq = "latest"
+zoxide = "latest"
