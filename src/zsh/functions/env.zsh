@@ -108,3 +108,32 @@ env.get() {
     env.load "$var"
     echo "${(P)var}"
 }
+
+##
+# Sources an environment file.
+# @param file Path to the .env file
+##
+env.source.file() {
+    local env_file=$1
+    [[ -f "$env_file" ]] || return 1
+
+    while IFS= read -r line; do
+        # Skip comments (starting with #, with optional leading whitespace) and empty lines
+        [[ $line =~ ^[[:space:]]*# ]] && continue
+        [[ -z $line ]] && continue
+        # Parse key=value (split on first =)
+        if [[ $line =~ ^([^=]+)=(.*)$ ]]; then
+            local key=${match[1]}
+            local value=${match[2]}
+            # Trim leading/trailing whitespace from key and value
+            key=${key##[[:space:]]}
+            key=${key%%[[:space:]]}
+            value=${value##[[:space:]]}
+            value=${value%%[[:space:]]}
+            # Validate key: must be a valid variable name (letters, digits, underscores; start with letter/_)
+            if [[ $key =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+                printf -v "$key" %s "$value" && export "$key"
+            fi
+        fi
+    done <"$env_file"
+}
