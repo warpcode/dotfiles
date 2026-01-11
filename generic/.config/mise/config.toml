@@ -3,7 +3,6 @@ idiomatic_version_file_enable_tools = ["node"]
 
 [tools]
 aichat = "latest"
-direnv = "latest"
 fzf = "latest"
 gh = "latest"
 jq = "latest"
