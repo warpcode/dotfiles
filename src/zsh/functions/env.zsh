@@ -51,14 +51,17 @@ env.register() {
 # @param ... Variable names to load
 ##
 env.load() {
-     # Collect unique dependencies
+     # Collect unique dependencies only for unloaded variables
     local -A deps_to_run
     for var in "$@"; do
-        local deps="${_ENV_LAZY_DEPS[$var]}"
-        if [[ -n "$deps" ]]; then
-            for dep in ${=deps}; do
-                deps_to_run[$dep]=1
-            done
+        # Only queue dependencies if variable is not loaded
+        if [[ $_ENV_LAZY_LOADED[$var] -eq 0 ]]; then
+            local deps="${_ENV_LAZY_DEPS[$var]}"
+            if [[ -n "$deps" ]]; then
+                for dep in ${=deps}; do
+                    deps_to_run[$dep]=1
+                done
+            fi
         fi
     done
 
