@@ -4,7 +4,7 @@ local file
 for file in ${0:A:h}/functions/**/*.zsh(Nn-); do source "$file"; done
 
 # Load in a .env file from the home directory if it exists
-env.source.file ~/.env
+[[ -f ~/.env ]] && env.source.file ~/.env
 
 # 2. Detect OS
 local current_os=$(_os_detect_os_family)
