@@ -1,7 +1,5 @@
 typeset -gA _ENV_LAZY_DEPS
 typeset -gA _ENV_LAZY_VARS
-typeset -gA _ENV_LAZY_LOADED
-typeset -gA _ENV_LAZY_LOAD_ATTEMPTS
 
 ##
 # Prints a key-value pair with quoted value.
@@ -20,7 +18,7 @@ env.print.kv() {
 # @param ... Variable names to print
 ##
 env.print.var() {
-    env.load "$@"
+    env.lazy.load "$@"
     for var in "$@"; do
         env.print.kv "$var" "${(P)var}"
     done
@@ -31,14 +29,24 @@ env.print.var() {
 # @param var Variable name
 # @param cmd Command to evaluate for the value
 ##
-env.register() {
+env.lazy.register() {
     local var_name=$1
     local cmd=$2
     shift 2
 
+    # Validate variable name
+    if [[ ! $var_name =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+        print -u2 "env.lazy.register: invalid variable name: $var_name"
+        return 1
+    fi
+
+    # Validate command is non-empty
+    if [[ -z $cmd ]]; then
+        print -u2 "env.lazy.register: empty command for variable: $var_name"
+        return 1
+    fi
+
     _ENV_LAZY_VARS[$var_name]=$cmd
-    _ENV_LAZY_LOADED[$var_name]=0
-    _ENV_LAZY_LOAD_ATTEMPTS[$var_name]=0
 
     # Store dependencies as space-separated list
     if [[ $# -gt 0 ]]; then
@@ -50,53 +58,52 @@ env.register() {
 # Loads one or more lazy environment variables if not already loaded.
 # @param ... Variable names to load
 ##
-env.load() {
-     # Collect unique dependencies only for unloaded variables
-    local -A deps_to_run
+env.lazy.load() {
+     # Load dependencies and variables in a single pass
+    local -A deps_seen
     for var in "$@"; do
-        # Only queue dependencies if variable is not loaded
-        if [[ $_ENV_LAZY_LOADED[$var] -eq 0 ]]; then
-            local deps="${_ENV_LAZY_DEPS[$var]}"
-            if [[ -n "$deps" ]]; then
-                for dep in ${=deps}; do
-                    deps_to_run[$dep]=1
-                done
-            fi
+        # Skip if variable is already set (from .env or previous load)
+        if [[ -n ${(P)var} ]]; then
+            continue
+        fi
+
+        # Variable is not set - run dependencies
+        local deps="${_ENV_LAZY_DEPS[$var]}"
+        if [[ -n "$deps" ]]; then
+            for dep in ${=deps}; do
+                # Only run each dependency once
+                if [[ -z ${deps_seen[$dep]} ]]; then
+                    eval "$dep" >/dev/null
+                    deps_seen[$dep]=1
+                fi
+            done
+        fi
+
+        # Execute lazy load command
+        local value
+        local exit_code=0
+        value="$(eval "${_ENV_LAZY_VARS[$var]}")" || exit_code=$?
+
+        # Only export if command succeeded (exit code 0)
+        if [[ $exit_code -eq 0 ]]; then
+            export "$var"="$value"
+        else
+            print -u2 "env.lazy.load: failed to load $var (exit code: $exit_code)"
         fi
     done
+}
 
-    # Run dependencies
-    for dep in "${(@k)deps_to_run}"; do
-        eval "$dep" >/dev/null
-    done
-
+##
+# Resets lazy-loaded environment variables so they can be reloaded.
+# Unsets the actual environment variable (not the lazy registration).
+# Only resets variables that have been registered.
+# @param ... Variable names to reset
+##
+env.lazy.reset() {
     for var in "$@"; do
-        if [[ $_ENV_LAZY_LOADED[$var] -eq 0 ]]; then
-            # Skip lazy loading if variable is already set (respect existing values)
-            if [[ -n ${(P)var} ]]; then
-                _ENV_LAZY_LOADED[$var]=1
-                continue
-            fi
-
-            local cmd="${_ENV_LAZY_VARS[$var]}"
-            local value="$(eval $cmd)"
-            local exit_code=$?
-
-            # Only mark as loaded if command succeeded (exit code 0)
-            if [[ $exit_code -eq 0 ]]; then
-                export "$var"="$value"
-                _ENV_LAZY_LOADED[$var]=1
-                _ENV_LAZY_LOAD_ATTEMPTS[$var]=0
-            else
-                # Increment failure counter and mark as loaded after max retries (default: 3)
-                local max_retries=${_ENV_LAZY_MAX_RETRIES:-3}
-                _ENV_LAZY_LOAD_ATTEMPTS[$var]=$((_ENV_LAZY_LOAD_ATTEMPTS[$var] + 1))
-
-                if [[ $_ENV_LAZY_LOAD_ATTEMPTS[$var] -ge $max_retries ]]; then
-                    export "$var"=""
-                    _ENV_LAZY_LOADED[$var]=1
-                fi
-            fi
+        # Only reset if the variable is registered AND set
+        if [[ -n ${_ENV_LAZY_VARS[$var]} ]] && [[ -v var ]]; then
+            unset -v "$var"
         fi
     done
 }
@@ -108,7 +115,7 @@ env.load() {
 ##
 env.get() {
     local var=$1
-    env.load "$var"
+    env.lazy.load "$var"
     echo "${(P)var}"
 }
 
@@ -118,7 +125,10 @@ env.get() {
 ##
 env.source.file() {
     local env_file=$1
-    [[ -f "$env_file" ]] || return 1
+    [[ -f "$env_file" ]] || {
+        print -u2 "env.source.file: file not found: $env_file"
+        return 1
+    }
 
     while IFS= read -r line; do
         # Skip comments (starting with #, with optional leading whitespace) and empty lines
