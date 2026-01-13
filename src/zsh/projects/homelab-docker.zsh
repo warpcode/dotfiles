@@ -3,11 +3,11 @@
 : "${HOMELAB_DOCKER_REPO:=git@github.com:warpcode/homelab-docker.git}"
 
 # Register lazy-loaded environment variables
-env.register "GEMINI_API_KEY" "kp show 'websites/email/google.main' -a gemini_api_key" 'kp.login'
-env.register "GITHUB_API_KEY" "kp show 'KeePassXC-Browser Passwords/Github' -a api_key_docker_ai" 'kp.login'
-env.register "GROQ_API_KEY" "kp show 'KeePassXC-Browser Passwords/Groq' -a api_key_docker" 'kp.login'
-env.register "OPENAI_API_KEY" "kp show 'KeePassXC-Browser Passwords/OpenRouter' -a api_key_docker" 'kp.login'
-env.register "OPENROUTER_API_KEY" "kp show 'KeePassXC-Browser Passwords/ChatGPT' -a api_key_docker_ai" 'kp.login'
+env.lazy.register "GEMINI_API_KEY" "kp show 'websites/email/google.main' -a gemini_api_key" 'kp.login'
+env.lazy.register "GITHUB_API_KEY" "kp show 'KeePassXC-Browser Passwords/Github' -a api_key_docker_ai" 'kp.login'
+env.lazy.register "GROQ_API_KEY" "kp show 'KeePassXC-Browser Passwords/Groq' -a api_key_docker" 'kp.login'
+env.lazy.register "OPENAI_API_KEY" "kp show 'KeePassXC-Browser Passwords/OpenRouter' -a api_key_docker" 'kp.login'
+env.lazy.register "OPENROUTER_API_KEY" "kp show 'KeePassXC-Browser Passwords/ChatGPT' -a api_key_docker_ai" 'kp.login'
 
 if [[ ! -d "$HOMELAB_DOCKER_DIR" ]]; then
   return
