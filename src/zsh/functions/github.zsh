@@ -1,5 +1,5 @@
 # Installation directory for GitHub releases (can be overridden by GITHUB_RELEASES_INSTALL_DIR env var)
-: ${GITHUB_RELEASES_INSTALL_DIR:="$HOME/.local/opt"}
+export GITHUB_RELEASES_INSTALL_DIR="${GITHUB_RELEASES_INSTALL_DIR:-$HOME/.local/opt}"
 
 # Get the latest release version from a GitHub repository
 # @param repo The repository in owner/repo format

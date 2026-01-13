@@ -1,9 +1,15 @@
 # Python Configuration
 # Determine the Python command to use, preferring python3 over python
 
+# Python command selection
+if (( $+commands[python3] )); then
+    export _W_PYTHON_COMMAND="${_W_PYTHON_COMMAND:-python3}"
+elif (( $+commands[python] )); then
+    export _W_PYTHON_COMMAND="${_W_PYTHON_COMMAND:-python}"
+fi
+
 # Return if _W_PYTHON_COMMAND is not set
 [[ -z "$_W_PYTHON_COMMAND" ]] && return
-
 
 alias python.http="mise exec python@latest -- python -m http.server"
 

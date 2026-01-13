@@ -1,5 +1,5 @@
 # Martini project directory (override in your environment or ~/.zshrc.d/m6.zsh if needed)
-: "${MARTINI_DIR:=$HOME/src/martini}"
+export MARTINI_DIR="${MARTINI_DIR:-$HOME/src/martini}"
 
 if [[ ! -d "$MARTINI_DIR" ]]; then
   return

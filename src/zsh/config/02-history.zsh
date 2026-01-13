@@ -11,9 +11,9 @@ setopt HIST_IGNORE_SPACE
 setopt appendhistory
 
 # Keep 1000 lines of history within the shell and save it to ~/.zsh_history:
-HISTSIZE=10000
-SAVEHIST=10000
-HISTFILE=~/.zsh_history
+export HISTSIZE="${HISTSIZE:-10000}"
+export SAVEHIST="${SAVEHIST:-10000}"
+export HISTFILE="${HISTFILE:-$HOME/.zsh_history}"
 
 # Uncomment the following line if you want to change the command execution time
 # stamp shown in the history command output.
@@ -21,7 +21,7 @@ HISTFILE=~/.zsh_history
 # "mm/dd/yyyy"|"dd.mm.yyyy"|"yyyy-mm-dd"
 # or set a custom format using the strftime function format specifications,
 # see 'man strftime' for details.
-HIST_STAMPS="yyyy-mm-dd"
+export HIST_STAMPS="${HIST_STAMPS:-yyyy-mm-dd}"
 
 # Allow large history
 export HISTFILESIZE="${HISTFILESIZE:-10000}"

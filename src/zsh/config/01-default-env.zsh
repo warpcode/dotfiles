@@ -1,6 +1,9 @@
 # XDG
 export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 
+# Man page pager
+export MANPAGER="${MANPAGER:-less -X}"
+
 
 # Setup default editor
 if [[ -z "$EDITOR" ]]; then
