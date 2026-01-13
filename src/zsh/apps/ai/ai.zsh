@@ -1,5 +1,7 @@
 # AI Chat configuration
 # ref: https://github.com/sigoden/aichat/wiki/Environment-Variables
+
+# === AI CLI Aliases ===
 alias ai.chat='ensure_aichat && aichat'
 
 alias ai.code='ai.opencode'

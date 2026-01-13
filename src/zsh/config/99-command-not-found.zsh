@@ -22,21 +22,21 @@ function command_not_found_handler() {
 
         # 2. Check if we have a recipe for this command
         local recipe_id=$(zinstall.recipe "$cmd")
-        
+
         if [[ -n "$recipe_id" ]]; then
             echo "💡 Command '$cmd' not found, but can be installed via package '$recipe_id'." >&2
             echo -n "   Install $recipe_id? [Y/n] " >&2
-            
+
             # Force read from /dev/tty to handle subshells/pipelines where stdin is redirected
             if read -q response < /dev/tty; then
                 echo "" >&2
                 zinstall.install "$recipe_id" >&2
-                
+
                 # Reload paths regardless of success
                 echo "🔄 Reloading paths..." >&2
                 [[ -f "$paths_config" ]] && source "$paths_config"
                 rehash
-                
+
                 if command -v "$cmd" >/dev/null 2>&1; then
                     # Execute the original command, preserving arguments
                     "$@"
