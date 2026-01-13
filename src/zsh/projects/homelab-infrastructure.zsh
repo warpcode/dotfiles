@@ -1,6 +1,6 @@
 # Homelab-infrastructure project directory (override in your environment or ~/.zshrc.d/homelab-infrastructure.zsh if needed)
-: "${HOMELAB_INFRASTRUCTURE_DIR:=$HOME/src/homelab-infrastructure}"
-: "${HOMELAB_INFRASTRUCTURE_REPO:=git@github.com:warpcode/homelab-infrastructure.git}"
+export HOMELAB_INFRASTRUCTURE_DIR="${HOMELAB_INFRASTRUCTURE_DIR:-$HOME/src/homelab-infrastructure}"
+export HOMELAB_INFRASTRUCTURE_REPO="${HOMELAB_INFRASTRUCTURE_REPO:-git@github.com:warpcode/homelab-infrastructure.git}"
 
 if [[ ! -d "$HOMELAB_INFRASTRUCTURE_DIR" ]]; then
   return

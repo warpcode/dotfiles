@@ -1,6 +1,6 @@
 # Homelab-docker project directory (override in your environment or ~/.zshrc.d/homelab-docker.zsh if needed)
-: "${HOMELAB_DOCKER_DIR:=$HOME/src/homelab-docker}"
-: "${HOMELAB_DOCKER_REPO:=git@github.com:warpcode/homelab-docker.git}"
+export HOMELAB_DOCKER_DIR="${HOMELAB_DOCKER_DIR:-$HOME/src/homelab-docker}"
+export HOMELAB_DOCKER_REPO="${HOMELAB_DOCKER_REPO:-git@github.com:warpcode/homelab-docker.git}"
 
 # Register lazy-loaded environment variables
 env.lazy.register "GEMINI_API_KEY" "kp show 'websites/email/google.main' -a gemini_api_key" 'kp.login'

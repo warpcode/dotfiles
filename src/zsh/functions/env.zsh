@@ -80,9 +80,8 @@ env.lazy.load() {
         fi
 
         # Execute lazy load command
-        local value
         local exit_code=0
-        value="$(eval "${_ENV_LAZY_VARS[$var]}")" || exit_code=$?
+        local value="$(eval "${_ENV_LAZY_VARS[$var]}")" || exit_code=$?
 
         # Only export if command succeeded (exit code 0)
         if [[ $exit_code -eq 0 ]]; then

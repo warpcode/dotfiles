@@ -1,6 +1,9 @@
 # Global variable to cache KeePassXC password for the session
 typeset -g KP_PASSWORD
 
+# KeePassXC database path
+export KEEPASS_DB_PATH="${KEEPASS_DB_PATH:-$HOME/.keepass/Accounts.kdbx}"
+
 ##
 # Main wrapper function for keepassxc-cli
 #
