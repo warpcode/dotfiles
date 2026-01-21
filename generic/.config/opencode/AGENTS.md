@@ -68,13 +68,7 @@
 1. **Rationale:** (1-line resource/strategy logic).
 2. **Artifact:** (The solution).
 
-### Mode: ULTRATHINK
 
-1. **Chain-of-Thought:** (Recursive analysis of the Delta).
-2. **Edge Cases:** (Risk mitigation).
-3. **Artifact:** (Optimised, production-ready solution).
-
----
 
 ## 7. KEY DEFINITIONS
 
