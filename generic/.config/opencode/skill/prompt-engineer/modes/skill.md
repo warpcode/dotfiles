@@ -7,9 +7,9 @@ Guidelines for creating discoverable, reusable, tool-equipped instruction sets t
 
 ### Core Principles
 
-**Skill = Discovery + Instructions + Tools + Resources**
+**Skill = Discovery + Instructions [+ Tools] [+ Resources]**
 
-Skills are discovered by AI based on description keywords, invoked on-demand (lazy loading), executed with specified tool permissions, and can reference bundled resources without loading them into initial context.
+Skills are discovered by AI based on description keywords and invoked on-demand. While simple skills may only contain instructions, advanced skills leverage specified tool permissions and reference bundled resources via lazy-loading to maintain a minimal initial context.
 
 **Progressive Disclosure**:
 1. Metadata (name + description) → Loaded at startup for discovery
@@ -116,7 +116,7 @@ mode: false                          # Optional: categorize as mode
 - `true`: Categorize as mode command (like /chat, /code)[131]
 - `false`: Regular skill (default)
 
-### Required: Content Structure
+### Standard Content Structure
 
 ```markdown
 # [One-line Purpose Statement]
@@ -129,7 +129,7 @@ Use this skill to [SPECIFIC OUTCOME] when [TRIGGER CONDITION].
 **When**: [Situations where this skill should be used]
 **Output**: [What user receives after execution]
 
-## Prerequisites
+## Prerequisites (Optional)
 
 **Required Tools**: [Tools that must be in allowed-tools]
 **Required Files**: [Files that must exist, file patterns]
@@ -150,7 +150,7 @@ Use this skill to [SPECIFIC OUTCOME] when [TRIGGER CONDITION].
 [Concrete instruction]
 [Output formatting requirements]
 
-## Output Format
+## Output Format (Optional)
 
 ### Structure
 [How results should be organized]
@@ -160,17 +160,12 @@ Use this skill to [SPECIFIC OUTCOME] when [TRIGGER CONDITION].
 [Complete example of expected output]
 ```
 
-## Error Handling
-
-### Error: [Error Type]
+## Error Handling (Optional)
 **Cause**: [What causes this error]
 **Resolution**: [How to handle it]
 **User Action**: [What user should do]
 
-### Error: [Error Type 2]
-...
-
-## Examples
+## Examples (Optional)
 
 ### Example 1: [Scenario Name]
 **User Request**: [What user asked for]
@@ -181,9 +176,7 @@ Use this skill to [SPECIFIC OUTCOME] when [TRIGGER CONDITION].
 ### Example 2: [Different Scenario]
 ...
 
-## Resources
-
-### Bundled Documentation
+## Resources (Optional)
 - `{baseDir}/references/api-spec.md`: [Description]
 - `{baseDir}/references/examples/`: [Description]
 
@@ -325,10 +318,10 @@ Expected: All tests pass, no errors
 - [ ] **Prerequisites Clear**: Required files, tools, context documented?
 - [ ] **Instructions Actionable**: Each step is concrete and executable?
 - [ ] **Output Format Defined**: Structure and examples provided?
-- [ ] **Error Handling**: Common errors documented with resolutions?
-- [ ] **Examples Complete**: Real-world scenarios with full context?
-- [ ] **Resources Documented**: Bundled files, scripts, templates listed?
-- [ ] **Progressive Disclosure**: References not embedded, loaded via Read?
+- [ ] **Error Handling**: Documented with resolutions (if applicable)?
+- [ ] **Examples Complete**: Real-world scenarios provided (recommended)?
+- [ ] **Resources Documented**: Bundled files, scripts, templates listed (if applicable)?
+- [ ] **Progressive Disclosure**: External references not embedded, loaded via Read (if applicable)?
 
 ## Common Pitfalls to Avoid
 

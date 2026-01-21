@@ -70,7 +70,7 @@ Integrate these during generation:
 ## Platform Matrix
 | Feature | OpenCode | Claude Code | Cursor | GitHub Copilot |
 | :--- | :--- | :--- | :--- | :--- |
-| **Agents** | `.opencode/agents/*.md` | `.claude/agents/*.md` | `.cursor/agents/*.md` | `.github/agents/*.md` |
+| **Agents** | `AGENT.md` | `AGENT.md` | N/A | `AGENTS.md` (Experimental) |
 | **Skills** | `SKILL.md` | `SKILL.md` | N/A | N/A |
 | **Rules** | N/A | N/A | `.cursorrules` | N/A |
 | **Instructions** | N/A | N/A | N/A | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md` |
