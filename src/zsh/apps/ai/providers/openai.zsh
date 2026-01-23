@@ -1,7 +1,7 @@
 # OpenAI Provider - Base API + wrapper
 # https://platform.openai.com/docs/api-reference
 
-env.lazy.register "OPENAI_API_KEY" "kp show 'KeePassXC-Browser Passwords/OpenRouter' -a api_key_docker" "kp.login"
+env.lazy.register "OPENAI_API_KEY" "kp show 'KeePassXC-Browser Passwords/ChatGPT' -a api_key_docker" "kp.login"
 
 # Base function for all OpenAI-compatible APIs
 # Args: base_url api_path api_key [extra_headers...]
