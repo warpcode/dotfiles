@@ -34,6 +34,8 @@ This dotfiles repository comes with a wide range of features to enhance your she
 -   **FZF Integration:** Integrates [fzf](https://github.com/junegunn/fzf) for powerful fuzzy history search.
 -   **Neovim Support:** Includes Neovim in the automatic package installation system.
 -   **Automatic PATH management:** Automatically scans `/opt/` and `~/.local/opt/` for subdirectories containing `bin`, `sbin`, `usr/bin`, `usr/sbin`, `usr/local/bin`, and `usr/local/sbin`, and adds them to PATH.
+-   **Universal Secret Manager:** A unified interface (`src/zsh/functions/secrets.zsh`) for managing master passwords via OS Keychains (macOS Keychain, Linux Secret Service).
+    -   **KeePassXC Integration:** The `kp` command now uses this system to securely retrieve your master password without storing it in shell variables permanently.
 -   **GitHub Release Installer:** Automatically downloads and installs applications directly from GitHub releases. Supports OS and architecture detection, version management, and creates executable symlinks in a `bin/` directory. Configurable installation directory via `GITHUB_RELEASES_INSTALL_DIR` environment variable (defaults to `~/.local/opt`).
 
 ## Installation
