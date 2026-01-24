@@ -1,6 +1,3 @@
-# Global variable to cache KeePassXC password for the session
-typeset -g KP_PASSWORD
-
 # KeePassXC database path
 export KEEPASS_DB_PATH="${KEEPASS_DB_PATH:-$HOME/.keepass/Accounts.kdbx}"
 
@@ -14,40 +11,39 @@ export KEEPASS_DB_PATH="${KEEPASS_DB_PATH:-$HOME/.keepass/Accounts.kdbx}"
 # @return 0 on success, 1 on error
 ##
 kp() {
-    local cmd
-    if [[ $# -gt 0 ]]; then
-        cmd="$1"
-        shift
-    else
-        cmd=""
-    fi
+    [[ "$1" == "forget" ]] && { kp.forget; return 0 }
 
-    local cli_cmd
-    if ! cli_cmd=$(kp.cli); then
-        echo "Error: keepassxc-cli not found. Please install KeePassXC." >&2
+    local cli_path; cli_path=$(kp.cli) || { echo "Error: keepassxc-cli not found." >&2; return 1 }
+    local -a command_array=(${(z)cli_path})
+
+    # Show help if no command or help requested
+    [[ -z "$1" || "$1" == "help" ]] && { "${command_array[@]}" --help; return 0 }
+
+    kp.login || return 1
+
+    # Execute with password piped from keychain
+    printf '%s' "$(secret.get keepassxc)" | "${command_array[@]}" "$1" "$KEEPASS_DB_PATH" "${@:2}" -q
+}
+
+##
+# Verify KeePass database existence
+##
+kp.verify_db() {
+    if [[ -z "$KEEPASS_DB_PATH" ]]; then
+        echo "Error: KEEPASS_DB_PATH is not set." >&2
         return 1
     fi
-
-    if [[ -z "$cmd" ]] || [[ "$cmd" == "help" ]]; then
-        eval "$cli_cmd" --help
-        return 0
-    fi
-
-    if ! kp.login; then
+    if [[ ! -f "$KEEPASS_DB_PATH" ]]; then
+        echo "Error: KeePass database not found at '$KEEPASS_DB_PATH'." >&2
         return 1
     fi
+}
 
-    local -a cmd_array
-    if [[ $cli_cmd == *" "* ]]; then
-        cmd_array=(${(z)cli_cmd})
-    else
-        cmd_array=("$cli_cmd")
-    fi
-    local cmd_str="${cmd_array[1]}"
-    for arg in "${cmd_array[@]:1}" "$cmd" "$KEEPASS_DB_PATH" "$@" "-q"; do
-        cmd_str+=" "$(printf '%q' "$arg")
-    done
-    printf '%s' "$KP_PASSWORD" | eval "$cmd_str"
+##
+# Clear cached credentials from keychain
+##
+kp.forget() {
+    secret.delete "keepassxc"
 }
 
 ##
@@ -81,35 +77,36 @@ kp.cli() {
 }
 
 ##
-# Get/prompt for password
+# Verify access to the database
 #
-# Prompts user for password and validates it, caching for the session
+# Logic:
+# 1. Attempt to get password from keychain via secret.get (non-interactive).
+# 2. If no password found, call secret.store "keepassxc" "-" to prompt and save.
+# 3. Verify the password against the DB.
+# 4. If verification fails, delete from keychain.
 #
 # @return 0 on success, 1 on failure
 ##
 kp.login() {
-    # Return if password is already cached
-    if [[ -n "$KP_PASSWORD" ]]; then
-        return 0
+    kp.verify_db || return 1
+
+    local cli_path; cli_path=$(kp.cli) || { echo "Error: keepassxc-cli not found." >&2; return 1 }
+    local -a command_array=(${(z)cli_path})
+
+    local password; password=$(secret.get "keepassxc")
+
+    # If no password in keychain, prompt and store
+    if [[ -z "$password" ]]; then
+        secret.store "keepassxc" "-" || return 1
+        password=$(secret.get "keepassxc")
     fi
 
-    local cli_cmd
-    if ! cli_cmd=$(kp.cli); then
-        echo "Error: keepassxc-cli not found" >&2
-        return 1
-    fi
-
-    local password
-    echo -n "Enter KeePassXC password: " >&2
-    read -rs password
-    echo >&2
-
-    if printf '%s' "$password" | eval "$cli_cmd" db-info "$KEEPASS_DB_PATH" >/dev/null 2>&1; then
-        # Cache the password for the session
-        KP_PASSWORD="$password"
+    # Verify the password against the DB
+    if [[ -n "$password" ]] && printf '%s' "$password" | "${command_array[@]}" db-info "$KEEPASS_DB_PATH" >/dev/null 2>&1; then
         return 0
     else
-        echo "Invalid password" >&2
+        echo "Invalid password." >&2
+        kp.forget
         return 1
     fi
 }
@@ -128,40 +125,16 @@ kp.search() {
 
     kp.login || return $?
 
-    local output
-    local exit_code
-    
-    output=$(kp search "$1")
-    exit_code=$?
+    # Simplified search using awk for exact tail matching (case-insensitive)
+    local search_results
+    search_results=$(kp search "$1" | awk -F/ -v search="$1" 'tolower($NF) == tolower(search)')
 
-    if [[ $exit_code -ne 0 ]]; then
-        return $exit_code
-    fi
-
-    if [[ -z "$output" ]]; then
-        echo "No entries found matching '$1'" >&2
+    if [[ -z "$search_results" ]]; then
+        echo "No exact matches found for '$1'" >&2
         return 1
     fi
 
-    # Filter for exact match (case-insensitive) on the entry name or path suffix
-    local query_l="${1:l}"
-    local line
-    local matches=()
-    while IFS= read -r line; do
-        if [[ -n "$line" ]]; then
-            local line_l="${line:l}"
-            if [[ "$line_l" == "$query_l" || "$line_l" == */"$query_l" ]]; then
-                matches+=("$line")
-            fi
-        fi
-    done <<< "$output"
-
-    if [[ ${#matches[@]} -eq 0 ]]; then
-        echo "No exact match found for '$1'" >&2
-        return 1
-    fi
-
-    printf '%s\n' "${matches[@]}"
+    echo "$search_results"
 }
 
 ##
@@ -171,22 +144,14 @@ kp.search() {
 # @return 0 on success, 1 on error/no results
 ##
 kp.search.first() {
-    if [[ $# -eq 0 ]]; then
-        echo "Usage: kp.search.first <query>" >&2
+    local first_match
+    first_match=$(kp.search "$1" 2>/dev/null | head -n 1)
+
+    if [[ -z "$first_match" ]]; then
         return 1
     fi
 
-    local output
-    local exit_code
-    
-    output=$(kp.search "$1")
-    exit_code=$?
-
-    if [[ $exit_code -ne 0 ]]; then
-        return $exit_code
-    fi
-
-    echo "$output" | head -n 1
+    echo "$first_match"
 }
 
 ##
@@ -207,6 +172,7 @@ _kp_completion() {
         'add:Add new entry'
         'edit:Edit entry'
         'rm:Remove entry'
+        'forget:Clear password from keychain'
     )
     _describe 'keepass command' commands
 }
