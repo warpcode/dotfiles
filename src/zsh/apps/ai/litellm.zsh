@@ -4,25 +4,6 @@ export LITELLM_API_BASE="${LITELLM_API_BASE:-$LITELLM_API_ENDPOINT}"
 export LITELLM_API_KEY="${LITELLM_API_KEY:-sk-1234}"
 
 ##
-# Generate a LiteLLM config file from OpenRouter free models
-# @return Config file path on stdout, or empty on error
-##
-ai.litellm.config.from.openrouter.free() {
-    local config_file
-    config_file=$(mktemp)
-
-    # Transform OpenRouter models to LiteLLM format
-    cat > "$config_file" << 'EOF'
-litellm_settings:
-  drop_params: true
-EOF
-    echo "model_list:" >> "$config_file"
-    ai.providers.openrouter.models.free | jq -r '.[] | "  - model_name: \"openrouter/" + .id + "\"\n    litellm_params:\n      model: \"openrouter/" + .id + "\"\n      api_key: os.environ/OPENROUTER_API_KEY"' >> "$config_file"
-
-    echo "$config_file"
-}
-
-##
 # Start a temporary LiteLLM server and run a command against it
 # Automatically starts litellm on a local port, waits for readiness,
 # executes the command, then cleans up the server

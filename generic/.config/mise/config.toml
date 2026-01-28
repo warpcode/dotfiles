@@ -11,6 +11,7 @@ uv_venv_auto = true
 aichat = "latest"
 fzf = "latest"
 gh = "latest"
+gomplate = "latest"
 jq = "latest"
 neovim = "0.11.5"
 node = "latest"
