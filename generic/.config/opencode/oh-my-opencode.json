@@ -3,25 +3,31 @@
   "google_auth": false,
   "agents": {
     "sisyphus": {
-      "model": "opencode/glm-4.7-free"
+      "model": "opencode/big-pickle"
     },
-    "librarian": {
-      "model": "opencode/glm-4.7-free"
-    },
-    "explore": {
-      "model": "opencode/glm-4.7-free"
+    "atlas": {
+      "model": "opencode/big-pickle"
     },
     "oracle": {
-      "model": "opencode/glm-4.7-free"
+      "model": "opencode/big-pickle"
     },
-    "frontend-ui-ux-engineer": {
-      "model": "opencode/glm-4.7-free"
+    "librarian": {
+      "model": "opencode/big-pickle"
     },
-    "document-writer": {
-      "model": "opencode/glm-4.7-free"
+    "explore": {
+      "model": "opencode/big-pickle"
     },
     "multimodal-looker": {
-      "model": "opencode/glm-4.7-free"
+      "model": "opencode/big-pickle"
+    },
+    "prometheus": {
+      "model": "opencode/big-pickle"
+    },
+    "frontend-ui-ux-engineer": {
+      "model": "opencode/big-pickle"
+    },
+    "document-writer": {
+      "model": "opencode/big-pickle"
     }
   }
 }
