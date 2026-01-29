@@ -1,33 +1,33 @@
 {
-  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/master/assets/oh-my-opencode.schema.json",
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/kimi-k2.5-free",
   "google_auth": false,
   "agents": {
     "sisyphus": {
-      "model": "opencode/big-pickle"
+      "model": "opencode/kimi-k2.5-free"
     },
     "atlas": {
-      "model": "opencode/big-pickle"
+      "model": "opencode/kimi-k2.5-free"
     },
     "oracle": {
-      "model": "opencode/big-pickle"
+      "model": "opencode/kimi-k2.5-free"
     },
     "librarian": {
-      "model": "opencode/big-pickle"
+      "model": "opencode/kimi-k2.5-free"
     },
     "explore": {
-      "model": "opencode/big-pickle"
+      "model": "opencode/kimi-k2.5-free"
     },
     "multimodal-looker": {
-      "model": "opencode/big-pickle"
+      "model": "opencode/kimi-k2.5-free"
     },
     "prometheus": {
-      "model": "opencode/big-pickle"
+      "model": "opencode/kimi-k2.5-free"
     },
     "frontend-ui-ux-engineer": {
-      "model": "opencode/big-pickle"
+      "model": "opencode/kimi-k2.5-free"
     },
     "document-writer": {
-      "model": "opencode/big-pickle"
+      "model": "opencode/kimi-k2.5-free"
     }
   }
 }
