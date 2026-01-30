@@ -1,69 +1,74 @@
 ##
 # Configuration Hydration Engine
-# Merges base configs with templates and injects secrets using gomplate.
-# Prints the rendered template to stdout.
+# Pure function: Template + Config Data → Rendered Output
+# Usage: config.hydrate <template-path> [--config-file <path>] [--config-json <json>] [--output <path>]
 ##
 
 config.hydrate() {
-    local tool=$1
-    if [[ -z "$tool" ]]; then
-        echo "Usage: config.hydrate <tool_name> [key=value ...]" >&2
-        return 1
-    fi
+    local template=$1
     shift
-
-    local template_dir="${DOTFILES}/assets/templates"
-    local config_dir="${DOTFILES}/assets/configs"
-
-    # Find template (support .json.tmpl, .yaml.tmpl, .tmpl)
-    local template=$(ls ${template_dir}/${tool}.*tmpl(N) | head -1)
-    if [[ -z "$template" ]]; then
-        echo "❌ No template found for '$tool' in $template_dir" >&2
+    
+    if [[ -z "$template" || ! -f "$template" ]]; then
+        echo "Usage: config.hydrate <template-path> [--config-file <path>] [--config-json <json>] [--output <path>]" >&2
         return 1
     fi
-
-    # Find base config (optional)
-    local base_config=$(ls ${config_dir}/${tool}.{json,yaml,yml}(N) | head -1)
-
-    # Ensure gomplate is available and run it via mise
-    local gomplate_cmd=("gomplate")
-    if (( $+commands[mise] )); then
-        gomplate_cmd=("mise" "exec" "--" "gomplate")
-    fi
-
-    local gomplate_args=("-f" "${template}")
-    local -a env_args=()
-
-    if [[ -n "$base_config" ]]; then
-        gomplate_args+=("-d" "config=file://${base_config}")
-    else
-        # Provide an empty object as default so templates can use (ds "config").key | default "..."
-        env_args+=("HYDRATE_EMPTY_CONFIG={}")
-        gomplate_args+=("-d" "config=env:HYDRATE_EMPTY_CONFIG?type=application/json")
-    fi
-    # Process extra args as datasources (key=value)
-    for arg in "$@"; do
-        if [[ "$arg" == *=* ]]; then
-            local key="${arg%%=*}"
-            local val="${arg#*=}"
-            local env_var="HYDRATE_DATA_${key}"
-
-            # Add to environment for the gomplate command
-            env_args+=("${env_var}=${val}")
-
-            # Detect if it's JSON and use the env: scheme
-            if [[ "$val" =~ ^[{\[] ]]; then
-                gomplate_args+=("-d" "${key}=env:${env_var}?type=application/json")
-            else
-                gomplate_args+=("-d" "${key}=env:${env_var}")
-            fi
-        fi
+    
+    # Accumulate merged config incrementally
+    local merged_config="{}"
+    local output_file=""
+    
+    # Parse arguments and deep merge configs
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --config-file)
+                if [[ -f "$2" ]]; then
+                    merged_config=$(jq -s '.[0] * .[1]' <<< "$merged_config $(cat "$2")")
+                else
+                    echo "❌ Config file not found: $2" >&2
+                    return 1
+                fi
+                shift 2
+                ;;
+            --config-json)
+                merged_config=$(jq -s '.[0] * $next' --argjson next "$2" <<< "$merged_config")
+                shift 2
+                ;;
+            --output)
+                output_file="$2"
+                shift 2
+                ;;
+            *)
+                echo "❌ Unknown option: $1" >&2
+                return 1
+                ;;
+        esac
     done
-
-    if env "${env_args[@]}" "${gomplate_cmd[@]}" "${gomplate_args[@]}"; then
-        return 0
-    else
-        echo "❌ Failed to hydrate configuration for '$tool'" >&2
+    
+    # Ensure secrets field exists (templates may reference it)
+    merged_config=$(echo "$merged_config" | jq '.secrets = (.secrets // {})')
+    
+    # Write merged config to temp file for gomplate (use absolute path)
+    local tmp_config=$(mktemp /tmp/config.hydrate.XXXXXX.json)
+    echo "$merged_config" > "$tmp_config"
+    
+    # Run gomplate with absolute path to temp config
+    # Capture both stdout and stderr, then process
+    local output stderr_output
+    output=$(gomplate -f "$template" -d "config=file://${tmp_config}?type=application/json" 2>&1)
+    local exit_code=$?
+    
+    rm -f "$tmp_config"
+    
+    if [[ $exit_code -ne 0 ]]; then
+        echo "❌ Template rendering failed" >&2
+        echo "$output" >&2
         return 1
+    fi
+    
+    # Output or write to file
+    if [[ -n "$output_file" ]]; then
+        echo "$output" > "$output_file"
+    else
+        echo "$output"
     fi
 }
