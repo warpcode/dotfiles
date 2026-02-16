@@ -1,33 +1,82 @@
 {
-  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/kimi-k2.5-free",
-  "google_auth": false,
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/master/assets/oh-my-opencode.schema.json",
   "agents": {
     "sisyphus": {
-      "model": "opencode/kimi-k2.5-free"
-    },
-    "atlas": {
-      "model": "opencode/kimi-k2.5-free"
+      "model": "opencode/minimax-m2.5-free",
+      "prompt_append": "If Trinity is unavailable, use MiniMax M2.1 (1M context), Kimi K2.5, or Big Pickle as alternatives. GitHub Copilot GPT-4.1 as last resort."
     },
     "oracle": {
-      "model": "opencode/kimi-k2.5-free"
+      "model": "opencode/minimax-m2.5-free",
+      "prompt_append": "If MiniMax unavailable, use Trinity Large or Kimi K2.5."
     },
     "librarian": {
-      "model": "opencode/kimi-k2.5-free"
+      "model": "opencode/gpt-5-nano",
+      "prompt_append": "If GPT-5 Nano unavailable, use GLM-4.7 or Big Pickle."
     },
     "explore": {
-      "model": "opencode/kimi-k2.5-free"
+      "model": "opencode/gpt-5-nano"
     },
-    "multimodal-looker": {
-      "model": "opencode/kimi-k2.5-free"
+    "atlas": {
+      "model": "opencode/kimi-k2.5-free",
+      "prompt_append": "If Kimi unavailable, use Trinity Large or MiniMax."
     },
     "prometheus": {
-      "model": "opencode/kimi-k2.5-free"
+      "model": "opencode/minimax-m2.5-free"
+    },
+    "metis": {
+      "model": "opencode/minimax-m2.5-free"
+    },
+    "momus": {
+      "model": "opencode/minimax-m2.5-free"
+    },
+    "multimodal-looker": {
+      "model": "opencode/kimi-k2.5-free",
+      "prompt_append": "Kimi is native multimodal. If unavailable, use Trinity or Big Pickle."
     },
     "frontend-ui-ux-engineer": {
-      "model": "opencode/kimi-k2.5-free"
+      "model": "opencode/glm-4.7-free",
+      "prompt_append": "GLM-4.7 is UI/vibe coding specialist. If unavailable, use Trinity or Kimi."
     },
     "document-writer": {
-      "model": "opencode/kimi-k2.5-free"
+      "model": "opencode/minimax-m2.5-free",
+      "prompt_append": "Trinity excels at creative writing. If unavailable, use GLM-4.7."
     }
+  },
+  "categories": {
+    "quick": {
+      "model": "opencode/gpt-5-nano"
+    },
+    "visual-engineering": {
+      "model": "opencode/glm-4.7-free"
+    },
+    "ultrabrain": {
+      "model": "opencode/minimax-m2.5-free"
+    },
+    "artistry": {
+      "model": "opencode/minimax-m2.5-free"
+    },
+    "unspecified-low": {
+      "model": "opencode/gpt-5-nano"
+    },
+    "unspecified-high": {
+      "model": "opencode/minimax-m2.5-free"
+    },
+    "writing": {
+      "model": "opencode/minimax-m2.5-free"
+    }
+  },
+  "sisyphus_agent": {
+    "disabled": false,
+    "default_builder_enabled": false,
+    "planner_enabled": true,
+    "replace_plan": true
+  },
+  "background_task": {
+    "defaultConcurrency": 5,
+    "staleTimeoutMs": 180000
+  },
+  "git_master": {
+    "commit_footer": true,
+    "include_co_authored_by": true
   }
 }

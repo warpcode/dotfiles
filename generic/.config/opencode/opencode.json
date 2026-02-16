@@ -12,71 +12,22 @@
     "AI.md",
     ".github/copilot-instructions.md"
   ],
-  "provider": {
-    "litellm": {
-      "npm": "@ai-sdk/openai-compatible",
-      "name": "LiteLLM Proxy",
-      "options": {
-        "baseURL": "{env:LITELLM_API_ENDPOINT}",
-        "apiKey": "{env:LITELLM_API_KEY}"
-      },
-      "models": {
-        "coding-model": {
-          "name": "coding-model (via LiteLLM)"
-        },
-        "devstral2": {
-          "name": "devstral2 (via LiteLLM)"
-        },
-        "qwen3-coder": {
-          "name": "qwen3-coder (via LiteLLM)"
-        },
-        "gpt-oss-20b": {
-          "name": "gpt-oss-20b (via LiteLLM)"
-        },
-        "gpt-oss-120b": {
-          "name": "gpt-oss-120b (via LiteLLM)"
-        },
-        "llama-4-maverick-17b-instruct": {
-          "name": "llama-4-maverick-17b-instruct (via LiteLLM)"
-        },
-        "gemini-2.5-pro": {
-          "name": "gemini-2.5-pro (via LiteLLM)"
-        },
-        "gemini-2.5-flash": {
-          "name": "gemini-2.5-flash (via LiteLLM)"
-        },
-
-        "o3-mini": {
-          "name": "o3-mini (via LiteLLM)"
-        },
-        "deepseek-v3": {
-          "name": "deepseek-v3 (via LiteLLM)"
-        }
-      }
-    }
-  },
-  "model": "{env:OPENCODE_MODEL}",
   "mcp": {
-    "grep_app": {
-      "type": "remote",
-      "url": "https://mcp.grep.app"
-    },
     "browsermcp": {
-      "type": "local",
       "command": [
         "npx",
         "@browsermcp/mcp@latest"
-      ]
+      ],
+      "type": "local"
     },
     "context7": {
-      "type": "remote",
-      "url": "https://mcp.context7.com/mcp",
       "headers": {
         "CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}"
-      }
+      },
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp"
     },
     "context7_local": {
-      "type": "local",
       "command": [
         "npx",
         "-y",
@@ -84,15 +35,96 @@
         "--api-key",
         "{env:CONTEXT7_API_KEY}"
       ],
-      "enabled": false
+      "enabled": false,
+      "type": "local"
     },
     "figma": {
-      "url": "https://mcp.figma.com/mcp",
+      "enabled": false,
       "type": "remote",
-      "enabled": false
+      "url": "https://mcp.figma.com/mcp"
+    },
+    "grep_app": {
+      "type": "remote",
+      "url": "https://mcp.grep.app"
     }
   },
+  "model": "{env:OPENCODE_MODEL}",
+  "permission": {
+    "external_directory": "allow",
+    "skill": "allow"
+  },
   "plugin": [
-    "oh-my-opencode"
-  ]
+    "oh-my-opencode@latest"
+  ],
+  "provider": {
+    "litellm": {
+      "models": {
+        "coding-model": {
+          "name": "coding-model (via LiteLLM)"
+        },
+        "deepseek-v3": {
+          "name": "deepseek-v3 (via LiteLLM)"
+        },
+        "devstral2": {
+          "name": "devstral2 (via LiteLLM)"
+        },
+        "gemini-2.5-flash": {
+          "name": "gemini-2.5-flash (via LiteLLM)"
+        },
+        "gemini-2.5-pro": {
+          "name": "gemini-2.5-pro (via LiteLLM)"
+        },
+        "gpt-oss-120b": {
+          "name": "gpt-oss-120b (via LiteLLM)"
+        },
+        "gpt-oss-20b": {
+          "name": "gpt-oss-20b (via LiteLLM)"
+        },
+        "llama-4-maverick-17b-instruct": {
+          "name": "llama-4-maverick-17b-instruct (via LiteLLM)"
+        },
+        "o3-mini": {
+          "name": "o3-mini (via LiteLLM)"
+        },
+        "qwen3-coder": {
+          "name": "qwen3-coder (via LiteLLM)"
+        }
+      },
+      "name": "LiteLLM Proxy",
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "apiKey": "{env:LITELLM_API_KEY}",
+        "baseURL": "{env:LITELLM_API_ENDPOINT}"
+      }
+    },
+    "ollama": {
+      "models": {
+        "glm-5:cloud": {
+          "_launch": true,
+          "name": "glm-5:cloud"
+        },
+        "kimi-k2.5:cloud": {
+          "_launch": true,
+          "limit": {
+            "context": 262144,
+            "output": 262144
+          },
+          "name": "kimi-k2.5:cloud"
+        },
+        "minimax-m2.5:cloud": {
+          "_launch": true,
+          "limit": {
+            "context": 204800,
+            "output": 128000
+          },
+          "name": "minimax-m2.5:cloud"
+        }
+      },
+      "name": "Ollama (local)",
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "http://127.0.0.1:11434/v1"
+      }
+    }
+  }
 }
