@@ -1,32 +1,41 @@
 ##
 # Configuration Hydration Engine
-# Pure function: Template + Config Data → Rendered Output
-# Usage: config.hydrate <template-path> [--config-file <path>] [--config-json <json>] [--output <path>]
+# Merges multiple JSON configs and renders a gomplate template.
+#
+# Usage: config.hydrate <template-path> [options]
+#
+# Options:
+#   --config-file <path>   JSON file to merge (can be used multiple times)
+#   --config-json <json>  Inline JSON to merge (can be used multiple times)
+#   --output <path>       Write output to file instead of stdout
+#   -h, --help            Show this help
+#
+# Examples:
+#   config.hydrate template.yaml --config-json '{"env": "prod"}'
+#   config.hydrate template.yaml --config-file base.json --config-file overrides.json --output app.conf
+#
+# Dependencies: jq, gomplate
+#
+# Returns: 0 on success, 1 on error
 ##
-
 config.hydrate() {
     local template=$1
     shift
 
-    if [[ -z "$template" || ! -f "$template" ]]; then
+    # Validate template
+    [[ -z "$template" || ! -f "$template" ]] && {
         echo "Usage: config.hydrate <template-path> [--config-file <path>] [--config-json <json>] [--output <path>]" >&2
         return 1
-    fi
+    }
 
-    # Accumulate merged config incrementally
-    local merged_config="{}"
-    local output_file=""
+    local merged_config='{}' output_file=
 
-    # Parse arguments and deep merge configs
+    # Parse arguments and merge configs
     while [[ $# -gt 0 ]]; do
         case $1 in
             --config-file)
-                if [[ -f "$2" ]]; then
-                    merged_config=$(jq -s '.[0] * .[1]' <<< "$merged_config $(cat "$2")")
-                else
-                    echo "❌ Config file not found: $2" >&2
-                    return 1
-                fi
+                [[ -f "$2" ]] || { echo "❌ Config file not found: $2" >&2; return 1; }
+                merged_config=$(jq -s '.[0] * .[1]' <<< "$merged_config" < "$2") || return 1
                 shift 2
                 ;;
             --config-json)
@@ -34,8 +43,12 @@ config.hydrate() {
                 shift 2
                 ;;
             --output)
-                output_file="$2"
+                output_file=$2
                 shift 2
+                ;;
+            -h|--help)
+                echo "Usage: config.hydrate <template> [--config-file <path>] [--config-json <json>] [--output <path>]"
+                return 0
                 ;;
             *)
                 echo "❌ Unknown option: $1" >&2
@@ -44,20 +57,19 @@ config.hydrate() {
         esac
     done
 
-    # Ensure secrets field exists (templates may reference it)
+    # Ensure secrets key always exists so templates referencing .secrets.* don't fail
+    # Uses jq's // operator: if secrets is null/undefined, default to empty object {}
     merged_config=$(echo "$merged_config" | jq '.secrets = (.secrets // {})')
 
-    # Write merged config to temp file for gomplate (use absolute path)
+    # Write merged config to temp file for gomplate
     local tmp_config=$(mktemp /tmp/config.hydrate.XXXXXX.json)
+    trap 'rm -f "$tmp_config"' EXIT INT TERM
     echo "$merged_config" > "$tmp_config"
 
-    # Run gomplate with absolute path to temp config
-    # Capture both stdout and stderr, then process
-    local output stderr_output
+    # Run gomplate and capture output
+    local output
     output=$(gomplate -f "$template" -d "config=file://${tmp_config}?type=application/json" 2>&1)
     local exit_code=$?
-
-    rm -f "$tmp_config"
 
     if [[ $exit_code -ne 0 ]]; then
         echo "❌ Template rendering failed" >&2
@@ -65,12 +77,8 @@ config.hydrate() {
         return 1
     fi
 
-    # Output or write to file
-    if [[ -n "$output_file" ]]; then
-        echo "$output" > "$output_file"
-    else
-        echo "$output"
-    fi
+    # Output to file or stdout
+    [[ -n "$output_file" ]] && echo "$output" > "$output_file" || echo "$output"
 }
 
 ##
