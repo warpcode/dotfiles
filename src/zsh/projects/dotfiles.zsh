@@ -8,16 +8,28 @@ function _dotfiles_tmux_setup() {
 }
 
 # Install dotfiles bootstrap to ~/.zshrc
-function dotfiles.install() {
-    dotfiles.install.zshrc
+function dotfiles.setup() {
+    dotfiles.setup.zshrc
+    dotfiles.setup.submodules
 
-    events.trigger "dotfiles.install"
+    events.trigger 'dotfiles.setup'
 }
 
-function dotfiles.install.zshrc() {
+function dotfiles.setup.zshrc() {
     local zshrc=~/.zshrc
     [[ -L "$zshrc" && ! -e "$zshrc" ]] && rm "$zshrc"
     [[ ! -e "$zshrc" ]] && touch "$zshrc"
     chmod 0600 "$zshrc"
     config.markers.replace "$zshrc" '# BEGIN dotfiles' '# END dotfiles' "source '$DOTFILES/src/zsh/init.zsh'"
 }
+
+function dotfiles.setup.submodules() {
+    (
+        df.cd
+        local submodule_status=$(git submodule status 2>/dev/null)
+        if [[ -n "$submodule_status" ]]; then
+            git submodule update --init --remote --recursive
+        fi
+    )
+}
+
