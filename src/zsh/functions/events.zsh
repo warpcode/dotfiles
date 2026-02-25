@@ -5,9 +5,9 @@
 # Events can pass arguments to all registered functions.
 #
 # Usage:
-#   _events_add_hook "event_name" function_name
-#   _events_trigger "event_name" [args...]
-#   _events_list_hooks
+#   events.add "event_name" function_name
+#   events.trigger "event_name" [args...]
+#   events.list
 
 # Associative array mapping event names to space-separated function lists
 typeset -A _events_hooks
@@ -16,7 +16,7 @@ typeset -A _events_hooks
 # @param event The event name
 # @param func The function name to register
 # @return 0 on success, 1 on error
-_events_add_hook() {
+events.add() {
     local event=$1
     local func=$2
 
@@ -42,7 +42,7 @@ _events_add_hook() {
 # Trigger an event, calling all registered functions with passed arguments
 # @param event The event name
 # @param args Arguments to pass to registered functions
-_events_trigger() {
+events.trigger() {
     local event=$1
     shift  # Remove event name, pass remaining args to hooks
 
@@ -59,7 +59,7 @@ _events_trigger() {
 
 # List all registered hooks for debugging
 # @return 0
-_events_list_hooks() {
+events.list() {
     for event in ${(k)_events_hooks}; do
         echo "Event '$event':"
         for func in ${(s: :)_events_hooks[$event]}; do

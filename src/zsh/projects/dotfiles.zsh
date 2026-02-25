@@ -10,6 +10,8 @@ function _dotfiles_tmux_setup() {
 # Install dotfiles bootstrap to ~/.zshrc
 function dotfiles.install() {
     dotfiles.install.zshrc
+
+    events.trigger "dotfiles.install"
 }
 
 function dotfiles.install.zshrc() {
