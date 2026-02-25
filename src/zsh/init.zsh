@@ -2,34 +2,24 @@ local file
 
 export DOTFILES=${0:A:h:h:h}
 
-# 1. Source core functions first (Critical for detection)
+# Source core functions first (Critical for detection)
 for file in ${0:A:h}/functions/**/*.zsh(Nn-); do source "$file"; done
 
 # Load in a .env file from the home directory if it exists
 [[ -f ~/.env ]] && env.source.file ~/.env
 
-# 2. Detect OS
-local current_os=$(_os_detect_os_family)
-
-# 3. Build list of remaining modules
+# Build list of remaining modules
 local files_to_source=(
     ~/.zshrc.before.d/**/*.zsh(Nn-)
     ${0:A:h}/{config,apps,projects}/**/*.zsh(Nn-)
-    ${0:A:h}/platform/${current_os}/**/*.zsh(Nn-)
     ~/.zshrc.{functions,config,apps,projects}/**/*.zsh(Nn-)
     ~/.zshrc.d/**/*.zsh(Nn-)
+    ~/.zsh_{path,prompt,exports,aliases,functions,extra}(Nn-)
 )
 
-# 4. Source the rest
+# Source the rest
 for file in "${files_to_source[@]}"; do
     source "$file"
 done
 
-# Load additional custom files
-# * ~/.zsh_aliases can be used for additional aliases.
-# * ~/.zsh_path can be used to extend `$PATH`.
-# * ~/.zsh_extra can be used for other settings you don’t want to commit.
-for file in ~/.zsh_{path,prompt,exports,aliases,functions,extra}; do
-	[ -e "$file" ] && source "$file";
-done;
 unset file;
