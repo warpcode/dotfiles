@@ -19,14 +19,29 @@
 # Returns: 0 on success, 1 on error
 ##
 config.hydrate() {
+    local DOTFILES_TEMPLATES="$DOTFILES/assets/templates"
+    local DOTFILES_CONFIGS="$DOTFILES/assets/configs"
+
     local template=$1
     shift
 
     # Validate template
-    [[ -z "$template" || ! -f "$template" ]] && {
+    if [[ -z "$template" ]]; then
         echo "Usage: config.hydrate <template-path> [--config-file <path>] [--config-json <json>] [--output <path>]" >&2
         return 1
-    }
+    fi
+
+    # Check if template exists as-is
+    if [[ ! -f "$template" ]]; then
+        # Check if it might be a relative path in assets/templates
+        local template_alt="$DOTFILES_TEMPLATES/$template"
+        if [[ -f "$template_alt" ]]; then
+            template=$template_alt
+        else
+            echo "❌ Template not found: $template" >&2
+            return 1
+        fi
+    fi
 
     local merged_config='{}' output_file=
 
@@ -34,8 +49,17 @@ config.hydrate() {
     while [[ $# -gt 0 ]]; do
         case $1 in
             --config-file)
-                [[ -f "$2" ]] || { echo "❌ Config file not found: $2" >&2; return 1; }
-                merged_config=$(jq -s '.[0] * .[1]' <<< "$merged_config" < "$2") || return 1
+                local config_path=$2
+                if [[ ! -f "$config_path" ]]; then
+                    local config_alt="$DOTFILES_CONFIGS/$2"
+                    if [[ -f "$config_alt" ]]; then
+                        config_path=$config_alt
+                    else
+                        echo "❌ Config file not found: $2" >&2
+                        return 1
+                    fi
+                fi
+                merged_config=$(jq -s '.[0] * .[1]' <<< "$merged_config" < "$config_path") || return 1
                 shift 2
                 ;;
             --config-json)

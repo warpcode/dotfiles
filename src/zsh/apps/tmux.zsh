@@ -19,3 +19,12 @@ function _tmux_basic_git()  {
         \
         selectw -t editor
 }
+
+function tmux.setup() {
+    tmux.setup.config
+}
+events.add dotfiles.setup tmux.setup
+
+function tmux.setup.config() {
+    config.hydrate "tmux/tmux.conf.tmpl" --output ~/.tmux.conf
+}
