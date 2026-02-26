@@ -26,5 +26,7 @@ function tmux.setup() {
 events.add dotfiles.setup tmux.setup
 
 function tmux.setup.config() {
-    config.hydrate "tmux/tmux.conf.tmpl" --output ~/.tmux.conf
+    local destination=~/.tmux.conf
+    config.hydrate "tmux/tmux.conf.tmpl" --output "$destination"
+    chmod 600 "$destination"
 }
