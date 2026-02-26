@@ -3,7 +3,7 @@
 # Searches upward from the current directory to the root
 # @param files Array of file/directory names to search for
 # @return 0 if found (echoes path), 1 if not found
-_fs_find_parent_path() {
+fs.find.root() {
     local files=("$@")
     local dir="$PWD"
 
@@ -26,3 +26,4 @@ _fs_find_parent_path() {
 
     return 1
 }
+
