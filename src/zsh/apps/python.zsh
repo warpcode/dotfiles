@@ -43,7 +43,7 @@ function python.vrun() {
 
 # Function to automatically load Python venv when changing directories
 function python.load-venv {
-    local venv_path="$(_fs_find_parent_path .venv)"
+    local venv_path="$(fs.find.root .venv)"
 
     if [ -n "$venv_path" ]; then
         python.vrun "$venv_path"
