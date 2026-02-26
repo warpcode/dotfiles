@@ -5,5 +5,7 @@ function screen.setup() {
 events.add dotfiles.setup screen.setup
 
 function screen.setup.config() {
-    config.hydrate "screen/screenrc.tmpl" --output ~/.screenrc
+    local destination=~/.screenrc
+    config.hydrate "screen/screenrc.tmpl" --output "$destination"
+    chmod 600 "$destination"
 }
