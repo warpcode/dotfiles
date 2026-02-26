@@ -12,6 +12,7 @@ function dotfiles.setup() {
     dotfiles.setup.zshrc
     dotfiles.setup.submodules
 
+    events.trigger 'dotfiles.setup.first'
     events.trigger 'dotfiles.setup'
 }
 
