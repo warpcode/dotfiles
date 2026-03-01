@@ -1,7 +1,6 @@
 
 function command_not_found_handler() {
     local cmd="$1"
-    local paths_config="${DOTFILES}/src/zsh/config/01-paths.zsh"
     # Only run intelligent handler in interactive sessions
     # We allow subshells/pipes as long as the user can interact (e.g. via /dev/tty)
     if [[ -o interactive ]]; then
@@ -10,8 +9,7 @@ function command_not_found_handler() {
         #    but the current shell hasn't updated its PATH or hash table yet.
         rehash
         if ! command -v "$cmd" >/dev/null 2>&1; then
-             [[ -f "$paths_config" ]] && source "$paths_config"
-             rehash
+             paths.reload
         fi
 
         # If found after reload, run it immediately!
@@ -34,8 +32,7 @@ function command_not_found_handler() {
 
                 # Reload paths regardless of success
                 echo "🔄 Reloading paths..." >&2
-                [[ -f "$paths_config" ]] && source "$paths_config"
-                rehash
+                paths.reload
 
                 if command -v "$cmd" >/dev/null 2>&1; then
                     # Execute the original command, preserving arguments
