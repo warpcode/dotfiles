@@ -222,65 +222,6 @@ zinstall.recipe.stack() {
     echo "${stack[*]}"
 }
 
-# === Execution Engine ===
-
-_zinstall_execute_batch() {
-    local method="$1"
-    shift
-    local -a rids=("$@")
-    local rid pkgs=""
-
-    # 1. Pre-install hooks & Repo Setup for all in batch
-    for rid in "${rids[@]}"; do
-        zinstall.recipe.hooks.run "$rid" pre_install
-        zinstall.repo.setup "$rid" "$method"
-    done
-
-    # 2. Repo Update (Session-aware)
-    zinstall.repo.update "$method"
-
-    # 3. Installation
-    case "$method" in
-        apt|pkg|brew|brew-cask|dnf|pacman)
-            for rid in "${rids[@]}"; do
-                local recipe_pkgs=$(zinstall.recipe.field "$rid" "$method")
-                pkgs+=" $recipe_pkgs"
-            done
-            pkgs="${pkgs# }" # Strip leading space
-            [[ -z "$pkgs" ]] && return 0
-            echo "📦 Batch installing ($method): $pkgs"
-            ${=_zinstall_commands[$method]} ${=pkgs}
-            ;;
-        *)
-            # Non-batchable (github, install_cmd)
-            for rid in "${rids[@]}"; do
-                echo "📦 Installing $(zinstall.recipe.field "$rid" name) via $method..."
-                _zinstall_run_individual_installer "$rid" "$method"
-            done
-            ;;
-    esac
-
-    # 4. Post-install hooks
-    for rid in "${rids[@]}"; do
-        zinstall.recipe.hooks.run "$rid" post_install
-        echo "✅ Successfully installed $(zinstall.recipe.field "$rid" name)!"
-    done
-}
-
-_zinstall_run_individual_installer() {
-    local rid="$1" method="$2"
-    local pkgs=$(zinstall.recipe.field "$rid" "$method")
-
-    if [[ "$method" == "github" ]]; then
-        local app=${pkgs%%:*} rest=${pkgs#*:} repo=${rest%%@*} ver=${rest#*@}
-        _gh_install_release "$app" "$repo" "$ver"
-    elif [[ "$method" == "install_cmd" ]]; then
-        if functions ${pkgs} >/dev/null; then ${pkgs}; else eval "${pkgs}"; fi
-    else
-        ${=_zinstall_commands[$method]} ${=pkgs}
-    fi
-}
-
 zinstall.repo.update() {
     local method="$1"
     local force="${2:-0}"
@@ -368,108 +309,84 @@ zinstall.recipe.hooks.run() {
 
 zinstall.install() {
     zinstall.init
-    _zinstall_handled_in_session=()
     local -a stacks=()
-    local -i max_len=0
+    local -A seen=()
+    local target recipe_id stack_str i layer method
 
-    # 1. Build filtered stacks (Phase 1)
+    # 1. Resolve & Deduplicate Dependency Layers
     for target in "$@"; do
-        local stack_len=${#stacks}
-        local stack_str=$(zinstall.recipe.stack "$target")
-        local -a s=(${=stack_str})
-        local s_len=${#s}
-        local max_len=$(( s_len > max_len ? s_len : max_len ))
-
-        for (( j=1; j <= max_len; j++ )); do
-            local rid="${s[j]}"
-            [[ -z "$rid" ]] && continue
-            local found=0
-            for (( k=1; k <= stack_len; k++ )); do
-                if [[ " ${stacks[k]} " == *" $rid "* ]]; then
-                    found=1
-                    break
-                fi
-            done
-            [[ $found -eq 0 ]] && stacks[j]+=" $rid"
-        done
-    done
-
-    # 2.  Filter stacks to remove already installed recipes
-    local -a filtered_stacks=()
-    for stack_str in "${stacks[@]}"; do
-        local -a s=(${=stack_str})
-        local -a filtered=()
-        for rid in "${s[@]}"; do
-            if zinstall.recipe.is_installed "$rid"; then
-                echo "✅ Already installed: $(zinstall.recipe.field "$rid" name)"
-            else
-                filtered+=("$rid")
+        stack_str=($(zinstall.recipe.stack "$target"))
+        for (( i=1; i <= ${#stack_str}; i++ )); do
+            recipe_id="${stack_str[i]}"
+            if [[ -z ${seen[$recipe_id]} ]]; then
+                stacks[i]+=" $recipe_id"
+                seen[$recipe_id]=1
             fi
         done
-        [[ ${#filtered[@]} -gt 0 ]] && filtered_stacks+=("${filtered[*]}")
     done
 
-    # 3. Loop through indices, group by method, and execute batches
-    for stack_str in "${filtered_stacks[@]}"; do
-        local -a s=(${=stack_str})
-        local -A method_groups=()
+    # 2. Process each layer (deepest dependencies first)
+    for layer in "${stacks[@]}"; do
+        [[ -z "$layer" ]] && continue
+        local -A groups=()
 
-        for rid in "${s[@]}"; do
-            local method=$(zinstall.recipe.install_method "$rid")
-            [[ -n "$method" ]] && method_groups[$method]+=" $rid"
+        # Group by method and run pre-install setup
+        for recipe_id in ${=layer}; do
+            local name=$(zinstall.recipe.field "$recipe_id" name)
 
-            # run the pre install hooks for all, and setup repos (if needed)
-            zinstall.recipe.hooks.run "$rid" pre_install
-            zinstall.repo.setup "$rid" "$method"
+            if zinstall.recipe.is_installed "$recipe_id"; then
+                echo "✅ Already installed: $name"
+                continue
+            fi
+
+            if method=$(zinstall.recipe.install_method "$recipe_id"); then
+                groups[$method]+=" $recipe_id"
+                zinstall.recipe.hooks.run "$recipe_id" pre_install
+                zinstall.repo.setup "$recipe_id" "$method"
+            fi
         done
 
-        for method in "${(@k)method_groups}"; do
-            echo "📦 Installing batch ($method): ${method_groups[$method]}"
+        # 3. Execute installation for each method group in the layer
+        for method in "${(@k)groups}"; do
             zinstall.repo.update "$method"
+            local -a rids=(${=groups[$method]})
 
-            # check if $method exists in _zinstall_commands to determine if it's batchable
             if [[ -n ${_zinstall_commands[$method]} ]]; then
-                local pkgs=()
-                for rid in "${=method_groups[$method]}"; do
-                    local recipe_pkgs=$(zinstall.recipe.field "$rid" "$method")
-                    pkgs+=($recipe_pkgs)
-                done
-
+                # Batch installation (apt, pkg, brew, etc.)
+                local -a pkgs=()
+                for recipe_id in "${rids[@]}"; do pkgs+=($(zinstall.recipe.field "$recipe_id" "$method")); done
                 echo "📦 Batch installing ($method): $pkgs"
                 ${=_zinstall_commands[$method]} ${=pkgs} || {
-                    echo "❌ Batch installation failed for $method." >&2
+                    echo "❌ Batch installation failed for $method ($pkgs)" >&2
                     return 1
                 }
             else
-                # Non-batchable (github, install_cmd)
-                for rid in ${=method_groups[$method]}; do
-                    echo "📦 Installing $(zinstall.recipe.field "$rid" name) via $method..."
-                    case "$method" in
-                        github)
-                            local app=${recipe_pkgs%%:*} rest=${recipe_pkgs#*:} repo=${rest%%@*} ver=${rest#*@}
-                            _gh_install_release "$app" "$repo" "$ver" || { echo "❌ Installation failed for $rid." >&2; return 1; }
-                            ;;
-                        install_cmd)
-                            local cmd=$(zinstall.recipe.field "$rid" "install_cmd")
-                            if functions ${cmd} >/dev/null; then
-                                ${cmd} || { echo "❌ Installation failed for $rid." >&2; return 1; }
-                            else
-                                eval "${cmd}" || { echo "❌ Installation failed for $rid." >&2; return 1; }
-                            fi
-                            ;;
-                        *)
-                            echo "❌ Unknown installation method: $method for $rid" >&2
+                # Individual installation (github, install_cmd)
+                for recipe_id in "${rids[@]}"; do
+                    local val=$(zinstall.recipe.field "$recipe_id" "$method")
+                    local name=$(zinstall.recipe.field "$recipe_id" name)
+                    echo "📦 Installing $name via $method..."
+
+                    if [[ "$method" == "github" ]]; then
+                        local app=${val%%:*} rest=${val#*:} repo=${rest%%@*} ver=${rest#*@}
+                        _gh_install_release "$app" "$repo" "$ver" || {
+                            echo "❌ Installation failed for $name (github: $repo)" >&2
                             return 1
-                            ;;
-                    esac
+                        }
+                    elif [[ "$method" == "install_cmd" ]]; then
+                        functions "$val" >/dev/null && "$val" || eval "$val" || {
+                            echo "❌ Installation command failed for $name" >&2
+                            return 1
+                        }
+                    fi
                 done
             fi
-        done
 
-        for rid in "${s[@]}"; do
-            # run the post install hooks for all
-            zinstall.recipe.hooks.run "$rid" post_install
-            echo "✅ Successfully installed "$rid"!"
+            # Run post-install hooks for the group
+            for recipe_id in "${rids[@]}"; do
+                zinstall.recipe.hooks.run "$recipe_id" post_install
+                echo "✅ Successfully installed $recipe_id!"
+            done
         done
     done
 }
