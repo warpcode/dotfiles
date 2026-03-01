@@ -5,9 +5,7 @@ function _tmux_basic_git()  {
         return 1
     fi
 
-    (( $+commands[tmux] )) || (echo "Please install tmux" ; return 1);
-
-    tmux att -t "$1" ||
+    tmux.cli att -t "$1" ||
         tmux \
         new -s "$1" -n "editor" \; \
         send-keys 'e .' C-m\; \
@@ -20,13 +18,13 @@ function _tmux_basic_git()  {
         selectw -t editor
 }
 
-function tmux.setup() {
-    tmux.setup.config
+function tmux.cli() {
+   tmux.setup.config
+   mise.exec tmux@latest tmux
 }
-events.add dotfiles.setup tmux.setup
 
 function tmux.setup.config() {
     local destination=~/.tmux.conf
-    config.hydrate "tmux/tmux.conf.tmpl" --output "$destination"
+    config.symlink "tmux/tmux.conf" "$destination"
     chmod 600 "$destination"
 }
