@@ -11,7 +11,6 @@ _git_post_install() {
 
 typeset -A recipe=(
     [name]="git"
-    [provides]="git"
     [apt]="git"
     [brew]="git"
     [dnf]="git"

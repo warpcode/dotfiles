@@ -5,4 +5,5 @@ typeset -A recipe=(
     [dnf]="curl"
     [pacman]="curl"
     [brew]="curl"
+    [depends]="ca-certificates"
 )

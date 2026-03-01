@@ -51,6 +51,18 @@ typeset -A _zinstall_os_precedence=(
     [install_cmd]=11
 )
 
+# Command dictionary for checking if a package is installed
+typeset -A _zinstall_check_commands=(
+    [brew]="brew list"
+    [brew-cask]="brew list --cask"
+    [flatpak]="flatpak info"
+    [snap]="snap list"
+    [apt]="dpkg-query -W"
+    [pkg]="pkg info"
+    [dnf]="rpm -q"
+    [pacman]="pacman -Qq"
+)
+
 # === Initialization ===
 
 zinstall.init.recipes() {
@@ -140,12 +152,44 @@ zinstall.recipe.find_by_binary() {
 zinstall.recipe.is_installed() {
     local recipe_id="$1"
     local provides=$(zinstall.recipe.field "$recipe_id" "provides")
-    [[ -z "$provides" ]] && return 1 # Assume re-install if provides is missing
 
-    local cmd
-    for cmd in ${=provides}; do
-        command -v "$cmd" >/dev/null 2>&1 && return 0
+    # 1. Quick check: provides binary
+    if [[ -n "$provides" ]]; then
+        local cmd
+        for cmd in ${=provides}; do
+            command -v "$cmd" >/dev/null 2>&1 && return 0
+        done
+    fi
+
+    # 2. Exhaustive check: package managers
+    local method val check_cmd pkg all_installed
+    for method in "${(@k)_zinstall_check_commands[@]}"; do
+        # Only check available methods on this OS
+        [[ ${_zinstall_methods_available[$method]} -eq 1 ]] || continue
+
+        # Only check if recipe defines this method
+        val=$(zinstall.recipe.field "$recipe_id" "$method")
+        [[ -n "$val" ]] || continue
+
+        check_cmd="${_zinstall_check_commands[$method]}"
+        all_installed=1
+
+        # A method is only "satisfied" if ALL its packages are installed
+        for pkg in ${=val}; do
+            case "$method" in
+                apt)
+                    # Check for "ok installed" to avoid "rc" state (removed but config remains)
+                    dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "ok installed" || { all_installed=0; break; }
+                    ;;
+                *)
+                    ${=check_cmd} "$pkg" >/dev/null 2>&1 || { all_installed=0; break; }
+                    ;;
+            esac
+        done
+
+        [[ $all_installed -eq 1 ]] && return 0
     done
+
     return 1
 }
 

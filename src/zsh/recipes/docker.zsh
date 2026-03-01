@@ -1,19 +1,18 @@
 
 typeset -A recipe=(
     [name]="docker"
-    [provides]="docker"
     # Defines package names for different managers
     [brew-cask]="docker-desktop"
     [apt]="docker-ce docker-compose-plugin docker-model-plugin"
     [dnf]="docker-ce docker-compose-plugin docker-model-plugin"
     [pacman]="docker docker-compose-plugin docker-model-plugin"
-    
+
     # Repository setup
     # Format: url|keyring|repo_line
     # Tokens: %ARCH%, %KEYRING%, %CODENAME%, %DISTRO%
     [apt_repo]="https://download.docker.com/linux/%DISTRO%/gpg|docker-archive-keyring.gpg|deb [arch=%ARCH% signed-by=%KEYRING%] https://download.docker.com/linux/%DISTRO% %CODENAME% stable"
     [dnf_repo]="https://download.docker.com/linux/fedora/docker-ce.repo"
-    
+
     # Custom hooks
     [post_install]="_installer_post_docker_mcp"
 )
