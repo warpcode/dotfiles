@@ -19,7 +19,7 @@ function command_not_found_handler() {
         fi
 
         # 2. Check if we have a recipe for this command
-        local recipe_id=$(zinstall.recipe "$cmd")
+        local recipe_id=$(zinstall.recipe.find_by_binary "$cmd")
 
         if [[ -n "$recipe_id" ]]; then
             echo "💡 Command '$cmd' not found, but can be installed via package '$recipe_id'." >&2
