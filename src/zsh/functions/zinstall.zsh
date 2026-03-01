@@ -16,24 +16,25 @@ typeset -A _zinstall_handled_in_session  # recipe_id -> 1 if already processed
 
 # Command dictionary - maps method to install command template
 typeset -A _zinstall_commands=(
-    [brew]="brew install"
-    [brew-cask]="brew install --cask"
-    [flatpak]="flatpak install -y"
-    [snap]="sudo snap install"
     [apt]="sudo apt install -y"
-    [pkg]="pkg install -y"
-    [dnf]="sudo dnf install -y"
-    [pacman]="sudo pacman -S --noconfirm"
+    [brew-cask]="brew install --cask"
+    [brew]="brew install"
     [cargo]="cargo install"
+    [dnf]="sudo dnf install -y"
+    [flatpak]="flatpak install -y"
+    [mise]="mise install"
+    [pacman]="sudo pacman -S --noconfirm"
+    [pkg]="pkg install -y"
+    [snap]="sudo snap install"
 )
 
 # Repository update commands
 typeset -A _zinstall_update_commands=(
     [apt]="sudo apt update -qq"
-    [pkg]="pkg update"
+    [brew]="brew update"
     [dnf]="sudo dnf makecache"
     [pacman]="sudo pacman -Sy"
-    [brew]="brew update"
+    [pkg]="pkg update"
 )
 
 # OS-specific method precedence (lower number = higher priority)
@@ -47,20 +48,22 @@ typeset -A _zinstall_os_precedence=(
     [dnf]=7
     [pacman]=8
     [cargo]=9
-    [github]=10
-    [install_cmd]=11
+    [mise]=10
+    [github]=11
+    [install_cmd]=12
 )
 
 # Command dictionary for checking if a package is installed
 typeset -A _zinstall_check_commands=(
-    [brew]="brew list"
-    [brew-cask]="brew list --cask"
-    [flatpak]="flatpak info"
-    [snap]="snap list"
     [apt]="dpkg-query -W"
-    [pkg]="pkg info"
+    [brew-cask]="brew list --cask"
+    [brew]="brew list"
     [dnf]="rpm -q"
+    [flatpak]="flatpak info"
+    [mise]="mise where"
     [pacman]="pacman -Qq"
+    [pkg]="pkg info"
+    [snap]="snap list"
 )
 
 # === Initialization ===
@@ -126,6 +129,7 @@ zinstall.init.install_methods() {
     esac
 
     _os_has_package_manager cargo && _zinstall_methods_available[cargo]=1
+    _os_has_package_manager mise && _zinstall_methods_available[mise]=1
     _zinstall_methods_available[github]=1
     _zinstall_methods_available[install_cmd]=1
 }
@@ -149,46 +153,53 @@ zinstall.recipe.find_by_binary() {
     fi
 }
 
+zinstall.recipe.is_installed.by_method() {
+    local recipe_id="$1" method="$2"
+    local val=$(zinstall.recipe.field "$recipe_id" "$method")
+    [[ -n "$val" ]] || return 1
+
+    local check_cmd="${_zinstall_check_commands[$method]}"
+    [[ -n "$check_cmd" ]] || return 1
+
+    local pkg
+    for pkg in ${=val}; do
+        case "$method" in
+            apt)
+                dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "ok installed" || return 1
+                ;;
+            *)
+                ${=check_cmd} "$pkg" >/dev/null 2>&1 || return 1
+                ;;
+        esac
+    done
+    return 0
+}
+
 zinstall.recipe.is_installed() {
     local recipe_id="$1"
     local provides=$(zinstall.recipe.field "$recipe_id" "provides")
+    local method
+    local -a sorted_methods
 
-    # 1. Quick check: provides binary
+    # 1. Exhaustive check: package managers (in order of precedence)
+    for method in "${(@k)_zinstall_os_precedence[@]}"; do
+        # Only check available methods on this OS
+        if zinstall.recipe.is_installed.by_method "$recipe_id" "$method"; then
+            echo "$method"
+            return 0
+        fi
+    done
+
+    # 2. Quick check: provides binary on PATH
     if [[ -n "$provides" ]]; then
         local cmd
         for cmd in ${=provides}; do
-            command -v "$cmd" >/dev/null 2>&1 && return 0
+            if command -v "$cmd" >/dev/null 2>&1; then
+                echo "path"
+                return 0
+            fi
         done
     fi
-
-    # 2. Exhaustive check: package managers
-    local method val check_cmd pkg all_installed
-    for method in "${(@k)_zinstall_check_commands[@]}"; do
-        # Only check available methods on this OS
-        [[ ${_zinstall_methods_available[$method]} -eq 1 ]] || continue
-
-        # Only check if recipe defines this method
-        val=$(zinstall.recipe.field "$recipe_id" "$method")
-        [[ -n "$val" ]] || continue
-
-        check_cmd="${_zinstall_check_commands[$method]}"
-        all_installed=1
-
-        # A method is only "satisfied" if ALL its packages are installed
-        for pkg in ${=val}; do
-            case "$method" in
-                apt)
-                    # Check for "ok installed" to avoid "rc" state (removed but config remains)
-                    dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "ok installed" || { all_installed=0; break; }
-                    ;;
-                *)
-                    ${=check_cmd} "$pkg" >/dev/null 2>&1 || { all_installed=0; break; }
-                    ;;
-            esac
-        done
-
-        [[ $all_installed -eq 1 ]] && return 0
-    done
 
     return 1
 }
@@ -378,7 +389,7 @@ zinstall.install() {
         for recipe_id in ${=layer}; do
             local name=$(zinstall.recipe.field "$recipe_id" name)
 
-            if zinstall.recipe.is_installed "$recipe_id"; then
+            if zinstall.recipe.is_installed "$recipe_id" >/dev/null; then
                 echo "✅ Already installed: $name"
                 continue
             fi
@@ -437,8 +448,44 @@ zinstall.install() {
 
 zinstall.exec() {
     local cmd="$1"; shift
-    command -v "$cmd" >/dev/null 2>&1 && { "$cmd" "$@"; return $?; }
-    zinstall.install "$cmd" || return 1
-    command -v "$cmd" >/dev/null 2>&1 && { "$cmd" "$@"; return $?; }
-    return 1
+    local rid=$(zinstall.recipe.find_by_binary "$cmd")
+    local method prefix
+
+    if [[ -z "$rid" ]]; then
+        if command -v "$cmd" >/dev/null 2>&1; then
+            "$cmd" "$@"
+            return $?
+        else
+            echo "❌ Command '$cmd' not found and no recipe available." >&2
+            return 1
+        fi
+    fi
+
+    # rid is not empty, check if installed
+    method=$(zinstall.recipe.is_installed "$rid")
+
+    if [[ -z "$method" ]]; then
+        # If not installed, try to install it
+        zinstall.install "$cmd" || true
+        method=$(zinstall.recipe.is_installed "$rid")
+    fi
+
+    if [[ -z "$method" ]]; then
+        # If still not detected by recipe methods, final check on PATH
+        if command -v "$cmd" >/dev/null 2>&1; then
+            "$cmd" "$@"
+            return $?
+        else
+            echo "❌ Command '$cmd' not found and installation failed." >&2
+            return 1
+        fi
+    fi
+
+    # Based on the detected method, apply prefix if defined
+    prefix=$(zinstall.recipe.field "$rid" "${method}_exec_prefix")
+    if [[ -n "$prefix" ]]; then
+        eval "${prefix} ${cmd} \"\$@\""
+    else
+        "$cmd" "$@"
+    fi
 }
