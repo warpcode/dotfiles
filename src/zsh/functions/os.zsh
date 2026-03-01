@@ -86,3 +86,31 @@ _os_filter_by_arch() {
     local arch_regex="($(IFS='|'; echo "${arch_patterns[*]}"))"
     echo "$input" | grep -E "$arch_regex"
 }
+
+# === Package Manager Detection ===
+
+# Check if running on Debian-based Linux
+# @return 0 if Debian/Ubuntu, 1 otherwise
+_os_is_debian_based() {
+    [[ -f /etc/debian_version ]]
+}
+
+# Check if running on Fedora-based Linux
+# @return 0 if Fedora/RHEL, 1 otherwise
+_os_is_fedora_based() {
+    [[ -f /etc/fedora-release ]]
+}
+
+# Check if running on Arch Linux
+# @return 0 if Arch, 1 otherwise
+_os_is_arch_based() {
+    [[ -f /etc/arch-release ]] || [[ -f /etc/gentoo-release ]]
+}
+
+# Check if a package manager is available
+# @param $1 package manager name (brew, flatpak, snap, apt, dnf, pacman, cargo)
+# @return 0 if available, 1 otherwise
+_os_has_package_manager() {
+    local pm="$1"
+    command -v "$pm" >/dev/null 2>&1
+}
