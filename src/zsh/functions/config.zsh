@@ -1,23 +1,68 @@
 ##
-# Configuration Hydration Engine
-# Merges multiple JSON configs and renders a gomplate template.
+# Symlink a config file or directory from assets/configs/ to a destination
 #
-# Usage: config.hydrate <template-path> [options]
+# Usage: config.symlink <source> <destination>
 #
-# Options:
-#   --config-file <path>   JSON file to merge (can be used multiple times)
-#   --config-json <json>  Inline JSON to merge (can be used multiple times)
-#   --output <path>       Write output to file instead of stdout
-#   -h, --help            Show this help
+# Source is resolved like config.hydrate:
+#   - First checks if it exists as an absolute/relative path
+#   - Then checks in $DOTFILES/assets/configs/<source>
 #
-# Examples:
-#   config.hydrate template.yaml --config-json '{"env": "prod"}'
-#   config.hydrate template.yaml --config-file base.json --config-file overrides.json --output app.conf
-#
-# Dependencies: jq, gomplate
+# If destination is a symlink but doesn't point to our source, replace it
+# If destination is a regular file, replace it with our symlink
+# If destination is a directory, error
 #
 # Returns: 0 on success, 1 on error
 ##
+config.symlink() {
+    local source="$1"
+    local destination="$2"
+
+    if [[ -z "$source" || -z "$destination" ]]; then
+        echo "Usage: config.symlink <source> <destination>" >&2
+        return 1
+    fi
+
+    # Validate and resolve source (like config.hydrate)
+    if [[ -f "$source" || -d "$source" ]]; then
+        : # source exists as-is
+    else
+        local source_alt="$DOTFILES/assets/configs/$source"
+        if [[ -f "$source_alt" || -d "$source_alt" ]]; then
+            source=$source_alt
+        else
+            echo "❌ Source not found: $1 (checked: $1, $source_alt)" >&2
+            return 1
+        fi
+    fi
+
+    # Resolve the absolute path of the source
+    local source_abs="$(realpath "$source")"
+
+    # Check what exists at the destination
+    if [[ -d "$destination" && ! -L "$destination" ]]; then
+        echo "Error: Destination is a directory: $destination" >&2
+        return 1
+    fi
+
+    # If destination is already a symlink, check if it points to our source
+    if [[ -L "$destination" ]]; then
+        local dest_target="$(readlink -f "$destination")"
+        if [[ "$dest_target" == "$source_abs" ]]; then
+            # Already points to our source, nothing to do
+            return 0
+        else
+            # Replace the symlink
+            rm "$destination"
+        fi
+    elif [[ -e "$destination" ]]; then
+        # Regular file exists, remove it
+        rm "$destination"
+    fi
+
+    # Create the symlink
+    ln -s "$source" "$destination"
+}
+
 config.hydrate() {
     local DOTFILES_TEMPLATES="$DOTFILES/assets/templates"
     local DOTFILES_CONFIGS="$DOTFILES/assets/configs"
