@@ -10,7 +10,8 @@ typeset -A recipe=(
     # Repository setup
     # Format: url|keyring|repo_line
     # Tokens: %ARCH%, %KEYRING%, %CODENAME%, %DISTRO%
-    [apt_repo]="https://download.docker.com/linux/%DISTRO%/gpg|docker-archive-keyring.gpg|deb [arch=%ARCH% signed-by=%KEYRING%] https://download.docker.com/linux/%DISTRO% %CODENAME% stable"
+    [apt_repo]="docker-archive-keyring.gpg|deb [arch=%ARCH% signed-by=%KEYRING%] https://download.docker.com/linux/%DISTRO% %CODENAME% stable"
+    [apt_key]="https://download.docker.com/linux/%DISTRO%/gpg|docker-archive-keyring.gpg"
     [dnf_repo]="https://download.docker.com/linux/fedora/docker-ce.repo"
 
     # Custom hooks
