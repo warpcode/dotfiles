@@ -15,8 +15,11 @@ typeset -gA _pkg_repo_dirty        # Maps installer_rid to 1 if extensions chang
 
 # @description Main entry point. Recursively scan the recipes directory and load all .zsh recipe files.
 pkg.init() {
+    # Guard against multiple calls AND recursion during initialization
+    [[ -n "$_pkg_initializing" ]] && return
     [[ ${#_pkg_files[@]} -gt 0 ]] && return
 
+    typeset -g _pkg_initializing=1
     local recipes_dir="${DOTFILES}/src/zsh/recipes"
     local f recipe_id key cmd
     local -A tmp_installers=() # Collect precedence locally (rid -> prec)
@@ -30,7 +33,7 @@ pkg.init() {
         source "$f"
 
         # Every recipe must have a name
-        [[ -z "${recipe[name]}" ]] && continue
+        [[ -z "${recipe[name]}" ]] && { unset _pkg_initializing; continue; }
 
         _pkg_files[$recipe_id]="$f"
 
@@ -63,6 +66,7 @@ pkg.init() {
     for item in "${(@on)sort_helper}"; do
         _pkg_installers+=("${item#*:}")
     done
+    unset _pkg_initializing
 }
 
 # --- Recipe Accessors ---
