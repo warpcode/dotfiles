@@ -2,7 +2,6 @@
 alias git.zip="git.cli archive --format=zip HEAD ':!*.gitignore' -o ${PWD##*/}.zip"
 
 # Ensure the defaults are loaded
-
 function _git_clone_and_cd() {
     if [[ -z "$1" ]]; then
         echo "Please provide a valid git url"
@@ -26,5 +25,5 @@ function _git_clone_and_cd() {
 }
 
 function git.cli() {
-    zinstall.exec git
+    pkg.exec git "$@"
 }

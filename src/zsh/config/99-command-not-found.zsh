@@ -19,7 +19,7 @@ function command_not_found_handler() {
         fi
 
         # 2. Check if we have a recipe for this command
-        local recipe_id=$(zinstall.recipe.find_by_binary "$cmd")
+        local recipe_id=$(pkg.find "$cmd")
 
         if [[ -n "$recipe_id" ]]; then
             echo "💡 Command '$cmd' not found, but can be installed via package '$recipe_id'." >&2
@@ -28,7 +28,7 @@ function command_not_found_handler() {
             # Force read from /dev/tty to handle subshells/pipelines where stdin is redirected
             if read -q response < /dev/tty; then
                 echo "" >&2
-                zinstall.install "$recipe_id" >&2
+                pkg.install "$recipe_id" >&2
 
                 # Reload paths regardless of success
                 echo "🔄 Reloading paths..." >&2
