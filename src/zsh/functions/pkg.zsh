@@ -41,7 +41,6 @@ pkg.init() {
 
         # Map provides/name to recipe ID
         local -a provides=(${=recipe[provides]})
-        [[ ${#provides} -eq 0 ]] && provides=("${recipe[name]}")
 
         for cmd in "${provides[@]}"; do
             _pkg_cmds[$cmd]="$recipe_id"
@@ -77,12 +76,6 @@ pkg.find() {
     if [[ -n "${_pkg_cmds[$target]}" ]]; then
         print -r -- "${_pkg_cmds[$target]}"
         return 0
-    else
-        # If not found in provides, check if target itself is a recipe ID
-        if [[ -n "${_pkg_files[$target]}" ]]; then
-            print -r -- "$target"
-            return 0
-        fi
     fi
 
     return 1
@@ -188,8 +181,7 @@ pkg.hooks.ext() {
 # @return 0 if satisfied (binary on PATH or provider confirms), 1 otherwise.
 pkg.status() {
     pkg.init
-    local target="$1"
-    local rid=$(pkg.find "$target")
+    local rid=$1
     [[ -z "$rid" ]] && return 1
 
     # 1. Quick check: provides binary on PATH
@@ -297,7 +289,7 @@ pkg.stack() {
     local -A seen=()
 
     _resolve() {
-        local rid=$(pkg.find "$1")
+        local rid="$1"
         [[ -z "$rid" ]] && return 1
 
         # Skip if already fully resolved
@@ -317,12 +309,6 @@ pkg.stack() {
             return 1
         fi
 
-        if pkg.status "$rid"; then
-            visiting[$rid]=""
-            seen[$rid]=1
-            return 0
-        fi
-
         # Resolve dependencies (including implicit installer)
         local -a deps=($(pkg.deps "$rid"))
         local dep
@@ -332,6 +318,14 @@ pkg.stack() {
 
         visiting[$rid]=""
         seen[$rid]=1
+        # Proxies are meta-packages; they don't get installed directly,
+        # but their dependencies (processed above) do.
+        if [[ "$(pkg.field "$rid" "proxy")" = "true" ]]; then
+            return 0
+        elif pkg.status "$rid"; then
+            return 0
+        fi
+
         stack+=("$rid")
     }
 
@@ -464,10 +458,10 @@ pkg.exec() {
     fi
 
     # 2. Check if installed; prompt to install if not
-    if ! pkg.status "$cmd"; then
+    if ! pkg.status "$rid"; then
         if read -q "?📦 Command '$cmd' not found. Would you like to install it? [y/N] "; then
             echo
-            pkg.install "$cmd" || return 1
+            pkg.install "$rid" || return 1
 
             paths.reload
 

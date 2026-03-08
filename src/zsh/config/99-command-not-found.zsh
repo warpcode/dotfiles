@@ -22,29 +22,8 @@ function command_not_found_handler() {
         local recipe_id=$(pkg.find "$cmd")
 
         if [[ -n "$recipe_id" ]]; then
-            echo "💡 Command '$cmd' not found, but can be installed via package '$recipe_id'." >&2
-            echo -n "   Install $recipe_id? [Y/n] " >&2
-
-            # Force read from /dev/tty to handle subshells/pipelines where stdin is redirected
-            if read -q response < /dev/tty; then
-                echo "" >&2
-                pkg.install "$recipe_id" >&2
-
-                # Reload paths regardless of success
-                echo "🔄 Reloading paths..." >&2
-                paths.reload
-
-                if command -v "$cmd" >/dev/null 2>&1; then
-                    # Execute the original command, preserving arguments
-                    "$@"
-                    return $?
-                else
-                    echo "❌ Command '$cmd' still not found after installation. You may need to restart your shell." >&2
-                    return 127
-                fi
-            else
-                echo "" >&2
-            fi
+            pkg.exec "$@"
+            return $?
         fi
     fi
 

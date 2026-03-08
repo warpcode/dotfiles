@@ -6,17 +6,17 @@ typeset -A recipe=(
     [installer_install]='
         local pkgs=($(pkg.field "$1" composer))
         [[ ${#pkgs[@]} -eq 0 ]] && return 1
-        composer global require "${pkgs[@]}"
+        pkg.exec composer global require "${pkgs[@]}"
     '
     [installer_upgrade]='
         local pkgs=($(pkg.field "$1" composer))
         [[ ${#pkgs[@]} -eq 0 ]] && return 1
-        composer global require "${pkgs[@]}"
+        pkg.exec composer global require "${pkgs[@]}"
     '
     [installer_check]='
         local pkgs=($(pkg.field "$1" composer)) satisfied=1
         for pkg in "${pkgs[@]}"; do
-            composer global show "$pkg" >/dev/null 2>&1 || { satisfied=0; break; }
+            pkg.exec composer global show "$pkg" >/dev/null 2>&1 || { satisfied=0; break; }
         done
         return $((1 - satisfied))
     '
