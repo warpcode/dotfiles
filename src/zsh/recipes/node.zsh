@@ -1,5 +1,5 @@
 typeset -A recipe=(
     [name]="node"
-    [provides]="node npx"
+    [provides]="node npm npx"
     [mise]="node@latest"
 )

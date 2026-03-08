@@ -8,6 +8,6 @@ typeset -A recipe=(
     [installer_install]='
         local pkgs=($(pkg.field "$1" uvx))
         [[ ${#pkgs[@]} -eq 0 ]] && return 1
-        uvx tool install "${pkgs[@]}"
+        pkg.exec uvx tool install "${pkgs[@]}"
     '
 )

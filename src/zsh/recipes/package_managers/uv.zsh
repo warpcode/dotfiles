@@ -7,17 +7,17 @@ typeset -A recipe=(
     [installer_install]='
         local pkgs=($(pkg.field "$1" uv))
         [[ ${#pkgs[@]} -eq 0 ]] && return 1
-        uv tool install "${pkgs[@]}"
+        pkg.exec uv tool install "${pkgs[@]}"
     '
     [installer_upgrade]='
         local pkgs=($(pkg.field "$1" uv))
         [[ ${#pkgs[@]} -eq 0 ]] && return 1
-        uv tool upgrade "${pkgs[@]}"
+        pkg.exec uv tool upgrade "${pkgs[@]}"
     '
     [installer_check]='
         local pkgs=($(pkg.field "$1" uv)) satisfied=1
         for pkg in "${pkgs[@]}"; do
-            uv tool list | grep -q "^$pkg " || { satisfied=0; break; }
+            pkg.exec uv tool list | grep -q "^$pkg " || { satisfied=0; break; }
         done
         return $((1 - satisfied))
     '
