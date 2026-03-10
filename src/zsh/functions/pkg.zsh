@@ -445,7 +445,7 @@ pkg.repo.update() {
 # @param $1 string The command/binary to execute.
 # @param $@ remaining arguments passed to the command.
 pkg.exec() {
-    pkg.init
+    pkg.init >&2
     local cmd="$1"; shift
 
     # 1. If binary is in PATH, it always takes precedent
@@ -464,8 +464,8 @@ pkg.exec() {
     # 2. Check if installed; prompt to install if not
     if ! pkg.status "$rid"; then
         if read -q "?📦 Command '$cmd' not found. Would you like to install it? [y/N] "; then
-            echo
-            pkg.install "$rid" || return 1
+            echo "" >&2
+            pkg.install "$rid" >&2 || return 1
 
             paths.reload
 
