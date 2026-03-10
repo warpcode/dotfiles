@@ -137,7 +137,7 @@ config.hydrate() {
 
     # Run gomplate and capture output
     local output
-    output=$(gomplate -f "$template" -d "config=file://${tmp_config}?type=application/json" 2>&1)
+    output=$(pkg.exec gomplate -f "$template" -d "config=file://${tmp_config}?type=application/json")
     local exit_code=$?
 
     if [[ $exit_code -ne 0 ]]; then

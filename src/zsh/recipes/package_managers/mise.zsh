@@ -39,7 +39,7 @@ typeset -A recipe=(
         local pkgs=($(pkg.field "$1" mise))
         shift
         [[ ${#pkgs[@]} -eq 0 ]] && return 1
-        pkg.exec mise exec "${pkgs[@]}" -- "$@"
+        pkg.exec mise exec --quiet "${pkgs[@]}" -- "$@"
     '
 )
 

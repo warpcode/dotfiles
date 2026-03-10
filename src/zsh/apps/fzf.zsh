@@ -1,15 +1,5 @@
-
-#;
-# fzf.cli - Wrapper for fzf that falls back to mise exec if fzf is not installed
-#
-# Checks if fzf is available in PATH. If not, uses mise exec to run fzf@latest.
-#
-# $@ - Arguments passed to fzf
-#
-# Returns:
-#   Exit code from fzf
 function fzf.cli() {
-    mise.exec fzf@latest fzf "$@"
+    pkg.exec fzf "$@"
 }
 
 # Use fzf for history search
