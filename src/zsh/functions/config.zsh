@@ -68,6 +68,7 @@ config.hydrate() {
     local DOTFILES_CONFIGS="$DOTFILES/assets/configs"
 
     local template=$1
+    local template_input=$1 # Save original input for directory extraction
     shift
 
     # Validate template
@@ -128,7 +129,9 @@ config.hydrate() {
 
     # Ensure secrets key always exists so templates referencing .secrets.* don't fail
     # Uses jq's // operator: if secrets is null/undefined, default to empty object {}
-    merged_config=$(echo "$merged_config" | jq '.secrets = (.secrets // {})')
+    # Also provide a default for 'created' if missing
+    local now_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    merged_config=$(echo "$merged_config" | jq --arg now "$now_date" '.secrets = (.secrets // {}) | .created = (.created // $now)')
 
     # Write merged config to temp file for gomplate
     local tmp_config=$(mktemp /tmp/config.hydrate.XXXXXX.json)
@@ -136,8 +139,25 @@ config.hydrate() {
     echo "$merged_config" > "$tmp_config"
 
     # Run gomplate and capture output
+    local gomplate_args=(
+        --missing-key=zero
+        -f "$template"
+        -c "config=file://${tmp_config}?type=application/json"
+    )
+
+    # If template is relative and has a directory, use its first part for partials
+    if [[ "$template_input" != /* && "$template_input" == */* ]]; then
+        local first_dir="${template_input%%/*}"
+        local partials_dir="${DOTFILES_TEMPLATES}/${first_dir}/partials"
+        if [[ -d "$partials_dir" ]]; then
+            gomplate_args+=(--template "tpls=${partials_dir}/")
+        elif [[ -d "${DOTFILES_TEMPLATES}/${first_dir}" ]]; then
+            gomplate_args+=(--template "tpls=${DOTFILES_TEMPLATES}/${first_dir}/")
+        fi
+    fi
+
     local output
-    output=$(pkg.exec gomplate -f "$template" -d "config=file://${tmp_config}?type=application/json")
+    output=$(pkg.exec gomplate "${gomplate_args[@]}")
     local exit_code=$?
 
     if [[ $exit_code -ne 0 ]]; then

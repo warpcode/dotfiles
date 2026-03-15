@@ -15,26 +15,40 @@ markdown.body.get() {
   ' "$file" | sed '/./,$!d'
 }
 
-# Get the entire frontmatter content from a markdown file
-# Returns the content between the first two '---' markers.
-# Strict: File MUST start with '---' (no leading whitespace/BOM).
-# Returns 0 if frontmatter found, 1 otherwise.
+# Get the inner frontmatter content from a single markdown file
 markdown.frontmatter.get() {
   local file="$1"
   [[ -f "$file" ]] || { echo "Error: File '$file' not found." >&2; return 1 }
-
-  local output
-  output=$(awk '
+  awk '
     BEGIN { p = 0; found = 0 }
     NR == 1 && /^---$/ { p = 1; next }
     p == 1 && /^---$/ { p = 0; found = 1; exit }
     p == 1 { print }
     END { if (found == 0) exit 1 }
-  ' "$file")
+  ' "$file"
+}
 
-  local ret=$?
-  (( ret == 0 )) && echo "$output"
-  return $ret
+# Stream frontmatter from multiple files with 'path' attribute injection
+# Returns a multi-document YAML stream suitable for yq processing.
+markdown.frontmatter.get.all() {
+  [[ $# -eq 0 ]] && return 0
+  awk '
+    FNR == 1 {
+      if (in_fm) print "---"
+      in_fm = 0; found_fm = 0
+    }
+    /^---$/ {
+      if (!found_fm) {
+        in_fm = 1; found_fm = 1
+        print "---"; print "path: " FILENAME
+        next
+      } else if (in_fm) {
+        in_fm = 0; print "---"
+        next
+      }
+    }
+    in_fm { print }
+  ' "$@"
 }
 
 # Remove the entire frontmatter block from a markdown file
