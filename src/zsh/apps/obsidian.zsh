@@ -104,12 +104,6 @@ obsidian.note.resolve_path() {
   obsidian.find.byAttribute "title" "$base_name" | head -n 1
 }
 
-# @description Check if a note exists
-obsidian.note.exists() {
-  local p="$1"
-  [[ -f "$p" || -f "$OBSIDIAN_VAULT/$p" || -f "$OBSIDIAN_VAULT/$p.md" ]]
-}
-
 # ─── Field Prompting ───────────────────────────────────────────────────────
 
 # @description Prompt for a field based on rules
