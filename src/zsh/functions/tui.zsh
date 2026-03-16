@@ -23,7 +23,7 @@ tui.input() {
             -o) optional=true; shift ;;
             -v) validation="$2"; shift 2 ;;
             -*) shift ;; # Skip unknown flags
-            *) 
+            *)
                 if [[ -z "$prompt" ]]; then
                     prompt="$1"
                 fi
@@ -82,7 +82,7 @@ tui.input() {
 tui.confirm() {
     local prompt=""
     local default=""
-    
+
     while [[ $# -gt 0 ]]; do
         case "$1" in
             -d) default="${2:l}"; shift 2 ;;
@@ -137,7 +137,7 @@ tui.select() {
             -p) fzf_prompt="$2"; shift 2 ;;
             -d) default="$2"; shift 2 ;;
             -*) shift ;; # Skip unknown flags
-            *) 
+            *)
                 if [[ -z "$prompt" ]]; then
                     prompt="$1"
                 else
@@ -183,7 +183,7 @@ tui.select() {
     local items_file=""
     local input_stream=""
     local -a fzf_cmd=(fzf --prompt "$fzf_prompt $hint> " --height 40% --reverse)
-    
+
     if [[ -n "$default" ]]; then
         local idx=${items[(i)*$default*]}
         if [[ $idx -le ${#items} ]]; then
@@ -201,7 +201,7 @@ tui.select() {
         printf "%s\n" "${items[@]}" > "$items_file"
 
         local bind_cmd="ctrl-n:execute(read -r \"?Custom value: \" val < /dev/tty > /dev/tty; [[ -n \"\$val\" ]] && { printf \"%s\n\" \"\$val\" | cat - \"$items_file\" > \"${items_file}.tmp\" && mv \"${items_file}.tmp\" \"$items_file\"; })+reload(cat \"$items_file\")+first"
-        
+
         # If multi-selection, select the new entry and move down.
         # If single-selection, immediately accept the new entry.
         if [[ "$multi" == true ]]; then
@@ -219,7 +219,7 @@ tui.select() {
         local -a choices=()
         local fzf_exit=0
         local fzf_out=""
-        
+
         if [[ "$custom" == true ]]; then
             fzf_out=$( "${fzf_cmd[@]}" < "$items_file" )
             fzf_exit=$?
@@ -257,7 +257,7 @@ tui.select() {
 # @description Select multiple items from a list.
 # @param $1 string Prompt text
 # @param -c Include 'Custom...' entry
-# @param -o Optional 
+# @param -o Optional
 # @param $@ Remaining items
 tui.multiselect() {
     tui.select -m "$@"
@@ -268,10 +268,10 @@ tui.multiselect() {
 # @param -d <date> Default date in YYYY-MM-DD format
 tui.date() {
     zmodload zsh/datetime 2>/dev/null
-    
+
     local prompt="Date"
     local default=""
-    
+
     while [[ $# -gt 0 ]]; do
         case "$1" in
             -d) default="$2"; shift 2 ;;
@@ -301,7 +301,7 @@ tui.date() {
 
     local selected
     selected=$(tui.select -p "$prompt" -d "$query" -c "${items[@]}") || return 1
-    
+
     # Extract the YYYY-MM-DD part (first space-separated word)
     echo "${selected%% *}"
 }
@@ -312,7 +312,7 @@ tui.date() {
 tui.time() {
     local prompt="Time"
     local default=""
-    
+
     while [[ $# -gt 0 ]]; do
         case "$1" in
             -d) default="$2"; shift 2 ;;
@@ -337,12 +337,12 @@ tui.time() {
     local -a hours=({00..23})
     local hour
     hour=$(tui.select -p "$prompt (Hour)" -d "$def_h" "${hours[@]}") || return 1
-    
+
     local -a mins_secs=({00..59})
     local minute
     minute=$(tui.select -o -p "$prompt (Minute)" -d "$def_m" -c "${mins_secs[@]}") || return 1
     [[ -z "$minute" ]] && minute="00"
-    
+
     local second
     second=$(tui.select -o -p "$prompt (Second)" -d "$def_s" -c "${mins_secs[@]}") || return 1
     [[ -z "$second" ]] && second="00"
