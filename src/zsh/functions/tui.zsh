@@ -75,6 +75,45 @@ tui.input() {
     done
 }
 
+# @description A styled Yes/No confirmation prompt.
+# @param $1 string Prompt text
+# @param -d <y|n> Default value (y or n)
+# @return 0 for Yes, 1 for No
+tui.confirm() {
+    local prompt=""
+    local default=""
+    
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -d) default="${2:l}"; shift 2 ;;
+            -*) shift ;;
+            *) [[ -z "$prompt" ]] && prompt="$1"; shift ;;
+        esac
+    done
+
+    local suffix="[y/n]"
+    [[ "$default" == "y" ]] && suffix="[Y/n]"
+    [[ "$default" == "n" ]] && suffix="[y/N]"
+
+    local answer
+    while true; do
+        if read -r "answer?$prompt $suffix: "; then
+            answer="${answer:l}"
+            [[ -z "$answer" ]] && answer="$default"
+
+            case "$answer" in
+                y|yes) return 0 ;;
+                n|no) return 1 ;;
+                *) echo "❌ Please answer with 'y' or 'n'." >&2 ;;
+            esac
+        else
+            echo "" >&2
+            return 1
+        fi
+    done
+}
+
+
 # @description Select exactly one item from a list.
 # @param $1 string Prompt text
 # @param -c Include 'Custom...' entry for free-type
@@ -85,6 +124,7 @@ tui.select() {
     local custom=false
     local optional=false
     local multi=false
+    local default=""
     local fzf_prompt=""
     local -a items=()
 
@@ -95,6 +135,7 @@ tui.select() {
             -o) optional=true; shift ;;
             -m) multi=true; shift ;;
             -p) fzf_prompt="$2"; shift 2 ;;
+            -d) default="$2"; shift 2 ;;
             -*) shift ;; # Skip unknown flags
             *) 
                 if [[ -z "$prompt" ]]; then
@@ -142,6 +183,14 @@ tui.select() {
     local items_file=""
     local input_stream=""
     local -a fzf_cmd=(fzf --prompt "$fzf_prompt $hint> " --height 40% --reverse)
+    
+    if [[ -n "$default" ]]; then
+        local idx=${items[(i)*$default*]}
+        if [[ $idx -le ${#items} ]]; then
+            fzf_cmd+=(--bind "load:pos($idx)")
+        fi
+    fi
+
     [[ "$multi" == true ]] && fzf_cmd+=(-m)
 
     if [[ "$custom" == true ]]; then
@@ -212,4 +261,91 @@ tui.select() {
 # @param $@ Remaining items
 tui.multiselect() {
     tui.select -m "$@"
+}
+
+# @description Select a date from a list around today.
+# @param $1 string Prompt text
+# @param -d <date> Default date in YYYY-MM-DD format
+tui.date() {
+    zmodload zsh/datetime 2>/dev/null
+    
+    local prompt="Date"
+    local default=""
+    
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -d) default="$2"; shift 2 ;;
+            -p) prompt="$2"; shift 2 ;;
+            -*) shift ;;
+            *) prompt="$1"; shift ;;
+        esac
+    done
+
+    local -a items=()
+    local i
+    for i in {-30..90}; do
+        local ts=$(( EPOCHSECONDS + i * 86400 ))
+        local d=$(strftime "%Y-%m-%d" $ts)
+        local day=$(strftime "%a" $ts)
+        local label=""
+        case $i in
+            0) label=" [Today]" ;;
+            1) label=" [Tomorrow]" ;;
+            -1) label=" [Yesterday]" ;;
+        esac
+        items+=("$d ($day)$label")
+    done
+
+    local query="$default"
+    [[ -z "$query" ]] && query="Today"
+
+    local selected
+    selected=$(tui.select -p "$prompt" -d "$query" -c "${items[@]}") || return 1
+    
+    # Extract the YYYY-MM-DD part (first space-separated word)
+    echo "${selected%% *}"
+}
+
+# @description Select a time (HH:MM:SS).
+# @param $1 string Prompt text
+# @param -d <time> Default time in HH:MM[:SS] format
+tui.time() {
+    local prompt="Time"
+    local default=""
+    
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -d) default="$2"; shift 2 ;;
+            -p) prompt="$2"; shift 2 ;;
+            -*) shift ;;
+            *) prompt="$1"; shift ;;
+        esac
+    done
+
+    local def_h="" def_m="" def_s=""
+    if [[ "$default" =~ ^([0-9]{2}):([0-9]{2})(:([0-9]{2}))?$ ]]; then
+        def_h="${match[1]}"
+        def_m="${match[2]}"
+        def_s="${match[4]}"
+    else
+        zmodload zsh/datetime 2>/dev/null
+        def_h=$(strftime "%H" $EPOCHSECONDS)
+        def_m=$(strftime "%M" $EPOCHSECONDS)
+        def_s=$(strftime "%S" $EPOCHSECONDS)
+    fi
+
+    local -a hours=({00..23})
+    local hour
+    hour=$(tui.select -p "$prompt (Hour)" -d "$def_h" "${hours[@]}") || return 1
+    
+    local -a mins_secs=({00..59})
+    local minute
+    minute=$(tui.select -o -p "$prompt (Minute)" -d "$def_m" -c "${mins_secs[@]}") || return 1
+    [[ -z "$minute" ]] && minute="00"
+    
+    local second
+    second=$(tui.select -o -p "$prompt (Second)" -d "$def_s" -c "${mins_secs[@]}") || return 1
+    [[ -z "$second" ]] && second="00"
+
+    echo "$hour:$minute:$second"
 }
