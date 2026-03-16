@@ -6,6 +6,6 @@ events.add dotfiles.setup screen.setup
 
 function screen.setup.config() {
     local destination=~/.screenrc
-    config.hydrate "screen/screenrc.tmpl" --output "$destination"
+    config.symlink "screen/.screenrc" "$destination"
     chmod 600 "$destination"
 }
