@@ -46,3 +46,50 @@ fs.find.root() {
     return 1
 }
 
+# Search for a string in file contents recursively from the current directory
+# @param -r Optional: Use regex search (default is literal string search)
+# @param query The string to search for
+# @param dir Optional: The directory to search in (default: .)
+# @return 0 if matches found (echoes filename:line:match), 1 if none found
+fs.search() {
+    local regex=false
+    if [[ "$1" == "-r" ]]; then
+        regex=true
+        shift
+    fi
+
+    local query="$1"
+    local dir="${2:-.}"
+
+    if [[ -z "$query" ]]; then
+        echo "Usage: fs.search [-r] <query> [dir]" >&2
+        return 1
+    fi
+
+    local grep_flags=("-n" "-I") # Removed -H as we use --heading or awk for filename
+
+    if [[ "$regex" == "false" ]]; then
+        grep_flags+=("-F")
+    fi
+
+    # If in a git repo, use git grep to respect .gitignore
+    if git.cli rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        git.cli --no-pager grep --recurse-submodules --heading --break "${grep_flags[@]}" "$query" -- "$dir"
+    else
+        grep -r "${grep_flags[@]}" \
+            --exclude-dir={.git,.svn,CVS,node_modules,vendor,dist,build,.gemini,.opencode} \
+            "$query" "$dir" | awk -F: '
+            {
+                if ($1 != last_file) {
+                    if (last_file != "") print "";
+                    print $1;
+                    last_file = $1;
+                }
+                sub(/^[^:]+:/, "");
+                print $0;
+            }'
+    fi
+}
+
+
+
