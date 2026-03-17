@@ -6,11 +6,13 @@
 # prompt adam1
 
 # Use emacs keybindings even if our EDITOR is set to vi
-bindkey -e
+[[ -o interactive ]] && bindkey -e
 
-# Use modern completion system
-autoload -Uz compinit
-compinit
+# Use modern completion system (interactive shells only)
+if [[ -o interactive ]]; then
+    autoload -Uz compinit
+    (( $+functions[compdef] )) || compinit
+fi
 
 zstyle ':completion:*' auto-description 'specify: %d'
 zstyle ':completion:*' completer _expand _complete _correct _approximate

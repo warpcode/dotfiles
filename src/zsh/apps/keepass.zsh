@@ -155,26 +155,21 @@ kp.search.first() {
 }
 
 ##
-# Tab completion for kp function
-#
-# Provides tab completion for keepassxc-cli commands
-#
-# @param array $words Array of command line words
-# @param int $cword Index of current word
-# @param array $line Array of command line
-##
-_kp_completion() {
-    local -a commands=(
-        'show:Show an entry'
-        'ls:List entries'
-        'search:Search entries'
-        'clip:Copy password to clipboard'
-        'add:Add new entry'
-        'edit:Edit entry'
-        'rm:Remove entry'
-        'forget:Clear password from keychain'
-    )
-    _describe 'keepass command' commands
-}
-
-compdef _kp_completion kp
+# Tab completion for kp function (Oh My Zsh required)
+# Only register when interactive and Oh My Zsh is loaded
+if [[ -o interactive ]] && (( $+functions[compdef] )); then
+    _kp_completion() {
+        local -a commands=(
+            'show:Show an entry'
+            'ls:List entries'
+            'search:Search entries'
+            'clip:Copy password to clipboard'
+            'add:Add new entry'
+            'edit:Edit entry'
+            'rm:Remove entry'
+            'forget:Clear password from keychain'
+        )
+        _describe 'keepass command' commands
+    }
+    compdef _kp_completion kp
+fi
