@@ -349,3 +349,36 @@ tui.time() {
 
     echo "$hour:$minute:$second"
 }
+
+# @description Preview a file with syntax highlighting.
+# @param $1 string Path to the file to preview
+# @param $2 number Optional: Line number to highlight
+tui.preview() {
+    local file="$1" line="${2:-0}"
+    [[ -f "$file" ]] || return 1
+
+    # Binary check (silent exit to avoid fzf noise)
+    command -v file >/dev/null && file -bi "$file" | grep -q 'binary' && return 1
+
+    # bat (Primary choice)
+    if command -v bat >/dev/null 2>&1; then
+        local opts=("--style=numbers" "--color=always")
+        ((line > 0)) && opts+=("--highlight-line" "$line")
+        bat "${opts[@]}" "$file"
+        return $?
+    fi
+
+    # Common formatting for stdout pagers
+    local awk_fmt='l>0 && NR==l {printf "\033[1;31m>>>\033[0m %5d: %s\n", NR, $0; next} {printf "    %5d: %s\n", NR, $0}'
+
+    # pygmentize (High-quality stdout fallback)
+    local pcmd=$(command -v pygmentize || command -v pygmentise)
+    if [[ -n "$pcmd" ]]; then
+        $pcmd -f terminal -g "$file" 2>/dev/null | awk -v l="$line" "$awk_fmt"
+        return $?
+    fi
+
+    # awk (Final fallback)
+    awk -v l="$line" "$awk_fmt" "$file"
+    return $?
+}
