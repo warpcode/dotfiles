@@ -1,25 +1,41 @@
-local file
+export DOTFILES="${0:A:h:h:h}"
 
-export DOTFILES=${0:A:h:h:h}
+_zsh.init() {
+    setopt null_glob globstarshort
 
-# Source core functions first (Critical for detection)
-for file in ${0:A:h}/functions/**/*.zsh(Nn-); do source "$file"; done
+    local root f
+    local roots=(
+        "$HOME/.zshrc.before.d/"
+        "$DOTFILES/src/zsh/"
+        "$HOME/.zshrc.d/"
+        "$HOME/.zsh_"
+    )
 
-# Load in a .env file from the home directory if it exists
-[[ -f ~/.env ]] && env.source.file ~/.env
+    for root in $roots; do
+        for f in "${root}"functions/**/*.zsh(Nn-); do
+            source "$f"
+        done
+    done
 
-# Build list of remaining modules
-local files_to_source=(
-    ~/.zshrc.before.d/**/*.zsh(Nn-)
-    ${0:A:h}/{config,apps,projects}/**/*.zsh(Nn-)
-    ~/.zshrc.{functions,config,apps,projects}/**/*.zsh(Nn-)
-    ~/.zshrc.d/**/*.zsh(Nn-)
-    ~/.zsh_{path,prompt,exports,aliases,functions,extra}(Nn-)
-)
+    [[ -f ~/.env ]] && env.source.file ~/.env
 
-# Source the rest
-for file in "${files_to_source[@]}"; do
-    source "$file"
-done
+    for root in $roots; do
+        for f in "${root}"{config,apps,projects}/**/*.zsh(Nn-); do
+            source "$f"
+        done
+    done
+    for root in $roots; do
+        for f in "${root}"{path,prompt,exports,aliases,extra}(Nn-); do
+            source "$f"
+        done
+    done
+}
 
-unset file;
+# Reload the Zsh configuration
+zsh.reload() {
+    source $HOME/.zshrc
+    [[ -o interactive ]] && echo "🔄 config reloaded"
+}
+export ZSH_RELOAD_FN=$(functions zsh.reload)
+
+_zsh.init
