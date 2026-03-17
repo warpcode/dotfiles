@@ -10,7 +10,7 @@
 #   events.list
 
 # Associative array mapping event names to space-separated function lists
-typeset -A _events_hooks
+typeset -gA _events_hooks
 
 # Register a function for a specific event
 # @param event The event name
@@ -21,7 +21,7 @@ events.add() {
     local func=$2
 
     # Validate function exists
-    if ! (( $+functions[$func] )); then
+    if ! functions "$func" >/dev/null; then
         echo "Error: Function '$func' does not exist" >&2
         return 1
     fi
