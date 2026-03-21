@@ -3,30 +3,30 @@ typeset -A recipe=(
     [provides]="apt"
     [installer]=true
     [installer_precedence]=6
-    [installer_install]='
+    [installer_install]='fn() {
         local pkgs=($(pkg.field "$1" apt))
         [[ ${#pkgs[@]} -eq 0 ]] && return 1
         sudo apt install -y "${pkgs[@]}"
-    '
-    [installer_upgrade]='
+    }'
+    [installer_upgrade]='fn() {
         local pkgs=($(pkg.field "$1" apt))
         [[ ${#pkgs[@]} -eq 0 ]] && return 1
         sudo apt install --only-upgrade -y "${pkgs[@]}"
-    '
-    [installer_repo_update]='sudo apt update -qq'
-    [installer_check]='
+    }'
+    [installer_repo_update]='fn() { sudo apt update -qq; }'
+    [installer_check]='fn() {
         local pkgs=($(pkg.field "$1" apt)) satisfied=1
         for pkg in "${pkgs[@]}"; do
             dpkg-query -W -f='\''${Status}'\'' "$pkg" 2>/dev/null | grep -q "ok installed" || { satisfied=0; break; }
         done
         return $((1 - satisfied))
-    '
+    }'
 
     # Registration of extensions
     [installer_pre_install_ext]="key repo"
 
     # Implementation: installer_ext_key <rid> <key_url|keyring_name>
-    [installer_ext_key]='
+    [installer_ext_key]='fn() {
         local rid=$1
         local val=$(pkg.field "$rid" "apt_key")
         [[ -z "$val" ]] && return 0
@@ -43,10 +43,10 @@ typeset -A recipe=(
             curl -fsSL "$key_url" | sudo gpg --dearmor -o "$keyring_path" --yes
             return 2 # Dirty
         fi
-    '
+    }'
 
     # Implementation: installer_ext_repo <rid> <keyring_name|repo_line>
-    [installer_ext_repo]='
+    [installer_ext_repo]='fn() {
         local rid=$1
         local val=$(pkg.field "$rid" "apt_repo")
         [[ -z "$val" ]] && return 0
@@ -73,5 +73,5 @@ typeset -A recipe=(
             echo "$repo_line" | sudo tee "$list_file" >/dev/null
             return 2 # Dirty
         fi
-    '
+    }'
 )

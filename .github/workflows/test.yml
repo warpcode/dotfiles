@@ -58,10 +58,12 @@ jobs:
             url."https://github.com/".insteadOf git@github.com:
           git config --global --add safe.directory "$(pwd)"
 
-      # Install dotfiles using make (as root)
+      # Install dotfiles using install.sh
       - name: Install dotfiles
         run: |
-          make install-generic
+          export DOTFILES="$(pwd)"
+          export DOTFILES_SKIP_CHSHELL=1
+          ./install.sh
 
       # Install additional dependencies using df.install
       - name: Install additional dependencies
@@ -99,12 +101,12 @@ jobs:
           git config --global \
             url."https://github.com/".insteadOf git@github.com:
 
-      # Install dotfiles using make
+      # Install dotfiles using install.sh
       - name: Install dotfiles
         run: |
-          pwd
-          ls -al
-          make install-generic
+          export DOTFILES="$(pwd)"
+          export DOTFILES_SKIP_CHSHELL=1
+          ./install.sh
 
       # Install additional dependencies using df.install
       - name: Install additional dependencies

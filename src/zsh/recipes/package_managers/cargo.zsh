@@ -11,23 +11,23 @@ typeset -A recipe=(
     [provides]="cargo"
     [installer]=true
     [installer_precedence]=9
-    [installer_install]='
+    [installer_install]='fn() {
         local pkgs=($(pkg.field "$1" cargo))
         [[ ${#pkgs[@]} -eq 0 ]] && return 1
         pkg.exec cargo install "${pkgs[@]}"
-    '
-    [installer_upgrade]='
+    }'
+    [installer_upgrade]='fn() {
         local pkgs=($(pkg.field "$1" cargo))
         [[ ${#pkgs[@]} -eq 0 ]] && return 1
         pkg.exec cargo install "${pkgs[@]}" # cargo install re-installs/upgrades
-    '
-    [installer_check]='
+    }'
+    [installer_check]='fn() {
         local pkgs=($(pkg.field "$1" cargo)) satisfied=1
         for pkg in "${pkgs[@]}"; do
             pkg.exec cargo install --list | grep -q "^$pkg " || { satisfied=0; break; }
         done
         return $((1 - satisfied))
-    '
+    }'
     [apt]="cargo"
     [dnf]="cargo"
     [pacman]="cargo"

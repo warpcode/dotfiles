@@ -3,23 +3,23 @@ typeset -A recipe=(
     [provides]="composer"
     [installer]=true
     [installer_precedence]=15
-    [installer_install]='
+    [installer_install]='fn() {
         local pkgs=($(pkg.field "$1" composer))
         [[ ${#pkgs[@]} -eq 0 ]] && return 1
         pkg.exec composer global require "${pkgs[@]}"
-    '
-    [installer_upgrade]='
+    }'
+    [installer_upgrade]='fn() {
         local pkgs=($(pkg.field "$1" composer))
         [[ ${#pkgs[@]} -eq 0 ]] && return 1
         pkg.exec composer global require "${pkgs[@]}"
-    '
-    [installer_check]='
+    }'
+    [installer_check]='fn() {
         local pkgs=($(pkg.field "$1" composer)) satisfied=1
         for pkg in "${pkgs[@]}"; do
             pkg.exec composer global show "$pkg" >/dev/null 2>&1 || { satisfied=0; break; }
         done
         return $((1 - satisfied))
-    '
+    }'
     # composer itself can be installed via various methods:
     [apt]="composer"
     [dnf]="composer"

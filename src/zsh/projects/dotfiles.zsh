@@ -9,8 +9,9 @@ function _dotfiles_tmux_setup() {
 
 # Install dotfiles bootstrap to ~/.zshrc
 function dotfiles.setup() {
-    dotfiles.setup.zshrc
     dotfiles.setup.submodules
+    dotfiles.setup.bootstrap
+    dotfiles.setup.zshrc
 
     events.trigger 'dotfiles.setup.first'
     events.trigger 'dotfiles.setup'
@@ -32,5 +33,9 @@ function dotfiles.setup.submodules() {
             git submodule update --init --remote --recursive
         fi
     )
+}
+
+function dotfiles.setup.bootstrap() {
+    pkg.install bootstrap
 }
 
