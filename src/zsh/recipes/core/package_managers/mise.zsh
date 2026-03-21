@@ -10,7 +10,7 @@ typeset -A recipe=(
     [custom_install_update]='fn() { pkg.exec curl https://mise.run | sh; }'
     [custom_install_enabled]='fn() {
         [[ "$OSTYPE" != linux* ]] && return 1
-        typeset -f _os_is_termux >/dev/null && _os_is_termux && return 1
+        _os_is_termux && return 1
         return 0
     }'
 

@@ -9,8 +9,8 @@ function _dotfiles_tmux_setup() {
 
 # Install dotfiles bootstrap to ~/.zshrc
 function dotfiles.setup() {
-    dotfiles.setup.submodules
     dotfiles.setup.bootstrap
+    dotfiles.setup.submodules
     dotfiles.setup.zshrc
 
     events.trigger 'dotfiles.setup.first'
@@ -28,10 +28,7 @@ function dotfiles.setup.zshrc() {
 function dotfiles.setup.submodules() {
     (
         df.cd
-        local submodule_status=$(git submodule status 2>/dev/null)
-        if [[ -n "$submodule_status" ]]; then
-            git submodule update --init --remote --recursive
-        fi
+        git submodule update --init --remote --recursive
     )
 }
 
