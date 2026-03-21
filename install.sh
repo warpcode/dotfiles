@@ -96,8 +96,14 @@ install_pkg() {
 ensure_dotfiles() {
     local repo_url="$1"
 
-    if [ -d "$DOTFILES_INSTALL_DIR" ] && [ -d "$DOTFILES_INSTALL_DIR/.git" ]; then
+    # If the directory exists and contains our signature file, we are good
+    if [ -d "$DOTFILES_INSTALL_DIR" ] && [ -f "$DOTFILES_INSTALL_DIR/install.sh" ]; then
         echo "Dotfiles already present at $DOTFILES_INSTALL_DIR"
+
+        if [ -d "$DOTFILES_INSTALL_DIR/.git" ]; then
+            echo "Initializing submodules..."
+            (cd "$DOTFILES_INSTALL_DIR" && git submodule update --init --recursive --depth 1 --quiet 2>/dev/null || true)
+        fi
         return 0
     fi
 
