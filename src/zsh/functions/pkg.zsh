@@ -111,10 +111,21 @@ pkg.is_installable() {
     # 1. If already installed, it's satisfied
     pkg.status "$rid" && return 0
 
-    # 2. Global visibility check
+    # 2. Proxy check: if proxy=true, it's installable if deps are installable
+    local proxy_val="$(pkg.field "$rid" "proxy")"
+    if [[ "$proxy_val" == "true" ]]; then
+        local deps=($(pkg.field "$rid" "depends"))
+        local dep
+        for dep in "${deps[@]}"; do
+            pkg.is_installable "$dep" || { echo "DEBUG: dep $dep not installable" >&2; return 1; }
+        done
+        return 0
+    fi
+
+    # 3. Global visibility check
     pkg.hook "$rid" "enabled" || return 1
 
-    # 3. Check if there is an available installer for this recipe
+    # 4. Check if there is an available installer for this recipe
     local installer_rid pkg_name
     for installer_rid in "${_pkg_installers[@]}"; do
         pkg_name=$(pkg.field "$rid" "$installer_rid")
@@ -144,19 +155,26 @@ pkg.hook() {
     local f="${_pkg_files[$rid]}"
     [[ -f "$f" ]] && source "$f"
 
-    # 1. If it's a defined function, call it directly
+    # 1. Anonymous function: starts with 'fn()' - strip wrapper and eval inline
+    if [[ "$val" == 'fn() '* ]]; then
+        # Remove 'fn() {' prefix and trailing '}'
+        local stripped="${val[7,-2]}"
+        # Eval in anonymous function scope with args passed
+        () {
+            local hook_logic="$1"; shift
+            eval "$hook_logic"
+        } "$stripped" "$@"
+        return $?
+    fi
+
+    # 2. Named function reference
     if functions "$val" >/dev/null; then
         "$val" "$@"
         return $?
     fi
 
-    # 2. Treat as a command string/anonymous function.
-    # We wrap it in an anonymous function to provide local scope ($1, $2, etc.)
-    # and isolate the execution context.
-    () {
-        local hook_logic="$1"; shift
-        eval "$hook_logic"
-    } "$val" "$@"
+    # 3. Plain string - just echo it (not evaluated)
+    echo "$val"
 }
 
 # @description Helper to dispatch installer-specific extensions for a recipe.
