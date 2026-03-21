@@ -418,6 +418,7 @@ pkg.install() {
                     return 1
                 }
             done
+            paths.reload
 
             # Run post-install hooks for the group
             for recipe_id in "${rids[@]}"; do
@@ -479,23 +480,25 @@ pkg.exec() {
         return 127
     fi
 
-    # 2. Check if installed; prompt to install if not
+    # 2. Check if installed
     if ! pkg.status "$rid"; then
-        if read -q "?📦 Command '$cmd' not found. Would you like to install it? [y/N] "; then
-            echo "" >&2
-            pkg.install "$rid" >&2 || return 1
-
-            paths.reload
-
-            # Re-check PATH post-install
-            if command -v "$cmd" >/dev/null 2>&1; then
-                command "$cmd" "$@"
+        # If interactive and installable, ask the user
+        if [[ -o interactive ]] && pkg.is_installable "$rid"; then
+            if tui.confirm "📦 Command '$cmd' is provided by recipe '$rid' but is not installed. Install now?" >&2; then
+                pkg.install "$rid" >&2 || return $?
+                # Re-check status after install
+                if ! pkg.status "$rid"; then
+                    echo "❌ Installation finished but '$cmd' is still not found/executable." >&2
+                    return 127
+                fi
+                # Recurse once to execute now that it's installed
+                pkg.exec "$cmd" "$@"
                 return $?
             fi
-        else
-            echo
-            return 127
         fi
+
+        echo "❌ Command '$cmd' is not installed. Run 'pkg.install $rid' to install it." >&2
+        return 127
     fi
 
     # 3. Command is installed but not in PATH — check for installer_exec hook

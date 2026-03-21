@@ -59,6 +59,11 @@ config.symlink() {
         rm "$destination"
     fi
 
+    # Create the destination directory only if it doesn't exist
+    local dest_dir
+    dest_dir=$(dirname "$destination")
+    [[ ! -d "$dest_dir" ]] && mkdir -p "$dest_dir"
+
     # Create the symlink
     ln -s "$source" "$destination"
 }
@@ -105,11 +110,11 @@ config.hydrate() {
                         return 1
                     fi
                 fi
-                merged_config=$(jq -s '.[0] * .[1]' <<< "$merged_config" < "$config_path") || return 1
+                merged_config=$(pkg.exec jq -s '.[0] * .[1]' <<< "$merged_config" < "$config_path") || return 1
                 shift 2
                 ;;
             --config-json)
-                merged_config=$(jq -s '.[0] * $next' --argjson next "$2" <<< "$merged_config")
+                merged_config=$(pkg.exec jq -s '.[0] * $next' --argjson next "$2" <<< "$merged_config")
                 shift 2
                 ;;
             --output)
@@ -131,7 +136,7 @@ config.hydrate() {
     # Uses jq's // operator: if secrets is null/undefined, default to empty object {}
     # Also provide a default for 'created' if missing
     local now_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    merged_config=$(echo "$merged_config" | jq --arg now "$now_date" '.secrets = (.secrets // {}) | .created = (.created // $now)')
+    merged_config=$(echo "$merged_config" | pkg.exec jq --arg now "$now_date" '.secrets = (.secrets // {}) | .created = (.created // $now)')
 
     # Write merged config to temp file for gomplate
     local tmp_config=$(mktemp /tmp/config.hydrate.XXXXXX.json)
@@ -167,7 +172,13 @@ config.hydrate() {
     fi
 
     # Output to file or stdout
-    [[ -n "$output_file" ]] && echo "$output" > "$output_file" || echo "$output"
+    if [[ -n "$output_file" ]]; then
+        local out_dir=$(dirname "$output_file")
+        [[ ! -d "$out_dir" ]] && mkdir -p "$out_dir"
+        echo "$output" > "$output_file"
+    else
+        echo "$output"
+    fi
 }
 
 ##

@@ -31,32 +31,9 @@ jobs:
         working-directory: ${{ github.workspace }}
 
     steps:
-      # Install required dependencies
-      - name: Install dependencies
-        run: |
-          if command -v apt-get >/dev/null 2>&1; then
-            apt-get update -qq && \
-              apt-get install -y -qq sudo zsh stow git jq wget curl make
-          elif command -v dnf >/dev/null 2>&1; then
-            dnf update -y -q && \
-              dnf install -y -q sudo zsh stow git jq wget curl make
-          elif command -v pacman >/dev/null 2>&1; then
-            pacman -Syu --noconfirm --quiet sudo zsh stow git jq wget curl make
-          else
-            echo "Unsupported package manager"
-            exit 1
-          fi
-
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      # Configure git to use HTTPS instead of SSH
-      - name: Configure git
-        run: |
-          git config --global \
-            url."https://github.com/".insteadOf git@github.com:
-          git config --global --add safe.directory "$(pwd)"
 
       # Install dotfiles using install.sh
       - name: Install dotfiles
@@ -64,14 +41,6 @@ jobs:
           export DOTFILES="$(pwd)"
           export DOTFILES_SKIP_CHSHELL=1
           ./install.sh
-
-      # Install additional dependencies using df.install
-      - name: Install additional dependencies
-        run: |
-          zsh -c '
-            source ~/.zshrc
-            _installer_install
-          '
 
   test-macos:
     runs-on: macos-latest
@@ -85,21 +54,9 @@ jobs:
         run: |
           /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-      # Install required dependencies
-      - name: Install dependencies
-        run: |
-          brew update
-          brew install zsh stow git jq wget curl make
-
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      # Configure git to use HTTPS instead of SSH
-      - name: Configure git
-        run: |
-          git config --global \
-            url."https://github.com/".insteadOf git@github.com:
 
       # Install dotfiles using install.sh
       - name: Install dotfiles
@@ -107,11 +64,3 @@ jobs:
           export DOTFILES="$(pwd)"
           export DOTFILES_SKIP_CHSHELL=1
           ./install.sh
-
-      # Install additional dependencies using df.install
-      - name: Install additional dependencies
-        run: |
-          zsh -c '
-            source ~/.zshrc
-            _installer_install
-          '

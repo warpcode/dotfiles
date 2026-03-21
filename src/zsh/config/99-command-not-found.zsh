@@ -19,13 +19,12 @@ function command_not_found_handler() {
         fi
 
         # 2. Check if we have a recipe for this command
-        # local recipe_id=$(pkg.find "$cmd")
+        local recipe_id=$(pkg.find "$cmd")
 
-        # if [[ -n "$recipe_id" ]]; then
-        #     # Potential recursion point: disabled for stability
-        #     # pkg.exec "$@"
-        #     # return $?
-        # fi
+        if [[ -n "$recipe_id" ]]; then
+            pkg.exec "$@"
+            return $?
+        fi
     fi
 
     # Check docker images (placeholder from original file)
