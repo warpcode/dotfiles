@@ -425,6 +425,7 @@ pkg.install() {
                 pkg.hook "$recipe_id" "post_install"
                 pkg.hooks.ext "$recipe_id" "installer_post_install_ext"
             done
+            pkg.hook "$method" "installer_post_install"
             pkg.hook "$method" "post_install"
 
             # Final verification

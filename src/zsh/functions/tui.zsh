@@ -37,7 +37,8 @@ tui.input() {
     display_prompt="$display_prompt: "
 
     while true; do
-        if read -r "value?$display_prompt"; then
+        printf > /dev/tty "%s" "$display_prompt"
+        if read -r value < /dev/tty; then
             # Handle default
             if [[ -z "$value" ]] && [[ -n "$default" ]]; then
                 value="$default"
@@ -97,7 +98,8 @@ tui.confirm() {
 
     local answer
     while true; do
-        if read -r "answer?$prompt $suffix: "; then
+        printf > /dev/tty "%s %s: " "$prompt" "$suffix"
+        if read -r answer < /dev/tty; then
             answer="${answer:l}"
             [[ -z "$answer" ]] && answer="$default"
 

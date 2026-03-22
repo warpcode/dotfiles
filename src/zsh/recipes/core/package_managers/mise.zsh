@@ -53,6 +53,11 @@ typeset -A recipe=(
         [[ ${#pkgs[@]} -eq 0 ]] && return 1
         pkg.exec mise exec --quiet "${pkgs[@]}" -- "$@"
     }'
+    [installer_post_install]='fn() {
+        if command -v mise >/dev/null; then
+            eval "$(mise activate zsh)"
+        fi
+    }'
 )
 
 
