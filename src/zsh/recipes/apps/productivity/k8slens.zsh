@@ -1,6 +1,4 @@
-typeset -A recipe=(
-    [name]="k8slens"
-    [brew-cask]="lens"
-    [flatpak]="io.k8slens.Lens"
-    [provides]="lens"
-)
+pkg.define k8slens \
+    package="k8slens" \
+    managers="snap" \
+    snap="kontena-lens --classic"

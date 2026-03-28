@@ -1,7 +1,3 @@
-typeset -A recipe=(
-    [name]="openssl"
-    [apt]="openssl libssl-dev"
-    [dnf]="openssl openssl-devel"
-    [pacman]="openssl"
-    [brew]="openssl"
-)
+pkg.define openssl \
+    package="openssl" \
+    managers="apt dnf brew"

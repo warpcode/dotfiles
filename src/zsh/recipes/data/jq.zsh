@@ -1,5 +1,3 @@
-typeset -A recipe=(
-    [name]="jq"
-    [provides]="jq"
-    [mise]="jq@latest"
-)
+pkg.define jq \
+    package="jq" \
+    managers="apt dnf pacman brew"

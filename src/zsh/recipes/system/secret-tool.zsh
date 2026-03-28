@@ -1,7 +1,5 @@
-typeset -A recipe=(
-    [name]="secret-tool"
-    [provides]="secret-tool"
-    [apt]="libsecret-tools"
-    [pacman]="libsecret"
-    [dnf]="libsecret"
-)
+pkg.define secret-tool \
+    package="secret-tool" \
+    managers="apt dnf" \
+    apt="libsecret-tools" \
+    dnf="libsecret"

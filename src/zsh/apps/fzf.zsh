@@ -1,5 +1,5 @@
 function fzf.cli() {
-    pkg.exec fzf "$@"
+    command fzf "$@"
 }
 
 if [[ -o interactive ]] && pkg.status fzf >/dev/null 2>&1; then

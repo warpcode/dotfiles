@@ -1,4 +1,4 @@
-typeset -A recipe=(
-    [name]="dnf-plugins-core"
-    [dnf]="dnf-plugins-core"
-)
+# Placeholder for dnf-plugins-core dependency
+pkg.define dnf-plugins-core \
+    package="dnf-plugins-core" \
+    managers="dnf"

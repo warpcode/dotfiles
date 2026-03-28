@@ -1,7 +1,3 @@
-typeset -A recipe=(
-    [name]="git"
-    [apt]="git"
-    [brew]="git"
-    [dnf]="git"
-    [pacman]="git"
-)
+pkg.define git \
+    package="git" \
+    managers="apt dnf pacman brew"

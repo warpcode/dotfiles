@@ -1,6 +1,3 @@
-typeset -A recipe=(
-    [name]="eslint"
-    [provides]="eslint"
-    [npm]="eslint"
-    [depends]="node"
-)
+pkg.define eslint \
+    package="eslint" \
+    managers="npm"

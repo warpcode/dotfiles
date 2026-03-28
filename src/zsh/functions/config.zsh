@@ -110,11 +110,11 @@ config.hydrate() {
                         return 1
                     fi
                 fi
-                merged_config=$(pkg.exec jq -s '.[0] * .[1]' <<< "$merged_config" < "$config_path") || return 1
+                merged_config=$(jq -s '.[0] * .[1]' <<< "$merged_config" < "$config_path") || return 1
                 shift 2
                 ;;
             --config-json)
-                merged_config=$(pkg.exec jq -s '.[0] * $next' --argjson next "$2" <<< "$merged_config")
+                merged_config=$(jq -s '.[0] * $next' --argjson next "$2" <<< "$merged_config")
                 shift 2
                 ;;
             --output)
@@ -136,7 +136,7 @@ config.hydrate() {
     # Uses jq's // operator: if secrets is null/undefined, default to empty object {}
     # Also provide a default for 'created' if missing
     local now_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    merged_config=$(echo "$merged_config" | pkg.exec jq --arg now "$now_date" '.secrets = (.secrets // {}) | .created = (.created // $now)')
+    merged_config=$(echo "$merged_config" | jq --arg now "$now_date" '.secrets = (.secrets // {}) | .created = (.created // $now)')
 
     # Write merged config to temp file for gomplate
     local tmp_config=$(mktemp /tmp/config.hydrate.XXXXXX.json)
@@ -162,7 +162,7 @@ config.hydrate() {
     fi
 
     local output
-    output=$(pkg.exec gomplate "${gomplate_args[@]}")
+    output=$(gomplate "${gomplate_args[@]}")
     local exit_code=$?
 
     if [[ $exit_code -ne 0 ]]; then

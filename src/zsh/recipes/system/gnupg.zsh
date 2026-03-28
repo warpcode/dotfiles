@@ -1,8 +1,6 @@
-typeset -A recipe=(
-    [name]="gnupg"
-    [provides]="gpg"
-    [apt]="gnupg"
-    [dnf]="gnupg"
-    [pacman]="gnupg"
-    [brew]="gnupg"
-)
+pkg.define gnupg \
+    package="gpg" \
+    managers="apt dnf brew" \
+    apt="gnupg2" \
+    dnf="gnupg2" \
+    brew="gnupg"

@@ -1,5 +1,4 @@
-typeset -A recipe=(
-    [name]="opencode"
-    [provides]="opencode"
-    [npx]="opencode-ai@latest"
-)
+pkg.define opencode \
+    package="opencode" \
+    managers="npm" \
+    npm="opencode-ai@latest"

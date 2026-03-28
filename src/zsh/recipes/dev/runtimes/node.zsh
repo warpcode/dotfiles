@@ -1,5 +1,3 @@
-typeset -A recipe=(
-    [name]="node"
-    [provides]="node npm npx"
-    [mise]="node@latest"
-)
+pkg.define node \
+    package="node" \
+    managers="mise"

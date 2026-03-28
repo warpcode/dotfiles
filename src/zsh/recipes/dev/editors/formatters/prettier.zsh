@@ -1,6 +1,3 @@
-typeset -A recipe=(
-    [name]="prettier"
-    [provides]="prettier"
-    [npm]="prettier"
-    [depends]="node"
-)
+pkg.define prettier \
+    package="prettier" \
+    managers="npm"

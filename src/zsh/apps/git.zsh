@@ -25,12 +25,12 @@ function _git_clone_and_cd() {
 }
 
 function git.cli() {
-    pkg.exec git "$@"
+    command git "$@"
 }
 
 function git.setup() {
-    pkg.exec git config --global include.path "$(fs.dotfiles.path "assets/configs/git/.gitconfig_default")"
-    pkg.exec git config --global core.excludesfile "$(fs.dotfiles.path "assets/configs/git/.gitignore_global")"
+    command git config --global include.path "$(fs.dotfiles.path "assets/configs/git/.gitconfig_default")"
+    command git config --global core.excludesfile "$(fs.dotfiles.path "assets/configs/git/.gitignore_global")"
 }
 events.add dotfiles.setup git.setup
 
