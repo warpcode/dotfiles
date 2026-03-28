@@ -1,5 +1,3 @@
-typeset -A recipe=(
-    [name]="tmux"
-    [provides]="tmux"
-    [mise]="tmux@latest"
-)
+pkg.define tmux \
+    package="tmux" \
+    managers="apt dnf pacman brew"

@@ -85,7 +85,7 @@ markdown.frontmatter.set() {
   } > "$tmp" && mv "$tmp" "$file" || { rm -f "$tmp"; return 1 }
 }
 
-# Validate the YAML frontmatter using 'yq' via pkg.exec
+# Validate the YAML frontmatter using 'yq'
 # Returns 0 if valid, non-zero otherwise.
 markdown.frontmatter.validate() {
   local file="$1"
@@ -97,8 +97,8 @@ markdown.frontmatter.validate() {
     return 1
   }
 
-  # Use pkg.exec to handle yq installation automatically
-  if echo "${fm:-"{}"}" | pkg.exec yq '.' > /dev/null 2>&1; then
+  # Validate YAML using yq
+  if echo "${fm:-"{}"}" | yq '.' > /dev/null 2>&1; then
     return 0
   else
     echo "Error: Invalid YAML in frontmatter of '$file'." >&2

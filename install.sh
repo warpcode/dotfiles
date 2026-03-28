@@ -185,9 +185,20 @@ set_zsh_default "$zsh_path"
 # 3. Clone repository
 ensure_dotfiles "$DOTFILES_REPO_URL"
 
-# 4. Hand off to internal Zsh configuration
-echo "Bootstrapping dotfiles..."
+# 4. Run staged package installation
+echo ""
+echo "=============================================="
+echo "Installing packages in stages..."
+echo "=============================================="
 cd "$DOTFILES_INSTALL_DIR"
+export DOTFILES="$DOTFILES_INSTALL_DIR"
+
+# Source pkg.zsh and run staged installation
+zsh -c "source src/zsh/functions/pkg.zsh && pkg.install_all"
+
+# 5. Hand off to internal Zsh configuration
+echo ""
+echo "Bootstrapping dotfiles..."
 
 # Source the internal init and run the dotfiles setup
 $zsh_path -c "source src/zsh/init.zsh && dotfiles.setup"

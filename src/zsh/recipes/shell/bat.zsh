@@ -1,5 +1,3 @@
-typeset -A recipe=(
-    [name]="bat"
-    [provides]="bat"
-    [mise]="bat@latest"
-)
+pkg.define bat \
+    package="bat" \
+    managers="mise apt dnf pacman brew"

@@ -1,5 +1,3 @@
-typeset -A recipe=(
-    [name]="fzf"
-    [provides]="fzf"
-    [mise]="fzf@latest"
-)
+pkg.define fzf \
+    package="fzf" \
+    managers="apt dnf pacman brew"

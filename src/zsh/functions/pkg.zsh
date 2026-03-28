@@ -1,526 +1,271 @@
-# pkg.zsh - Modular Recipe-Driven Package & Command Manager
+# pkg.zsh - Staged Package Installer
 #
-# This system implements the "Recipe Contract v3", allowing for deep dependency
-# chaining, virtual command execution (exec closures), and proxy-based meta-packages.
+# Usage: source src/zsh/functions/pkg.zsh && pkg.install_all
+#
+# Recipe format:
+#   pkg.define <name> \
+#       package="<name>" \
+#       managers="<manager1> <manager2> ..." \
+#       <manager>="<override_name>"  # Optional override
+#
+# Note: Manager modules are auto-loaded by init.zsh
 
-# Global State (Internal)
-typeset -gA _pkg_recipes           # Cached recipe data: [recipe_id:field]=value
-typeset -gA _pkg_files             # Maps recipe_id to absolute file path
-typeset -gA _pkg_cmds              # Maps binary/command name to recipe_id
-typeset -ga _pkg_installers        # Sorted list of installer names by precedence
-typeset -gA _pkg_repo_updated      # Maps installer_rid to 1 if updated in session
-typeset -gA _pkg_repo_dirty        # Maps installer_rid to 1 if extensions changed system state
+# Global recipe storage: pkg_recipes[recipe_id:key]=value
+typeset -gA pkg_recipes
 
-# --- Initialization ---
+# Package list: all recipe names
+typeset -ga pkg_list
 
-# @description Main entry point. Recursively scan the recipes directory and load all .zsh recipe files.
-pkg.init() {
-    # Guard against multiple calls AND recursion during initialization
-    [[ -n "$_pkg_initializing" ]] && return
-    [[ ${#_pkg_files[@]} -gt 0 ]] && return
+# Default manager priority order (used when recipe doesn't specify managers)
+typeset -ga PKG_MANAGER_PRIORITY=(flatpak mise snap uv npm cargo brew brew_cask apt dnf pacman)
 
-    typeset -g _pkg_initializing=1
-    local recipes_dir="${DOTFILES}/src/zsh/recipes"
-    local f recipe_id key cmd
-    local -A tmp_installers=() # Collect precedence locally (rid -> prec)
+# Action state: pkg_action[rid]="skip|defer|install|upgrade|unavailable"
+typeset -gA pkg_action
 
-    for f in "$recipes_dir"/**/*.zsh(N); do
-        recipe_id="${f:t:r}"
+# --- Recipe Definition ---
 
-        # Reset local recipe array for each file
-        unset recipe
-        typeset -A recipe
-        source "$f"
+pkg.define() {
+    local rid="$1"; shift
+    local norm_id="${rid//-/_}"
+    local pair key val
 
-        # Every recipe must have a name
-        [[ -z "${recipe[name]}" ]] && { unset _pkg_initializing; continue; }
+    # Store raw recipe data
+    for pair in "$@"; do
+        key="${pair%%=*}"
+        val="${pair#*=}"
+        pkg_recipes[${norm_id}:${key}]="$val"
 
-        _pkg_files[$recipe_id]="$f"
-
-        # Cache all fields: [recipe_id:field]=value
-        for key in "${(@k)recipe}"; do
-            _pkg_recipes["$recipe_id:$key"]="${recipe[$key]}"
-        done
-
-        # Map provides/name to recipe ID
-        local -a provides=(${=recipe[provides]})
-
-        for cmd in "${provides[@]}"; do
-            _pkg_cmds[$cmd]="$recipe_id"
-        done
-
-        # If the recipe provides an installer, register its precedence
-        if [[ "${recipe[installer]}" == "true" ]]; then
-            tmp_installers[$recipe_id]="${recipe[installer_precedence]:-999}"
+        # If this is the managers field, ensure all listed managers are in priority list
+        if [[ "$key" == "managers" ]]; then
+            local m
+            for m in ${=val}; do
+                if [[ ! " ${PKG_MANAGER_PRIORITY[*]} " == *" $m "* ]]; then
+                    PKG_MANAGER_PRIORITY+=("$m")
+                fi
+            done
         fi
     done
 
-    # Sort installers by precedence (ascending) into the global _pkg_installers array
-    local -a sort_helper=()
-    local rid
-    for rid in "${(@k)tmp_installers}"; do
-        sort_helper+=("${(l:3::0:)tmp_installers[$rid]}:$rid")
-    done
-
-    _pkg_installers=()
-    for item in "${(@on)sort_helper}"; do
-        _pkg_installers+=("${item#*:}")
-    done
-    unset _pkg_initializing
+    # Add to package list
+    pkg_list+=("$norm_id")
 }
 
-# --- Recipe Accessors ---
+# Load all recipe files from disk
+pkg.load_recipes() {
+    local recipe_file
+    for recipe_file in "${DOTFILES}/src/zsh/recipes/"**/*.zsh; do
+        [[ -f "$recipe_file" ]] || continue
+        source "$recipe_file"
+    done
+}
 
-# @description Find the recipe ID that provides a given binary or command.
-# @param $1 string The binary or command name.
-pkg.find() {
+# Compile actions for all recipes based on current system state
+pkg.compile_actions() {
+    local rid total count
+    total=${#pkg_list[@]}
+    count=0
+
+    # Clear current actions to force recalculation if this is a new pass
+    # Actually, pkg.install_all should do this or we can do it here.
+    # We'll do it here to be safe.
+    pkg_action=()
+
+    for rid in "${pkg_list[@]}"; do
+        ((count++))
+        printf "\r🔍 Compiling actions: %d/%d (%s)..." "$count" "$total" "$rid" >&2
+        pkg_action[$rid]=$(pkg.recipeAction "$rid")
+    done
+    printf "\r\033[K" >&2  # Clear progress line
+}
+
+# Run package manager func
+pkg.manager_func() {
+    local func=$1; shift;
+    local m
+    for m in "${PKG_MANAGER_PRIORITY[@]}"; do
+        local setup_func="pkg.managers.${m}.${func}"
+        if typeset -f "$setup_func" >/dev/null 2>&1; then
+            "$setup_func" "$@" || return $?
+        fi
+    done
+}
+
+# Check if a recipe is installable via any available manager
+pkg.installable() {
+    local rid="$1"
+    local m
+
+    for m in "${PKG_MANAGER_PRIORITY[@]}"; do
+        pkg.managers.${m}.is_available || continue
+        typeset -f "pkg.managers.${m}.search" >/dev/null 2>&1 || continue
+
+        if pkg.managers.${m}.search "$rid"; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Check if a recipe is loaded
+pkg.isLoaded() {
+    local rid="$1"
+    local norm_id="${rid//-/_}"
+    local r
+    for r in "${pkg_list[@]}"; do
+        [[ "$r" == "$norm_id" ]] && return 0
+    done
+    return 1
+}
+
+# Check if an action means the manager is enabled (install/upgrade/defer)
+pkg.actionIsEnabled() {
+    local action="$1"
+    [[ "$action" == "install"* || "$action" == "upgrade"* || "$action" == "defer" ]]
+}
+
+# Get all recipes with a specific action value (e.g., "install", "defer", "skip")
+pkg.recipesByAction() {
     local target="$1"
-    pkg.init
-
-    if [[ -n "${_pkg_cmds[$target]}" ]]; then
-        print -r -- "${_pkg_cmds[$target]}"
-        return 0
-    fi
-
-    return 1
+    local rid
+    for rid in "${pkg_list[@]}"; do
+        [[ "${pkg_action[$rid]}" == "$target" ]] && echo "$rid"
+    done
 }
 
-# @description Retrieve a specific field's value from a loaded recipe.
-# @param $1 string The recipe ID.
-# @param $2 string The field name.
-# @param $3 string [Optional] Default value if field is missing.
-pkg.field() {
-    local rid="$1" field="$2" default="${3:-}"
-    local key="${rid}:${field}"
-    pkg.init
-
-    if [[ -n "${_pkg_recipes["$key"]}" ]]; then
-        print -r -- "${_pkg_recipes["$key"]}"
-    else
-        print -r -- "$default"
-    fi
-}
-
-# @description Check if a recipe is installable in the current environment.
-# @param $1 string The recipe ID.
-# @return 0 if installable, 1 otherwise.
-pkg.is_installable() {
-    pkg.init
+# Get package name for a recipe
+# Usage: pkg.recipePackages <rid> [manager]
+pkg.recipePackages() {
     local rid="$1"
+    local norm_id="${rid//-/_}"
+    local manager="$2"
 
-    # 1. If already installed, it's satisfied
-    pkg.status "$rid" && return 0
-
-    # 2. Proxy check: if proxy=true, it's installable if deps are installable
-    local proxy_val="$(pkg.field "$rid" "proxy")"
-    if [[ "$proxy_val" == "true" ]]; then
-        local deps=($(pkg.field "$rid" "depends"))
-        local dep
-        for dep in "${deps[@]}"; do
-            pkg.is_installable "$dep" || { echo "DEBUG: dep $dep not installable" >&2; return 1; }
+    if [[ -n "$manager" ]]; then
+        # Check if manager is valid for this recipe
+        local managers=(${=$(pkg.recipeManagers "$rid")})
+        local m
+        for m in "${managers[@]}"; do
+            [[ "$m" == "$manager" ]] && break
         done
-        return 0
-    fi
-
-    # 3. Global visibility check
-    pkg.hook "$rid" "enabled" || return 1
-
-    # 4. Check if there is an available installer for this recipe
-    local installer_rid pkg_name
-    for installer_rid in "${_pkg_installers[@]}"; do
-        pkg_name=$(pkg.field "$rid" "$installer_rid")
-        [[ -z "$pkg_name" ]] && continue
-
-        # Is the installer itself allowed to run here?
-        if pkg.hook "$installer_rid" "installer_enabled"; then
-            return 0
-        fi
-    done
-
-    return 1
-}
-# --- Hook Engine ---
-
-# @description Execute a lifecycle hook, closure, or command string from a recipe.
-# @param $1 string The recipe ID.
-# @param $2 string The hook field name (e.g., 'exec', 'pre_install').
-# @param $@ remaining arguments passed to the hook.
-pkg.hook() {
-    pkg.init
-    local rid="$1" hook_name="$2"; shift 2
-    local val=$(pkg.field "$rid" "$hook_name")
-    [[ -z "$val" ]] && return 0
-
-    # Ensure recipe file is sourced so local functions are available
-    local f="${_pkg_files[$rid]}"
-    [[ -f "$f" ]] && source "$f"
-
-    # 1. Anonymous function: starts with 'fn()' - strip wrapper and eval inline
-    if [[ "$val" == 'fn() '* ]]; then
-        # Remove 'fn() {' prefix and trailing '}'
-        local stripped="${val[7,-2]}"
-        # Eval in anonymous function scope with args passed
-        () {
-            local hook_logic="$1"; shift
-            eval "$hook_logic"
-        } "$stripped" "$@"
-        return $?
-    fi
-
-    # 2. Named function reference
-    if functions "$val" >/dev/null; then
-        "$val" "$@"
-        return $?
-    fi
-
-    # 3. Plain string - just echo it (not evaluated)
-    echo "$val"
-}
-
-# @description Helper to dispatch installer-specific extensions for a recipe.
-# @param $1 string Target recipe ID.
-# @param $2 string Extension registration field name.
-# @param $3 integer [Optional] If 1, handle the 'dirty' repo signal (exit code 2).
-pkg.hooks.ext() {
-    local rid="$1" hook_field="$2" handle_dirty="${3:-0}"
-    local method=$(pkg.detect_installer "$rid")
-    [[ -z "$method" ]] && return 0
-
-    local exts=($(pkg.field "$method" "$hook_field"))
-    local ext
-
-    for ext in "${exts[@]}"; do
-        # Pass only $rid — installer_ext_<name> fetches what it needs from pkg.field
-        pkg.hook "$method" "installer_ext_$ext" "$rid"
-        [[ "$handle_dirty" -eq 1 ]] && [[ $? -eq 2 ]] && _pkg_repo_dirty["$method"]=1
-    done
-}
-
-# --- Status & Dependency Resolution ---
-
-# @description Check if a recipe is currently installed or satisfied.
-# @param $1 string The recipe ID or binary name.
-# @return 0 if satisfied (binary on PATH or provider confirms), 1 otherwise.
-pkg.status() {
-    pkg.init
-    local rid=$1
-    [[ -z "$rid" ]] && return 1
-
-    # 1. Quick check: provides binary on PATH
-    local provides=$(pkg.field "$rid" "provides")
-    if [[ -n "$provides" ]]; then
-        local cmd
-        for cmd in ${=provides}; do
-            if command -v "$cmd" >/dev/null 2>&1; then
-                return 0
-            fi
-        done
-    fi
-
-    # 2. Proxy check: if proxy=true, it is "installed" if its deps are met.
-    if [[ "$(pkg.field "$rid" "proxy")" == "true" ]]; then
-        local deps=($(pkg.field "$rid" "depends"))
-        local dep satisfied=0
-        if [[ ${#deps[@]} -gt 0 ]]; then
-            satisfied=1
-            for dep in "${deps[@]}"; do
-                if ! pkg.status "$dep"; then
-                    satisfied=0
-                    break
-                fi
-            done
-            [[ $satisfied -eq 1 ]] && return 0
+        # If manager is valid, return manager-specific package
+        if [[ "$m" == "$manager" ]]; then
+            local pkg="${pkg_recipes[${norm_id}:${manager}]}"
+            echo "${pkg:-${pkg_recipes[${norm_id}:package]}}"
+            return
         fi
     fi
-
-    # 3. Exhaustive check: registered installers (in order of precedence)
-    local installer_rid pkg_name
-    for installer_rid in "${_pkg_installers[@]}"; do
-        # Does this recipe have a package defined for this installer?
-        pkg_name=$(pkg.field "$rid" "$installer_rid")
-        [[ -z "$pkg_name" ]] && continue
-
-        # Is the installer itself available?
-        if pkg.status "$installer_rid"; then
-            # Verify the installer actually provides a check hook
-            [[ -z "$(pkg.field "$installer_rid" "installer_check")" ]] && continue
-
-            # Pass only $rid — installer_check fetches packages internally
-            if pkg.hook "$installer_rid" "installer_check" "$rid" >/dev/null 2>&1; then
-                return 0
-            fi
-        fi
-    done
-
-    return 1
+    # Fall back to generic package
+    echo "${pkg_recipes[${norm_id}:package]}"
 }
 
-# @description Determine the best (highest precedence) installer available for a recipe.
-# @param $1 string The recipe ID.
-# @return 0 and echoes installer recipe ID if found, 1 otherwise.
-pkg.detect_installer() {
-    pkg.init
+# Check if a recipe is already satisfied (skip or upgrade:*)
+pkg.isSatisfied() {
     local rid="$1"
-    local installer_rid pkg_name
+    local action=$(pkg.recipeAction "$rid")
+    [[ "$action" == "skip" || "$action" == "upgrade"* ]]
+}
+# Determine action for a recipe: skip|defer|install|upgrade|unavailable
+pkg.recipeAction() {
+    local rid="$1" norm_id="${1//-/_}" m dep
+    local -a valid_managers=()
+    local any_enabled=0
 
-    # Iterate through sorted installers
-    for installer_rid in "${_pkg_installers[@]}"; do
-        # Does this recipe have a package defined for this installer?
-        pkg_name=$(pkg.field "$rid" "$installer_rid")
-        [[ -z "$pkg_name" ]] && continue
+    # Check if recipe is loaded
+    ! pkg.isLoaded "$rid" && { echo "unavailable"; return 1; }
 
-        # Is the installer itself allowed to run here?
-        if pkg.is_installable "$installer_rid"; then
-            echo -n "$installer_rid"
-            return 0
+    # Return cached action if already processed in this pass
+    [[ -n "${pkg_action[$rid]}" ]] && { echo "${pkg_action[$rid]}"; return 0; }
+
+    # Check dependencies (circular dependency prevention not included for brevity)
+    for dep in ${=pkg_recipes[${norm_id}:deps]}; do
+        ! pkg.isSatisfied "$dep" && { echo "defer"; return 0; }
+    done
+
+    # Phase 1: Filter enabled managers and check availability
+    for m in ${=$(pkg.recipeManagers "$rid")}; do
+        typeset -f "pkg.managers.${m}.enabled" >/dev/null 2>&1 || continue
+        pkg.managers.${m}.enabled || continue
+
+        any_enabled=1
+        pkg.managers.${m}.is_available || { echo "defer"; return 0; }
+        valid_managers+=("$m")
+    done
+
+    # Decision: Skip if none enabled
+    [[ $any_enabled -eq 0 ]] && { echo "skip"; return 0; }
+
+    # Phase 2: Check if already installed via ANY valid manager
+    # This prevents duplicate installs across different managers
+    for m in "${valid_managers[@]}"; do
+        pkg.managers.${m}.check "$rid" 2>/dev/null && { echo "upgrade:$m"; return 0; }
+    done
+
+    # Phase 3: Find best valid manager with package in repo
+    for m in "${valid_managers[@]}"; do
+        if typeset -f "pkg.managers.${m}.search" >/dev/null 2>&1; then
+            pkg.managers.${m}.search "$rid" && { echo "install:$m"; return 0; }
         fi
     done
 
-    return 1
+    echo "unavailable"
 }
 
-# @description Resolve immediate dependencies for a recipe, including explicit deps and the detected installer.
-# @param $1 string The recipe ID.
-# @return 0 and echoes space-separated dependency IDs.
-pkg.deps() {
-    pkg.init
+# Get ordered list of managers for a recipe
+pkg.recipeManagers() {
     local rid="$1"
-    local -a deps=($(pkg.field "$rid" "depends"))
-
-    # 1. Resolve the best installer for this recipe
-    local method=$(pkg.detect_installer "$rid")
-
-    # 2. Always add the installer if found and not already in deps
-    if [[ -n "$method" ]] && [[ "$rid" != "$method" ]]; then
-        # Check if already in the deps array
-        if [[ ${deps[(i)$method]} -gt ${#deps} ]]; then
-            deps+=("$method")
-        fi
-    fi
-
-    echo "${deps[@]}"
+    local norm_id="${rid//-/_}"
+    local managers_field="${pkg_recipes[${norm_id}:managers]}"
+    echo "${managers_field:-${PKG_MANAGER_PRIORITY[*]}}"
 }
 
-# @description Build a linearized, deduplicated dependency stack for one or more targets.
-# @param $@ strings Target binaries or recipe names.
-# @return 0 and echoes space-separated recipe IDs.
-pkg.stack() {
-    pkg.init
-    local -a stack=()
-    local -A visiting=()
-    local -A seen=()
+# --- Installation ---
 
-    _resolve() {
-        local rid="$1"
-        [[ -z "$rid" ]] && return 1
 
-        # Skip if already fully resolved
-        [[ -n "${seen[$rid]}" ]] && return 0
+pkg.install_all() {
+    echo "🔧 Starting package installation..."
 
-        # Cycle detection
-        if [[ -n "${visiting[$rid]}" ]]; then
-            echo "❌ Dependency cycle detected at $rid" >&2
-            return 1
-        fi
+    # Phase 1: Load all recipes to populate metadata (keys, repos, etc)
+    pkg.load_recipes
 
-        visiting[$rid]=1
+    local pass=0
+    local max_passes=10
 
-        # Check if the target itself is installable/valid
-        if ! pkg.is_installable "$rid"; then
-            echo "❌ Recipe '$rid' is not installable in this environment." >&2
-            return 1
-        fi
+    while [[ $pass -lt $max_passes ]]; do
+        ((pass++))
 
-        # Resolve dependencies (including implicit installer)
-        local -a deps=($(pkg.deps "$rid"))
-        local dep
-        for dep in "${deps[@]}"; do
-            _resolve "$dep" || return 1
+        # Phase 2: Setup repositories for all managers idempotently
+        # This is inside the loop so newly installed managers get setup
+        pkg.manager_func setup_repos
+
+        # Phase 3: Recalculate actions based on current system state
+        pkg.compile_actions
+
+        # Check for any pending installs
+        local pending_installs=()
+        local m
+        for m in "${PKG_MANAGER_PRIORITY[@]}"; do
+            local recipes=$(pkg.recipesByAction "install:$m")
+            [[ -n "$recipes" ]] && pending_installs+=("install:$m -> $recipes")
         done
 
-        visiting[$rid]=""
-        seen[$rid]=1
-        # Proxies are meta-packages; they don't get installed directly,
-        # but their dependencies (processed above) do.
-        if [[ "$(pkg.field "$rid" "proxy")" = "true" ]]; then
-            return 0
-        elif pkg.status "$rid"; then
-            return 0
+        if [[ ${#pending_installs[@]} -eq 0 ]]; then
+            echo "✨ No pending installations. Finished after Pass $((pass-1))."
+            break
         fi
 
-        stack+=("$rid")
-    }
-
-    _resolve "$@" || return 1
-
-    echo "${stack[*]}"
-}
-
-# --- Installation & Lifecycle ---
-
-# @description Install the specified targets, resolving all dependencies and running hooks.
-# @param $@ strings Target binaries or recipe names.
-pkg.install() {
-    pkg.init
-
-    local -a stacks=()
-    local -A seen=()
-    local target recipe_id stack_str i layer method
-
-    # 1. Resolve & Deduplicate Dependency Layers
-    for target in "$@"; do
-        stack_str=($(pkg.stack "$target"))
-        for (( i=1; i <= ${#stack_str}; i++ )); do
-            recipe_id="${stack_str[i]}"
-
-            if [[ -z ${seen[$recipe_id]} ]]; then
-                stacks[i]+=" $recipe_id"
-                seen[$recipe_id]=1
-            fi
+        echo "🔄 Pass $pass..."
+        local p
+        for p in "${pending_installs[@]}"; do
+            echo "   $p"
         done
+
+        # Phase 4: Run installation for all managers
+        pkg.manager_func install || { echo "❌ Critical: Installation failed. Terminating."; return 1; }
     done
 
+    # Final cleanup for all managers
+    echo "🧹 Running cleanup..."
+    pkg.manager_func cleanup
 
-    # 2. Process each layer (deepest dependencies first)
-    for layer in "${stacks[@]}"; do
-        [[ -z "$layer" ]] && continue
-        local -A groups=()
-
-        # Group by method and run pre-install setup
-        for recipe_id in ${=layer}; do
-            local name=$(pkg.field "$recipe_id" name)
-            local method=$(pkg.detect_installer "$recipe_id")
-
-            if [[ -n "$method" ]]; then
-                groups[$method]+=" $recipe_id"
-            else
-                echo "❌ No installer available for $name" >&2
-                return 1
-            fi
-        done
-
-        # 3. Execute installation for each method group in the layer
-        for method in "${(@k)groups}"; do
-            local -a rids=(${=groups[$method]})
-
-            pkg.hook "$method" "pre_install"
-            for recipe_id in "${rids[@]}"; do
-                pkg.hooks.ext "$recipe_id" "installer_pre_install_ext" 1
-                pkg.hook "$recipe_id" "pre_install"
-                pkg.repo.update "$method"
-            done
-
-            for recipe_id in "${rids[@]}"; do
-                local name=$(pkg.field "$recipe_id" name)
-                echo "📦 Installing $name via $method"
-                pkg.hook "$method" "installer_install" "$recipe_id" || {
-                    echo "❌ Installation failed for $name via $method" >&2
-                    return 1
-                }
-            done
-            paths.reload
-
-            # Run post-install hooks for the group
-            for recipe_id in "${rids[@]}"; do
-                pkg.hook "$recipe_id" "post_install"
-                pkg.hooks.ext "$recipe_id" "installer_post_install_ext"
-            done
-            pkg.hook "$method" "installer_post_install"
-            pkg.hook "$method" "post_install"
-
-            # Final verification
-            for recipe_id in "${rids[@]}"; do
-                local name=$(pkg.field "$recipe_id" name)
-                if pkg.status "$recipe_id"; then
-                    echo "✨ $name installed successfully."
-                else
-                    echo "⚠️  $name install finished but status check failed." >&2
-                fi
-            done
-        done
-    done
-}
-
-# @description Refresh the package cache for a specific installation method.
-# @param $1 string The recipe ID of the provider.
-pkg.repo.update() {
-    pkg.init
-    local rid="$1"
-
-    if [[ "${_pkg_repo_dirty["$method"]}" -eq 1 ]] || [[ -z "${_pkg_repo_updated["$method"]}" ]]; then
-        _pkg_repo_updated["$method"]=1
-        _pkg_repo_dirty["$method"]=0
-
-        # Only update if the installer itself is functional/satisfied
-        if pkg.status "$rid"; then
-            pkg.hook "$rid" "installer_repo_update"
-        fi
-
-    fi
-}
-
-# --- Command Execution ---
-
-# @description Execute a command, checking PATH first, then status, then installer_exec hooks.
-# @param $1 string The command/binary to execute.
-# @param $@ remaining arguments passed to the command.
-pkg.exec() {
-    pkg.init >&2
-    local cmd="$1"; shift
-
-    # 1. If binary is in PATH, it always takes precedent
-    if command -v "$cmd" >/dev/null 2>&1; then
-        command "$cmd" "$@"
-        return $?
-    fi
-
-    # Find the recipe providing this command
-    local rid=$(pkg.find "$cmd")
-    if [[ -z "$rid" ]]; then
-        echo "📦 Command '$cmd' not found." >&2
-        return 127
-    fi
-
-    # 2. Check if installed
-    if ! pkg.status "$rid"; then
-        # If interactive and installable, ask the user
-        if [[ -o interactive ]] && pkg.is_installable "$rid"; then
-            if tui.confirm "📦 Command '$cmd' is provided by recipe '$rid' but is not installed. Install now?" >&2; then
-                pkg.install "$rid" >&2 || return $?
-                # Re-check status after install
-                if ! pkg.status "$rid"; then
-                    echo "❌ Installation finished but '$cmd' is still not found/executable." >&2
-                    return 127
-                fi
-                # Recurse once to execute now that it's installed
-                pkg.exec "$cmd" "$@"
-                return $?
-            fi
-        fi
-
-        echo "❌ Command '$cmd' is not installed. Run 'pkg.install $rid' to install it." >&2
-        return 127
-    fi
-
-    # 3. Command is installed but not in PATH — check for installer_exec hook
-    local method=$(pkg.detect_installer "$rid")
-
-    if [[ -n "$method" ]]; then
-        # Check for {installer_method}_exec hook on recipe OR installer_exec on the installer
-        if [[ -n "$(pkg.field "$rid" "${method}_exec")" || -n "$(pkg.field "$method" "installer_exec")" ]]; then
-            pkg.hook "$method" "installer_exec" "$rid" "$cmd" "$@"
-            return $?
-        fi
-    fi
-
-    # 4. Fallback to generic exec hook defined on the recipe itself
-    local exec_hook=$(pkg.field "$rid" "exec")
-    if [[ -n "$exec_hook" ]]; then
-        pkg.hook "$rid" "exec" "$cmd" "$@"
-        return $?
-    fi
-
-    # 5. No hooks available
-    echo "❌ Command '$cmd' is installed but cannot be executed (not in PATH and no execution hooks present)." >&2
-    return 127
+    echo "=============================================="
+    echo "✨ Installation complete!"
 }

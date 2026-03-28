@@ -20,7 +20,7 @@ function _tmux_basic_git()  {
 
 function tmux.cli() {
    tmux.setup.config
-   pkg.exec tmux "$@"
+   command tmux "$@"
 }
 
 function tmux.setup.config() {

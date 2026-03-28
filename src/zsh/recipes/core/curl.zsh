@@ -1,9 +1,3 @@
-typeset -A recipe=(
-    [name]="curl"
-    [provides]="curl"
-    [apt]="curl"
-    [dnf]="curl"
-    [pacman]="curl"
-    [brew]="curl"
-    [depends]="ca-certificates"
-)
+pkg.define curl \
+    package="curl" \
+    managers="apt dnf pacman brew"

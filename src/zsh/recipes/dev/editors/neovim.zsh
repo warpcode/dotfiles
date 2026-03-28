@@ -1,5 +1,3 @@
-typeset -A recipe=(
-    [name]="neovim"
-    [provides]="nvim"
-    [mise]="neovim@0.11.6"
-)
+pkg.define neovim \
+    package="neovim@0.11.6" \
+    managers="mise"
