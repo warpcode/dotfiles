@@ -1,15 +1,11 @@
 #!/usr/bin/env zsh
 # =============================================================================
-#
 # SYNOPSIS
-#   Manage PATH environment variable
-#
-# DESCRIPTION
-#   A collection of functions for manipulating and displaying the PATH
-#   environment variable. These functions handle directory existence checks,
-#   prevent duplicates, and provide convenient access to path operations.
-#
+#   Manage PATH environment variable via Zsh native array-tied 'path'
 # =============================================================================
+
+# Ensure path is unique and global. Zsh automatically ties 'path' to 'PATH'.
+typeset -gU path
 
 ##
 # Append a directory to PATH if it does not already exist.
@@ -17,11 +13,12 @@
 # @param 1 The directory to append
 # @return 0 on success, 1 if directory does not exist
 ##
-paths.append(){
-    [ ! -d "$1" ] && return 1
-
-    paths.remove "$1"
-    export PATH="$PATH:$1"
+paths.append() {
+    local d="${1%/}"
+    [[ -d "$d" ]] || return 1
+    # If already in path, do nothing
+    (( ${path[(I)$d]} )) && return 0
+    path+=("$d")
 }
 
 ##
@@ -30,11 +27,12 @@ paths.append(){
 # @param 1 The directory to prepend
 # @return 0 on success, 1 if directory does not exist
 ##
-paths.prepend(){
-    [ ! -d "$1" ] && return 1
-
-    paths.remove "$1"
-    export PATH="$1:$PATH"
+paths.prepend() {
+    local d="${1%/}"
+    [[ -d "$d" ]] || return 1
+    # If already in path, do nothing
+    (( ${path[(I)$d]} )) && return 0
+    path=("$d" $path)
 }
 
 ##
@@ -43,11 +41,9 @@ paths.prepend(){
 # @param 1 The directory to remove
 # @return 0 always
 ##
-paths.remove(){
-    local -a path_array
-    path_array=(${(s.:.)PATH})
-    path_array=(${path_array:#$1})
-    export PATH=${(j.:.)path_array}
+paths.remove() {
+    local d="${1%/}"
+    path=(${path:#$d})
 }
 
 ##
@@ -56,20 +52,17 @@ paths.remove(){
 # @stdout PATH directories, one per line
 # @return 0 always
 ##
-paths.paths() {
-    echo -e ${PATH//:/\\n}
+paths.ls() {
+    print -l $path
 }
 
 ##
 # Reload PATH configuration and rehash the command hash table.
 #
-# Sources the paths configuration file and rebuilds the command hash table
-# to pick up any new commands added to PATH directories.
-#
 # @return 0 always
 ##
 paths.reload() {
-    local paths_config="${DOTFILES}/src/zsh/config/01-paths.zsh"
-    [[ -f "$paths_config" ]] && source "$paths_config"
+    local config="${DOTFILES:-$HOME/src/dotfiles}/src/zsh/config/01-paths.zsh"
+    [[ -f "$config" ]] && source "$config"
     rehash
 }
