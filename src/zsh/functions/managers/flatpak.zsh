@@ -1,32 +1,25 @@
-# src/zsh/functions/managers/flatpak.zsh
+# flatpak.zsh - Flatpak manager implementation
 
 pkg.managers.flatpak.is_available() {
-    command -v flatpak >/dev/null 2>&1
+    (( $+commands[flatpak] ))
 }
 
 pkg.managers.flatpak.enabled() {
     pkg.managers.flatpak.is_available && return 0
-    pkg.actionIsEnabled "$(pkg.recipeAction "$(pkg.managers.flatpak.recipe)")"
-}
-
-pkg.managers.flatpak.recipe() {
-    echo "flatpak"
+    pkg.action_is_enabled "$(pkg.recipe_action "flatpak")"
 }
 
 pkg.managers.flatpak.check() {
     pkg.managers.flatpak.is_available || return 1
     local rid="$1"
-    local pkgs_str pkgs
-    pkgs_str=$(pkg.managers.flatpak._get_pkgs "$rid")
-    [[ -z "$pkgs_str" ]] && return 1
-    pkgs=(${=pkgs_str})
-    [[ ${#pkgs[@]} -eq 0 ]] && return 1
+    local -a pkgs=( ${=pkg_recipes[$rid:flatpak]:-${pkg_recipes[$rid:package]}} )
+    (( $#pkgs == 0 )) && return 1
 
-    local pkg satisfied=1
+    local pkg
     for pkg in "${pkgs[@]}"; do
-        flatpak info "$pkg" >/dev/null 2>&1 || { satisfied=0; break; }
+        flatpak info "$pkg" >/dev/null 2>&1 || return 1
     done
-    return $((1 - satisfied))
+    return 0
 }
 
 pkg.managers.flatpak.update() {
@@ -41,8 +34,7 @@ pkg.managers.flatpak.cleanup() {
 
 pkg.managers.flatpak.exec() {
     pkg.managers.flatpak.is_available || return 1
-    local rid=$1; shift
-    local cmd=$1; shift
+    local rid=$1 cmd=$2; shift 2
     flatpak run "$cmd" "$@"
 }
 
@@ -56,24 +48,13 @@ pkg.managers.flatpak.setup_repos() {
     return 0
 }
 
-# Helper: Get package names for a recipe
-pkg.managers.flatpak._get_pkgs() {
-    local rid="$1"
-    pkg.recipePackages "$rid" "flatpak"
-}
-
-# Search: Check if all packages in a recipe exist in Flathub
 pkg.managers.flatpak.search() {
     pkg.managers.flatpak.is_available || return 1
     local rid="$1"
-    local pkgs_str pkgs
-    pkgs_str=$(pkg.managers.flatpak._get_pkgs "$rid")
-    [[ -z "$pkgs_str" ]] && return 1
-    pkgs=(${=pkgs_str})
-    [[ ${#pkgs[@]} -eq 0 ]] && return 1
+    local -a pkgs=( ${=pkg_recipes[$rid:flatpak]:-${pkg_recipes[$rid:package]}} )
+    (( $#pkgs == 0 )) && return 1
 
-    local all_apps
-    all_apps=$(flatpak remote-ls --cached --app flathub --columns=application 2>/dev/null)
+    local all_apps=$(flatpak remote-ls --cached --app flathub --columns=application 2>/dev/null)
     [[ -z "$all_apps" ]] && return 1
 
     local pkg
@@ -83,32 +64,24 @@ pkg.managers.flatpak.search() {
     return 0
 }
 
-# Install: Handle all install:flatpak recipes
 pkg.managers.flatpak.install() {
     pkg.managers.flatpak.is_available || return 0
-    local recipes pkgs="" rid
-    recipes=$(pkg.recipesByAction "install:flatpak")
-    
-    for rid in "${=recipes}"; do
-        local pkg=$(pkg.recipePackages "$rid" "flatpak")
-        [[ -n "$pkg" ]] && pkgs="${pkgs:+$pkgs }$pkg"
+    local rid pkgs=""
+    for rid in $(pkg.recipes_by_action "install:flatpak"); do
+        local p=$(pkg.recipe_packages "$rid" "flatpak")
+        [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
-    
     [[ -z "$pkgs" ]] && return 0
     flatpak install -y flathub ${=pkgs}
 }
 
-# Upgrade: Handle all upgrade:flatpak recipes
 pkg.managers.flatpak.upgrade() {
     pkg.managers.flatpak.is_available || return 0
-    local recipes pkgs="" rid
-    recipes=$(pkg.recipesByAction "upgrade:flatpak")
-    
-    for rid in "${=recipes}"; do
-        local pkg=$(pkg.recipePackages "$rid" "flatpak")
-        [[ -n "$pkg" ]] && pkgs="${pkgs:+$pkgs }$pkg"
+    local rid pkgs=""
+    for rid in $(pkg.recipes_by_action "upgrade:flatpak"); do
+        local p=$(pkg.recipe_packages "$rid" "flatpak")
+        [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
-    
     [[ -z "$pkgs" ]] && return 0
     flatpak update -y ${=pkgs}
 }

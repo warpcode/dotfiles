@@ -1,10 +1,6 @@
-##
-# Universal Secret Manager
-# Abstract wrapper for OS-level keychains (macOS Keychain, Linux Secret Service)
-##
+# secrets.zsh - Universal Secret Manager
 
-# Internal helper to execute platform-specific commands
-_secret_exec() {
+_secrets_exec() {
   local op=$1 svc=$2 acct=$3 val=$4
   if (( $+commands[security] )); then
     case $op in
@@ -17,36 +13,34 @@ _secret_exec() {
     case $op in
       get) secret-tool lookup service "$svc" account "$acct" 2>/dev/null ;;
       del) secret-tool clear service "$svc" account "$acct" &>/dev/null ;;
-      set) printf '%s' "$val" | secret-tool store --label="Dotfiles: $svc" service "$svc" account "$acct" ;;
+      set) print -nr "$val" | secret-tool store --label="Dotfiles: $svc" service "$svc" account "$acct" ;;
     esac
   else
-    return 127 # Command not found
+    return 127
   fi
 }
 
-secret.get() {
+secrets.get() {
   local svc=$1 acct=${2:-$USER}
-  [[ -z $svc ]] && { echo "Usage: secret.get <service> [account]" >&2; return 1 }
-  _secret_exec get "$svc" "$acct"
+  [[ -z $svc ]] && return 1
+  _secrets_exec get "$svc" "$acct"
 }
 
-secret.store() {
+secrets.store() {
   local svc=$1 pass=$2 acct=${3:-$USER}
-  [[ -z $svc || -z $pass ]] && { echo "Usage: secret.store <service> <password> [account]" >&2; return 1 }
+  [[ -z $svc || -z $pass ]] && return 1
 
   if [[ $pass == "-" ]]; then
     read -rs "pass?Enter password for '$svc' ($acct): "; echo >&2
     [[ -z $pass ]] && return 1
   fi
 
-  _secret_exec set "$svc" "$acct" "$pass" || { echo "Error: No OS keychain tool found." >&2; return 1 }
-  echo "Saved to $( (( $+commands[security] )) && echo "macOS Keychain" || echo "Secret Service" )." >&2
+  _secrets_exec set "$svc" "$acct" "$pass" || return 1
+  print -P "    %F{green}✅ Saved to OS keychain.%f" >&2
 }
 
-secret.delete() {
+secrets.delete() {
   local svc=$1 acct=${2:-$USER}
-  [[ -z $svc ]] && { echo "Usage: secret.delete <service> [account]" >&2; return 1 }
-
-  _secret_exec del "$svc" "$acct" && \
-    echo "Removed from $( (( $+commands[security] )) && echo "macOS Keychain" || echo "Secret Service" )." >&2
+  [[ -z $svc ]] && return 1
+  _secrets_exec del "$svc" "$acct" && print -P "    %F{yellow}🗑️ Removed from OS keychain.%f" >&2
 }

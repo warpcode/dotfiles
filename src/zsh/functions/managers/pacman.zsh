@@ -1,7 +1,7 @@
-# src/zsh/functions/managers/pacman.zsh
+# pacman.zsh - Pacman manager implementation
 
 pkg.managers.pacman.is_available() {
-    command -v pacman >/dev/null 2>&1
+    (( $+commands[pacman] ))
 }
 
 pkg.managers.pacman.enabled() {
@@ -11,17 +11,14 @@ pkg.managers.pacman.enabled() {
 pkg.managers.pacman.check() {
     pkg.managers.pacman.is_available || return 1
     local rid="$1"
-    local pkgs_str pkgs
-    pkgs_str=$(pkg.managers.pacman._get_pkgs "$rid")
-    [[ -z "$pkgs_str" ]] && return 1
-    pkgs=(${=pkgs_str})
-    [[ ${#pkgs[@]} -eq 0 ]] && return 1
+    local -a pkgs=( ${=pkg_recipes[$rid:pacman]:-${pkg_recipes[$rid:package]}} )
+    (( $#pkgs == 0 )) && return 1
 
-    local pkg satisfied=1
+    local pkg
     for pkg in "${pkgs[@]}"; do
-        pacman -Qq "$pkg" >/dev/null 2>&1 || { satisfied=0; break; }
+        pacman -Qq "$pkg" >/dev/null 2>&1 || return 1
     done
-    return $((1 - satisfied))
+    return 0
 }
 
 pkg.managers.pacman.update() {
@@ -34,21 +31,11 @@ pkg.managers.pacman.cleanup() {
     sudo pacman -Sc --noconfirm
 }
 
-# Helper: Get package names for a recipe
-pkg.managers.pacman._get_pkgs() {
-    local rid="$1"
-    pkg.recipePackages "$rid" "pacman"
-}
-
-# Search: Check if all packages in a recipe exist in Pacman repositories
 pkg.managers.pacman.search() {
     pkg.managers.pacman.is_available || return 1
     local rid="$1"
-    local pkgs_str pkgs
-    pkgs_str=$(pkg.managers.pacman._get_pkgs "$rid")
-    [[ -z "$pkgs_str" ]] && return 1
-    pkgs=(${=pkgs_str})
-    [[ ${#pkgs[@]} -eq 0 ]] && return 1
+    local -a pkgs=( ${=pkg_recipes[$rid:pacman]:-${pkg_recipes[$rid:package]}} )
+    (( $#pkgs == 0 )) && return 1
 
     local pkg
     for pkg in "${pkgs[@]}"; do
@@ -57,32 +44,17 @@ pkg.managers.pacman.search() {
     return 0
 }
 
-# Install: Handle all install:pacman recipes
 pkg.managers.pacman.install() {
     pkg.managers.pacman.is_available || return 0
-    local recipes pkgs="" rid
-    recipes=$(pkg.recipesByAction "install:pacman")
-    
-    for rid in "${=recipes}"; do
-        local pkg=$(pkg.recipePackages "$rid" "pacman")
-        [[ -n "$pkg" ]] && pkgs="${pkgs:+$pkgs }$pkg"
+    local rid pkgs=""
+    for rid in $(pkg.recipes_by_action "install:pacman"); do
+        local p=$(pkg.recipe_packages "$rid" "pacman")
+        [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
-    
     [[ -z "$pkgs" ]] && return 0
     sudo pacman -S --noconfirm ${=pkgs}
 }
 
-# Upgrade: Handle all upgrade:pacman recipes
 pkg.managers.pacman.upgrade() {
-    pkg.managers.pacman.is_available || return 0
-    local recipes pkgs="" rid
-    recipes=$(pkg.recipesByAction "upgrade:pacman")
-    
-    for rid in "${=recipes}"; do
-        local pkg=$(pkg.recipePackages "$rid" "pacman")
-        [[ -n "$pkg" ]] && pkgs="${pkgs:+$pkgs }$pkg"
-    done
-    
-    [[ -z "$pkgs" ]] && return 0
-    sudo pacman -S --noconfirm ${=pkgs}
+    pkg.managers.pacman.install
 }

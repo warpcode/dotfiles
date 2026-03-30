@@ -1,110 +1,61 @@
+# fs.zsh - Filesystem utilities
+
 # Resolve a path within the dotfiles repository
-# @param path Path relative to DOTFILES root (e.g., "configs/myapp" or "src/zsh/init.zsh")
-# @return 0 if found (echoes full realpath), 1 if not found
 fs.dotfiles.path() {
-    local path="$1"
-
-    if [[ -z "$path" ]]; then
-        return 1
-    fi
-
-    if [[ -n "$DOTFILES" && -e "$DOTFILES/$path" ]]; then
-        local full_path="$DOTFILES/$path"
-        echo "${full_path:a:P}"
-        return 0
-    fi
-
-    return 1
+    [[ -n "$1" && -n "$DOTFILES" ]] || return 1
+    local full="${DOTFILES}/$1"
+    [[ -e "$full" ]] || return 1
+    echo "${full:a:P}"
 }
 
-# Find the first parent directory containing any of the specified files/directories
-# Searches upward from the current directory to the root
-# @param files Array of file/directory names to search for
-# @return 0 if found (echoes path), 1 if not found
+# Find root directory containing markers
 fs.find.root() {
-    local files=("$@")
-    local dir="$PWD"
-
-    for file in "${files[@]}"; do
-        if [[ -e "$dir/$file" ]]; then
-            echo "$dir/$file"
-            return 0
-        fi
+    local dir=$PWD
+    while [[ $dir != / ]]; do
+        for f in "$@"; [[ -e "$dir/$f" ]] && { echo "$dir"; return 0 }
+        dir=$dir:h
     done
-
-    while [[ "$dir" != "/" ]]; do
-        for file in "${files[@]}"; do
-            if [[ -e "$dir/$file" ]]; then
-                echo "$dir/$file"
-                return 0
-            fi
-        done
-        dir=$(dirname "$dir")
-    done
-
     return 1
 }
 
-# Search for a string in file contents recursively from the current directory
-# @param -r Optional: Use regex search (default is literal string search)
-# @param -s Optional: Single-line format (file:line:snippet)
-# @param query The string to search for
-# @param dir Optional: The directory to search in (default: .)
-# @return 0 if matches found (echoes results), 1 if none found
+# Search for a string in file contents
 fs.search() {
-    local regex=false
-    local singleline=false
+    local -A opts; zparseopts -E -D -K -A opts r s
+    local query="$1" dir="${2:-.}"
+    [[ -z "$query" ]] && { echo "Usage: fs.search [-r] [-s] <query> [dir]" >&2; return 1; }
 
-    while [[ "$1" == -* ]]; do
-        case "$1" in
-            -r) regex=true; shift ;;
-            -s) singleline=true; shift ;;
-            *) echo "Usage: fs.search [-r] [-s] <query> [dir]" >&2; return 1 ;;
-        esac
-    done
+    local -a flags=(-n -I)
+    [[ -z "$opts[-r]" ]] && flags+=(-F)
 
-    local query="$1"
-    local dir="${2:-.}"
-
-    if [[ -z "$query" ]]; then
-        echo "Usage: fs.search [-r] [-s] <query> [dir]" >&2
-        return 1
-    fi
-
-    local grep_flags=("-n" "-I")
-
-    if [[ "$regex" == "false" ]]; then
-        grep_flags+=("-F")
-    fi
-
-    # If in a git repo, use git grep to respect .gitignore
-    if git.cli rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        if [[ "$singleline" == "true" ]]; then
-            git.cli --no-pager grep --recurse-submodules "${grep_flags[@]}" "$query" -- "$dir" | awk -F: '{print $1 ":" $2 ":" substr($0, index($0, $3))}'
+    if git rev-parse --is-inside-work-tree &>/dev/null; then
+        local -a cmd=(git --no-pager grep --recurse-submodules "${flags[@]}")
+        if [[ -n "$opts[-s]" ]]; then
+            $cmd "$query" -- "$dir" | while IFS=: read -r file line_num content; do
+                print "${file}:${line_num}:${content}"
+            done
         else
-            git.cli --no-pager grep --recurse-submodules --heading --break "${grep_flags[@]}" "$query" -- "$dir"
+            $cmd --heading --break "$query" -- "$dir"
         fi
     else
-        if [[ "$singleline" == "true" ]]; then
-            grep -r "${grep_flags[@]}" \
-                --exclude-dir={.git,.svn,CVS,node_modules,vendor,dist,build,.gemini,.opencode} \
-                "$query" "$dir" | awk -F: '{gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $1 ":" $2 ":" substr($0, index($0, $3))}'
+        local -a excludes=(.git .svn node_modules vendor dist build .gemini .opencode)
+        local -a cmd=(grep -r "${flags[@]}")
+        local d; for d in $excludes; cmd+=(--exclude-dir=$d)
+        
+        if [[ -n "$opts[-s]" ]]; then
+            $cmd "$query" "$dir" | while IFS=: read -r file line_num content; do
+                # Trim leading/trailing whitespace from line_num if needed
+                print "${file}:${line_num}:${content}"
+            done
         else
-            grep -r "${grep_flags[@]}" \
-                --exclude-dir={.git,.svn,CVS,node_modules,vendor,dist,build,.gemini,.opencode} \
-                "$query" "$dir" | awk -F: '
-                {
-                    if ($1 != last_file) {
-                        if (last_file != "") print "";
-                        print $1;
-                        last_file = $1;
-                    }
-                    sub(/^[^:]+:/, "");
-                    print $0;
-                }'
+            local last="" file content
+            $cmd "$query" "$dir" | while IFS=: read -r file content; do
+                if [[ "$file" != "$last" ]]; then
+                    [[ -n "$last" ]] && print ""
+                    print -P "%F{blue}${file}%f"
+                    last="$file"
+                fi
+                print -r -- "$content"
+            done
         fi
     fi
 }
-
-
-

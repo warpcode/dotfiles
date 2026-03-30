@@ -1,220 +1,106 @@
-##
-# Symlink a config file or directory from assets/configs/ to a destination
-#
-# Usage: config.symlink <source> <destination>
-#
-# Source is resolved like config.hydrate:
-#   - First checks if it exists as an absolute/relative path
-#   - Then checks in $DOTFILES/assets/configs/<source>
-#
-# If destination is a symlink but doesn't point to our source, replace it
-# If destination is a regular file, replace it with our symlink
-# If destination is a directory, error
-#
-# Returns: 0 on success, 1 on error
-##
-config.symlink() {
-    local source="$1"
-    local destination="$2"
+# config.zsh - Configuration management and templating
 
-    if [[ -z "$source" || -z "$destination" ]]; then
-        echo "Usage: config.symlink <source> <destination>" >&2
-        return 1
-    fi
-
-    # Validate and resolve source (like config.hydrate)
-    if [[ -f "$source" || -d "$source" ]]; then
-        : # source exists as-is
-    else
-        local source_alt="$DOTFILES/assets/configs/$source"
-        if [[ -f "$source_alt" || -d "$source_alt" ]]; then
-            source=$source_alt
-        else
-            echo "❌ Source not found: $1 (checked: $1, $source_alt)" >&2
-            return 1
-        fi
-    fi
-
-    # Resolve the absolute path of the source
-    local source_abs="$(realpath "$source")"
-
-    # Check what exists at the destination
-    if [[ -d "$destination" && ! -L "$destination" ]]; then
-        echo "Error: Destination is a directory: $destination" >&2
-        return 1
-    fi
-
-    # If destination is already a symlink, check if it points to our source
-    if [[ -L "$destination" ]]; then
-        local dest_target="$(readlink -f "$destination")"
-        if [[ "$dest_target" == "$source_abs" ]]; then
-            # Already points to our source, nothing to do
-            return 0
-        else
-            # Replace the symlink
-            rm "$destination"
-        fi
-    elif [[ -e "$destination" ]]; then
-        # Regular file exists, remove it
-        rm "$destination"
-    fi
-
-    # Create the destination directory only if it doesn't exist
-    local dest_dir
-    dest_dir=$(dirname "$destination")
-    [[ ! -d "$dest_dir" ]] && mkdir -p "$dest_dir"
-
-    # Create the symlink
-    ln -s "$source" "$destination"
+_config_resolve() {
+    local type="$1" path="$2"
+    [[ -e "$path" ]] && { echo "${path:a:P}"; return 0; }
+    local alt="$DOTFILES/assets/$type/$path"
+    [[ -e "$alt" ]] && { echo "${alt:a:P}"; return 0; }
+    return 1
 }
 
-config.hydrate() {
-    local DOTFILES_TEMPLATES="$DOTFILES/assets/templates"
-    local DOTFILES_CONFIGS="$DOTFILES/assets/configs"
+# Symlink a config file or directory from assets/configs/
+config.symlink() {
+    local src="$1" dst="$2"
+    [[ -z "$src" || -z "$dst" ]] && { echo "Usage: config.symlink <source> <destination>" >&2; return 1; }
 
-    local template=$1
-    local template_input=$1 # Save original input for directory extraction
+    local resolved; resolved=$(_config_resolve configs "$src") || {
+        echo "❌ Source not found: $src" >&2
+        return 1
+    }
+
+    [[ -d "$dst" && ! -L "$dst" ]] && { echo "❌ Destination is a directory: $dst" >&2; return 1; }
+    [[ -L "$dst" && "${dst:a:P}" == "$resolved" ]] && return 0
+    [[ -e "$dst" || -L "$dst" ]] && rm -f "$dst"
+
+    mkdir -p "${dst:h}"
+    ln -s "$resolved" "$dst"
+}
+
+# Template a file using gomplate and JSON configs
+config.hydrate() {
+    local -A opts; zparseopts -E -D -K -A opts -config-file: -config-json: -output: h -help
+    local tpl_in="$1"
+    [[ -z "$tpl_in" || -n "$opts[-h]$opts[--help]" ]] && {
+        echo "Usage: config.hydrate <template> [--config-file <path>] [--config-json <json>] [--output <path>]"
+        return 0
+    }
     shift
 
-    # Validate template
-    if [[ -z "$template" ]]; then
-        echo "Usage: config.hydrate <template-path> [--config-file <path>] [--config-json <json>] [--output <path>]" >&2
-        return 1
+    local tpl; tpl=$(_config_resolve templates "$tpl_in") || { echo "❌ Template not found: $tpl_in" >&2; return 1; }
+
+    local merged='{}'
+    # Handle --config-file
+    if [[ -n "$opts[--config-file]" ]]; then
+        local cfg; cfg=$(_config_resolve configs "$opts[--config-file]") || return 1
+        merged=$(jq -s '.[0] * .[1]' <<<"$merged" <"$cfg")
+    fi
+    # Handle --config-json
+    if [[ -n "$opts[--config-json]" ]]; then
+        merged=$(jq -s '.[0] * $n' --argjson n "$opts[--config-json]" <<<"$merged")
     fi
 
-    # Check if template exists as-is
-    if [[ ! -f "$template" ]]; then
-        # Check if it might be a relative path in assets/templates
-        local template_alt="$DOTFILES_TEMPLATES/$template"
-        if [[ -f "$template_alt" ]]; then
-            template=$template_alt
+    merged=$(jq --arg now "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" '.secrets |= (. // {}) | .created |= (. // $now)' <<<"$merged")
+
+    local tmp=$(mktemp)
+    {
+        print -r "$merged" > "$tmp"
+        local -a args=(--missing-key=zero -f "$tpl" -c "config=file://${tmp}?type=application/json")
+
+        if [[ "$tpl_in" == */* ]]; then
+            local base="$DOTFILES/assets/templates/${tpl_in%%/*}"
+            [[ -d "$base/partials" ]] && args+=(--template "tpls=$base/partials/")
+        fi
+
+        if [[ -n "$opts[--output]" ]]; then
+            mkdir -p "${opts[--output]:h}"
+            gomplate "${args[@]}" > "$opts[--output]"
         else
-            echo "❌ Template not found: $template" >&2
-            return 1
+            gomplate "${args[@]}"
         fi
-    fi
-
-    local merged_config='{}' output_file=
-
-    # Parse arguments and merge configs
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-            --config-file)
-                local config_path=$2
-                if [[ ! -f "$config_path" ]]; then
-                    local config_alt="$DOTFILES_CONFIGS/$2"
-                    if [[ -f "$config_alt" ]]; then
-                        config_path=$config_alt
-                    else
-                        echo "❌ Config file not found: $2" >&2
-                        return 1
-                    fi
-                fi
-                merged_config=$(jq -s '.[0] * .[1]' <<< "$merged_config" < "$config_path") || return 1
-                shift 2
-                ;;
-            --config-json)
-                merged_config=$(jq -s '.[0] * $next' --argjson next "$2" <<< "$merged_config")
-                shift 2
-                ;;
-            --output)
-                output_file=$2
-                shift 2
-                ;;
-            -h|--help)
-                echo "Usage: config.hydrate <template> [--config-file <path>] [--config-json <json>] [--output <path>]"
-                return 0
-                ;;
-            *)
-                echo "❌ Unknown option: $1" >&2
-                return 1
-                ;;
-        esac
-    done
-
-    # Ensure secrets key always exists so templates referencing .secrets.* don't fail
-    # Uses jq's // operator: if secrets is null/undefined, default to empty object {}
-    # Also provide a default for 'created' if missing
-    local now_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    merged_config=$(echo "$merged_config" | jq --arg now "$now_date" '.secrets = (.secrets // {}) | .created = (.created // $now)')
-
-    # Write merged config to temp file for gomplate
-    local tmp_config=$(mktemp /tmp/config.hydrate.XXXXXX.json)
-    trap 'rm -f "$tmp_config"' EXIT INT TERM
-    echo "$merged_config" > "$tmp_config"
-
-    # Run gomplate and capture output
-    local gomplate_args=(
-        --missing-key=zero
-        -f "$template"
-        -c "config=file://${tmp_config}?type=application/json"
-    )
-
-    # If template is relative and has a directory, use its first part for partials
-    if [[ "$template_input" != /* && "$template_input" == */* ]]; then
-        local first_dir="${template_input%%/*}"
-        local partials_dir="${DOTFILES_TEMPLATES}/${first_dir}/partials"
-        if [[ -d "$partials_dir" ]]; then
-            gomplate_args+=(--template "tpls=${partials_dir}/")
-        elif [[ -d "${DOTFILES_TEMPLATES}/${first_dir}" ]]; then
-            gomplate_args+=(--template "tpls=${DOTFILES_TEMPLATES}/${first_dir}/")
-        fi
-    fi
-
-    local output
-    output=$(gomplate "${gomplate_args[@]}")
-    local exit_code=$?
-
-    if [[ $exit_code -ne 0 ]]; then
-        echo "❌ Template rendering failed" >&2
-        echo "$output" >&2
-        return 1
-    fi
-
-    # Output to file or stdout
-    if [[ -n "$output_file" ]]; then
-        local out_dir=$(dirname "$output_file")
-        [[ ! -d "$out_dir" ]] && mkdir -p "$out_dir"
-        echo "$output" > "$output_file"
-    else
-        echo "$output"
-    fi
+    } always {
+        rm -f "$tmp"
+    }
 }
 
-##
-# Replace content between two markers in a file.
-# If markers don't exist, appends them with replacement.
-# If file doesn't exist, creates it with markers and replacement.
-#
-# Usage: config.markers.replace <file> <lead_marker> <tail_marker> <replacement>
-# Args:
-#   target_file   - Path to file to modify
-#   lead          - Opening marker (regex)
-#   tail          - Closing marker (regex)
-#   replacement   - Text to insert between markers
-##
+# Replace content between markers
 config.markers.replace() {
-    local target_file="$1" lead="$2" tail="$3" replacement="$4"
+    local file="$1" lead="$2" tail="$3" repl="$4"
+    [[ -z "$file" || -z "$lead" || -z "$tail" || -z "$repl" ]] && return 1
 
-    # Validate arguments
-    [[ -z "$target_file" || -z "$lead" || -z "$tail" || -z "$replacement" ]] && return 1
-
-    # Create new file with markers if it doesn't exist
-    if [[ ! -f "$target_file" ]]; then
-        printf '%s\n%s\n%s\n' "$lead" "$replacement" "$tail" > "$target_file"
-        return
+    if [[ ! -f "$file" ]]; then
+        print -r "$lead" > "$file"
+        print -r "$repl" >> "$file"
+        print -r "$tail" >> "$file"
+    elif ! grep -qE -- "$lead" "$file" || ! grep -qE -- "$tail" "$file"; then
+        print -r "$lead" >> "$file"
+        print -r "$repl" >> "$file"
+        print -r "$tail" >> "$file"
+    else
+        local -a lines=( ${(f)"$(<"$file")"} )
+        local -a new_lines=()
+        local block=0
+        local line
+        for line in "${lines[@]}"; do
+            if [[ "$line" =~ "$lead" ]]; then
+                new_lines+=("$line" "$repl")
+                block=1
+            elif [[ "$block" -eq 1 && "$line" =~ "$tail" ]]; then
+                block=0
+                new_lines+=("$line")
+            elif [[ "$block" -eq 0 ]]; then
+                new_lines+=("$line")
+            fi
+        done
+        print -rl -- "${new_lines[@]}" > "$file"
     fi
-
-    # Only append if BOTH markers are missing
-    if ! grep -qE -- "$lead" "$target_file" || ! grep -qE -- "$tail" "$target_file"; then
-        printf '%s\n%s\n%s\n' "$lead" "$replacement" "$tail" >> "$target_file"
-        return
-    fi
-
-    # Replace content between markers
-    awk -v lead="$lead" -v tail="$tail" -v repl="$replacement" '
-        $0 ~ lead { print; print repl; in_block=1; next }
-        in_block && $0 ~ tail { in_block=0; print; next }
-        !in_block' "$target_file" > "${target_file}.tmp" &&
-        mv "${target_file}.tmp" "$target_file"
 }

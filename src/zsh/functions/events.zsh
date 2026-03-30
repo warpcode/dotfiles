@@ -1,69 +1,33 @@
 # events.zsh - Custom event system for Zsh
-#
-# This module provides a system for registering and triggering custom events.
-# Functions can be registered for specific events and will be called when the event is triggered.
-# Events can pass arguments to all registered functions.
-#
-# Usage:
-#   events.add "event_name" function_name
-#   events.trigger "event_name" [args...]
-#   events.list
 
-# Associative array mapping event names to space-separated function lists
 typeset -gA _events_hooks
 
-# Register a function for a specific event
-# @param event The event name
-# @param func The function name to register
-# @return 0 on success, 1 on error
+# Register a function for an event.
 events.add() {
-    local event=$1
-    local func=$2
-
-    # Validate function exists
-    if ! functions "$func" >/dev/null; then
-        echo "Error: Function '$func' does not exist" >&2
-        return 1
-    fi
-
-    # Add to event's function list (space-separated), avoiding duplicates
-    if [[ ${_events_hooks[$event]} =~ (^|[[:space:]])${func}($|[[:space:]]) ]]; then
-        # Already registered
-        return 0
-    fi
-
-    if [[ -n ${_events_hooks[$event]} ]]; then
-        _events_hooks[$event]+=" $func"
-    else
-        _events_hooks[$event]=$func
-    fi
+  local event=$1 func=$2
+  (( $+functions[$func] )) || return 1
+  [[ " ${_events_hooks[$event]} " == *" $func "* ]] || \
+    _events_hooks[$event]+="${_events_hooks[$event]:+ }$func"
 }
 
-# Trigger an event, calling all registered functions with passed arguments
-# @param event The event name
-# @param args Arguments to pass to registered functions
+# Remove a function from an event.
+events.remove() {
+  local event=$1 func=$2
+  _events_hooks[$event]=${${(z)_events_hooks[$event]}:#$func}
+}
+
+# Trigger an event
 events.trigger() {
-    local event=$1
-    shift  # Remove event name, pass remaining args to hooks
-
-    # Check if event has any hooks
-    if [[ -z ${_events_hooks[$event]} ]]; then
-        return 0
-    fi
-
-    # Call each registered function with arguments
-    for func in ${(s: :)_events_hooks[$event]}; do
-        $func "$@"
-    done
+  local event=$1; shift
+  local func; for func in ${(z)_events_hooks[$event]}; do
+    $func "$@"
+  done
 }
 
-# List all registered hooks for debugging
-# @return 0
+# List all registered events
 events.list() {
-    for event in ${(k)_events_hooks}; do
-        echo "Event '$event':"
-        for func in ${(s: :)_events_hooks[$event]}; do
-            echo "  - $func"
-        done
-    done
+  local event; for event in ${(k)_events_hooks}; do
+    print -P "%F{blue}Event '$event':%f"
+    printf "  - %s\n" ${(z)_events_hooks[$event]}
+  done
 }
