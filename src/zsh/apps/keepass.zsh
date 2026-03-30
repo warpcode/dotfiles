@@ -22,7 +22,7 @@ kp() {
     kp.login || return 1
 
     # Execute with password piped from keychain
-    printf '%s' "$(secret.get keepassxc)" | "${command_array[@]}" "$1" "$KEEPASS_DB_PATH" "${@:2}" -q
+    printf '%s' "$(secrets.get keepassxc)" | "${command_array[@]}" "$1" "$KEEPASS_DB_PATH" "${@:2}" -q
 }
 
 ##
@@ -43,7 +43,7 @@ kp.verify_db() {
 # Clear cached credentials from keychain
 ##
 kp.forget() {
-    secret.delete "keepassxc"
+    secrets.delete "keepassxc"
 }
 
 ##
@@ -80,8 +80,8 @@ kp.cli() {
 # Verify access to the database
 #
 # Logic:
-# 1. Attempt to get password from keychain via secret.get (non-interactive).
-# 2. If no password found, call secret.store "keepassxc" "-" to prompt and save.
+# 1. Attempt to get password from keychain via secrets.get (non-interactive).
+# 2. If no password found, call secrets.store "keepassxc" "-" to prompt and save.
 # 3. Verify the password against the DB.
 # 4. If verification fails, delete from keychain.
 #
@@ -93,12 +93,12 @@ kp.login() {
     local cli_path; cli_path=$(kp.cli) || { echo "Error: keepassxc-cli not found." >&2; return 1 }
     local -a command_array=(${(z)cli_path})
 
-    local password; password=$(secret.get "keepassxc")
+    local password; password=$(secrets.get "keepassxc")
 
     # If no password in keychain, prompt and store
     if [[ -z "$password" ]]; then
-        secret.store "keepassxc" "-" || return 1
-        password=$(secret.get "keepassxc")
+        secrets.store "keepassxc" "-" || return 1
+        password=$(secrets.get "keepassxc")
     fi
 
     # Verify the password against the DB

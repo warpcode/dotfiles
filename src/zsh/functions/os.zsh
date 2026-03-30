@@ -1,116 +1,96 @@
 #!/usr/bin/env zsh
 
-# Function to detect if the system is Termux
-_os_is_termux() {
-    if [[ -n "$TERMUX_VERSION" ]] && [[ -n "$PREFIX" && -d "$PREFIX" ]]; then
-        return 0
-    else
-        return 1
-    fi
+# os.zsh - OS and architecture detection utilities with caching
+
+# Detect if running in Termux
+os.is_termux() {
+    (( $+TERMUX_VERSION )) && [[ -d "$PREFIX" ]]
 }
 
-# OS detection utilities
-# Functions for detecting operating system and architecture
+# Detect OS family (macos, debian, fedora, arch, termux, linux, or unknown)
+os.family() {
+    [[ -n "$__OS_FAMILY" ]] && { echo "$__OS_FAMILY"; return }
 
-# Detect OS and return a string identifier
-# Detect OS from $OSTYPE and /etc/os-release.
-# @return string OS identifier
-_os_detect_os_family() {
-    case $OSTYPE in
-        darwin*) echo macos ;;
+    local os="unknown"
+    case "$OSTYPE" in
+        darwin*) os="macos" ;;
         linux*)
-            if _os_is_termux; then
-                echo "termux"
-                return
+            if os.is_termux; then os="termux"
+            elif [[ -f /etc/os-release ]]; then
+                local -A os_info
+                local line key val
+                for line in ${(f)"$(</etc/os-release)"}; do
+                    [[ "$line" == [A-Z_]*=* ]] || continue
+                    key="${line%%=*}"
+                    val="${line#*=}"
+                    # Remove quotes
+                    val="${${val#[\"\']}%[\"\']}"
+                    os_info[$key]="$val"
+                done
+                
+                local id="${os_info[ID]}"
+                local like="${os_info[ID_LIKE]}"
+                
+                case "$id" in
+                    ubuntu|debian|pop|kali|linuxmint) os="debian" ;;
+                    fedora|rhel|centos) os="fedora" ;;
+                    arch|manjaro) os="arch" ;;
+                    *) 
+                        if [[ "$like" == *debian* ]]; then os="debian"
+                        elif [[ "$like" == *fedora* ]]; then os="fedora"
+                        elif [[ "$like" == *arch* ]]; then os="arch"
+                        else os="${id:-linux}"
+                        fi
+                        ;;
+                esac
             fi
-            [ -f /etc/os-release ] || { echo unknown; return; }
-             . /etc/os-release
-             case $ID in
-                  ubuntu|debian) echo debian ;;
-                   fedora|arch) echo "$ID" ;;
-                  *) echo unsupported ;;
-              esac
             ;;
-        *) echo unknown ;;
     esac
+    export __OS_FAMILY="$os"
+    echo "$os"
 }
 
-# Detect architecture using uname.
-# @return string arch identifier
-_os_detect_arch() {
-    case $(uname -m) in
-        x86_64|amd64) echo amd64 ;;
-        aarch64|arm64) echo arm64 ;;
-        *) uname -m ;;
+# Detect architecture (amd64, arm64, or raw uname)
+os.arch() {
+    [[ -n "$__OS_ARCH" ]] && { echo "$__OS_ARCH"; return }
+
+    local arch=$(uname -m)
+    case "$arch" in
+        x86_64|amd64) arch="amd64" ;;
+        aarch64|arm64) arch="arm64" ;;
     esac
+    export __OS_ARCH="$arch"
+    echo "$arch"
 }
 
-# Check if the current environment has a GUI
-# Returns 0 (true) if GUI detected, 1 (false) otherwise
-_os_has_gui() {
-    # macOS is assumed to be GUI unless strictly SSH without X11 forwarding
-    if [[ "$OSTYPE" == darwin* ]]; then
-        [[ -z "$SSH_CONNECTION" ]] && return 0
-    fi
-
-    # Linux/BSD: Check for X11 or Wayland display variables
-    if [[ -n "$DISPLAY" ]] || [[ -n "$WAYLAND_DISPLAY" ]]; then
-        return 0
-    fi
-
-    # Default to no GUI
-    return 1
+# Environment checks
+os.has_gui() {
+    [[ "$OSTYPE" == darwin* && -z "$SSH_CONNECTION" ]] && return 0
+    [[ -n "$DISPLAY" || -n "$WAYLAND_DISPLAY" ]]
 }
 
-# Check if the current environment is headless (CLI only)
-_os_is_headless() {
-    if _os_has_gui; then
-        return 1
-    else
-        return 0
-    fi
+os.is_headless() {
+    ! os.has_gui
 }
 
 # Filter input lines by architecture patterns
-# @param input Text to filter
-# @return Filtered lines matching current architecture
-_os_filter_by_arch() {
-    local input="$1"
-    local arch=$(_os_detect_arch)
-    local arch_patterns=()
-    case $arch in
-        amd64) arch_patterns=("amd64" "x86_64" "x64") ;;
-        arm64) arch_patterns=("arm64" "aarch64") ;;
-        *) arch_patterns=("$arch") ;;
+# Usage: os.filter_by_arch "input string" OR echo "input" | os.filter_by_arch
+os.filter_by_arch() {
+    local arch=$(os.arch) p
+    case "$arch" in
+        amd64) p="(amd64|x86_64|x64)" ;;
+        arm64) p="(arm64|aarch64)" ;;
+        *)     p="$arch" ;;
     esac
-    local arch_regex="($(IFS='|'; echo "${arch_patterns[*]}"))"
-    echo "$input" | grep -E "$arch_regex"
-}
-
-# === Package Manager Detection ===
-
-# Check if running on Debian-based Linux
-# @return 0 if Debian/Ubuntu, 1 otherwise
-_os_is_debian_based() {
-    [[ -f /etc/debian_version ]]
-}
-
-# Check if running on Fedora-based Linux
-# @return 0 if Fedora/RHEL, 1 otherwise
-_os_is_fedora_based() {
-    [[ -f /etc/fedora-release ]]
-}
-
-# Check if running on Arch Linux
-# @return 0 if Arch, 1 otherwise
-_os_is_arch_based() {
-    [[ -f /etc/arch-release ]] || [[ -f /etc/gentoo-release ]]
-}
-
-# Check if a package manager is available
-# @param $1 package manager name (brew, flatpak, snap, apt, dnf, pacman, cargo)
-# @return 0 if available, 1 otherwise
-_os_has_package_manager() {
-    local pm="$1"
-    command -v "$pm" >/dev/null 2>&1
+    
+    # Zsh-first filtering
+    if [[ -n "$1" ]]; then
+        local -a lines=( ${(f)1} )
+        print -l ${(M)lines:#(#i)*$~p*}
+    else
+        local line
+        while read -r line; do
+            [[ "$line" == (#i)*$~p* ]] && echo "$line"
+        done
+    fi
 }

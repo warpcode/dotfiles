@@ -1,5 +1,4 @@
 # pkg.zsh - Staged Package Installer
-# Usage: source src/zsh/functions/pkg.zsh && pkg.install_all
 
 typeset -gA pkg_recipes pkg_action pkg_exists
 typeset -ga pkg_list PKG_MANAGER_PRIORITY=(flatpak mise snap uv npm cargo brew brew_cask apt dnf pacman)
@@ -8,8 +7,9 @@ typeset -ga pkg_list PKG_MANAGER_PRIORITY=(flatpak mise snap uv npm cargo brew b
 pkg.define() {
     local rid="${1//-/_}"; shift
     (( ! ${pkg_exists[$rid]:-0} )) && { pkg_list+=($rid); pkg_exists[$rid]=1 }
+    local pair k v m
     for pair in "$@"; do
-        local k="${pair%%=*}" v="${pair#*=}"
+        k="${pair%%=*}" v="${pair#*=}"
         pkg_recipes[$rid:$k]="$v"
         [[ "$k" == managers ]] && for m in ${=v}; do
             (( ${PKG_MANAGER_PRIORITY[(Ie)$m]} )) || PKG_MANAGER_PRIORITY+=($m)
@@ -18,7 +18,7 @@ pkg.define() {
 }
 
 pkg.load_recipes() {
-    local f; for f in "${DOTFILES}/src/zsh/recipes/"**/*.zsh; do [[ -f "$f" ]] && source "$f"; done
+    local f; for f in "${DOTFILES}/src/zsh/recipes/"**/*.zsh(N); do source "$f"; done
 }
 
 # --- Action Compilation ---
@@ -26,10 +26,10 @@ pkg.compile_actions() {
     local rid c=0 total=${#pkg_list}
     pkg_action=()
     for rid in "${pkg_list[@]}"; do
-        printf "\r🔍 Compiling: %d/%d (%s)..." "$((++c))" "$total" "$rid" >&2
-        pkg_action[$rid]=$(pkg.recipeAction "$rid")
+        print -Pn "\r🔍 Compiling: $((++c))/$total ($rid)..." >&2
+        pkg_action[$rid]=$(pkg.recipe_action "$rid")
     done
-    printf "\r\033[K" >&2
+    print -Pn "\r\033[K" >&2
 }
 
 # --- Manager Interface ---
@@ -37,44 +37,44 @@ pkg.manager_func() {
     local f m func=$1; shift
     for m in "${PKG_MANAGER_PRIORITY[@]}"; do
         f="pkg.managers.$m.$func"
-        (( ${+functions[$f]} )) && { "$f" "$@" || return $? }
+        (( $+functions[$f] )) && { "$f" "$@" || return $? }
     done
 }
 
 # --- Helper Logic ---
-pkg.isLoaded() { (( ${pkg_exists[${1//-/_}]:-0} )) }
-pkg.actionIsEnabled() { [[ "$1" == (install*|upgrade*|defer) ]] }
-pkg.isSatisfied() { [[ "$(pkg.recipeAction "$1")" == (skip|upgrade:*) ]] }
+pkg.is_loaded() { (( ${pkg_exists[${1//-/_}]:-0} )) }
+pkg.action_is_enabled() { [[ "$1" == (install*|upgrade*|defer) ]] }
+pkg.is_satisfied() { [[ "$(pkg.recipe_action "$1")" == (skip|upgrade:*) ]] }
 
 pkg.installable() {
     local m; for m in "${PKG_MANAGER_PRIORITY[@]}"; do
-        (( ${+functions[pkg.managers.$m.is_available]} )) || continue
+        (( $+functions[pkg.managers.$m.is_available] )) || continue
         "pkg.managers.$m.is_available" || continue
-        (( ${+functions[pkg.managers.$m.search]} )) && "pkg.managers.$m.search" "$1" && return 0
+        (( $+functions[pkg.managers.$m.search] )) && "pkg.managers.$m.search" "$1" && return 0
     done
     return 1
 }
 
 # --- Core Action Resolver ---
-pkg.recipeAction() {
+pkg.recipe_action() {
     local rid="${1//-/_}" m dep any_enabled=0 res
     [[ -n "${pkg_action[$rid]}" ]] && { echo "${pkg_action[$rid]}"; return 0; }
-    pkg.isLoaded "$rid" || { echo "unavailable"; return 1; }
+    pkg.is_loaded "$rid" || return 1
 
     # 1. Resolve Dependencies
     for dep in ${=pkg_recipes[$rid:deps]}; do
-        pkg.isSatisfied "$dep" || { res="defer"; break; }
+        pkg.is_satisfied "$dep" || { res="defer"; break; }
     done
 
-    # 2. Check Managers (Priority Order)
+    # 2. Check Managers
     if [[ -z "$res" ]]; then
         local -a managers=( ${=pkg_recipes[$rid:managers]:-"${PKG_MANAGER_PRIORITY[@]}"} )
         local -a valid=()
         for m in "${managers[@]}"; do
-            (( ${+functions[pkg.managers.$m.enabled]} )) || continue
+            (( $+functions[pkg.managers.$m.enabled] )) || continue
             "pkg.managers.$m.enabled" || continue
             any_enabled=1
-            (( ${+functions[pkg.managers.$m.is_available]} )) || { res="defer"; break; }
+            (( $+functions[pkg.managers.$m.is_available] )) || { res="defer"; break; }
             "pkg.managers.$m.is_available" || { res="defer"; break; }
             valid+=($m)
         done
@@ -87,7 +87,7 @@ pkg.recipeAction() {
                 done
                 if [[ -z "$res" ]]; then
                     for m in "${valid[@]}"; do
-                        (( ${+functions[pkg.managers.$m.search]} )) && "pkg.managers.$m.search" "$rid" && { res="install:$m"; break; }
+                        (( $+functions[pkg.managers.$m.search] )) && "pkg.managers.$m.search" "$rid" && { res="install:$m"; break; }
                     done
                 fi
             fi
@@ -100,26 +100,24 @@ pkg.recipeAction() {
 }
 
 # --- Utils ---
-pkg.recipeManagers() {
+pkg.recipe_managers() {
     local rid="${1//-/_}"
     echo "${pkg_recipes[$rid:managers]:-${PKG_MANAGER_PRIORITY[*]}}"
 }
 
-pkg.recipePackages() {
+pkg.recipe_packages() {
     local rid="${1//-/_}" pkg
-    if [[ -n "$2" ]]; then
-        pkg="${pkg_recipes[$rid:$2]}"
-    fi
+    [[ -n "$2" ]] && pkg="${pkg_recipes[$rid:$2]}"
     echo "${pkg:-${pkg_recipes[$rid:package]}}"
 }
 
-pkg.recipesByAction() {
+pkg.recipes_by_action() {
     local rid target=$1; for rid in "${pkg_list[@]}"; do [[ "${pkg_action[$rid]}" == "$target" ]] && echo "$rid"; done
 }
 
 # --- Main Entry Point ---
 pkg.install_all() {
-    echo "🔧 Starting staged installation..."
+    print -P "%F{blue}🔧 Starting staged installation...%f"
     pkg.load_recipes
     local pass=0 max=10
     while (( pass++ < max )); do
@@ -128,14 +126,14 @@ pkg.install_all() {
 
         local -a pending=()
         for m in "${PKG_MANAGER_PRIORITY[@]}"; do
-            local r=$(pkg.recipesByAction "install:$m")
+            local r=$(pkg.recipes_by_action "install:$m")
             [[ -n "$r" ]] && pending+=("install:$m -> $r")
         done
 
-        (( ${#pending} == 0 )) && { echo "✨ Finished in $((pass-1)) passes."; break; }
+        (( ${#pending} == 0 )) && { print -P "%F{green}✨ Finished in $((pass-1)) passes.%f"; break; }
         echo "🔄 Pass $pass: ${(j:, :)pending}"
-        pkg.manager_func install || { echo "❌ Failed."; return 1; }
+        pkg.manager_func install || { print -P "%F{red}❌ Failed.%f"; return 1; }
     done
     pkg.manager_func cleanup
-    echo "✨ Complete!"
+    print -P "%F{green}✨ Complete!%f"
 }

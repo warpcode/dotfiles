@@ -1,386 +1,215 @@
 #!/usr/bin/env zsh
 
 # tui.zsh - Terminal UI Components for Dotfiles
-#
-# Provides reusable UI components for interactive shell scripts.
+# Re-engineered for Zsh performance and conciseness.
 
-# @description Read user input with support for defaults, validation, and optionality.
-# @param $1 string Prompt text
-# @param -d <value> Default value if input is empty
-# @param -o Optional flag (return empty if no value provided)
-# @param -v <regex> Validation regex pattern
-# @return 0 and prints input to stdout
+zmodload zsh/zutil    # For zparseopts
+zmodload zsh/datetime # For tui.date and tui.time
+
+# --- Internal Helpers ---
+
+_tui_err() { print -P "%F{red}❌ $1%f" >&2; return 1; }
+
+# --- Public API ---
+
+# @description Read user input with support for defaults and validation.
+# Flags: -d (default), -o (optional), -v (validation regex)
 tui.input() {
-    local prompt=""
-    local default=""
-    local optional=false
-    local validation=""
+    local -A opts; zparseopts -E -D -K -A opts d: o v:
+    local prompt="${1:-Input}" default="$opts[-d]" validation="$opts[-v]"
     local value=""
 
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            -d) default="$2"; shift 2 ;;
-            -o) optional=true; shift ;;
-            -v) validation="$2"; shift 2 ;;
-            -*) shift ;; # Skip unknown flags
-            *)
-                if [[ -z "$prompt" ]]; then
-                    prompt="$1"
-                fi
-                shift
-                ;;
-        esac
-    done
-
-    local display_prompt="$prompt"
-    [[ -n "$default" ]] && display_prompt="$display_prompt [$default]"
-    display_prompt="$display_prompt: "
-
+    local display_prompt="$prompt${default:+ [%B$default%b]}: "
+    
     while true; do
-        printf > /dev/tty "%s" "$display_prompt"
+        print -Pn "%F{blue}➜%f $display_prompt" > /dev/tty
         if read -r value < /dev/tty; then
-            # Handle default
-            if [[ -z "$value" ]] && [[ -n "$default" ]]; then
-                value="$default"
-            fi
+            value="${value:-$default}"
 
-            # Check if empty is allowed
             if [[ -z "$value" ]]; then
-                if [[ "$optional" == true ]]; then
-                    echo ""
-                    return 0
-                else
-                    continue # Loop again
-                fi
+                [[ -n "$opts[-o]" ]] && { echo ""; return 0; }
+                continue
             fi
 
-            # Validation
-            if [[ -n "$validation" ]]; then
-                if [[ ! "$value" =~ $validation ]]; then
-                    echo "❌ Invalid input (must match: $validation)" >&2
-                    continue
-                fi
+            if [[ -n "$validation" && ! "$value" =~ $validation ]]; then
+                _tui_err "Invalid input (must match: $validation)"
+                continue
             fi
 
             echo "$value"
             return 0
         else
-            local read_exit=$?
-            echo "" >&2 # newline after ^C or ^D
-            if [[ "$optional" == true ]]; then
-                echo ""
-                return 0
-            fi
-            return $read_exit # Abort entirely when mandatory
-        fi
-    done
-}
-
-# @description A styled Yes/No confirmation prompt.
-# @param $1 string Prompt text
-# @param -d <y|n> Default value (y or n)
-# @return 0 for Yes, 1 for No
-tui.confirm() {
-    local prompt=""
-    local default=""
-
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            -d) default="${2:l}"; shift 2 ;;
-            -*) shift ;;
-            *) [[ -z "$prompt" ]] && prompt="$1"; shift ;;
-        esac
-    done
-
-    local suffix="[y/n]"
-    [[ "$default" == "y" ]] && suffix="[Y/n]"
-    [[ "$default" == "n" ]] && suffix="[y/N]"
-
-    local answer
-    while true; do
-        printf > /dev/tty "%s %s: " "$prompt" "$suffix"
-        if read -r answer < /dev/tty; then
-            answer="${answer:l}"
-            [[ -z "$answer" ]] && answer="$default"
-
-            case "$answer" in
-                y|yes) return 0 ;;
-                n|no) return 1 ;;
-                *) echo "❌ Please answer with 'y' or 'n'." >&2 ;;
-            esac
-        else
             echo "" >&2
-            return 1
+            [[ -n "$opts[-o]" ]] && return 0 || return 1
         fi
     done
 }
 
+# @description A styled Yes/No confirmation prompt (single-keypress).
+# Flags: -d <y|n> (default)
+tui.confirm() {
+    local -A opts; zparseopts -E -D -K -A opts d:
+    local prompt="${1:-Are you sure?}" default="${opts[-d]:l}"
+    
+    local suffix="[y/n]"
+    [[ "$default" == "y" ]] && suffix="[%BY%bn/n]"
+    [[ "$default" == "n" ]] && suffix="[y/%BN%bn]"
 
-# @description Select exactly one item from a list.
-# @param $1 string Prompt text
-# @param -c Include 'Custom...' entry for free-type
-# @param -p <text> fzf prompt (defaults to first argument)
-# @param $@ Remaining items to select from
+    print -Pn "%F{yellow}?%f $prompt $suffix " > /dev/tty
+    
+    # read -k 1 returns immediately after one character.
+    local choice
+    if read -k 1 choice < /dev/tty; then
+        echo "" >&2
+        case "${choice:l}" in
+            y) return 0 ;;
+            n) return 1 ;;
+            $'\n'|$'\r') [[ "$default" == "y" ]] && return 0 || return 1 ;;
+            *) return 1 ;;
+        esac
+    fi
+    return 1
+}
+
+# @description Select items from a list using fzf.
+# Flags: -c (custom), -o (optional), -m (multi), -p (prompt), -d (default)
 tui.select() {
-    local prompt=""
-    local custom=false
-    local optional=false
-    local multi=false
-    local default=""
-    local fzf_prompt=""
-    local -a items=()
-
-    # Parse arguments
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            -c) custom=true; shift ;;
-            -o) optional=true; shift ;;
-            -m) multi=true; shift ;;
-            -p) fzf_prompt="$2"; shift 2 ;;
-            -d) default="$2"; shift 2 ;;
-            -*) shift ;; # Skip unknown flags
-            *)
-                if [[ -z "$prompt" ]]; then
-                    prompt="$1"
-                else
-                    items+=("$1")
-                fi
-                shift
-                ;;
-        esac
-    done
-
-    [[ -z "$fzf_prompt" ]] && fzf_prompt="$prompt"
-
-    # Filter out empty strings from items
-    items=(${items:#})
-
-    # Handle 0 or 1 items based on optionality
-    if [[ ${#items} -eq 0 ]]; then
-        if [[ "$optional" == "true" ]]; then
-            return 0
-        else
-            echo "❌ Error: Selection for '$prompt' is required but no options available." >&2
-            return 1
-        fi
-    elif [[ ${#items} -eq 1 && "$optional" != "true" && "$custom" != "true" ]]; then
-        # Auto-select the only item if required and not multi-select/custom
-        if [[ "$multi" != "true" ]]; then
-            echo "${items[1]}"
-            return 0
-        fi
-    fi
-
-    if ! command -v fzf >/dev/null 2>&1; then
-        echo "❌ tui.select requires 'fzf' to be installed." >&2
-        return 1
-    fi
-
-    local hint="(Enter: confirm"
-    [[ "$multi" == true ]] && hint="(Tab: select, Enter: confirm"
-    [[ "$custom" == true ]] && hint="$hint, Ctrl-N: custom"
-    [[ "$optional" == true ]] && hint="$hint, Esc: skip"
-    hint="$hint)"
-
-    local items_file=""
-    local input_stream=""
-    local -a fzf_cmd=(fzf --prompt "$fzf_prompt $hint> " --height 40% --reverse)
-
-    if [[ -n "$default" ]]; then
-        local idx=${items[(i)*$default*]}
-        if [[ $idx -le ${#items} ]]; then
-            fzf_cmd+=(--bind "load:pos($idx)")
-        fi
-    fi
-
-    [[ "$multi" == true ]] && fzf_cmd+=(-m)
-
-    if [[ "$custom" == true ]]; then
-        # We use a temporary items file here to persist the list state so `fzf`'s internal
-        # `reload()` function can update the UI dynamically when new custom elements are added
-        # without closing the current selection session.
-        items_file=$(mktemp)
-        printf "%s\n" "${items[@]}" > "$items_file"
-
-        local bind_cmd="ctrl-n:execute(read -r \"?Custom value: \" val < /dev/tty > /dev/tty; [[ -n \"\$val\" ]] && { printf \"%s\n\" \"\$val\" | cat - \"$items_file\" > \"${items_file}.tmp\" && mv \"${items_file}.tmp\" \"$items_file\"; })+reload(cat \"$items_file\")+first"
-
-        # If multi-selection, select the new entry and move down.
-        # If single-selection, immediately accept the new entry.
-        if [[ "$multi" == true ]]; then
-            bind_cmd="$bind_cmd+toggle+down"
-        else
-            bind_cmd="$bind_cmd+accept"
-        fi
-
-        fzf_cmd+=(--bind "$bind_cmd")
-    else
-        input_stream=$(printf "%s\n" "${items[@]}")
-    fi
-
-    while true; do
-        local -a choices=()
-        local fzf_exit=0
-        local fzf_out=""
-
-        if [[ "$custom" == true ]]; then
-            fzf_out=$( "${fzf_cmd[@]}" < "$items_file" )
-            fzf_exit=$?
-            choices=(${(f)fzf_out})
-        else
-            fzf_out=$( echo "$input_stream" | "${fzf_cmd[@]}" )
-            fzf_exit=$?
-            choices=(${(f)fzf_out})
-        fi
-
-        # Check for explicit abort (Esc/Ctrl-C returns 130 in fzf)
-        if [[ $fzf_exit -ne 0 ]]; then
-            [[ -n "$items_file" ]] && rm -f "$items_file"
-            if [[ "$optional" == "true" ]]; then
-                return 0 # Treat Esc as a clean 'skip' when optional
-            fi
-            return $fzf_exit # Abort entirely when mandatory
-        fi
-
-        # User selected nothing (e.g. empty multiselect submit)
-        if [[ ${#choices[@]} -eq 0 || -z "$fzf_out" ]]; then
-            if [[ "$optional" == "true" ]]; then
-                [[ -n "$items_file" ]] && rm -f "$items_file"
-                return 0
-            fi
-            continue
-        fi
-
-        echo "${choices[@]}"
-        [[ -n "$items_file" ]] && rm -f "$items_file"
+    local -A opts; zparseopts -E -D -K -A opts c o m p: d:
+    local prompt="${1:-Select}" fzf_prompt="${opts[-p]:-$1}"
+    shift # Remove prompt from $@
+    
+    local -a items=( "${(@)@:#}" ) # Native Zsh: Remove empty elements
+    
+    # Fast-path for single items
+    if (( $#items == 1 )) && [[ -z "$opts[-o]$opts[-c]$opts[-m]" ]]; then
+        echo "$items[1]"
         return 0
-    done
-}
-
-# @description Select multiple items from a list.
-# @param $1 string Prompt text
-# @param -c Include 'Custom...' entry
-# @param -o Optional
-# @param $@ Remaining items
-tui.multiselect() {
-    tui.select -m "$@"
-}
-
-# @description Select a date from a list around today.
-# @param $1 string Prompt text
-# @param -d <date> Default date in YYYY-MM-DD format
-tui.date() {
-    zmodload zsh/datetime 2>/dev/null
-
-    local prompt="Date"
-    local default=""
-
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            -d) default="$2"; shift 2 ;;
-            -p) prompt="$2"; shift 2 ;;
-            -*) shift ;;
-            *) prompt="$1"; shift ;;
-        esac
-    done
-
-    local -a items=()
-    local i
-    for i in {-30..90}; do
-        local ts=$(( EPOCHSECONDS + i * 86400 ))
-        local d=$(strftime "%Y-%m-%d" $ts)
-        local day=$(strftime "%a" $ts)
-        local label=""
-        case $i in
-            0) label=" [Today]" ;;
-            1) label=" [Tomorrow]" ;;
-            -1) label=" [Yesterday]" ;;
-        esac
-        items+=("$d ($day)$label")
-    done
-
-    local query="$default"
-    [[ -z "$query" ]] && query="Today"
-
-    local selected
-    selected=$(tui.select -p "$prompt" -d "$query" -c "${items[@]}") || return 1
-
-    # Extract the YYYY-MM-DD part (first space-separated word)
-    echo "${selected%% *}"
-}
-
-# @description Select a time (HH:MM:SS).
-# @param $1 string Prompt text
-# @param -d <time> Default time in HH:MM[:SS] format
-tui.time() {
-    local prompt="Time"
-    local default=""
-
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            -d) default="$2"; shift 2 ;;
-            -p) prompt="$2"; shift 2 ;;
-            -*) shift ;;
-            *) prompt="$1"; shift ;;
-        esac
-    done
-
-    local def_h="" def_m="" def_s=""
-    if [[ "$default" =~ ^([0-9]{2}):([0-9]{2})(:([0-9]{2}))?$ ]]; then
-        def_h="${match[1]}"
-        def_m="${match[2]}"
-        def_s="${match[4]}"
-    else
-        zmodload zsh/datetime 2>/dev/null
-        def_h=$(strftime "%H" $EPOCHSECONDS)
-        def_m=$(strftime "%M" $EPOCHSECONDS)
-        def_s=$(strftime "%S" $EPOCHSECONDS)
     fi
 
-    local -a hours=({00..23})
-    local hour
-    hour=$(tui.select -p "$prompt (Hour)" -d "$def_h" "${hours[@]}") || return 1
+    (( $+commands[fzf] )) || return $(_tui_err "fzf not found")
 
-    local -a mins_secs=({00..59})
-    local minute
-    minute=$(tui.select -o -p "$prompt (Minute)" -d "$def_m" -c "${mins_secs[@]}") || return 1
-    [[ -z "$minute" ]] && minute="00"
+    local hint="(Enter: confirm${opts[-m]:+, Tab: select}${opts[-c]:+, Ctrl-N: custom})"
+    local -a fzf_cmd=( fzf --prompt "$fzf_prompt $hint> " --height 40% --reverse --ansi )
+    [[ -n "$opts[-m]" ]] && fzf_cmd+=( -m )
+    
+    # Handle default selection
+    if [[ -n "$opts[-d]" ]]; then
+        local idx=${items[(i)*$opts[-d]*]}
+        (( idx <= $#items )) && fzf_cmd+=( --bind "load:pos($idx)" )
+    fi
 
-    local second
-    second=$(tui.select -o -p "$prompt (Second)" -d "$def_s" -c "${mins_secs[@]}") || return 1
-    [[ -z "$second" ]] && second="00"
+    # Handle custom input via fzf reload mechanism
+    local out
+    if [[ -n "$opts[-c]" ]]; then
+        local tmp=$(mktemp)
+        trap "rm -f '$tmp'" EXIT
+        print -l "${items[@]}" > "$tmp"
+        
+        local bind="ctrl-n:execute(read -r \"?Custom value: \" val < /dev/tty > /dev/tty; [[ -n \"\$val\" ]] && { print \"\$val\" | cat - \"$tmp\" > \"$tmp.new\" && mv \"$tmp.new\" \"$tmp\"; })+reload(cat \"$tmp\")+first"
+        [[ -z "$opts[-m]" ]] && bind+="+accept" || bind+="+toggle+down"
+        
+        out=$( "${fzf_cmd[@]}" --bind "$bind" < "$tmp" )
+    else
+        out=$( print -l "${items[@]}" | "${fzf_cmd[@]}" )
+    fi
 
-    echo "$hour:$minute:$second"
+    local ret=$?
+    if (( ret == 0 )); then
+        echo "$out"
+    elif [[ -n "$opts[-o]" ]]; then
+        return 0
+    fi
+    return $ret
+}
+
+tui.multiselect() { tui.select -m "$@"; }
+
+# @description Date picker around today.
+tui.date() {
+    local -A opts; zparseopts -E -D -K -A opts d: p:
+    local prompt="${opts[-p]:-${1:-Date}}" query="${opts[-d]:-Today}"
+    local -a items=()
+    
+    # Generate dates using Zsh arithmetic and strftime
+    local i ts d day label
+    for i in {-30..90}; do
+        ts=$(( EPOCHSECONDS + i * 86400 ))
+        d=$(strftime "%Y-%m-%d" $ts)
+        day=$(strftime "%a" $ts)
+        case $i in
+            0) label=" %F{green}[Today]%f" ;;
+            1) label=" %F{blue}[Tomorrow]%f" ;;
+            -1) label=" %F{yellow}[Yesterday]%f" ;;
+            *) label="" ;;
+        esac
+        items+=( "$d ($day)$label" )
+    done
+
+    local selected=$(tui.select -p "$prompt" -d "$query" -c "${items[@]}")
+    echo "${selected%% *}" # Return only the YYYY-MM-DD part
+}
+
+# @description Time picker (HH:MM:SS).
+tui.time() {
+    local -A opts; zparseopts -E -D -K -A opts d: p:
+    local prompt="${opts[-p]:-${1:-Time}}"
+    
+    local h m s
+    if [[ "$opts[-d]" =~ ^([0-9]{2}):([0-9]{2})(:([0-9]{2}))?$ ]]; then
+        h="$match[1]" m="$match[2]" s="$match[4]"
+    else
+        h=$(strftime "%H" $EPOCHSECONDS)
+        m=$(strftime "%M" $EPOCHSECONDS)
+        s=$(strftime "%S" $EPOCHSECONDS)
+    fi
+
+    h=$(tui.select -p "$prompt (Hour)" -d "$h" {00..23}) || return 1
+    m=$(tui.select -o -p "$prompt (Minute)" -d "$m" -c {00..59}) || return 1
+    s=$(tui.select -o -p "$prompt (Second)" -d "$s" -c {00..59}) || return 1
+
+    echo "${h:-00}:${m:-00}:${s:-00}"
 }
 
 # @description Preview a file with syntax highlighting.
-# @param $1 string Path to the file to preview
-# @param $2 number Optional: Line number to highlight
 tui.preview() {
     local file="$1" line="${2:-0}"
     [[ -f "$file" ]] || return 1
 
-    # Binary check (silent exit to avoid fzf noise)
-    command -v file >/dev/null && file -bi "$file" | grep -q 'binary' && return 1
+    # Zsh-native binary check via file command if available
+    (( $+commands[file] )) && file -bi "$file" | grep -q 'binary' && return 1
 
-    # bat (Primary choice)
-    if command -v bat >/dev/null 2>&1; then
-        local opts=("--style=numbers" "--color=always")
-        ((line > 0)) && opts+=("--highlight-line" "$line")
-        bat "${opts[@]}" "$file"
-        return $?
+    # 1. bat
+    if (( $+commands[bat] )); then
+        local -a args=( --style=numbers --color=always )
+        (( line > 0 )) && args+=( --highlight-line "$line" )
+        bat "${args[@]}" "$file"
+        return
     fi
 
-    # Common formatting for stdout pagers
-    local awk_fmt='l>0 && NR==l {printf "\033[1;31m>>>\033[0m %5d: %s\n", NR, $0; next} {printf "    %5d: %s\n", NR, $0}'
-
-    # pygmentize (High-quality stdout fallback)
-    local pcmd=$(command -v pygmentize || command -v pygmentise)
+    # 2. pygmentize or print fallback
+    local pcmd=${commands[pygmentize]:-$commands[pygmentise]}
     if [[ -n "$pcmd" ]]; then
-        $pcmd -f terminal -g "$file" 2>/dev/null | awk -v l="$line" "$awk_fmt"
-        return $?
+        $pcmd -f terminal -g "$file" 2>/dev/null | {
+            local i=0 content
+            while IFS= read -r content; do
+                (( ++i ))
+                if (( i == line )); then
+                    print -Pn "\r%F{red}>>>%f %5d: $content\n" "$i"
+                else
+                    print -Pn "    %5d: $content\n" "$i"
+                fi
+            done
+        }
+    else
+        local -a lines=( ${(f)"$(<"$file")"} )
+        local i=0
+        for line_content in "${lines[@]}"; do
+            (( ++i ))
+            if (( i == line )); then
+                print -Pn "%F{red}>>>%f %5d: $line_content\n" "$i"
+            else
+                print -Pn "    %5d: $line_content\n" "$i"
+            fi
+        done
     fi
-
-    # awk (Final fallback)
-    awk -v l="$line" "$awk_fmt" "$file"
-    return $?
 }
