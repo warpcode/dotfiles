@@ -24,13 +24,11 @@ function _git_clone_and_cd() {
     cd "$dir_name" || { echo "Failed to change directory to '$dir_name'"; return 1; }
 }
 
-function git.cli() {
-    command git "$@"
-}
+bin.wrap git
 
 function git.setup() {
     command git config --global include.path "$(fs.dotfiles.path "assets/configs/git/.gitconfig_default")"
     command git config --global core.excludesfile "$(fs.dotfiles.path "assets/configs/git/.gitignore_global")"
 }
-events.add dotfiles.setup git.setup
+app.setup git git.setup
 

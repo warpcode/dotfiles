@@ -4,18 +4,15 @@ This is a personal collection of dotfiles for \*nix systems, designed to create 
 
 ## Requirements
 
-The following dependencies are required:
+The bootstrap script handles most requirements automatically. On a fresh system, you only need:
 
-- **stow** - Symlink management (must be installed manually before running `make install-generic`)
-- **zsh** - Shell (pre-installed on macOS, required to run the installer)
+- **curl** or **wget** - To download the bootstrap script.
+- **sudo** access - To install system packages (`git`, `zsh`).
 
-These will be installed automatically by the installer:
-
-- **git** - Version control
-- **jq** - JSON processor
-- **curl** - HTTP client
-
-Additional tools like `fzf`, `uv`, `tmux`, `rsync`, and `direnv` can be installed using the dotfiles installer.
+The following will be managed by the internal package system:
+- **mise** - Polyglot tool manager.
+- **stow** - Symlink management (used internally).
+- **jq**, **fzf**, etc.
 
 ## Features
 
@@ -40,24 +37,36 @@ This dotfiles repository comes with a wide range of features to enhance your she
 
 ## Installation
 
+The recommended way to install these dotfiles is via the bootstrap script:
+
+```bash
+# Using curl
+curl -fsSL https://raw.githubusercontent.com/warpcode/dotfiles/master/install.sh | bash
+
+# Using wget
+wget -O- https://raw.githubusercontent.com/warpcode/dotfiles/master/install.sh | bash
+```
+
+This script will:
+1. Detect your OS and install core dependencies (`git`, `zsh`).
+2. Ensure `zsh` is your default shell.
+3. Clone this repository to `~/.dotfiles`.
+4. Initialize the modular configuration system.
+
+### Manual Installation (Optional)
+
+If you prefer to install manually:
+
 1.  Clone the repository:
     ```bash
-    git clone <repository-url> ~/.dotfiles
+    git clone https://github.com/warpcode/dotfiles.git ~/.dotfiles
     cd ~/.dotfiles
     ```
 
-2.  Install the dotfiles:
+2.  Run the installer:
     ```bash
-    make install-generic
+    ./install.sh
     ```
-    This will create symlinks for the generic configuration files in your home directory. Required dependencies will be installed automatically when you start a new Zsh session.
-
-3.  (Optional) Install work-specific dotfiles:
-    ```bash
-    make install-work
-    ```
-
-To uninstall, you can use `make uninstall-generic` or `make uninstall-work`.
 
 ### Installing Applications from GitHub Releases
 
@@ -106,7 +115,6 @@ make update-submodules
 - Ensure your OS is supported (macOS, Debian/Ubuntu, Fedora, Arch Linux)
 - Check that you have `sudo` access for system package installation
 - For GitHub releases, ensure `curl` and `tar` are available
-- Ensure `stow` is installed before running `make install-generic` (e.g., `brew install stow` on macOS, `apt install stow` on Debian/Ubuntu)
 
 ### Conflicts with existing configuration?
 - The dotfiles use `stow` to manage symlinks, which won't overwrite existing files

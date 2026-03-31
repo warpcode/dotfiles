@@ -12,7 +12,7 @@ fs.dotfiles.path() {
 fs.find.root() {
     local dir=$PWD
     while [[ $dir != / ]]; do
-        for f in "$@"; [[ -e "$dir/$f" ]] && { echo "$dir"; return 0 }
+        for f in "$@"; do [[ -e "$dir/$f" ]] && { echo "$dir"; return 0 }; done
         dir=$dir:h
     done
     return 1
@@ -58,4 +58,34 @@ fs.search() {
             done
         fi
     fi
+}
+
+# Pipe fs.search into fzf with previews and open-in-editor binding
+fs.fzf() {
+    local regex=false
+    if [[ "$1" == "-r" ]]; then
+        regex=true
+        shift
+    fi
+
+    local query="$1"
+    local dir="${2:-.}"
+    local dotfiles="${DOTFILES:-$HOME/.config/dotfiles}"
+
+    local init_cmd="source $dotfiles/src/zsh/init.zsh >/dev/null 2>&1"
+
+    # Use positional arguments to sub-zsh to avoid quoting issues with {q}, {1}, etc.
+    # Add sleep  for debouncing. fzf kills the previous reload process if a new one is triggered.
+    local reload_cmd="zsh -c 'sleep 0.25; $init_cmd && if [[ \${#1} -gt 0 ]]; then fs.search $([[ "$regex" == "true" ]] && echo -r) -s \"\$1\" \"\$2\"; else :; fi' -- {q} \"$dir\""
+    local preview_cmd="zsh -c '$init_cmd && tui.preview \"\$1\" \"\$2\" 10' -- {1} {2}"
+
+    # Start with initial search if query provided, otherwise start empty
+    { [[ -n "$query" ]] && fs.search $([[ "$regex" == "true" ]] && echo -r) -s "$query" "$dir" || : } \
+        | command fzf --ansi --disabled --query "$query" \
+            --bind "change:reload:$reload_cmd" \
+            --delimiter ':' --preview-window=right:60%:wrap:+{2}-15 \
+            --preview "$preview_cmd" \
+            | while IFS=: read file line rest; do
+                [[ -n "$file" ]] && ${VISUAL:-${EDITOR:-vim}} "+$line" "$file" < /dev/tty
+            done
 }

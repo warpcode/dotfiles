@@ -1,7 +1,12 @@
 {
   "general": {
     "preferredEditor": "neovim",
-    "previewFeatures": true
+    "previewFeatures": true,
+    "sessionRetention": {
+      "warningAcknowledged": true,
+      "enabled": true,
+      "maxAge": "120d"
+    }
   },
   "security": {
     "auth": {
@@ -9,11 +14,6 @@
     }
   },
   "mcpServers": {
-    "skillport": {
-      "command": "uvx",
-      "args": ["skillport-mcp"],
-      "env": { "SKILLPORT_SKILLS_DIR": "~/.config/opencode/skill" }
-    }
   },
   "context": {
     "fileName": [

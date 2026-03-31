@@ -18,7 +18,8 @@ pkg.define() {
 }
 
 pkg.load_recipes() {
-    local f; for f in "${DOTFILES}/src/zsh/recipes/"**/*.zsh(N); do source "$f"; done
+    local base; base=$(fs.dotfiles.path "src/zsh/recipes") || return 1
+    local f; for f in "$base/"**/*.zsh(N); do source "$f"; done
 }
 
 # --- Action Compilation ---
@@ -100,6 +101,12 @@ pkg.recipe_action() {
 }
 
 # --- Utils ---
+pkg.status() {
+    local rid="${1//-/_}"
+    pkg.is_loaded "$rid" || return 1
+    pkg.is_satisfied "$rid"
+}
+
 pkg.recipe_managers() {
     local rid="${1//-/_}"
     echo "${pkg_recipes[$rid:managers]:-${PKG_MANAGER_PRIORITY[*]}}"
