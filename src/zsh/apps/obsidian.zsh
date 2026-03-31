@@ -11,7 +11,7 @@ if [[ -z "$OBSIDIAN_VAULT" || "$OBSIDIAN_VAULT" == "." ]]; then
     fi
 fi
 
-export OBSIDIAN_SYSTEM="$OBSIDIAN_VAULT/_system"
+export OBSIDIAN_SYSTEM=$(fs.dotfiles.path "assets/configs/obsidian/_system")
 export OBSIDIAN_RULES="$OBSIDIAN_SYSTEM/rules"
 export OBSIDIAN_NOTES="$OBSIDIAN_RULES/notes"
 export OBSIDIAN_FIELDS="$OBSIDIAN_RULES/fields"
@@ -191,7 +191,7 @@ obsidian.note.new() {
   # 1. Validation: Ensure we are in a valid Obsidian environment
   if [[ ! -d "$OBSIDIAN_NOTES" ]]; then
     echo "❌ Error: Notes rules directory not found at '$OBSIDIAN_NOTES'." >&2
-    echo "   Ensure OBSIDIAN_VAULT is set correctly or you are in a vault root." >&2
+    echo "   Ensure \$DOTFILES is set correctly and the rules exist in assets/configs/obsidian/_system." >&2
     return 1
   fi
 

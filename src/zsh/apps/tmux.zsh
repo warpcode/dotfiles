@@ -18,13 +18,8 @@ function _tmux_basic_git()  {
         selectw -t editor
 }
 
-function tmux.cli() {
-   tmux.setup.config
-   command tmux "$@"
-}
+bin.wrap tmux tmux tmux.setup.config
 
 function tmux.setup.config() {
-    local destination=~/.tmux.conf
-    config.symlink "tmux/tmux.conf" "$destination"
-    chmod 600 "$destination"
+    app.config "tmux/tmux.conf" ~/.tmux.conf
 }

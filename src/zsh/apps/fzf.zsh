@@ -1,6 +1,4 @@
-function fzf.cli() {
-    command fzf "$@"
-}
+bin.wrap fzf
 
 if [[ -o interactive ]] && pkg.status fzf >/dev/null 2>&1; then
     # Use fzf for history search in an interactive shell

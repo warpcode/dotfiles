@@ -3,9 +3,7 @@
 _config_resolve() {
     local type="$1" path="$2"
     [[ -e "$path" ]] && { echo "${path:a:P}"; return 0; }
-    local alt="$DOTFILES/assets/$type/$path"
-    [[ -e "$alt" ]] && { echo "${alt:a:P}"; return 0; }
-    return 1
+    fs.dotfiles.path "assets/$type/$path"
 }
 
 # Symlink a config file or directory from assets/configs/
@@ -57,8 +55,8 @@ config.hydrate() {
         local -a args=(--missing-key=zero -f "$tpl" -c "config=file://${tmp}?type=application/json")
 
         if [[ "$tpl_in" == */* ]]; then
-            local base="$DOTFILES/assets/templates/${tpl_in%%/*}"
-            [[ -d "$base/partials" ]] && args+=(--template "tpls=$base/partials/")
+            local base=$(fs.dotfiles.path "assets/templates/${tpl_in%%/*}")
+            [[ -n "$base" && -d "$base/partials" ]] && args+=(--template "tpls=$base/partials/")
         fi
 
         if [[ -n "$opts[--output]" ]]; then
@@ -103,4 +101,27 @@ config.markers.replace() {
         done
         print -rl -- "${new_lines[@]}" > "$file"
     fi
+}
+
+# High-level application configuration helper
+app.config() {
+    # Usage: app.config <src-relative-to-assets> <dst-absolute> [chmod-mode]
+    local src="$1" dst="$2" mode="${3:-600}"
+    [[ -z "$src" || -z "$dst" ]] && { echo "Usage: app.config <src> <dst> [mode]" >&2; return 1; }
+
+    if [[ "$src" == *.tmpl ]]; then
+        config.hydrate "$src" --output "$dst"
+    else
+        config.symlink "$src" "$dst"
+    fi
+
+    # Set permissions if provided
+    chmod "$mode" "$dst"
+}
+
+# Helper to register an application setup function
+app.setup() {
+    # Usage: app.setup <app-name-or-event> <setup-func> [event-type]
+    local app="$1" func="$2" event="${3:-dotfiles.setup}"
+    events.add "$event" "$func"
 }
