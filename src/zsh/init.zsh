@@ -1,4 +1,4 @@
-export DOTFILES="${0:A:h:h:h}"
+[[ -z "$DOTFILES" ]] && export DOTFILES="${0:A:h:h:h}"
 
 _zsh.init() {
     setopt null_glob globstarshort

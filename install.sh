@@ -193,8 +193,8 @@ echo "=============================================="
 cd "$DOTFILES_INSTALL_DIR"
 export DOTFILES="$DOTFILES_INSTALL_DIR"
 
-# Source pkg.zsh and run staged installation
-zsh -c "source src/zsh/functions/pkg.zsh && pkg.install_all"
+# Source all functions (including fs.zsh) then run staged installation
+zsh -c "source src/zsh/init.zsh && pkg.install_all"
 
 # 5. Hand off to internal Zsh configuration
 echo ""

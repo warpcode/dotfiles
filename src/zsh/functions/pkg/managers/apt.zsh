@@ -11,7 +11,7 @@ pkg.managers.apt.enabled() {
 pkg.managers.apt.check() {
     pkg.managers.apt.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[$rid:apt]:-${pkg_recipes[$rid:package]}} )
+    local -a pkgs=( ${=pkg_recipes[${rid}:apt]:-${pkg_recipes[${rid}:package]}} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg
@@ -34,7 +34,7 @@ pkg.managers.apt.cleanup() {
 pkg.managers.apt.search() {
     pkg.managers.apt.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[$rid:apt]:-${pkg_recipes[$rid:package]}} )
+    local -a pkgs=( ${=pkg_recipes[${rid}:apt]:-${pkg_recipes[${rid}:package]}} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg
@@ -74,7 +74,7 @@ pkg.managers.apt.setup_repos() {
     local arch=$(dpkg --print-architecture 2>/dev/null || echo amd64)
     local distro=$(lsb_release -is 2>/dev/null | tr '[:upper:]' '[:lower:]' || echo debian)
 
-    typeset -A seen_keys
+    typeset -A seen_keys keyring_map
     for key in ${(k)pkg_recipes}; do
         [[ "$key" == *":apt_key" ]] || continue
         val="${pkg_recipes[$key]}"
@@ -84,16 +84,43 @@ pkg.managers.apt.setup_repos() {
         key_url="${val%%|*}" keyring_name="${val#*|}"
         keyring_path="/etc/apt/keyrings/$keyring_name"
         
-        key_url="${key_url//%CODENAME%/$codename}"
-        key_url="${key_url//%ARCH%/$arch}"
-        key_url="${key_url//%DISTRO%/$distro}"
-        key_url="${key_url//%KEYRING%/$keyring_path}"
+        key_url="${key_url//\%CODENAME\%/$codename}"
+        key_url="${key_url//\%ARCH\%/$arch}"
+        key_url="${key_url//\%DISTRO\%/$distro}"
+        key_url="${key_url//\%KEYRING\%/$keyring_path}"
 
         sudo install -dm 755 /etc/apt/keyrings 2>/dev/null
-        if [[ ! -f "$keyring_path" ]]; then
+
+        local gpg_path="${keyring_path%.*}.gpg"
+        if [[ -f "$gpg_path" ]]; then
+            keyring_path="$gpg_path"
+        elif [[ -f "$keyring_path" ]]; then
+            if head -1 "$keyring_path" 2>/dev/null | grep -q "BEGIN PGP"; then
+                sudo gpg --dearmor -o "$gpg_path" "$keyring_path" 2>/dev/null && {
+                    sudo rm -f "$keyring_path"
+                    sudo chmod a+r "$gpg_path"
+                    keyring_path="$gpg_path"
+                    changed=1
+                }
+            else
+                sudo chmod a+r "$keyring_path"
+            fi
+        else
             echo "   Adding GPG key: $keyring_name"
-            sudo curl -fsSL "$key_url" -o "$keyring_path" 2>/dev/null && { sudo chmod a+r "$keyring_path"; changed=1; }
+            sudo curl -fsSL "$key_url" -o "$keyring_path" 2>/dev/null || continue
+            if head -1 "$keyring_path" 2>/dev/null | grep -q "BEGIN PGP"; then
+                sudo gpg --dearmor -o "$gpg_path" "$keyring_path" 2>/dev/null && {
+                    sudo rm -f "$keyring_path"
+                    sudo chmod a+r "$gpg_path"
+                    keyring_path="$gpg_path"
+                    changed=1
+                }
+            else
+                sudo chmod a+r "$keyring_path"
+                changed=1
+            fi
         fi
+        keyring_map[$keyring_name]="$keyring_path"
     done
 
     typeset -A seen_repos
@@ -104,12 +131,12 @@ pkg.managers.apt.setup_repos() {
         seen_repos[$val]=1
         pkg_name="${repo_key%:apt_repo}"
         keyring_name="${val%%|*}" repo_line="${val#*|}"
-        keyring_path="/etc/apt/keyrings/$keyring_name"
+        keyring_path="${keyring_map[$keyring_name]:-/etc/apt/keyrings/$keyring_name}"
 
-        repo_line="${repo_line//%CODENAME%/$codename}"
-        repo_line="${repo_line//%ARCH%/$arch}"
-        repo_line="${repo_line//%DISTRO%/$distro}"
-        repo_line="${repo_line//%KEYRING%/$keyring_path}"
+        repo_line="${repo_line//\%CODENAME\%/$codename}"
+        repo_line="${repo_line//\%ARCH\%/$arch}"
+        repo_line="${repo_line//\%DISTRO\%/$distro}"
+        repo_line="${repo_line//\%KEYRING\%/$keyring_path}"
 
         local list_file="/etc/apt/sources.list.d/dotfiles-${pkg_name}.list"
         if [[ ! -f "$list_file" ]] || [[ "$(< $list_file)" != "$repo_line" ]]; then

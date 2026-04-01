@@ -29,7 +29,7 @@ pkg.managers.brew_cask.cleanup() {
 pkg.managers.brew_cask.search() {
     pkg.managers.brew_cask.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[$rid:brew_cask]:-${pkg_recipes[$rid:package]}} )
+    local -a pkgs=( ${=pkg_recipes[${rid}:brew_cask]:-${pkg_recipes[${rid}:package]}} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg

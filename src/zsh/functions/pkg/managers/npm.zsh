@@ -12,7 +12,7 @@ pkg.managers.npm.enabled() {
 pkg.managers.npm.check() {
     pkg.managers.npm.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[$rid:npm]:-${pkg_recipes[$rid:package]}} )
+    local -a pkgs=( ${=pkg_recipes[${rid}:npm]:-${pkg_recipes[${rid}:package]}} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg base_pkg
@@ -39,7 +39,7 @@ pkg.managers.npm.exec() {
 pkg.managers.npm.search() {
     pkg.managers.npm.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[$rid:npm]:-${pkg_recipes[$rid:package]}} )
+    local -a pkgs=( ${=pkg_recipes[${rid}:npm]:-${pkg_recipes[${rid}:package]}} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg
