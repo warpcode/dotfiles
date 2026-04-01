@@ -1,5 +1,9 @@
 # snap.zsh - Snap manager implementation
 
+pkg.define_manager "snap" \
+    "name=Snap" \
+    "url=https://snapcraft.io/"
+
 pkg.managers.snap.is_available() {
     (( $+commands[snap] ))
 }

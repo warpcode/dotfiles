@@ -1,5 +1,9 @@
 # dnf.zsh - DNF manager implementation
 
+pkg.define_manager "dnf" \
+    "name=DNF" \
+    "url=https://dnf.readthedocs.io/"
+
 pkg.managers.dnf.is_available() {
     (( $+commands[dnf] ))
 }

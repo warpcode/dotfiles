@@ -1,5 +1,9 @@
 # pacman.zsh - Pacman manager implementation
 
+pkg.define_manager "pacman" \
+    "name=Pacman" \
+    "url=https://wiki.archlinux.org/title/Pacman"
+
 pkg.managers.pacman.is_available() {
     (( $+commands[pacman] ))
 }

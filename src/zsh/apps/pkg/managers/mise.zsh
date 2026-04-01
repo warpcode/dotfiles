@@ -1,5 +1,9 @@
 # mise.zsh - Mise manager implementation
 
+pkg.define_manager "mise" \
+    "name=Mise" \
+    "url=https://mise.jdx.dev/"
+
 pkg.managers.mise.is_available() {
     (( $+commands[mise] ))
 }
