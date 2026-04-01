@@ -10,7 +10,7 @@ pkg.define() {
     local pair k v m
     for pair in "$@"; do
         k="${pair%%=*}" v="${pair#*=}"
-        pkg_recipes[$rid:$k]="$v"
+        pkg_recipes[${rid}:${k}]="$v"
         [[ "$k" == managers ]] && for m in ${=v}; do
             (( ${PKG_MANAGER_PRIORITY[(Ie)$m]} )) || PKG_MANAGER_PRIORITY+=($m)
         done
@@ -63,13 +63,13 @@ pkg.recipe_action() {
     pkg.is_loaded "$rid" || return 1
 
     # 1. Resolve Dependencies
-    for dep in ${=pkg_recipes[$rid:deps]}; do
+    for dep in ${=pkg_recipes[${rid}:deps]}; do
         pkg.is_satisfied "$dep" || { res="defer"; break; }
     done
 
     # 2. Check Managers
     if [[ -z "$res" ]]; then
-        local -a managers=( ${=pkg_recipes[$rid:managers]:-"${PKG_MANAGER_PRIORITY[@]}"} )
+        local -a managers=( ${=pkg_recipes[${rid}:managers]:-"${PKG_MANAGER_PRIORITY[@]}"} )
         local -a valid=()
         for m in "${managers[@]}"; do
             (( $+functions[pkg.managers.$m.enabled] )) || continue
@@ -109,13 +109,13 @@ pkg.status() {
 
 pkg.recipe_managers() {
     local rid="${1//-/_}"
-    echo "${pkg_recipes[$rid:managers]:-${PKG_MANAGER_PRIORITY[*]}}"
+    echo "${pkg_recipes[${rid}:managers]:-${PKG_MANAGER_PRIORITY[*]}}"
 }
 
 pkg.recipe_packages() {
     local rid="${1//-/_}" pkg
-    [[ -n "$2" ]] && pkg="${pkg_recipes[$rid:$2]}"
-    echo "${pkg:-${pkg_recipes[$rid:package]}}"
+    [[ -n "$2" ]] && pkg="${pkg_recipes[${rid}:${2}]}"
+    echo "${pkg:-${pkg_recipes[${rid}:package]}}"
 }
 
 pkg.recipes_by_action() {

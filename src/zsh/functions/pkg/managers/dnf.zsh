@@ -11,7 +11,7 @@ pkg.managers.dnf.enabled() {
 pkg.managers.dnf.check() {
     pkg.managers.dnf.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[$rid:dnf]:-${pkg_recipes[$rid:package]}} )
+    local -a pkgs=( ${=pkg_recipes[${rid}:dnf]:-${pkg_recipes[${rid}:package]}} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg
@@ -34,7 +34,7 @@ pkg.managers.dnf.cleanup() {
 pkg.managers.dnf.search() {
     pkg.managers.dnf.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[$rid:dnf]:-${pkg_recipes[$rid:package]}} )
+    local -a pkgs=( ${=pkg_recipes[${rid}:dnf]:-${pkg_recipes[${rid}:package]}} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg

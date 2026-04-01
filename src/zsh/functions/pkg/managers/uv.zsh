@@ -12,7 +12,7 @@ pkg.managers.uv.enabled() {
 pkg.managers.uv.check() {
     pkg.managers.uv.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[$rid:uv]:-${pkg_recipes[$rid:package]}} )
+    local -a pkgs=( ${=pkg_recipes[${rid}:uv]:-${pkg_recipes[${rid}:package]}} )
     (( $#pkgs == 0 )) && return 1
 
     local installed_raw=$(uv tool list 2>/dev/null)
@@ -29,13 +29,13 @@ pkg.managers.uv.update() { return 0; }
 
 pkg.managers.uv.cleanup() {
     pkg.managers.uv.is_available || return 0
-    uv cache clean
+    uv cache clean --force 2>/dev/null
 }
 
 pkg.managers.uv.search() {
     pkg.managers.uv.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[$rid:uv]:-${pkg_recipes[$rid:package]}} )
+    local -a pkgs=( ${=pkg_recipes[${rid}:uv]:-${pkg_recipes[${rid}:package]}} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg

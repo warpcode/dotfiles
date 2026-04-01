@@ -12,7 +12,7 @@ pkg.managers.flatpak.enabled() {
 pkg.managers.flatpak.check() {
     pkg.managers.flatpak.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[$rid:flatpak]:-${pkg_recipes[$rid:package]}} )
+    local -a pkgs=( ${=pkg_recipes[${rid}:flatpak]:-${pkg_recipes[${rid}:package]}} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg
@@ -51,7 +51,7 @@ pkg.managers.flatpak.setup_repos() {
 pkg.managers.flatpak.search() {
     pkg.managers.flatpak.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[$rid:flatpak]:-${pkg_recipes[$rid:package]}} )
+    local -a pkgs=( ${=pkg_recipes[${rid}:flatpak]:-${pkg_recipes[${rid}:package]}} )
     (( $#pkgs == 0 )) && return 1
 
     local all_apps=$(flatpak remote-ls --cached --app flathub --columns=application 2>/dev/null)

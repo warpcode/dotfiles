@@ -14,7 +14,7 @@ pkg.managers.mise.enabled() {
 pkg.managers.mise.check() {
     pkg.managers.mise.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[$rid:mise]:-${pkg_recipes[$rid:package]}} )
+    local -a pkgs=( ${=pkg_recipes[${rid}:mise]:-${pkg_recipes[${rid}:package]}} )
     (( $#pkgs == 0 )) && return 1
 
     local installed_raw=$(mise ls --global --no-header 2>/dev/null | grep -v "(missing)")
@@ -53,7 +53,7 @@ pkg.managers.mise.upgrade() {
 
 pkg.managers.mise.cleanup() {
     pkg.managers.mise.is_available || return 0
-    mise prune
+    mise prune -y 2>/dev/null
 }
 
 pkg.managers.mise.exec() {
@@ -65,7 +65,7 @@ pkg.managers.mise.exec() {
 pkg.managers.mise.search() {
     pkg.managers.mise.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[$rid:mise]:-${pkg_recipes[$rid:package]}} )
+    local -a pkgs=( ${=pkg_recipes[${rid}:mise]:-${pkg_recipes[${rid}:package]}} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg base_pkg

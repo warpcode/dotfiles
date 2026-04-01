@@ -11,7 +11,7 @@ pkg.managers.brew.enabled() {
 pkg.managers.brew.check() {
     pkg.managers.brew.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[$rid:brew]:-${pkg_recipes[$rid:package]}} )
+    local -a pkgs=( ${=pkg_recipes[${rid}:brew]:-${pkg_recipes[${rid}:package]}} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg pkg_name
@@ -35,7 +35,7 @@ pkg.managers.brew.cleanup() {
 pkg.managers.brew.search() {
     pkg.managers.brew.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[$rid:brew]:-${pkg_recipes[$rid:package]}} )
+    local -a pkgs=( ${=pkg_recipes[${rid}:brew]:-${pkg_recipes[${rid}:package]}} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg

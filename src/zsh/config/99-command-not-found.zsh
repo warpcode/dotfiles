@@ -6,7 +6,7 @@ function command_not_found_handler() {
         # 1. Attempt to blindly reload paths/rehash first
         rehash
         if ! command -v "$cmd" >/dev/null 2>&1; then
-             paths.reload
+             path.reload
         fi
 
         # If found after reload, run it immediately!

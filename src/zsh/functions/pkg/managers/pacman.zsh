@@ -11,7 +11,7 @@ pkg.managers.pacman.enabled() {
 pkg.managers.pacman.check() {
     pkg.managers.pacman.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[$rid:pacman]:-${pkg_recipes[$rid:package]}} )
+    local -a pkgs=( ${=pkg_recipes[${rid}:pacman]:-${pkg_recipes[${rid}:package]}} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg
@@ -34,7 +34,7 @@ pkg.managers.pacman.cleanup() {
 pkg.managers.pacman.search() {
     pkg.managers.pacman.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[$rid:pacman]:-${pkg_recipes[$rid:package]}} )
+    local -a pkgs=( ${=pkg_recipes[${rid}:pacman]:-${pkg_recipes[${rid}:package]}} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg
