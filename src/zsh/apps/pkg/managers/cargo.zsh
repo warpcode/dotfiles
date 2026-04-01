@@ -1,5 +1,9 @@
 # cargo.zsh - Cargo manager implementation
 
+pkg.define_manager "cargo" \
+    "name=Cargo" \
+    "url=https://doc.rust-lang.org/cargo/"
+
 pkg.managers.cargo.is_available() {
     (( $+commands[cargo] ))
 }

@@ -1,5 +1,9 @@
 # uv.zsh - UV manager implementation
 
+pkg.define_manager "uv" \
+    "name=UV" \
+    "url=https://github.com/astral-sh/uv"
+
 pkg.managers.uv.is_available() {
     (( $+commands[uv] ))
 }

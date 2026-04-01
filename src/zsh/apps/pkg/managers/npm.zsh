@@ -1,5 +1,9 @@
 # npm.zsh - NPM manager implementation
 
+pkg.define_manager "npm" \
+    "name=NPM" \
+    "url=https://www.npmjs.com/"
+
 pkg.managers.npm.is_available() {
     (( $+commands[npm] ))
 }

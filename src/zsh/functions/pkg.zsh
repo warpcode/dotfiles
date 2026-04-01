@@ -1,7 +1,21 @@
 # pkg.zsh - Staged Package Installer
 
-typeset -gA pkg_recipes pkg_action pkg_exists
+typeset -gA pkg_recipes pkg_action pkg_exists pkg_managers
 typeset -ga pkg_list PKG_MANAGER_PRIORITY=(flatpak mise snap uv npm cargo brew brew_cask apt dnf pacman)
+
+# --- Manager Definition ---
+pkg.define_manager() {
+    local mid="${1//-/_}"; shift
+    pkg_managers[$mid]=1
+    # Add to end of priority list if not already present
+    (( ${PKG_MANAGER_PRIORITY[(Ie)$mid]} )) || PKG_MANAGER_PRIORITY+=($mid)
+
+    local pair k v
+    for pair in "$@"; do
+        k="${pair%%=*}" v="${pair#*=}"
+        pkg_managers[$mid:$k]="$v"
+    done
+}
 
 # --- Recipe Definition ---
 pkg.define() {
@@ -17,10 +31,6 @@ pkg.define() {
     done
 }
 
-pkg.load_recipes() {
-    local base; base=$(fs.dotfiles.path "src/zsh/recipes") || return 1
-    local f; for f in "$base/"**/*.zsh(N); do source "$f"; done
-}
 
 # --- Action Compilation ---
 pkg.compile_actions() {
@@ -125,7 +135,6 @@ pkg.recipes_by_action() {
 # --- Main Entry Point ---
 pkg.install_all() {
     print -P "%F{blue}🔧 Starting staged installation...%f"
-    pkg.load_recipes
     local pass=0 max=10
     while (( pass++ < max )); do
         pkg.manager_func setup_repos

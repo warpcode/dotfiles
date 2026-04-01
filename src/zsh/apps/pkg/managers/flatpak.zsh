@@ -1,5 +1,9 @@
 # flatpak.zsh - Flatpak manager implementation
 
+pkg.define_manager "flatpak" \
+    "name=Flatpak" \
+    "url=https://flatpak.org/"
+
 pkg.managers.flatpak.is_available() {
     (( $+commands[flatpak] ))
 }

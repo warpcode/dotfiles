@@ -1,5 +1,9 @@
 # brew.zsh - Homebrew manager implementation
 
+pkg.define_manager "brew" \
+    "name=Homebrew" \
+    "url=https://brew.sh"
+
 pkg.managers.brew.is_available() {
     (( $+commands[brew] ))
 }

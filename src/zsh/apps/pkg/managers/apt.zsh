@@ -1,5 +1,9 @@
 # apt.zsh - APT manager implementation
 
+pkg.define_manager "apt" \
+    "name=APT" \
+    "url=https://wiki.debian.org/Apt"
+
 pkg.managers.apt.is_available() {
     (( $+commands[apt-get] ))
 }

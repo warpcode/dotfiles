@@ -1,5 +1,9 @@
 # brew_cask.zsh - Homebrew Cask manager implementation
 
+pkg.define_manager "brew_cask" \
+    "name=Homebrew Cask" \
+    "url=https://formulae.brew.sh/cask/"
+
 pkg.managers.brew_cask.is_available() {
     (( $+commands[brew] ))
 }
