@@ -4,12 +4,12 @@
 ai.provider.define "groq" \
     "name=Groq" \
     "base_url=https://api.groq.com/openai/v1" \
-    "openai_compatible=true"
+    "openai_compatible=true" \
+    "api_key_env=GROQ_API_KEY" \
+    "priority=30"
 
 ai.providers.groq.enabled() {
-    # Personal use
-    [[ "$IS_WORK" == "1" ]] && return 1
-    return 0
+    [[ -n "${GROQ_API_KEY:-}" ]]
 }
 
 ai.providers.groq.credentials() {

@@ -4,13 +4,9 @@
 ai.mcp.define "context7" \
     "type=remote" \
     "url=https://mcp.context7.com/mcp" \
+    "api_key_header=CONTEXT7_API_KEY" \
     "description=Remote context enhancement and documentation search"
 
 ai.mcps.context7.enabled() {
-    [[ -n "$CONTEXT7_API_KEY" ]] || return 1
-    return 0
-}
-
-ai.mcps.context7.config() {
-    echo "headers: { \"CONTEXT7_API_KEY\": \"$CONTEXT7_API_KEY\" }"
+    [[ -n "$CONTEXT7_API_KEY" ]]
 }

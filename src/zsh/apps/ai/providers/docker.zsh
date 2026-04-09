@@ -4,7 +4,8 @@
 ai.provider.define "docker" \
     "name=Docker (Local Inference)" \
     "base_url=http://localhost:12434/engines/llama.cpp/v1" \
-    "openai_compatible=true"
+    "openai_compatible=true" \
+    "priority=60"
 
 ai.providers.docker.enabled() {
     # Check if docker container is up

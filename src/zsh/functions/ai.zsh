@@ -157,17 +157,31 @@ ai.models.free() {
     local tmp_dir=$(mktemp -d)
     for pid in "${enabled_pids[@]}"; do
         (
+            [[ "$(registry.get ai_provider "$pid" openai_compatible)" == "true" ]] || exit 0
             local free_func="ai.providers.$pid.models.free"
-            if (( $+functions[$free_func] )); then
-                local raw_models=$("$free_func" 2>/dev/null)
-                local clean_models=$(echo "$raw_models" | jq -c -M . 2>/dev/null)
-                if [[ -z "$clean_models" || "$clean_models" == "null" ]]; then
-                    clean_models="[]"
-                fi
-                print -r -- "$clean_models" > "$tmp_dir/$pid.json"
-            else
-                echo "[]" > "$tmp_dir/$pid.json"
-            fi
+            (( $+functions[$free_func] )) || exit 0
+
+            local raw raw_models name base_url api_key_env
+            raw=$("$free_func" 2>/dev/null)
+            raw_models=$(echo "$raw" | jq -c -M . 2>/dev/null)
+            [[ -z "$raw_models" || "$raw_models" == "null" || "$raw_models" == "[]" ]] && exit 0
+
+            name="$(registry.get ai_provider "$pid" name)"
+            base_url="$(registry.get ai_provider "$pid" base_url)"
+            api_key_env="$(registry.get ai_provider "$pid" api_key_env)"
+
+            jq -n \
+                --arg pid "$pid" --arg name "$name" \
+                --arg base_url "$base_url" --arg key_env "$api_key_env" \
+                --argjson models "$raw_models" \
+                '{
+                    ($pid): {
+                        name: $name,
+                        npm: "@ai-sdk/openai-compatible",
+                        options: ({baseURL: $base_url} + (if $key_env != "" then {apiKey: ("{env:" + $key_env + "}")} else {} end)),
+                        models: (reduce $models[] as $m ({}; .[$m.id] = {name: ($m.name // $m.id)}))
+                    }
+                }' > "$tmp_dir/$pid.json"
         ) &
     done
     wait
@@ -176,7 +190,7 @@ ai.models.free() {
 
     local output
     if ls "$tmp_dir"/*.json >/dev/null 2>&1; then
-        output=$(jq -n -c 'reduce inputs as $i ({}; . + { (input_filename | sub(".*/"; "") | sub(".json$"; "")): $i })' "$tmp_dir"/*.json 2>/dev/null)
+        output=$(jq -n -c 'reduce inputs as $i ({}; . + $i)' "$tmp_dir"/*.json 2>/dev/null)
     fi
     rm -rf "$tmp_dir"
 
@@ -185,6 +199,32 @@ ai.models.free() {
     else
         echo "{}"
     fi
+}
+
+ai.mcps() {
+    local rid output='{}'
+    for rid in $(registry.list ai_mcp_recipe); do
+        ai.mcp.is_enabled "$rid" || continue
+
+        local type cmd url header_env block
+        type="$(ai.mcp.get "$rid" type)"
+        cmd="$(ai.mcp.get "$rid" command)"
+        url="$(ai.mcp.get "$rid" url)"
+        header_env="$(ai.mcp.get "$rid" api_key_header)"
+
+        if [[ "$type" == "local" ]]; then
+            block="$(jq -n --arg t "$type" --arg c "$cmd" '{type: $t, command: ($c | split(" "))}')"
+        else
+            block="$(jq -n --arg t "$type" --arg u "$url" '{type: $t, url: $u}')"
+        fi
+
+        [[ -n "$header_env" ]] && block="$(jq -n \
+            --argjson b "$block" --arg k "$header_env" \
+            '$b + {headers: {($k): ("{env:" + $k + "}")}}')"
+
+        output="$(jq -n --argjson m "$output" --arg k "$rid" --argjson v "$block" '$m + {($k): $v}')"
+    done
+    echo "$output"
 }
 
 # ai.chat <provider>/<model> [prompt]
