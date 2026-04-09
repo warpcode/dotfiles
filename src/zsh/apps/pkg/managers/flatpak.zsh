@@ -1,6 +1,6 @@
 # flatpak.zsh - Flatpak manager implementation
 
-pkg.define_manager "flatpak" \
+pkg.manager.define "flatpak" \
     "name=Flatpak" \
     "url=https://flatpak.org/"
 
@@ -10,13 +10,13 @@ pkg.managers.flatpak.is_available() {
 
 pkg.managers.flatpak.enabled() {
     pkg.managers.flatpak.is_available && return 0
-    pkg.action_is_enabled "$(pkg.recipe_action "flatpak")"
+    pkg.recipe.action_is_enabled "$(pkg.recipe.action "flatpak")"
 }
 
 pkg.managers.flatpak.check() {
     pkg.managers.flatpak.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[${rid}:flatpak]:-${pkg_recipes[${rid}:package]}} )
+    local -a pkgs=( ${=$(pkg.recipe.get "$rid" flatpak):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg
@@ -55,7 +55,7 @@ pkg.managers.flatpak.setup_repos() {
 pkg.managers.flatpak.search() {
     pkg.managers.flatpak.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[${rid}:flatpak]:-${pkg_recipes[${rid}:package]}} )
+    local -a pkgs=( ${=$(pkg.recipe.get "$rid" flatpak):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
     local all_apps=$(flatpak remote-ls --cached --app flathub --columns=application 2>/dev/null)
@@ -71,8 +71,8 @@ pkg.managers.flatpak.search() {
 pkg.managers.flatpak.install() {
     pkg.managers.flatpak.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipes_by_action "install:flatpak"); do
-        local p=$(pkg.recipe_packages "$rid" "flatpak")
+    for rid in $(pkg.recipe.by_action "install:flatpak"); do
+        local p=$(pkg.recipe.packages "$rid" "flatpak")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0
@@ -82,8 +82,8 @@ pkg.managers.flatpak.install() {
 pkg.managers.flatpak.upgrade() {
     pkg.managers.flatpak.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipes_by_action "upgrade:flatpak"); do
-        local p=$(pkg.recipe_packages "$rid" "flatpak")
+    for rid in $(pkg.recipe.by_action "upgrade:flatpak"); do
+        local p=$(pkg.recipe.packages "$rid" "flatpak")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0

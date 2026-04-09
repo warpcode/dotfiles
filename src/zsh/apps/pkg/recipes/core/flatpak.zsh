@@ -1,3 +1,3 @@
-pkg.define flatpak \
+pkg.recipe.define flatpak \
     package="flatpak" \
     managers="apt dnf pacman"

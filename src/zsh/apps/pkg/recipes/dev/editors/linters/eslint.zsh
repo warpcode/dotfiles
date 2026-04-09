@@ -1,3 +1,3 @@
-pkg.define eslint \
+pkg.recipe.define eslint \
     package="eslint" \
     managers="npm"

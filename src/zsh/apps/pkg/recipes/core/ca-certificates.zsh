@@ -1,3 +1,3 @@
-pkg.define ca-certificates \
+pkg.recipe.define ca-certificates \
     package="ca-certificates" \
     managers="apt dnf pacman"

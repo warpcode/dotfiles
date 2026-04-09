@@ -1,6 +1,6 @@
 # snap.zsh - Snap manager implementation
 
-pkg.define_manager "snap" \
+pkg.manager.define "snap" \
     "name=Snap" \
     "url=https://snapcraft.io/"
 
@@ -15,7 +15,7 @@ pkg.managers.snap.enabled() {
 pkg.managers.snap.check() {
     pkg.managers.snap.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[${rid}:snap]:-${pkg_recipes[${rid}:package]}} )
+    local -a pkgs=( ${=$(pkg.recipe.get "$rid" snap):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg pkg_name
@@ -32,7 +32,7 @@ pkg.managers.snap.cleanup() { return 0; }
 pkg.managers.snap.search() {
     pkg.managers.snap.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[${rid}:snap]:-${pkg_recipes[${rid}:package]}} )
+    local -a pkgs=( ${=$(pkg.recipe.get "$rid" snap):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg pkg_name
@@ -46,8 +46,8 @@ pkg.managers.snap.search() {
 pkg.managers.snap.install() {
     pkg.managers.snap.is_available || return 0
     local rid pkg pkg_name
-    for rid in $(pkg.recipes_by_action "install:snap"); do
-        pkg=$(pkg.recipe_packages "$rid" "snap")
+    for rid in $(pkg.recipe.by_action "install:snap"); do
+        pkg=$(pkg.recipe.packages "$rid" "snap")
         [[ -z "$pkg" ]] && continue
         if [[ "$pkg" == *" --classic"* ]]; then
             pkg_name="${pkg%% --classic*}"
@@ -61,8 +61,8 @@ pkg.managers.snap.install() {
 pkg.managers.snap.upgrade() {
     pkg.managers.snap.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipes_by_action "upgrade:snap"); do
-        local p=$(pkg.recipe_packages "$rid" "snap")
+    for rid in $(pkg.recipe.by_action "upgrade:snap"); do
+        local p=$(pkg.recipe.packages "$rid" "snap")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0

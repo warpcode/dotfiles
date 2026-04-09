@@ -1,1 +1,0 @@
-export CONTEXT7_API_KEY="${CONTEXT7_API_KEY:-}"

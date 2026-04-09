@@ -1,3 +1,3 @@
-pkg.define node \
+pkg.recipe.define node \
     package="node" \
     managers="mise"

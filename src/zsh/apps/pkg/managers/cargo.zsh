@@ -1,6 +1,6 @@
 # cargo.zsh - Cargo manager implementation
 
-pkg.define_manager "cargo" \
+pkg.manager.define "cargo" \
     "name=Cargo" \
     "url=https://doc.rust-lang.org/cargo/"
 
@@ -10,13 +10,13 @@ pkg.managers.cargo.is_available() {
 
 pkg.managers.cargo.enabled() {
     pkg.managers.cargo.is_available && return 0
-    pkg.action_is_enabled "$(pkg.recipe_action "cargo")"
+    pkg.recipe.action_is_enabled "$(pkg.recipe.action "cargo")"
 }
 
 pkg.managers.cargo.check() {
     pkg.managers.cargo.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[${rid}:cargo]:-${pkg_recipes[${rid}:package]}} )
+    local -a pkgs=( ${=$(pkg.recipe.get "$rid" cargo):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg
@@ -32,7 +32,7 @@ pkg.managers.cargo.cleanup() { return 0; }
 pkg.managers.cargo.search() {
     pkg.managers.cargo.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[${rid}:cargo]:-${pkg_recipes[${rid}:package]}} )
+    local -a pkgs=( ${=$(pkg.recipe.get "$rid" cargo):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg
@@ -45,8 +45,8 @@ pkg.managers.cargo.search() {
 pkg.managers.cargo.install() {
     pkg.managers.cargo.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipes_by_action "install:cargo"); do
-        local p=$(pkg.recipe_packages "$rid" "cargo")
+    for rid in $(pkg.recipe.by_action "install:cargo"); do
+        local p=$(pkg.recipe.packages "$rid" "cargo")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0

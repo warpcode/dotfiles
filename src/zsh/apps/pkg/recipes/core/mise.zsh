@@ -1,4 +1,4 @@
-pkg.define mise \
+pkg.recipe.define mise \
     package="mise" \
     managers="apt dnf brew pacman" \
     apt_key="https://mise.jdx.dev/gpg-key.pub|mise-archive-keyring.asc" \

@@ -1,6 +1,6 @@
 # brew.zsh - Homebrew manager implementation
 
-pkg.define_manager "brew" \
+pkg.manager.define "brew" \
     "name=Homebrew" \
     "url=https://brew.sh"
 
@@ -15,7 +15,7 @@ pkg.managers.brew.enabled() {
 pkg.managers.brew.check() {
     pkg.managers.brew.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[${rid}:brew]:-${pkg_recipes[${rid}:package]}} )
+    local -a pkgs=( ${=$(pkg.recipe.get "$rid" brew):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg pkg_name
@@ -39,7 +39,7 @@ pkg.managers.brew.cleanup() {
 pkg.managers.brew.search() {
     pkg.managers.brew.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[${rid}:brew]:-${pkg_recipes[${rid}:package]}} )
+    local -a pkgs=( ${=$(pkg.recipe.get "$rid" brew):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg
@@ -52,8 +52,8 @@ pkg.managers.brew.search() {
 pkg.managers.brew.install() {
     pkg.managers.brew.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipes_by_action "install:brew"); do
-        local p=$(pkg.recipe_packages "$rid" "brew")
+    for rid in $(pkg.recipe.by_action "install:brew"); do
+        local p=$(pkg.recipe.packages "$rid" "brew")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0
@@ -63,8 +63,8 @@ pkg.managers.brew.install() {
 pkg.managers.brew.upgrade() {
     pkg.managers.brew.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipes_by_action "upgrade:brew"); do
-        local p=$(pkg.recipe_packages "$rid" "brew")
+    for rid in $(pkg.recipe.by_action "upgrade:brew"); do
+        local p=$(pkg.recipe.packages "$rid" "brew")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0
@@ -73,11 +73,11 @@ pkg.managers.brew.upgrade() {
 
 pkg.managers.brew.setup_repos() {
     pkg.managers.brew.is_available || return 0
-    local changed=0 tap_key val t
+    local changed=0 rid val t
     typeset -A seen_taps
-    for tap_key in ${(k)pkg_recipes}; do
-        [[ "$tap_key" == *":brew_tap" ]] || continue
-        val="${pkg_recipes[$tap_key]}"
+    for rid in $(registry.list pkg); do
+        val="$(pkg.recipe.get "$rid" "brew_tap")"
+        [[ -z "$val" ]] && continue
         for t in ${=val}; do
             [[ -n "${seen_taps[$t]}" ]] && continue
             seen_taps[$t]=1

@@ -1,4 +1,4 @@
-pkg.define lazygit \
+pkg.recipe.define lazygit \
     package="lazygit" \
     managers="brew dnf" \
     brew="jesseduffield/lazygit/lazygit" \

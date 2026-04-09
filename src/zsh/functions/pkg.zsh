@@ -1,44 +1,41 @@
 # pkg.zsh - Staged Package Installer
 
-typeset -gA pkg_recipes pkg_action pkg_exists pkg_managers
-typeset -ga pkg_list PKG_MANAGER_PRIORITY=(flatpak mise snap uv npm cargo brew brew_cask apt dnf pacman)
+typeset -gA pkg_action
+typeset -ga PKG_MANAGER_PRIORITY=(flatpak mise snap uv npm cargo brew brew_cask apt dnf pacman)
 
 # --- Manager Definition ---
-pkg.define_manager() {
+pkg.manager.define() {
     local mid="${1//-/_}"; shift
-    pkg_managers[$mid]=1
-    # Add to end of priority list if not already present
+    registry.define "pkg_manager" "$mid" "$@"
     (( ${PKG_MANAGER_PRIORITY[(Ie)$mid]} )) || PKG_MANAGER_PRIORITY+=($mid)
-
-    local pair k v
-    for pair in "$@"; do
-        k="${pair%%=*}" v="${pair#*=}"
-        pkg_managers[$mid:$k]="$v"
-    done
 }
 
 # --- Recipe Definition ---
-pkg.define() {
+pkg.recipe.define() {
     local rid="${1//-/_}"; shift
-    (( ! ${pkg_exists[$rid]:-0} )) && { pkg_list+=($rid); pkg_exists[$rid]=1 }
+    registry.define "pkg" "$rid" "$@"
     local pair k v m
     for pair in "$@"; do
+        [[ "$pair" == *=* ]] || continue
         k="${pair%%=*}" v="${pair#*=}"
-        pkg_recipes[${rid}:${k}]="$v"
         [[ "$k" == managers ]] && for m in ${=v}; do
             (( ${PKG_MANAGER_PRIORITY[(Ie)$m]} )) || PKG_MANAGER_PRIORITY+=($m)
         done
     done
 }
 
+# --- Registry Accessors ---
+pkg.recipe.get() { registry.get "pkg" "$1" "$2"; }
+pkg.recipe.exists() { registry.exists "pkg" "$1"; }
 
 # --- Action Compilation ---
 pkg.compile_actions() {
-    local rid c=0 total=${#pkg_list}
+    local rid c=0 total=$(registry.list pkg 2>/dev/null | wc -l)
     pkg_action=()
-    for rid in "${pkg_list[@]}"; do
-        print -Pn "\r🔍 Compiling: $((++c))/$total ($rid)..." >&2
-        pkg_action[$rid]=$(pkg.recipe_action "$rid")
+    local id
+    for id in $(registry.list pkg); do
+        print -Pn "\r🔍 Compiling: $((++c))/$total ($id)..." >&2
+        pkg_action[$id]=$(pkg.recipe.action "$id")
     done
     print -Pn "\r\033[K" >&2
 }
@@ -53,33 +50,23 @@ pkg.manager_func() {
 }
 
 # --- Helper Logic ---
-pkg.is_loaded() { (( ${pkg_exists[${1//-/_}]:-0} )) }
-pkg.action_is_enabled() { [[ "$1" == (install*|upgrade*|defer) ]] }
-pkg.is_satisfied() { [[ "$(pkg.recipe_action "$1")" == (skip|upgrade:*) ]] }
-
-pkg.installable() {
-    local m; for m in "${PKG_MANAGER_PRIORITY[@]}"; do
-        (( $+functions[pkg.managers.$m.is_available] )) || continue
-        "pkg.managers.$m.is_available" || continue
-        (( $+functions[pkg.managers.$m.search] )) && "pkg.managers.$m.search" "$1" && return 0
-    done
-    return 1
-}
+pkg.recipe.action_is_enabled() { [[ "$1" == (install*|upgrade*|defer) ]] }
+pkg.recipe.is_satisfied() { [[ "$(pkg.recipe.action "$1")" == (skip|upgrade:*) ]] }
 
 # --- Core Action Resolver ---
-pkg.recipe_action() {
+pkg.recipe.action() {
     local rid="${1//-/_}" m dep any_enabled=0 res
     [[ -n "${pkg_action[$rid]}" ]] && { echo "${pkg_action[$rid]}"; return 0; }
-    pkg.is_loaded "$rid" || return 1
+    pkg.recipe.exists "$rid" || return 1
 
     # 1. Resolve Dependencies
-    for dep in ${=pkg_recipes[${rid}:deps]}; do
-        pkg.is_satisfied "$dep" || { res="defer"; break; }
+    for dep in ${=$(pkg.recipe.get "$rid" deps)}; do
+        pkg.recipe.is_satisfied "$dep" || { res="defer"; break; }
     done
 
     # 2. Check Managers
     if [[ -z "$res" ]]; then
-        local -a managers=( ${=pkg_recipes[${rid}:managers]:-"${PKG_MANAGER_PRIORITY[@]}"} )
+        local -a managers=( ${=$(pkg.recipe.get "$rid" managers):-${PKG_MANAGER_PRIORITY[@]}} )
         local -a valid=()
         for m in "${managers[@]}"; do
             (( $+functions[pkg.managers.$m.enabled] )) || continue
@@ -111,25 +98,17 @@ pkg.recipe_action() {
 }
 
 # --- Utils ---
-pkg.status() {
-    local rid="${1//-/_}"
-    pkg.is_loaded "$rid" || return 1
-    pkg.is_satisfied "$rid"
-}
-
-pkg.recipe_managers() {
-    local rid="${1//-/_}"
-    echo "${pkg_recipes[${rid}:managers]:-${PKG_MANAGER_PRIORITY[*]}}"
-}
-
-pkg.recipe_packages() {
+pkg.recipe.packages() {
     local rid="${1//-/_}" pkg
-    [[ -n "$2" ]] && pkg="${pkg_recipes[${rid}:${2}]}"
-    echo "${pkg:-${pkg_recipes[${rid}:package]}}"
+    [[ -n "$2" ]] && pkg=$(pkg.recipe.get "$rid" "$2")
+    echo "${pkg:-$(pkg.recipe.get "$rid" package)}"
 }
 
-pkg.recipes_by_action() {
-    local rid target=$1; for rid in "${pkg_list[@]}"; do [[ "${pkg_action[$rid]}" == "$target" ]] && echo "$rid"; done
+pkg.recipe.by_action() {
+    local rid target=$1
+    for rid in ${(k)pkg_action[@]}; do
+        [[ "${pkg_action[$rid]}" == "$target" ]] && echo "$rid"
+    done
 }
 
 # --- Main Entry Point ---
@@ -142,7 +121,7 @@ pkg.install_all() {
 
         local -a pending=()
         for m in "${PKG_MANAGER_PRIORITY[@]}"; do
-            local r=$(pkg.recipes_by_action "install:$m")
+            local r=$(pkg.recipe.by_action "install:$m")
             [[ -n "$r" ]] && pending+=("install:$m -> $r")
         done
 

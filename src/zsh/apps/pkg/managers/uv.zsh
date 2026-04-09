@@ -1,6 +1,6 @@
 # uv.zsh - UV manager implementation
 
-pkg.define_manager "uv" \
+pkg.manager.define "uv" \
     "name=UV" \
     "url=https://github.com/astral-sh/uv"
 
@@ -10,13 +10,13 @@ pkg.managers.uv.is_available() {
 
 pkg.managers.uv.enabled() {
     pkg.managers.uv.is_available && return 0
-    pkg.action_is_enabled "$(pkg.recipe_action "uv")"
+    pkg.recipe.action_is_enabled "$(pkg.recipe.action "uv")"
 }
 
 pkg.managers.uv.check() {
     pkg.managers.uv.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[${rid}:uv]:-${pkg_recipes[${rid}:package]}} )
+    local -a pkgs=( ${=$(pkg.recipe.get "$rid" uv):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
     local installed_raw=$(uv tool list 2>/dev/null)
@@ -39,7 +39,7 @@ pkg.managers.uv.cleanup() {
 pkg.managers.uv.search() {
     pkg.managers.uv.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[${rid}:uv]:-${pkg_recipes[${rid}:package]}} )
+    local -a pkgs=( ${=$(pkg.recipe.get "$rid" uv):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg
@@ -52,8 +52,8 @@ pkg.managers.uv.search() {
 pkg.managers.uv.install() {
     pkg.managers.uv.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipes_by_action "install:uv"); do
-        local p=$(pkg.recipe_packages "$rid" "uv")
+    for rid in $(pkg.recipe.by_action "install:uv"); do
+        local p=$(pkg.recipe.packages "$rid" "uv")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0
@@ -63,8 +63,8 @@ pkg.managers.uv.install() {
 pkg.managers.uv.upgrade() {
     pkg.managers.uv.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipes_by_action "upgrade:uv"); do
-        local p=$(pkg.recipe_packages "$rid" "uv")
+    for rid in $(pkg.recipe.by_action "upgrade:uv"); do
+        local p=$(pkg.recipe.packages "$rid" "uv")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0

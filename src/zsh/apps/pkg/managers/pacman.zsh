@@ -1,6 +1,6 @@
 # pacman.zsh - Pacman manager implementation
 
-pkg.define_manager "pacman" \
+pkg.manager.define "pacman" \
     "name=Pacman" \
     "url=https://wiki.archlinux.org/title/Pacman"
 
@@ -15,7 +15,7 @@ pkg.managers.pacman.enabled() {
 pkg.managers.pacman.check() {
     pkg.managers.pacman.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[${rid}:pacman]:-${pkg_recipes[${rid}:package]}} )
+    local -a pkgs=( ${=$(pkg.recipe.get "$rid" pacman):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg
@@ -38,7 +38,7 @@ pkg.managers.pacman.cleanup() {
 pkg.managers.pacman.search() {
     pkg.managers.pacman.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[${rid}:pacman]:-${pkg_recipes[${rid}:package]}} )
+    local -a pkgs=( ${=$(pkg.recipe.get "$rid" pacman):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg
@@ -51,8 +51,8 @@ pkg.managers.pacman.search() {
 pkg.managers.pacman.install() {
     pkg.managers.pacman.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipes_by_action "install:pacman"); do
-        local p=$(pkg.recipe_packages "$rid" "pacman")
+    for rid in $(pkg.recipe.by_action "install:pacman"); do
+        local p=$(pkg.recipe.packages "$rid" "pacman")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0

@@ -1,6 +1,6 @@
 # npm.zsh - NPM manager implementation
 
-pkg.define_manager "npm" \
+pkg.manager.define "npm" \
     "name=NPM" \
     "url=https://www.npmjs.com/"
 
@@ -10,18 +10,23 @@ pkg.managers.npm.is_available() {
 
 pkg.managers.npm.enabled() {
     pkg.managers.npm.is_available && return 0
-    pkg.action_is_enabled "$(pkg.recipe_action "node")"
+    pkg.recipe.action_is_enabled "$(pkg.recipe.action "node")"
 }
 
 pkg.managers.npm.check() {
     pkg.managers.npm.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[${rid}:npm]:-${pkg_recipes[${rid}:package]}} )
+    local -a pkgs=( ${=$(pkg.recipe.get "$rid" npm):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg base_pkg
     for pkg in "${pkgs[@]}"; do
-        base_pkg="${pkg%@*}"
+        if [[ "$pkg" == @* ]]; then
+            # Scoped package: strip @version only if present after the slash
+            [[ "$pkg" == */*@* ]] && base_pkg="${pkg%@*}" || base_pkg="$pkg"
+        else
+            base_pkg="${pkg%@*}"
+        fi
         npm list -g "$base_pkg" >/dev/null 2>&1 || return 1
     done
     return 0
@@ -43,7 +48,7 @@ pkg.managers.npm.exec() {
 pkg.managers.npm.search() {
     pkg.managers.npm.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[${rid}:npm]:-${pkg_recipes[${rid}:package]}} )
+    local -a pkgs=( ${=$(pkg.recipe.get "$rid" npm):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg
@@ -56,8 +61,8 @@ pkg.managers.npm.search() {
 pkg.managers.npm.install() {
     pkg.managers.npm.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipes_by_action "install:npm"); do
-        local p=$(pkg.recipe_packages "$rid" "npm")
+    for rid in $(pkg.recipe.by_action "install:npm"); do
+        local p=$(pkg.recipe.packages "$rid" "npm")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0

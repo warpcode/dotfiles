@@ -1,4 +1,4 @@
-pkg.define gnupg \
+pkg.recipe.define gnupg \
     package="gpg" \
     managers="apt dnf brew" \
     apt="gnupg2" \

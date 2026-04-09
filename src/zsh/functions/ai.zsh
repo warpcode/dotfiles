@@ -1,159 +1,117 @@
 # AI, MCP & Agent Wrapper System - Core Registries
-# Inspired by pkg.zsh
+# Thin wrappers around registry.zsh
 
-# --- Provider Registry ---
-typeset -gA ai_providers ai_provider_exists
-typeset -ga ai_provider_list
+# --- Generic Provider Executors (Reduces Eval Boilerplate) ---
 
-ai.define_provider() {
-    local pid="${1//-/_}"; shift
-    (( ! ${ai_provider_exists[$pid]:-0} )) && { ai_provider_list+=($pid); ai_provider_exists[$pid]=1 }
-    local pair k v
-    for pair in "$@"; do
-        k="${pair%%=*}" v="${pair#*=}"
-        ai_providers[$pid:$k]="$v"
-    done
+_ai.provider.api_executor() {
+    local pid="$1" api_path="$2"
+    local api_key=$(ai.provider.credentials "$pid")
+    local base_url=$(registry.get "ai_provider" "$pid" "base_url")
+    ai.provider.api.base "$base_url" "$api_path" "$api_key"
 }
 
-ai.provider.load_all() {
-    local base; base=$(fs.dotfiles.path "src/zsh/apps/ai/providers") || return 1
-    local f; for f in "$base/"*.zsh(N); do source "$f"; done
+_ai.provider.models_executor() {
+    local pid="$1"
+    local cached=$(cache.get "ai" "models_${pid}")
+    [[ -n "$cached" ]] && { echo "$cached"; return 0; }
+
+    local result=$(ai.providers.${pid}.api "/models" | jq -c -M '.data')
+    if [[ -n "$result" && "$result" != "null" ]]; then
+        cache.set "ai" "models_${pid}" "$result"
+    fi
+    echo "$result"
 }
+
+# --- Provider ---
+ai.provider.define() {
+    registry.define "ai_provider" "$@"
+    
+    local pid="${1//-/_}"
+    if (( ! $+functions[ai.providers.${pid}.enabled] )); then
+        eval "ai.providers.${pid}.enabled() { return 0 }"
+    fi
+    local is_openai=$(registry.get "ai_provider" "$pid" "openai_compatible")
+    
+    if [[ "$is_openai" == "true" || "$is_openai" == "1" ]]; then
+        if (( ! $+functions[ai.providers.${pid}.api] )); then
+            eval "ai.providers.${pid}.api() { _ai.provider.api_executor '$pid' \"\$1\"; }"
+        fi
+        
+        if (( ! $+functions[ai.providers.${pid}.models] )); then
+            eval "ai.providers.${pid}.models() { _ai.provider.models_executor '$pid'; }"
+        fi
+
+        if (( ! $+functions[ai.providers.${pid}.models.free] )); then
+            eval "ai.providers.${pid}.models.free() { ai.providers.${pid}.models; }"
+        fi
+    fi
+}
+ai.provider.list() { registry.list "ai_provider"; }
 
 ai.provider.is_enabled() {
-    local pid="${1//-/_}"
-    
-    # 1. Check if explicitly disabled/enabled via function
-    local func="ai.providers.$pid.enabled"
-    if (( $+functions[$func] )); then
-        "$func" || return 1
-    fi
-    
-    # 2. Check for required key
-    if [[ "${ai_providers[$pid:requires_key]}" == "1" ]]; then
-        ai.provider.has_credentials "$pid" || return 1
-    fi
-    
-    return 0
+    registry.is_enabled "ai_provider" "${1//-/_}" "ai.providers"
 }
 
-ai.provider.has_credentials() {
-    local pid="${1//-/_}"
-    
-    # Delegate to custom function if it exists
-    local func="ai.providers.$pid.has_credentials"
-    if (( $+functions[$func] )); then
-        "$func"
-        return $?
-    fi
-
-    # Default logic: check for environment variable
-    # We look at the credentials function to see what it returns
-    # but that might be expensive. Instead, we'll assume standard naming
-    # or rely on the provider to implement its own has_credentials.
-    
-    # For now, let's just try to get the credentials.
-    # To avoid repeated expensive calls, we'll check if it's already in the environment.
-    local key=$(ai.provider.get_credentials "$pid" 2>/dev/null)
-    [[ -n "$key" ]] && return 0
-    
-    return 1
-}
-
-ai.provider.get_credentials() {
+ai.provider.credentials() {
     local pid="${1//-/_}"
     local func="ai.providers.$pid.credentials"
     (( $+functions[$func] )) && "$func"
 }
 
-# --- MCP Recipe Registry ---
-typeset -gA ai_mcp_recipes ai_mcp_recipe_exists
-typeset -ga ai_mcp_recipe_list
-
-ai.mcp.define_recipe() {
-    local rid="${1//-/_}"; shift
-    (( ! ${ai_mcp_recipe_exists[$rid]:-0} )) && { ai_mcp_recipe_list+=($rid); ai_mcp_recipe_exists[$rid]=1 }
-    local pair k v
-    for pair in "$@"; do
-        k="${pair%%=*}" v="${pair#*=}"
-        ai_mcp_recipes[$rid:$k]="$v"
-    done
-}
-
-ai.mcp.recipe.load_all() {
-    local base; base=$(fs.dotfiles.path "src/zsh/apps/ai/mcp/recipes") || return 1
-    local f; for f in "$base/"*.zsh(N); do source "$f"; done
-}
-
-ai.mcp.recipe.is_enabled() {
-    local rid="${1//-/_}"
-    local func="ai.mcp.recipes.$rid.enabled"
-    if (( $+functions[$func] )); then
-        "$func"
-        return $?
+# --- MCP ---
+ai.mcp.define() {
+    registry.define "ai_mcp_recipe" "$@"
+    local id="${1//-/_}"
+    if (( ! $+functions[ai.mcps.${id}.enabled] )); then
+        eval "ai.mcps.${id}.enabled() { return 0 }"
     fi
-    return 0
+}
+ai.mcp.is_enabled() { registry.is_enabled "ai_mcp_recipe" "${1//-/_}" "ai.mcps" }
+ai.mcp.get() { registry.get "ai_mcp_recipe" "$1" "$2"; }
+
+# --- Agent ---
+ai.agent.define() {
+    registry.define "ai_agent" "$@"
+    local id="${1//-/_}"
+    if (( ! $+functions[ai.agents.${id}.enabled] )); then
+        eval "ai.agents.${id}.enabled() { return 0 }"
+    fi
 }
 
-ai.mcp.recipe.get_config() {
-    local rid="${1//-/_}"
-    local -A config
-    config[command]="${ai_mcp_recipes[$rid:command]}"
-    config[type]="${ai_mcp_recipes[$rid:type]:-local}"
-    config[url]="${ai_mcp_recipes[$rid:url]}"
-    local func="ai.mcp.recipes.$rid.config"
-    (( $+functions[$func] )) && "$func"
-}
+ai.agent.get() { registry.get "ai_agent" "$1" "$2"; }
 
-# --- Agent/Task Registry ---
-typeset -gA ai_agents ai_agent_exists
-typeset -ga ai_agent_list
+# --- Generic OpenAI Compatible API Base ---
+ai.provider.api.base() {
+    local base_url="${1:?}"
+    local api_path="${2:?}"
+    local api_key="${3:-}"
+    shift 3
+    local extra_headers=("$@")
 
-ai.define_agent() {
-    local aid="${1//-/_}"; shift
-    (( ! ${ai_agent_exists[$aid]:-0} )) && { ai_agent_list+=($aid); ai_agent_exists[$aid]=1 }
-    local pair k v
-    for pair in "$@"; do
-        k="${pair%%=*}" v="${pair#*=}"
-        ai_agents[$aid:$k]="$v"
+    local curl_args=(
+        --fail --silent
+        "${base_url%/}${api_path}"
+        -H "Content-Type: application/json"
+    )
+
+    [[ -n "$api_key" ]] && curl_args+=(-H "Authorization: Bearer ${api_key}")
+
+    for header in "${extra_headers[@]}"; do
+        curl_args+=($header)
     done
-}
 
-ai.agent.load_all() {
-    local base; base=$(fs.dotfiles.path "src/zsh/apps/ai/agents/definitions") || return 1
-    local f; for f in "$base/"*.zsh(N); do source "$f"; done
-}
-
-ai.agent.get_details() {
-    local aid="${1//-/_}"
-    local -A details
-    details[name]="${ai_agents[$aid:name]}"
-    details[description]="${ai_agents[$aid:description]}"
-    details[type]="${ai_agents[$aid:type]:-subagent}"
-    details[mcp_tools]="${ai_agents[$aid:mcp_tools]}"
-    details[skills]="${ai_agents[$aid:skills]}"
-    details[internal_tools]="${ai_agents[$aid:internal_tools]}"
-    details[commands]="${ai_agents[$aid:commands]}"
-    details[task_type]="${ai_agents[$aid:task_type]}"
-    local func="ai.agents.$aid.details"
-    (( $+functions[$func] )) && "$func"
+    curl "${curl_args[@]}"
 }
 
 # --- Common Utilities ---
 ai.models() {
-    local force="${1:-0}"
-    local cached=$(cache.get "ai" "models_all")
-    [[ "$force" != "1" && -n "$cached" ]] && { echo "$cached"; return 0; }
-
-    ai.provider.load_all
 
     local pid
     local -a enabled_pids=()
-    for pid in "${ai_provider_list[@]}"; do
+    for pid in $(registry.list ai_provider); do
         ai.provider.is_enabled "$pid" && enabled_pids+=($pid)
     done
 
-    # Suppress job control notifications
     [[ -o monitor ]] && local restore_monitor=1 && unsetopt monitor
 
     local tmp_dir=$(mktemp -d)
@@ -162,7 +120,6 @@ ai.models() {
             local func="ai.providers.$pid.models"
             if (( $+functions[$func] )); then
                 local raw_models=$("$func" 2>/dev/null)
-                # Sanitize and validate JSON output
                 local clean_models=$(echo "$raw_models" | jq -c -M . 2>/dev/null)
                 if [[ -z "$clean_models" || "$clean_models" == "null" ]]; then
                     clean_models="[]"
@@ -175,37 +132,26 @@ ai.models() {
 
     [[ -n "$restore_monitor" ]] && setopt monitor
 
-    # Consolidate results using jq
     local output
     if ls "$tmp_dir"/*.json >/dev/null 2>&1; then
-        # Use -c to keep it compact for the variable, we pretty-print at the end
         output=$(jq -n -c 'reduce inputs as $i ({}; . + { (input_filename | sub(".*/"; "") | sub(".json$"; "")): $i })' "$tmp_dir"/*.json 2>/dev/null)
     fi
     rm -rf "$tmp_dir"
 
     if [[ -n "$output" && "$output" != "null" ]]; then
-        # Pretty print for the user and cache
-        local pretty_output=$(echo "$output" | jq -M .)
-        cache.set "ai" "models_all" "$pretty_output"
-        echo "$pretty_output"
+        echo "$output" | jq -M .
     else
         echo "{}"
     fi
-    }
+}
+
 ai.models.free() {
-    local force="${1:-0}"
-    local cached=$(cache.get "ai" "models_free")
-    [[ "$force" != "1" && -n "$cached" ]] && { echo "$cached"; return 0; }
-
-    ai.provider.load_all
-
     local pid
     local -a enabled_pids=()
-    for pid in "${ai_provider_list[@]}"; do
+    for pid in $(registry.list ai_provider); do
         ai.provider.is_enabled "$pid" && enabled_pids+=($pid)
     done
 
-    # Suppress job control notifications
     [[ -o monitor ]] && local restore_monitor=1 && unsetopt monitor
 
     local tmp_dir=$(mktemp -d)
@@ -214,14 +160,12 @@ ai.models.free() {
             local free_func="ai.providers.$pid.models.free"
             if (( $+functions[$free_func] )); then
                 local raw_models=$("$free_func" 2>/dev/null)
-                # Sanitize and validate JSON output
                 local clean_models=$(echo "$raw_models" | jq -c -M . 2>/dev/null)
                 if [[ -z "$clean_models" || "$clean_models" == "null" ]]; then
                     clean_models="[]"
                 fi
                 print -r -- "$clean_models" > "$tmp_dir/$pid.json"
             else
-                # Skip providers that don't explicitly support free model detection
                 echo "[]" > "$tmp_dir/$pid.json"
             fi
         ) &
@@ -230,20 +174,58 @@ ai.models.free() {
 
     [[ -n "$restore_monitor" ]] && setopt monitor
 
-    # Consolidate results using jq
     local output
     if ls "$tmp_dir"/*.json >/dev/null 2>&1; then
-        # Use -c to keep it compact for the variable, we pretty-print at the end
         output=$(jq -n -c 'reduce inputs as $i ({}; . + { (input_filename | sub(".*/"; "") | sub(".json$"; "")): $i })' "$tmp_dir"/*.json 2>/dev/null)
     fi
     rm -rf "$tmp_dir"
 
     if [[ -n "$output" && "$output" != "null" ]]; then
-        # Pretty print for the user and cache
-        local pretty_output=$(echo "$output" | jq -M .)
-        cache.set "ai" "models_free" "$pretty_output"
-        echo "$pretty_output"
+        echo "$output" | jq -M .
     else
         echo "{}"
     fi
 }
+
+# ai.chat <provider>/<model> [prompt]
+# Example: ai.chat opencode/big-pickle "Hello"
+ai.chat() {
+    local target="${1:?Usage: ai.chat <provider>/<model> [prompt]}"
+    shift
+    local provider="${target%%/*}"
+    local model="${target#*/}"
+    local prompt="$*"
+
+    # Normalize provider name for registry/function lookups
+    local pid="${provider//-/_}"
+
+    # 1. Get Provider Details
+    local base_url=$(registry.get "ai_provider" "$pid" "base_url")
+    [[ -z "$base_url" ]] && { print "Unknown provider: $provider" >&2; return 1; }
+
+    # 2. Get Credentials
+    local api_key=$(ai.provider.credentials "$pid")
+
+    # 3. Handle Input (Piped + Args)
+    local input=""
+    [[ ! -t 0 ]] && input=$(cat)
+    local content="$prompt"
+    [[ -n "$input" ]] && content="${prompt}${prompt:+: }${input}"
+    [[ -z "$content" ]] && { print "Error: No prompt provided via arguments or pipe." >&2; return 1; }
+
+    # 4. Execute via OpenAI Base API
+    ai.provider.api.base "$base_url" "/chat/completions" "$api_key" \
+        -d @- <<EOF | jq -r '.choices[0].message.content'
+{
+  "model": "$model",
+  "messages": [
+    {
+      "role": "user",
+      "content": $(jq -Rs . <<< "$content")
+    }
+  ],
+  "stream": false
+}
+EOF
+}
+

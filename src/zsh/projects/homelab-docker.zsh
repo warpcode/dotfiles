@@ -1,13 +1,9 @@
 # Homelab-docker project directory (override in your environment or ~/.zshrc.d/homelab-docker.zsh if needed)
 export HOMELAB_DOCKER_DIR="${HOMELAB_DOCKER_DIR:-$HOME/src/homelab-docker}"
 export HOMELAB_DOCKER_REPO="${HOMELAB_DOCKER_REPO:-git@github.com:warpcode/homelab-docker.git}"
+# homelab-docker project - AI/LLM Environment
+# Aligned with dotfiles secret management system (Provider versions take precedence)
 
-# Register lazy-loaded environment variables
-env.lazy.register 'GEMINI_API_KEY' 'kp show '\''websites/email/google.main'\'' -a gemini_api_key' 'kp.login'
-env.lazy.register 'GITHUB_API_KEY' 'kp show '\''KeePassXC-Browser Passwords/Github'\'' -a api_key_docker_ai' 'kp.login'
-env.lazy.register 'GROQ_API_KEY' 'kp show '\''KeePassXC-Browser Passwords/Groq'\'' -a api_key_docker' 'kp.login'
-env.lazy.register 'OPENAI_API_KEY' 'kp show '\''KeePassXC-Browser Passwords/OpenRouter'\'' -a api_key_docker' 'kp.login'
-env.lazy.register 'OPENROUTER_API_KEY' 'kp show '\''KeePassXC-Browser Passwords/ChatGPT'\'' -a api_key_docker_ai' 'kp.login'
 
 if [[ ! -d "$HOMELAB_DOCKER_DIR" ]]; then
   return
@@ -22,12 +18,13 @@ hd.env.gen() {
         {
             env.print.kv "DOCKER_CONTEXT" "remote-docker"
             env.print.kv "BASE_HOSTNAME" "warpcode.co.uk"
-            env.print.kv "LITELLM_MASTER_KEY" "${LITELLM_API_KEY}"
+            env.print.kv "LITELLM_MASTER_KEY" "$(secrets.resolve 'LITELLM_API_KEY')"
             env.print.var \
                 "GEMINI_API_KEY" \
-                "GITHUB_API_KEY" \
+                "GITHUB_API_TOKEN" \
                 "GROQ_API_KEY" \
                 "OPENAI_API_KEY" \
                 "OPENROUTER_API_KEY"
         }  > "$HOMELAB_DOCKER_DIR/.env"
 }
+

@@ -1,6 +1,6 @@
 # apt.zsh - APT manager implementation
 
-pkg.define_manager "apt" \
+pkg.manager.define "apt" \
     "name=APT" \
     "url=https://wiki.debian.org/Apt"
 
@@ -15,7 +15,7 @@ pkg.managers.apt.enabled() {
 pkg.managers.apt.check() {
     pkg.managers.apt.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[${rid}:apt]:-${pkg_recipes[${rid}:package]}} )
+    local -a pkgs=( ${=$(pkg.recipe.get "$rid" apt):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg
@@ -38,7 +38,7 @@ pkg.managers.apt.cleanup() {
 pkg.managers.apt.search() {
     pkg.managers.apt.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[${rid}:apt]:-${pkg_recipes[${rid}:package]}} )
+    local -a pkgs=( ${=$(pkg.recipe.get "$rid" apt):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg
@@ -51,8 +51,8 @@ pkg.managers.apt.search() {
 pkg.managers.apt.install() {
     pkg.managers.apt.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipes_by_action "install:apt"); do
-        local p=$(pkg.recipe_packages "$rid" "apt")
+    for rid in $(pkg.recipe.by_action "install:apt"); do
+        local p=$(pkg.recipe.packages "$rid" "apt")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0
@@ -62,8 +62,8 @@ pkg.managers.apt.install() {
 pkg.managers.apt.upgrade() {
     pkg.managers.apt.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipes_by_action "upgrade:apt"); do
-        local p=$(pkg.recipe_packages "$rid" "apt")
+    for rid in $(pkg.recipe.by_action "upgrade:apt"); do
+        local p=$(pkg.recipe.packages "$rid" "apt")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0
@@ -79,9 +79,10 @@ pkg.managers.apt.setup_repos() {
     local distro=$(lsb_release -is 2>/dev/null | tr '[:upper:]' '[:lower:]' || echo debian)
 
     typeset -A seen_keys keyring_map
-    for key in ${(k)pkg_recipes}; do
-        [[ "$key" == *":apt_key" ]] || continue
-        val="${pkg_recipes[$key]}"
+    local rid
+    for rid in $(registry.list pkg); do
+        val="$(pkg.recipe.get "$rid" "apt_key")"
+        [[ -z "$val" ]] && continue
         [[ -n "${seen_keys[$val]}" ]] && continue
         seen_keys[$val]=1
 
@@ -128,12 +129,12 @@ pkg.managers.apt.setup_repos() {
     done
 
     typeset -A seen_repos
-    for repo_key in ${(k)pkg_recipes}; do
-        [[ "$repo_key" == *":apt_repo" ]] || continue
-        val="${pkg_recipes[$repo_key]}"
+    for rid in $(registry.list pkg); do
+        val="$(pkg.recipe.get "$rid" "apt_repo")"
+        [[ -z "$val" ]] && continue
         [[ -n "${seen_repos[$val]}" ]] && continue
         seen_repos[$val]=1
-        pkg_name="${repo_key%:apt_repo}"
+        pkg_name="$rid"
         keyring_name="${val%%|*}" repo_line="${val#*|}"
         keyring_path="${keyring_map[$keyring_name]:-/etc/apt/keyrings/$keyring_name}"
 
