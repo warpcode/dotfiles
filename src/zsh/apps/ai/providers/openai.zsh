@@ -8,11 +8,12 @@ secrets.register "OPENAI_API_KEY" \
 ai.provider.define "openai" \
     "name=OpenAI" \
     "base_url=https://api.openai.com/v1" \
-    "openai_compatible=true"
+    "openai_compatible=true" \
+    "api_key_env=OPENAI_API_KEY" \
+    "priority=40"
 
 ai.providers.openai.enabled() {
-    [[ "$IS_WORK" == "1" ]] && return 1
-    return 0
+    [[ -n "${OPENAI_API_KEY:-}" ]]
 }
 
 ai.providers.openai.credentials() {

@@ -4,7 +4,8 @@
 ai.provider.define "ollama" \
     "name=Ollama (Local)" \
     "base_url=http://localhost:11434/v1" \
-    "openai_compatible=true"
+    "openai_compatible=true" \
+    "priority=50"
 
 ai.providers.ollama.enabled() {
     # Enabled if service is running
