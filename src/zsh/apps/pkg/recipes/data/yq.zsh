@@ -1,3 +1,3 @@
-pkg.define yq \
+pkg.recipe.define yq \
     package="yq" \
     managers="brew mise"

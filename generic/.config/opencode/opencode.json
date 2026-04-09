@@ -49,12 +49,8 @@
     }
   },
   "model": "{env:OPENCODE_MODEL}",
-  "permission": {
-    "external_directory": "allow",
-    "skill": "allow"
-  },
   "plugin": [
-    "oh-my-opencode@latest"
+    "oh-my-openagent@latest"
   ],
   "provider": {
     "litellm": {

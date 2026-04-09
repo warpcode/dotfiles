@@ -1,4 +1,4 @@
-pkg.define docker \
+pkg.recipe.define docker \
     package="docker" \
     managers="brew apt" \
     brew="docker" \

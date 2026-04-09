@@ -1,17 +1,12 @@
-# Ollama Provider - Local inference, no auth
+# Ollama Provider - Local LLMs
 # https://github.com/ollama/ollama/blob/main/docs/api.md
 
-ai.providers.ollama.api() {
-    local api_path="${1:?}"
-    local base_url="${OLLAMA_BASE_URL:-http://localhost:11434}"
-    command curl --fail -s "${base_url%/}${api_path}" -H "Content-Type: application/json"
-}
+ai.provider.define "ollama" \
+    "name=Ollama (Local)" \
+    "base_url=http://localhost:11434/v1" \
+    "openai_compatible=true"
 
-ai.providers.ollama.models() {
-    ai.providers.ollama.api "/api/tags" | jq -M '.models'
-}
-
-ai.providers.ollama.models.free() {
-    # Ollama is local - all models are "free" (no API costs)
-    ai.providers.ollama.models
+ai.providers.ollama.enabled() {
+    # Enabled if service is running
+    curl -s -o /dev/null -w '%{http_code}' "http://localhost:11434/api/tags" | grep -q '200'
 }

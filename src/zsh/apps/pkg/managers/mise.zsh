@@ -1,6 +1,6 @@
 # mise.zsh - Mise manager implementation
 
-pkg.define_manager "mise" \
+pkg.manager.define "mise" \
     "name=Mise" \
     "url=https://mise.jdx.dev/"
 
@@ -12,13 +12,13 @@ pkg.managers.mise.enabled() {
     local rid="$1"
     pkg.managers.mise.is_available && return 0
     [[ "$rid" == "mise" ]] && return 1
-    pkg.action_is_enabled "$(pkg.recipe_action "mise")"
+    pkg.recipe.action_is_enabled "$(pkg.recipe.action "mise")"
 }
 
 pkg.managers.mise.check() {
     pkg.managers.mise.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[${rid}:mise]:-${pkg_recipes[${rid}:package]}} )
+    local -a pkgs=( ${=$(pkg.recipe.get "$rid" mise):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
     local installed_raw=$(mise ls --global --no-header 2>/dev/null | grep -v "(missing)")
@@ -36,8 +36,8 @@ pkg.managers.mise.check() {
 pkg.managers.mise.install() {
     pkg.managers.mise.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipes_by_action "install:mise"); do
-        local p=$(pkg.recipe_packages "$rid" "mise")
+    for rid in $(pkg.recipe.by_action "install:mise"); do
+        local p=$(pkg.recipe.packages "$rid" "mise")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0
@@ -69,7 +69,7 @@ pkg.managers.mise.exec() {
 pkg.managers.mise.search() {
     pkg.managers.mise.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[${rid}:mise]:-${pkg_recipes[${rid}:package]}} )
+    local -a pkgs=( ${=$(pkg.recipe.get "$rid" mise):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg base_pkg

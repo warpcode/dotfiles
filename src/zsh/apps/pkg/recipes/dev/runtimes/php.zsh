@@ -1,3 +1,3 @@
-pkg.define php \
+pkg.recipe.define php \
     package="php" \
     managers="brew"

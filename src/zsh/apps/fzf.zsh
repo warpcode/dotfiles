@@ -1,6 +1,6 @@
-bin.wrap fzf
+(( $+commands[fzf] )) || return
 
-if [[ -o interactive ]] && pkg.status fzf >/dev/null 2>&1; then
+if [[ -o interactive ]]; then
     # Use fzf for history search in an interactive shell
-    source <(fzf.cli --zsh 2>/dev/null)
+    source <(fzf --zsh 2>/dev/null)
 fi

@@ -1,6 +1,6 @@
 # dnf.zsh - DNF manager implementation
 
-pkg.define_manager "dnf" \
+pkg.manager.define "dnf" \
     "name=DNF" \
     "url=https://dnf.readthedocs.io/"
 
@@ -15,7 +15,7 @@ pkg.managers.dnf.enabled() {
 pkg.managers.dnf.check() {
     pkg.managers.dnf.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[${rid}:dnf]:-${pkg_recipes[${rid}:package]}} )
+    local -a pkgs=( ${=$(pkg.recipe.get "$rid" dnf):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg
@@ -38,7 +38,7 @@ pkg.managers.dnf.cleanup() {
 pkg.managers.dnf.search() {
     pkg.managers.dnf.is_available || return 1
     local rid="$1"
-    local -a pkgs=( ${=pkg_recipes[${rid}:dnf]:-${pkg_recipes[${rid}:package]}} )
+    local -a pkgs=( ${=$(pkg.recipe.get "$rid" dnf):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
     local pkg
@@ -51,8 +51,8 @@ pkg.managers.dnf.search() {
 pkg.managers.dnf.install() {
     pkg.managers.dnf.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipes_by_action "install:dnf"); do
-        local p=$(pkg.recipe_packages "$rid" "dnf")
+    for rid in $(pkg.recipe.by_action "install:dnf"); do
+        local p=$(pkg.recipe.packages "$rid" "dnf")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0
@@ -62,8 +62,8 @@ pkg.managers.dnf.install() {
 pkg.managers.dnf.upgrade() {
     pkg.managers.dnf.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipes_by_action "upgrade:dnf"); do
-        local p=$(pkg.recipe_packages "$rid" "dnf")
+    for rid in $(pkg.recipe.by_action "upgrade:dnf"); do
+        local p=$(pkg.recipe.packages "$rid" "dnf")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0
@@ -72,11 +72,12 @@ pkg.managers.dnf.upgrade() {
 
 pkg.managers.dnf.setup_repos() {
     pkg.managers.dnf.is_available || return 0
-    local changed=0 repo_key val repo_filename
+    local changed=0 rid val repo_filename
+    
     typeset -A seen_repos
-    for repo_key in ${(k)pkg_recipes}; do
-        [[ "$repo_key" == *":dnf_repo" ]] || continue
-        val="${pkg_recipes[$repo_key]}"
+    for rid in $(registry.list pkg); do
+        val="$(pkg.recipe.get "$rid" "dnf_repo")"
+        [[ -z "$val" ]] && continue
         [[ -n "${seen_repos[$val]}" ]] && continue
         seen_repos[$val]=1
         repo_filename="${val:t}"
@@ -85,10 +86,11 @@ pkg.managers.dnf.setup_repos() {
             sudo dnf config-manager --add-repo "$val" && changed=1
         fi
     done
+
     typeset -A seen_coprs
-    for repo_key in ${(k)pkg_recipes}; do
-        [[ "$repo_key" == *":dnf_copr" ]] || continue
-        val="${pkg_recipes[$repo_key]}"
+    for rid in $(registry.list pkg); do
+        val="$(pkg.recipe.get "$rid" "dnf_copr")"
+        [[ -z "$val" ]] && continue
         [[ -n "${seen_coprs[$val]}" ]] && continue
         seen_coprs[$val]=1
         echo "   Enabling copr repo: $val"
