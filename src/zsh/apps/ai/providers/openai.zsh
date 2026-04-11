@@ -2,7 +2,7 @@
 # https://platform.openai.com/docs/api-reference
 
 secrets.register "OPENAI_API_KEY" \
-    "openai-api" "default" \
+    "openai-api" \
     "kp show 'KeePassXC-Browser Passwords/ChatGPT' -a api_key_docker"
 
 ai.provider.define "openai" \
