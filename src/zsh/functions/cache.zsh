@@ -4,7 +4,6 @@
 
 typeset -g CACHE_BASE_DIR="$HOME/.cache/dotfiles"
 typeset -g CACHE_KEY_SERVICE="dotfiles-cache-key"
-typeset -g CACHE_KEY_ACCOUNT="default"
 
 # Ensure strict permissions on the base directory
 if [[ ! -d "$CACHE_BASE_DIR" ]]; then
@@ -22,12 +21,12 @@ _cache.hash_key() {
 # Internal: Get or generate encryption key from OS keyring
 _cache.get_key() {
     local key
-    key=$(secrets.get "$CACHE_KEY_SERVICE" "$CACHE_KEY_ACCOUNT" 2>/dev/null)
+    key=$(secrets.get "$CACHE_KEY_SERVICE" 2>/dev/null)
     if [[ -z "$key" ]]; then
         # Generate random 32-byte key (64 hex chars)
         key=$(openssl rand -hex 32 2>/dev/null)
         if [[ -n "$key" ]]; then
-            secrets.store "$CACHE_KEY_SERVICE" "$key" "$CACHE_KEY_ACCOUNT" >/dev/null 2>&1
+            secrets.store "$CACHE_KEY_SERVICE" "$key" >/dev/null 2>&1
         fi
     fi
     echo "$key"
