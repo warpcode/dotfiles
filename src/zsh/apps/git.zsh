@@ -26,9 +26,3 @@ function _git_clone_and_cd() {
 
 bin.wrap git
 
-function git.setup() {
-    command git config --global include.path "$(fs.dotfiles.path "assets/configs/git/.gitconfig_default")"
-    command git config --global core.excludesfile "$(fs.dotfiles.path "assets/configs/git/.gitignore_global")"
-}
-app.setup git git.setup
-

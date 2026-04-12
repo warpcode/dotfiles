@@ -19,7 +19,3 @@ function _tmux_basic_git()  {
 }
 
 bin.wrap tmux tmux tmux.setup.config
-
-function tmux.setup.config() {
-    app.config "tmux/tmux.conf" ~/.tmux.conf
-}
