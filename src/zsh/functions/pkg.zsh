@@ -132,3 +132,24 @@ pkg.install_all() {
     pkg.manager_func cleanup
     print -P "%F{green}✨ Complete!%f"
 }
+
+# --- Recipe Lifecycle Hooks ---
+pkg.recipe.configure_all() {
+    local id rid func
+    for id in $(registry.list pkg 2>/dev/null); do
+        rid="${id//-/_}"
+        func="pkg.recipe.${rid}.configure"
+        (( $+functions[$func] )) || continue
+        "$func" "$id" || print -P "%F{red}✖ $func failed for $id%f"
+    done
+}
+
+pkg.recipe.init_all() {
+    local id rid func
+    for id in $(registry.list pkg 2>/dev/null); do
+        rid="${id//-/_}"
+        func="pkg.recipe.${rid}.init"
+        (( $+functions[$func] )) || continue
+        "$func" "$id" || print -P "%F{red}✖ $func failed for $id%f"
+    done
+}
