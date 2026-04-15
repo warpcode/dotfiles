@@ -34,10 +34,10 @@ pkg.compile_actions() {
     pkg_action=()
     local id
     for id in $(registry.list pkg); do
-        print -Pn "\r🔍 Compiling: $((++c))/$total ($id)..." >&2
+        tui.progress "Compiling: $((++c))/$total ($id)..."
         pkg_action[$id]=$(pkg.recipe.action "$id")
     done
-    print -Pn "\r\033[K" >&2
+    tui.progress.clear
 }
 
 # --- Manager Interface ---
@@ -113,7 +113,7 @@ pkg.recipe.by_action() {
 
 # --- Main Entry Point ---
 pkg.install_all() {
-    print -P "%F{blue}🔧 Starting staged installation...%f"
+    tui.banner "Installing packages in stages..." "=" 46
     local pass=0 max=10
     while (( pass++ < max )); do
         pkg.manager_func setup_repos
@@ -125,12 +125,12 @@ pkg.install_all() {
             [[ -n "$r" ]] && pending+=("install:$m -> $r")
         done
 
-        (( ${#pending} == 0 )) && { print -P "%F{green}✨ Finished in $((pass-1)) passes.%f"; break; }
-        echo "🔄 Pass $pass: ${(j:, :)pending}"
-        pkg.manager_func install || { print -P "%F{red}❌ Failed.%f"; return 1; }
+        (( ${#pending} == 0 )) && { tui.done "Finished in $((pass-1)) passes."; break; }
+        tui.info "Pass $pass: ${(j:, :)pending}"
+        pkg.manager_func install || { tui.fatal "Failed."; return 1; }
     done
     pkg.manager_func cleanup
-    print -P "%F{green}✨ Complete!%f"
+    tui.done "Complete!"
 }
 
 # --- Recipe Lifecycle Hooks ---
@@ -140,7 +140,7 @@ pkg.recipe.configure_all() {
         rid="${id//-/_}"
         func="pkg.recipe.${rid}.configure"
         (( $+functions[$func] )) || continue
-        "$func" "$id" || print -P "%F{red}✖ $func failed for $id%f"
+        "$func" "$id" || tui.error "$func failed for $id"
     done
 }
 
@@ -150,6 +150,6 @@ pkg.recipe.init_all() {
         rid="${id//-/_}"
         func="pkg.recipe.${rid}.init"
         (( $+functions[$func] )) || continue
-        "$func" "$id" || print -P "%F{red}✖ $func failed for $id%f"
+        "$func" "$id" || tui.error "$func failed for $id"
     done
 }

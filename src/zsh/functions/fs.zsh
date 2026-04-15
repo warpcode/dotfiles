@@ -51,7 +51,7 @@ fs.search() {
             $cmd "$query" "$dir" | while IFS=: read -r file content; do
                 if [[ "$file" != "$last" ]]; then
                     [[ -n "$last" ]] && print ""
-                    print -P "%F{blue}${file}%f"
+                    tui.heading "$file"
                     last="$file"
                 fi
                 print -r -- "$content"

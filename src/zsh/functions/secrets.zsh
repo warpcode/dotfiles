@@ -41,13 +41,13 @@ secrets.store() {
     fi
 
     _secrets_exec set "$(_secrets.prefix "$svc")" "$pass" || return 1
-    print -P "    %F{green}✅ Saved to OS keychain.%f" >&2
+    tui.success "Saved to OS keychain." >&2
 }
 
 secrets.delete() {
     local svc=$1
     [[ -z $svc ]] && return 1
-    _secrets_exec del "$(_secrets.prefix "$svc")" && print -P "    %F{yellow}🗑️ Removed from OS keychain.%f" >&2
+    _secrets_exec del "$(_secrets.prefix "$svc")" && tui.warn "Removed from OS keychain." >&2
 }
 
 # --- Smart Secret Management (Registry-backed) ---
