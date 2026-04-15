@@ -8,7 +8,77 @@ zmodload zsh/datetime # For tui.date and tui.time
 
 # --- Internal Helpers ---
 
-_tui_err() { print -P "%F{red}❌ $1%f" >&2; return 1; }
+typeset -gi TUI_INDENT_LEVEL=${TUI_INDENT_LEVEL:-0}
+typeset -gi TUI_INDENT_WIDTH=${TUI_INDENT_WIDTH:-4}
+
+_tui.indent() {
+    printf '%*s' $(( TUI_INDENT_LEVEL * TUI_INDENT_WIDTH )) ''
+}
+
+_tui_err() { tui.error "$1"; return 1; }
+tui.task() { print -P -- "$(_tui.indent)%F{blue}⚙︎ $*%f"; }
+tui.start() { print -P -- "$(_tui.indent)%F{blue}🔧 $*%f"; }
+tui.step() { print -P -- "$(_tui.indent)%F{blue}📝 $*%f"; }
+tui.info() { print -P -- "$(_tui.indent)%F{blue}ℹ $*%f"; }
+tui.success() { print -P -- "$(_tui.indent)%F{green}✓ $*%f"; }
+tui.done() { print -P -- "$(_tui.indent)%F{green}✨ $*%f"; }
+tui.warn() { print -P -- "$(_tui.indent)%F{yellow}⚠ $*%f"; }
+tui.error() { print -P -- "$(_tui.indent)%F{red}✖ $*%f" >&2; }
+tui.fatal() { print -P -- "$(_tui.indent)%F{red}❌ $*%f" >&2; }
+tui.heading() { print -P -- "$(_tui.indent)%F{blue}$*%f"; }
+
+tui.banner() {
+    local text="$1"
+    local char="${2:--}"
+    local width="${3:-0}"
+    local indent="$(_tui.indent)"
+    local line
+
+    (( ${#char} == 0 )) && char='-'
+    (( width <= 0 )) && width=${#text}
+    (( width < ${#text} )) && width=${#text}
+
+    line=$(printf '%*s' "$width" '')
+    line=${line// /$char}
+
+    print -r -- "${indent}${line}"
+    print -r -- "${indent}${text}"
+    print -r -- "${indent}${line}"
+}
+
+tui.progress() {
+    print -Pn -- "\r$(_tui.indent)%F{blue}🔍%f $*" >&2
+}
+
+tui.progress.clear() {
+    print -Pn -- "\r\033[K" >&2
+}
+
+tui.indent.push() {
+    local delta="${1:-1}"
+    (( TUI_INDENT_LEVEL += delta ))
+}
+
+tui.indent.pop() {
+    local delta="${1:-1}"
+    (( TUI_INDENT_LEVEL -= delta ))
+    (( TUI_INDENT_LEVEL < 0 )) && TUI_INDENT_LEVEL=0
+}
+
+tui.indent.reset() {
+    TUI_INDENT_LEVEL=0
+}
+
+tui.with_indent() {
+    local delta="${1:-1}"
+    shift
+    local old_level=$TUI_INDENT_LEVEL
+    tui.indent.push "$delta"
+    "$@"
+    local ret=$?
+    TUI_INDENT_LEVEL=$old_level
+    return $ret
+}
 
 # --- Public API ---
 

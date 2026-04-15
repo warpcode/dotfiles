@@ -27,7 +27,7 @@ events.trigger() {
 # List all registered events
 events.list() {
   local event; for event in ${(k)_events_hooks}; do
-    print -P "%F{blue}Event '$event':%f"
+    tui.heading "Event '$event':"
     printf "  - %s\n" ${(z)_events_hooks[$event]}
   done
 }

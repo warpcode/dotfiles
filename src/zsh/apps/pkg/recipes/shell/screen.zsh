@@ -3,7 +3,15 @@ pkg.recipe.define screen \
     managers="apt dnf pacman brew"
 
 pkg.recipe.screen.configure() {
-    (( $+commands[screen] )) || return 0
+    tui.task "Configuring screen..."
+    tui.indent.push
+    {
+        (( $+commands[screen] )) || { tui.warn "screen command not found, skipping"; return 0; }
 
-    app.config "screen/.screenrc" ~/.screenrc
+        tui.step "Linking .screenrc"
+        app.config "screen/.screenrc" ~/.screenrc
+        tui.success "screen configured"
+    } always {
+        tui.indent.pop
+    }
 }

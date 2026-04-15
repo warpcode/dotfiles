@@ -186,10 +186,6 @@ set_zsh_default "$zsh_path"
 ensure_dotfiles "$DOTFILES_REPO_URL"
 
 # 4. Run staged package installation
-echo ""
-echo "=============================================="
-echo "Installing packages in stages..."
-echo "=============================================="
 cd "$DOTFILES_INSTALL_DIR"
 export DOTFILES="$DOTFILES_INSTALL_DIR"
 

@@ -4,13 +4,21 @@ pkg.recipe.define opencode \
 
 
 pkg.recipe.opencode.configure() {
-    (( $+commands[opencode] )) || return 0
-    (( $+commands[jq] )) || return 0
+    tui.task "Configuring opencode..."
+    tui.indent.push
+    {
+        (( $+commands[opencode] )) || { tui.warn "opencode command not found, skipping"; return 0; }
+        (( $+commands[jq] )) || { tui.warn "jq command not found, skipping"; return 0; }
 
-    local target="${DOTFILES}/generic/.config/opencode/opencode.json"
-    pkg.recipe.opencode.configure.base "$target"
-    pkg.recipe.opencode.configure.providers "$target"
-    pkg.recipe.opencode.configure.mcps "$target"
+        local target="${DOTFILES}/generic/.config/opencode/opencode.json"
+        tui.step "Updating $target"
+        pkg.recipe.opencode.configure.base "$target"
+        pkg.recipe.opencode.configure.providers "$target"
+        pkg.recipe.opencode.configure.mcps "$target"
+        tui.success "Configuration complete"
+    } always {
+        tui.indent.pop
+    }
 }
 
 pkg.recipe.opencode.configure.base() {
