@@ -71,7 +71,9 @@ pkg.managers.flatpak.search() {
 pkg.managers.flatpak.install() {
     pkg.managers.flatpak.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipe.by_action "install:flatpak"); do
+    local -a rids=( "$@" )
+    (( ${#rids} == 0 )) && rids=( $(pkg.recipe.by_action "install:flatpak") )
+    for rid in "${rids[@]}"; do
         local p=$(pkg.recipe.packages "$rid" "flatpak")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
@@ -82,7 +84,9 @@ pkg.managers.flatpak.install() {
 pkg.managers.flatpak.upgrade() {
     pkg.managers.flatpak.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipe.by_action "upgrade:flatpak"); do
+    local -a rids=( "$@" )
+    (( ${#rids} == 0 )) && rids=( $(pkg.recipe.by_action "upgrade:flatpak") )
+    for rid in "${rids[@]}"; do
         local p=$(pkg.recipe.packages "$rid" "flatpak")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done

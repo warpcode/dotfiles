@@ -133,6 +133,83 @@ pkg.install_all() {
     tui.done "Complete!"
 }
 
+pkg.update_all() {
+    tui.banner "Updating packages..." "=" 46
+    pkg.manager_func setup_repos
+    pkg.manager_func update
+    pkg.compile_actions
+
+    local -a pending=()
+    local m
+    for m in "${PKG_MANAGER_PRIORITY[@]}"; do
+        local r=$(pkg.recipe.by_action "upgrade:$m")
+        [[ -n "$r" ]] && pending+=("upgrade:$m -> $r")
+    done
+
+    if (( ${#pending} == 0 )); then
+        tui.done "No packages need updating."
+    else
+        tui.info "Updating: ${(j:, :)pending}"
+        pkg.manager_func upgrade || { tui.fatal "Failed."; return 1; }
+    fi
+    
+    pkg.manager_func cleanup
+    tui.done "Complete!"
+}
+
+# --- CLI Wrappers ---
+pkg.install() {
+    if (( $# == 0 )); then
+        pkg.install_all
+    else
+        local rid action
+        for rid in "$@"; do
+            action=$(pkg.recipe.action "$rid")
+            case "$action" in
+                install:*)
+                    local m="${action#install:}"
+                    "pkg.managers.$m.install" "$rid"
+                    ;;
+                upgrade:*)
+                    tui.info "$rid is already installed (update available)."
+                    ;;
+                skip)
+                    tui.info "$rid is already installed and up to date."
+                    ;;
+                *)
+                    tui.error "Could not install $rid (action: $action)"
+                    ;;
+            esac
+        done
+    fi
+}
+
+pkg.update() {
+    if (( $# == 0 )); then
+        pkg.update_all
+    else
+        local rid action
+        for rid in "$@"; do
+            action=$(pkg.recipe.action "$rid")
+            case "$action" in
+                upgrade:*)
+                    local m="${action#upgrade:}"
+                    "pkg.managers.$m.upgrade" "$rid"
+                    ;;
+                install:*)
+                    tui.info "$rid is not installed. Use pkg.install $rid"
+                    ;;
+                skip)
+                    tui.info "$rid is already up to date."
+                    ;;
+                *)
+                    tui.error "Could not update $rid (action: $action)"
+                    ;;
+            esac
+        done
+    fi
+}
+
 # --- Recipe Lifecycle Hooks ---
 pkg.recipe.configure_all() {
     local id rid func

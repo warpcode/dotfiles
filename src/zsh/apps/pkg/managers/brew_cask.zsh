@@ -46,7 +46,9 @@ pkg.managers.brew_cask.search() {
 pkg.managers.brew_cask.install() {
     pkg.managers.brew_cask.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipe.by_action "install:brew_cask"); do
+    local -a rids=( "$@" )
+    (( ${#rids} == 0 )) && rids=( $(pkg.recipe.by_action "install:brew_cask") )
+    for rid in "${rids[@]}"; do
         local p=$(pkg.recipe.packages "$rid" "brew_cask")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
@@ -57,7 +59,9 @@ pkg.managers.brew_cask.install() {
 pkg.managers.brew_cask.upgrade() {
     pkg.managers.brew_cask.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipe.by_action "upgrade:brew_cask"); do
+    local -a rids=( "$@" )
+    (( ${#rids} == 0 )) && rids=( $(pkg.recipe.by_action "upgrade:brew_cask") )
+    for rid in "${rids[@]}"; do
         local p=$(pkg.recipe.packages "$rid" "brew_cask")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done

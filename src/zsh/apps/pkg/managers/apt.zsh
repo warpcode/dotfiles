@@ -51,7 +51,9 @@ pkg.managers.apt.search() {
 pkg.managers.apt.install() {
     pkg.managers.apt.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipe.by_action "install:apt"); do
+    local -a rids=( "$@" )
+    (( ${#rids} == 0 )) && rids=( $(pkg.recipe.by_action "install:apt") )
+    for rid in "${rids[@]}"; do
         local p=$(pkg.recipe.packages "$rid" "apt")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
@@ -62,7 +64,9 @@ pkg.managers.apt.install() {
 pkg.managers.apt.upgrade() {
     pkg.managers.apt.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipe.by_action "upgrade:apt"); do
+    local -a rids=( "$@" )
+    (( ${#rids} == 0 )) && rids=( $(pkg.recipe.by_action "upgrade:apt") )
+    for rid in "${rids[@]}"; do
         local p=$(pkg.recipe.packages "$rid" "apt")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done

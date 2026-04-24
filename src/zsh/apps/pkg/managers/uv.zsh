@@ -52,7 +52,9 @@ pkg.managers.uv.search() {
 pkg.managers.uv.install() {
     pkg.managers.uv.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipe.by_action "install:uv"); do
+    local -a rids=( "$@" )
+    (( ${#rids} == 0 )) && rids=( $(pkg.recipe.by_action "install:uv") )
+    for rid in "${rids[@]}"; do
         local p=$(pkg.recipe.packages "$rid" "uv")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
@@ -63,7 +65,9 @@ pkg.managers.uv.install() {
 pkg.managers.uv.upgrade() {
     pkg.managers.uv.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipe.by_action "upgrade:uv"); do
+    local -a rids=( "$@" )
+    (( ${#rids} == 0 )) && rids=( $(pkg.recipe.by_action "upgrade:uv") )
+    for rid in "${rids[@]}"; do
         local p=$(pkg.recipe.packages "$rid" "uv")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done

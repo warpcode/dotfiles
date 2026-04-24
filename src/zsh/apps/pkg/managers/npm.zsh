@@ -61,7 +61,9 @@ pkg.managers.npm.search() {
 pkg.managers.npm.install() {
     pkg.managers.npm.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipe.by_action "install:npm"); do
+    local -a rids=( "$@" )
+    (( ${#rids} == 0 )) && rids=( $(pkg.recipe.by_action "install:npm") )
+    for rid in "${rids[@]}"; do
         local p=$(pkg.recipe.packages "$rid" "npm")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
@@ -70,5 +72,5 @@ pkg.managers.npm.install() {
 }
 
 pkg.managers.npm.upgrade() {
-    pkg.managers.npm.install
+    pkg.managers.npm.install "$@"
 }
