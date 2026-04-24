@@ -46,7 +46,9 @@ pkg.managers.snap.search() {
 pkg.managers.snap.install() {
     pkg.managers.snap.is_available || return 0
     local rid pkg pkg_name
-    for rid in $(pkg.recipe.by_action "install:snap"); do
+    local -a rids=( "$@" )
+    (( ${#rids} == 0 )) && rids=( $(pkg.recipe.by_action "install:snap") )
+    for rid in "${rids[@]}"; do
         pkg=$(pkg.recipe.packages "$rid" "snap")
         [[ -z "$pkg" ]] && continue
         if [[ "$pkg" == *" --classic"* ]]; then
@@ -61,7 +63,9 @@ pkg.managers.snap.install() {
 pkg.managers.snap.upgrade() {
     pkg.managers.snap.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipe.by_action "upgrade:snap"); do
+    local -a rids=( "$@" )
+    (( ${#rids} == 0 )) && rids=( $(pkg.recipe.by_action "upgrade:snap") )
+    for rid in "${rids[@]}"; do
         local p=$(pkg.recipe.packages "$rid" "snap")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done

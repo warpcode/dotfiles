@@ -51,7 +51,9 @@ pkg.managers.pacman.search() {
 pkg.managers.pacman.install() {
     pkg.managers.pacman.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipe.by_action "install:pacman"); do
+    local -a rids=( "$@" )
+    (( ${#rids} == 0 )) && rids=( $(pkg.recipe.by_action "install:pacman") )
+    for rid in "${rids[@]}"; do
         local p=$(pkg.recipe.packages "$rid" "pacman")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
@@ -60,5 +62,5 @@ pkg.managers.pacman.install() {
 }
 
 pkg.managers.pacman.upgrade() {
-    pkg.managers.pacman.install
+    pkg.managers.pacman.install "$@"
 }

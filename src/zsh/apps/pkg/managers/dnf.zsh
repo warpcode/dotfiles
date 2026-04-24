@@ -51,7 +51,9 @@ pkg.managers.dnf.search() {
 pkg.managers.dnf.install() {
     pkg.managers.dnf.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipe.by_action "install:dnf"); do
+    local -a rids=( "$@" )
+    (( ${#rids} == 0 )) && rids=( $(pkg.recipe.by_action "install:dnf") )
+    for rid in "${rids[@]}"; do
         local p=$(pkg.recipe.packages "$rid" "dnf")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
@@ -62,7 +64,9 @@ pkg.managers.dnf.install() {
 pkg.managers.dnf.upgrade() {
     pkg.managers.dnf.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipe.by_action "upgrade:dnf"); do
+    local -a rids=( "$@" )
+    (( ${#rids} == 0 )) && rids=( $(pkg.recipe.by_action "upgrade:dnf") )
+    for rid in "${rids[@]}"; do
         local p=$(pkg.recipe.packages "$rid" "dnf")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done

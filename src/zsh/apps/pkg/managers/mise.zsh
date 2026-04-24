@@ -36,7 +36,9 @@ pkg.managers.mise.check() {
 pkg.managers.mise.install() {
     pkg.managers.mise.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipe.by_action "install:mise"); do
+    local -a rids=( "$@" )
+    (( ${#rids} == 0 )) && rids=( $(pkg.recipe.by_action "install:mise") )
+    for rid in "${rids[@]}"; do
         local p=$(pkg.recipe.packages "$rid" "mise")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
@@ -48,11 +50,11 @@ pkg.managers.mise.install() {
 
 pkg.managers.mise.update() {
     pkg.managers.mise.is_available || return 0
-    mise update
+    mise plugins update
 }
 
 pkg.managers.mise.upgrade() {
-    pkg.managers.mise.install
+    pkg.managers.mise.install "$@"
 }
 
 pkg.managers.mise.cleanup() {

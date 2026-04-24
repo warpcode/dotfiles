@@ -45,7 +45,9 @@ pkg.managers.cargo.search() {
 pkg.managers.cargo.install() {
     pkg.managers.cargo.is_available || return 0
     local rid pkgs=""
-    for rid in $(pkg.recipe.by_action "install:cargo"); do
+    local -a rids=( "$@" )
+    (( ${#rids} == 0 )) && rids=( $(pkg.recipe.by_action "install:cargo") )
+    for rid in "${rids[@]}"; do
         local p=$(pkg.recipe.packages "$rid" "cargo")
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
@@ -54,5 +56,5 @@ pkg.managers.cargo.install() {
 }
 
 pkg.managers.cargo.upgrade() {
-    pkg.managers.cargo.install
+    pkg.managers.cargo.install "$@"
 }
