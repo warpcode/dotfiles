@@ -13,8 +13,7 @@
       "selectedType": "oauth-personal"
     }
   },
-  "mcpServers": {
-  },
+  "mcpServers": {},
   "context": {
     "fileName": [
       "AGENTS.md",
