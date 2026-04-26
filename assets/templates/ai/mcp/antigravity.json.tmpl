@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+{{- range $i, $m := .config.mcps }}
+    {{- if $i }},{{ end }}
+    "{{ $m.id }}": {
+      "enabled": true,
+      {{- if eq $m.type "local" }}
+      "command": {{ $m.command | toJSON }},
+      "args": {{ $m.args | toJSON }},
+      "env": {{ $m.env | toJSON }}
+      {{- else }}
+      "type": "sse",
+      "url": {{ $m.url | toJSON }},
+      "headers": {{ $m.env | toJSON }}
+      {{- end }}
+    }
+{{- end }}
+  }
+}

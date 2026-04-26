@@ -8,13 +8,29 @@ _config_resolve() {
 
 # Symlink a config file or directory from assets/configs/
 config.symlink() {
+    local -A opts; zparseopts -E -D -K -A opts -contents -help h
     local src="$1" dst="$2"
-    [[ -z "$src" || -z "$dst" ]] && { echo "Usage: config.symlink <source> <destination>" >&2; return 1; }
+    [[ -z "$src" || -z "$dst" ]] && { echo "Usage: config.symlink [--contents] <source> <destination>" >&2; return 1; }
 
     local resolved; resolved=$(_config_resolve configs "$src") || {
         echo "❌ Source not found: $src" >&2
         return 1
     }
+
+    if (( ${+opts[--contents]} )); then
+        [[ ! -d "$resolved" ]] && { echo "❌ Source is not a directory: $resolved" >&2; return 1; }
+        
+        if [[ -L "$dst" || -f "$dst" ]]; then
+            rm -f "$dst"
+        fi
+        mkdir -p "$dst"
+        
+        local item
+        for item in "$resolved"/*(DN); do
+            config.symlink "$item" "$dst/${item:t}"
+        done
+        return 0
+    fi
 
     [[ -d "$dst" && ! -L "$dst" ]] && { echo "❌ Destination is a directory: $dst" >&2; return 1; }
     [[ -L "$dst" && "${dst:a:P}" == "$resolved" ]] && return 0
