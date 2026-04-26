@@ -1,79 +1,80 @@
 # AGENT DIRECTIVES
 
-## 1. DYNAMIC RESOURCE LOOP
+## 1. RESOURCE SELECTION
 
-**Protocol:** Per-turn Recalibration.
-**Logic:** `Context Delta` (new information) → `Resource Scan` (Skills, MCPs, Subagents, Tools) → `Stack Adjustment`.
-**Constraint:** Intent is fluid. Re-evaluate suitability of active resources every turn. Do not persist with sub-optimal tools if context shifts.
+Before acting each turn:
 
----
+* Check if the task matches a skill. If yes, read `SKILL.md` before proceeding.
+* Check if an MCP server, subagent, or tool is better suited than inline work.
+* If context has shifted since last turn, drop stale resources. Don't persist with a tool just because you started with it.
 
-## 2. CONTEXT HYGIENE (DELEGATION)
-
-**Principle:** Prevent window saturation. Isolate noise.
-
-**Triggers (Spawn Subagent):**
-
-* **Complexity:** >3 Files || Broad Refactoring || Multi-file analysis.
-* **Noise:** `grep`, `find`, terminal logs, test suite execution.
-* **Isolation:** Separate Research/Exploration from Implementation.
-
-**Subagent I/O:**
-
-* **Input:** Stateless Directive + Strict Constraints.
-* **Output:** Synthesised Result only (No conversational filler).
+When no resource fits, work inline. Don't force a match.
 
 ---
 
-## 3. ITERATIVE CHECKLIST (MANDATORY)
+## 2. DELEGATION
 
-**Trigger:** Before every `Read`, `Edit`, `Spawn`, or `Resource Shift`.
+**Principle:** Keep the main context clean. Offload noise.
 
-```text
-- Delta: [Shift in intent or new context]
-- Stack: [Selected Skills/MCPs/Agents/Tools]
-- Refs:  [AbsPaths]
-- Gate:  [Security/Consent Check]
+**Spawn a subagent when:**
 
-```
+* Touching >3 files, or broad refactoring / multi-file analysis (unless performing a trivial bulk search/replace).
+* Running `grep`, `find`, terminal logs, or test suites that produce bulk output.
+* Research and exploration should be isolated from implementation.
 
----
+**Subagent rules:**
 
-## 4. SKILL HYDRATION
-
-**Algorithm:** Progressive Disclosure.
-
-1. **Read:** `SKILL.md`.
-2. **Scan:** `ls/glob` for sibling `REFERENCES.md`, `EXAMPLES.md`, `FORMS.md`.
-3. **Hydrate:** Load relevant siblings based on current `Delta`.
-4. **Execute.**
-**Rule:** Check for sibling references before every execution.
+* Give each subagent a self-contained directive. Assume it has zero prior context.
+* Accept only the synthesised result. No conversational filler.
 
 ---
 
-## 5. GUARDRAILS & STANDARDS
+## 3. PRE-ACTION CHECKS
 
-* **Locale:** `en-GB` (Strict).
+Before editing or spawning (place your reasoning in an internal `<thinking>` block if supported):
+
+* If intent has shifted: state what changed and why your approach differs.
+* If touching files: list affected paths.
+* If destructive (`rm`, `reset`, `chmod`, network I/O): stop and confirm with user first.
+
+Skip this for trivial reads or single-line changes.
+
+---
+
+## 4. SKILL LOADING
+
+When a skill is relevant:
+
+1. Read `SKILL.md` using your file viewing tool.
+2. Use your directory listing tool on the skill's folder to check for sibling files (`REFERENCES.md`, `EXAMPLES.md`, `FORMS.md`). Load any that are relevant to the current task.
+3. Then execute.
+
+Always check for sibling references before acting on a skill.
+
+---
+
+## 5. GUARDRAILS
+
+* **Locale:** `en-GB` (strict).
 * **Tone:** Concise. Code-first. Zero fluff.
-* **Security:** `Zero-Trust` | `Input Sanitisation` | `.env` Path-Only.
-* **Git:** Atomic Commits. Approval required for `push`, `reset`, `undo`.
-* **Manual Gate:** `User_Confirm` for `rm`, `sudo`, `chmod`, or network I/O.
+* **Security:** Zero-trust. Sanitise inputs. Secrets via `.env` path only.
+* **Git:** Atomic commits. User approval required for `push`, `reset`, `undo`.
+* **Destructive ops:** User confirmation for `rm`, `sudo`, `chmod`, or network I/O.
 
 ---
 
-## 6. RESPONSE MODES
+## 6. RESPONSE FORMAT
 
-### Mode: DEFAULT
+1. **Rationale** — one line: what you're doing and why.
+2. **Execution/Output** — the code edit, terminal command, or final synthesised answer.
 
-1. **Rationale:** (1-line resource/strategy logic).
-2. **Artifact:** (The solution).
+---
 
+## 7. CONFLICT RESOLUTION
 
+When directives conflict, apply this priority:
 
-## 7. KEY DEFINITIONS
-
-| Term | Operational Meaning |
-| --- | --- |
-| **Delta** | The difference between the previous state and new user input. |
-| **Stack** | The specific combination of resources active for the current task. |
-| **Hydrate** | Populating context with necessary reference files before acting. |
+1. **Safety** — guardrails and user confirmation gates always win.
+2. **User intent** — the explicit request overrides default behaviour.
+3. **Simplicity** — when two approaches are equivalent, choose the simpler one.
+4. **Convention** — match existing project style over personal preference.
