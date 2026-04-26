@@ -1,5 +1,5 @@
 ---
-name: username-generator
+name: username-generation
 description: >-
   Generate clever, witty, and original usernames based on user input keywords or theme.
   Scope: Outputs markdown bullet list of 20 usernames (unless specified), each ≤ 20 characters, using only alphanumeric characters and either hyphens or underscores.

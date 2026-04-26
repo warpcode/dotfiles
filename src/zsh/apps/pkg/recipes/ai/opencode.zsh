@@ -10,19 +10,56 @@ pkg.recipe.opencode.configure() {
         (( $+commands[opencode] )) || { tui.warn "opencode command not found, skipping"; return 0; }
         (( $+commands[jq] )) || { tui.warn "jq command not found, skipping"; return 0; }
 
-        local target="${DOTFILES}/generic/.config/opencode/opencode.json"
+        local target="${XDG_CONFIG_HOME}/opencode/opencode.json"
         tui.step "Updating $target"
         pkg.recipe.opencode.configure.base "$target"
         pkg.recipe.opencode.configure.providers "$target"
         pkg.recipe.opencode.configure.mcps "$target"
+
+        tui.step "Linking skills directory"
+        config.symlink --contents "ai/skills" "${HOME}/.agents/skills"
+        pkg.recipe.opencode.configure.skills
+
         tui.success "Configuration complete"
     } always {
         tui.indent.pop
     }
 }
 
+pkg.recipe.opencode.configure.skills() {
+    local -a skills=(
+        "anthropics/skills:skill-creator"
+        "JuliusBrussee/caveman:caveman,caveman-compress,caveman-commit,caveman-help,caveman-review"
+    )
+
+    local item repo names name out
+    local -a name_args
+    for item in "${skills[@]}"; do
+        repo="${item%%:*}"
+        names="${item#*:}"
+
+        name_args=()
+        if [[ "$repo" == "$names" || "$names" == "*" ]]; then
+            name_args=(--skill "*")
+            tui.step "Skills: * (${repo})"
+        else
+            # Split comma-separated names into multiple --skill flags
+            for name in ${(s:,:)names}; do
+                name_args+=(--skill "$name")
+            done
+            tui.step "Skills: ${names} (${repo})"
+        fi
+
+        if ! out=$(npx skills add "$repo" "${name_args[@]}" -g --agent universal -y 2>&1); then
+            tui.error "Failed to install ${item}"
+            echo "$out" | grep -v "█"
+        fi
+    done
+}
+
+
 pkg.recipe.opencode.configure.base() {
-    local target="${1:-${DOTFILES}/generic/.config/opencode/opencode.json}"
+    local target="${1:-${XDG_CONFIG_HOME}/opencode/opencode.json}"
     [[ -f "$target" ]] && return 0
     mkdir -p "${target:h}"
     jq -n '{
@@ -37,7 +74,7 @@ pkg.recipe.opencode.configure.base() {
 }
 
 pkg.recipe.opencode.configure.providers() {
-    local target="${1:-${DOTFILES}/generic/.config/opencode/opencode.json}"
+    local target="${1:-${XDG_CONFIG_HOME}/opencode/opencode.json}"
     local providers selected_model='' pid
 
     providers="$(ai.models.free)"
@@ -63,7 +100,7 @@ pkg.recipe.opencode.configure.providers() {
 }
 
 pkg.recipe.opencode.configure.mcps() {
-    local target="${1:-${DOTFILES}/generic/.config/opencode/opencode.json}"
+    local target="${1:-${XDG_CONFIG_HOME}/opencode/opencode.json}"
     local tmp
     tmp="$(jq --argjson mcps "$(ai.mcps)" '.mcp = $mcps' "$target")" && printf '%s\n' "$tmp" > "$target"
 }

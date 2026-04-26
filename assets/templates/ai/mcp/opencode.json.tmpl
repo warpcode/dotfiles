@@ -1,0 +1,15 @@
+{
+{{- range $i, $m := .config.mcps }}
+  {{- if $i }},{{ end }}
+  "{{ $m.id }}": {
+    "type": "{{ $m.type }}",
+    {{- if eq $m.type "local" }}
+    "command": {{ $m.full_command | toJSON }},
+    "environment": {{ $m.env | toJSON }}
+    {{- else }}
+    "url": {{ $m.url | toJSON }},
+    "headers": {{ $m.env | toJSON }}
+    {{- end }}
+  }
+{{- end }}
+}

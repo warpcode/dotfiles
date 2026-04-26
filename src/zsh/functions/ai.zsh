@@ -69,16 +69,6 @@ ai.mcp.define() {
 ai.mcp.is_enabled() { registry.is_enabled "ai_mcp_recipe" "${1//-/_}" "ai.mcps" }
 ai.mcp.get() { registry.get "ai_mcp_recipe" "$1" "$2"; }
 
-# --- Agent ---
-ai.agent.define() {
-    registry.define "ai_agent" "$@"
-    local id="${1//-/_}"
-    if (( ! $+functions[ai.agents.${id}.enabled] )); then
-        eval "ai.agents.${id}.enabled() { return 0 }"
-    fi
-}
-
-ai.agent.get() { registry.get "ai_agent" "$1" "$2"; }
 
 # --- Generic OpenAI Compatible API Base ---
 ai.provider.api.base() {
@@ -202,29 +192,59 @@ ai.models.free() {
 }
 
 ai.mcps() {
-    local rid output='{}'
+    local format="${1:-opencode}"
+    local rid mcp_list='[]'
+    
     for rid in $(registry.list ai_mcp_recipe); do
         ai.mcp.is_enabled "$rid" || continue
 
-        local type cmd url header_env block
-        type="$(ai.mcp.get "$rid" type)"
-        cmd="$(ai.mcp.get "$rid" command)"
-        url="$(ai.mcp.get "$rid" url)"
-        header_env="$(ai.mcp.get "$rid" api_key_header)"
+        local _type='' _cmd='' _url='' _header_env='' _desc='' _env_vars=''
+        _type="$(ai.mcp.get "$rid" type)"
+        _cmd="$(ai.mcp.get "$rid" command)"
+        _url="$(ai.mcp.get "$rid" url)"
+        _header_env="$(ai.mcp.get "$rid" api_key_header)"
+        _desc="$(ai.mcp.get "$rid" description)"
+        _env_vars="$(ai.mcp.get "$rid" env)" 
 
-        if [[ "$type" == "local" ]]; then
-            block="$(jq -n --arg t "$type" --arg c "$cmd" '{type: $t, command: ($c | split(" "))}')"
-        else
-            block="$(jq -n --arg t "$type" --arg u "$url" '{type: $t, url: $u}')"
+        # Reliably split command into parts using Zsh's shell parser
+        local -a _parts=() _dequoted=()
+        _parts=(${(z)_cmd})
+        for _p in "${_parts[@]}"; do
+            local _p="$_p"
+            _dequoted+=("${(Q)_p}")
+        done
+        
+        local _cmd_json='[]'
+        if [[ ${#_dequoted} -gt 0 ]]; then
+            _cmd_json=$(jq -n -c '$ARGS.positional' --args -- "${_dequoted[@]}")
         fi
 
-        [[ -n "$header_env" ]] && block="$(jq -n \
-            --argjson b "$block" --arg k "$header_env" \
-            '$b + {headers: {($k): ("{env:" + $k + "}")}}')"
-
-        output="$(jq -n --argjson m "$output" --arg k "$rid" --argjson v "$block" '$m + {($k): $v}')"
+        mcp_list="$(jq -n --argjson m "$mcp_list" --arg k "$rid" \
+            --arg t "$_type" --argjson cp "$_cmd_json" --arg u "$_url" --arg h "$_header_env" --arg d "$_desc" --arg e "$_env_vars" \
+            '$m + [{
+                id: $k,
+                type: $t,
+                command: ($cp[0] // null),
+                args: ($cp[1:] // []),
+                full_command: $cp,
+                url: $u,
+                description: $d,
+                env: (
+                    (if $h != "" then {($h): ("{env:" + $h + "}")} else {} end) +
+                    (if $e != "" then ($e | split(",") | map( (index(":") // length) as $i | {key: .[0:$i], value: .[$i+1:]} ) | from_entries) else {} end)
+                )
+            }]')"
     done
-    echo "$output"
+
+    # Normalize format for template selection
+    local template_format="$format"
+    case "$format" in
+        antigravity|claude|cursor) template_format="antigravity" ;;
+        opencode|*) template_format="opencode" ;;
+    esac
+
+    local template="ai/mcp/${template_format}.json.tmpl"
+    config.hydrate "$template" --config-json "$(jq -n --argjson m "$mcp_list" '{mcps: $m}')"
 }
 
 # ai.chat <provider>/<model> [prompt]
