@@ -63,6 +63,21 @@ config.hydrate() {
         merged=$(jq -s '.[0] * $n' --argjson n "$opts[--config-json]" <<<"$merged")
     fi
 
+    # Resolve secrets in the merged JSON
+    local -a aliases
+    aliases=($(echo "$merged" | jq -r '.. | strings | select(startswith("{secret:") and endswith("}")) | sub("^{secret:"; "") | sub("}$"; "")' | sort -u))
+    
+    local alias_item secret_val
+    for alias_item in "${aliases[@]}"; do
+        secret_val=$("$DOTFILES/bin/df.secrets" "$alias_item" 2>/dev/null)
+        if [[ -n "$secret_val" ]]; then
+            # Replace the token with the actual secret value
+            merged=$(jq --arg a "{secret:$alias_item}" --arg v "$secret_val" 'walk(if type == "string" and . == $a then $v else . end)' <<<"$merged")
+        else
+            echo "⚠️  Warning: Could not resolve secret: $alias_item" >&2
+        fi
+    done
+
     merged=$(jq --arg now "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" '.secrets |= (. // {}) | .created |= (. // $now)' <<<"$merged")
 
     local tmp=$(mktemp)
