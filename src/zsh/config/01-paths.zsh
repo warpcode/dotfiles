@@ -2,6 +2,7 @@ path.prepend "/usr/local/bin"
 path.prepend "/usr/local/sbin"
 path.prepend "${HOME}/.local/bin"
 path.prepend "${HOME}/bin"
+path.prepend "${DOTFILES}/bin"
 
 path.append "${HOME}/.cargo/bin"
 
