@@ -1,0 +1,355 @@
+#!/usr/bin/env zsh
+#
+# df.jira - Generic Jira REST API wrapper for searches and metadata.
+#
+# Usage: df.jira jql "issuetype = Epic" --max-results 10
+#        df.jira issues MAR-123 MAR-456 --fields "summary,status"
+#        df.jira fields "Story"
+#
+# Environment:
+#   JIRA_URL, JIRA_USER, JIRA_API_KEY
+
+emulate -LR zsh
+setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL
+
+zmodload zsh/datetime
+
+# ---------------------------------------------------------------------------
+# Global Variables
+# ---------------------------------------------------------------------------
+typeset -g JIRA_URL="${JIRA_URL:-}"
+typeset -g JIRA_USER="${JIRA_USER:-}"
+typeset -g JIRA_TOKEN="${JIRA_API_KEY:-}"
+typeset -g -i VERBOSE=0
+typeset -g -i RAW_OUTPUT=0
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+#######################################
+# Print error message with timestamp.
+# Arguments:
+#   $* - Error message components.
+#######################################
+err() {
+  print -r -- "[$(strftime '%Y-%m-%dT%H:%M:%S%z' ${EPOCHSECONDS})] df.jira: $*" >&2
+}
+
+#######################################
+# Print error and exit.
+# Arguments:
+#   $* - Error message components.
+#######################################
+die() {
+  err "$*"
+  exit 1
+}
+
+#######################################
+# Check for required dependencies.
+#######################################
+check_deps() {
+  local dep
+  for dep in curl jq base64; do
+    if ! command -v "$dep" >/dev/null; then
+      die "Error: '$dep' is required but not found."
+    fi
+  done
+}
+
+#######################################
+# Sanitize JSON by removing raw control characters.
+# Arguments:
+#   Stdin - Raw JSON.
+# Outputs:
+#   Writes cleaned JSON to stdout.
+#######################################
+_clean_json() {
+  tr -d '\000-\037'
+}
+
+#######################################
+# Call Jira API using curl.
+# Arguments:
+#   $1 - HTTP Method (GET, POST, etc.)
+#   $2 - Endpoint URL
+#   $3 - (Optional) JSON Payload
+# Outputs:
+#   Writes API response to stdout.
+#######################################
+_call_api() {
+  local method="$1"
+  local endpoint="$2"
+  local payload="${3:-}"
+
+  local auth_header
+  auth_header="Basic $(print -n "${JIRA_USER}:${JIRA_TOKEN}" | base64 | tr -d '\n')"
+
+  local -a curl_opts
+  curl_opts=(
+    -s
+    -w "%{http_code}"
+    -X "${method}"
+    -H "Authorization: ${auth_header}"
+    -H "Content-Type: application/json"
+    -H "Accept: application/json"
+  )
+
+  if [[ -n "${payload}" ]]; then
+    curl_opts+=(-d "${payload}")
+  fi
+
+  if (( VERBOSE )); then
+    err "Request: ${method} ${endpoint}"
+    [[ -n "${payload}" ]] && err "Payload: ${payload}"
+  fi
+
+  local response_file
+  response_file=$(mktemp)
+  trap "rm -f ${response_file}" EXIT
+
+  local http_code
+  http_code=$(curl "${curl_opts[@]}" -o "${response_file}" "${endpoint}")
+  local response=$(<"${response_file}")
+
+  if [[ "${http_code}" -lt 200 || "${http_code}" -ge 300 ]]; then
+    if (( VERBOSE )); then
+      err "HTTP Status: ${http_code}"
+      err "Response: ${response}"
+    fi
+    case "${http_code}" in
+      401) die "Authentication failed (401)." ;;
+      403) die "Forbidden (403)." ;;
+      404) die "Not Found (404)." ;;
+      400) die "Bad Request (400)." ;;
+      *)   die "Request failed with HTTP ${http_code}." ;;
+    esac
+  fi
+
+  print -r -- "${response}"
+}
+
+# ---------------------------------------------------------------------------
+# Subcommands
+# ---------------------------------------------------------------------------
+
+#######################################
+# Execute 'jql' subcommand.
+# Arguments:
+#   $* - Subcommand options and query.
+#######################################
+cmd_jql() {
+  local query=""
+  local -i max_results=50
+  local -A extra_params
+
+  if [[ $# -gt 0 && "$1" != -* ]]; then
+    query="$1"
+    shift
+  fi
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --max-results) max_results="$2"; shift 2 ;;
+      --param)
+        if [[ "$2" != *=* ]]; then
+          die "Error: --param requires key=value format (got: $2)"
+        fi
+        extra_params[${2%%=*}]="${2#*=}"
+        shift 2
+        ;;
+      *) die "Unknown option for 'jql': $1" ;;
+    esac
+  done
+
+  [[ -z "${query}" ]] && die "Error: JQL query string is required."
+
+  local -a jq_args
+  jq_args=(--arg jql "${query}" --argjson maxResults "${max_results}")
+  local k v
+  for k v in "${(kv)extra_params[@]}"; do
+    if [[ "${v}" =~ ^[0-9]+$ ]]; then
+      jq_args+=(--argjson "${k}" "${v}")
+    else
+      jq_args+=(--arg "${k}" "${v}")
+    fi
+  done
+
+  local payload
+  payload=$(jq -n "${jq_args[@]}" '{"jql": $jql, "maxResults": $maxResults} + ($ARGS.named | del(.jql, .maxResults))')
+
+  local response
+  response=$(_call_api "POST" "${JIRA_URL%/}/rest/api/3/search/jql" "${payload}")
+
+  if (( RAW_OUTPUT )); then
+    print -r -- "${response}"
+  elif [[ -t 1 ]]; then
+    print -r -- "${response}" | _clean_json | jq '.'
+  else
+    print -r -- "${response}"
+  fi
+}
+
+#######################################
+# Execute 'issues' subcommand.
+# Arguments:
+#   $* - Subcommand options and IDs.
+#######################################
+cmd_issues() {
+  local -a issue_ids
+  local fields=""
+  local expand=""
+
+  while [[ $# -gt 0 && "$1" != -* ]]; do
+    issue_ids+=("$1")
+    shift
+  done
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --fields) fields="$2"; shift 2 ;;
+      --expand) expand="$2"; shift 2 ;;
+      *) die "Unknown option for 'issues': $1" ;;
+    esac
+  done
+
+  [[ ${#issue_ids[@]} -eq 0 ]] && die "Error: At least one issue ID/key is required."
+
+  local payload
+  payload=$(jq -n \
+    --arg fields "${fields}" \
+    --arg expand "${expand}" \
+    '{"issueIdsOrKeys": $ARGS.positional}
+     + (if $fields != "" then {"fields": ($fields | split(",") | map(select(length > 0)))} else {} end)
+     + (if $expand != "" then {"expand": ($expand | split(",") | map(select(length > 0)))} else {} end)' \
+    --args "${issue_ids[@]}")
+
+  local response
+  response=$(_call_api "POST" "${JIRA_URL%/}/rest/api/3/issue/bulkfetch" "${payload}")
+
+  if (( RAW_OUTPUT )); then
+    print -r -- "${response}"
+  elif [[ -t 1 ]]; then
+    print -r -- "${response}" | _clean_json | jq '.'
+  else
+    print -r -- "${response}"
+  fi
+}
+
+#######################################
+# Execute 'fields' subcommand.
+# Arguments:
+#   $* - Subcommand options and filter.
+#######################################
+cmd_fields() {
+  local filter=""
+  if [[ $# -gt 0 && "$1" != -* ]]; then
+    filter="$1"
+    shift
+  fi
+
+  [[ $# -gt 0 ]] && die "Unknown option for 'fields': $1"
+
+  local response
+  response=$(_call_api "GET" "${JIRA_URL%/}/rest/api/3/field")
+
+  if (( RAW_OUTPUT )); then
+    print -r -- "${response}"
+  elif [[ -n "${filter}" ]]; then
+    print -r -- "${response}" | _clean_json | jq --arg filter "${filter}" 'map(select(.name | test($filter; "i"))) | map({(.id): .name}) | add // {}'
+  elif [[ -t 1 ]]; then
+    print -r -- "${response}" | _clean_json | jq 'map({(.id): .name}) | add'
+  else
+    print -r -- "${response}"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+usage() {
+  cat <<EOF
+Usage: df.jira <subcommand> [options]
+
+Subcommands:
+  jql                   Search for issues
+  issues                Fetch details for specific issue(s)
+  fields                List or search for Jira fields
+
+General Options:
+  --url <url>           Jira workspace URL
+  --user <email>        Jira user email
+  --token <api-token>   Jira API token
+  --raw                 Output raw response from API
+  -v, --verbose         Show verbose request/response details
+  -h, --help            Show this help
+
+'jql' Options:
+  <query>               JQL query string (positional, required)
+  --max-results <int>   Maximum number of results (default: 50)
+  --param <key=val>     Additional parameters to pass to the API
+
+'issues' Options:
+  <id/key>...           One or more issue IDs or keys (positional, required)
+  --fields <list>       Comma-separated list of fields to include
+  --expand <list>       Comma-separated list of expand options
+
+'fields' Options:
+  <filter>              Optional search pattern to filter fields by name
+
+Authentication:
+  Can be provided via flags or environment variables:
+  JIRA_URL, JIRA_USER, JIRA_API_KEY
+EOF
+  exit 1
+}
+
+main() {
+  check_deps
+
+  # Parse global options first, leaving subcommand and its args in $@
+  local -a opts
+  zparseopts -D -E -a opts \
+    -url:=opts \
+    -user:=opts \
+    -token:=opts \
+    -raw=opts \
+    v=opts -verbose=opts \
+    h=opts -help=opts
+
+  local opt
+  for opt in "${opts[@]}"; do
+    case "${opt}" in
+      --url)    JIRA_URL="${opts[$((opts[(i)$opt] + 1))]}";;
+      --user)   JIRA_USER="${opts[$((opts[(i)$opt] + 1))]}";;
+      --token)  JIRA_TOKEN="${opts[$((opts[(i)$opt] + 1))]}";;
+      --raw)    RAW_OUTPUT=1 ;;
+      -v|--verbose) VERBOSE=1 ;;
+      -h|--help)    usage ;;
+    esac
+  done
+
+  local subcommand="${1:-}"
+  [[ -z "${subcommand}" ]] && usage
+  shift
+
+  # Final validation of mandatory credentials
+  [[ -z "${JIRA_URL}" ]]   && die "Error: Jira URL is required (or set JIRA_URL)."
+  [[ -z "${JIRA_USER}" ]]  && die "Error: Jira User is required (or set JIRA_USER)."
+  [[ -z "${JIRA_TOKEN}" ]] && die "Error: Jira API Key is required (or set JIRA_API_KEY)."
+
+  if [[ ! "${JIRA_URL}" =~ ^https?:// ]]; then
+    JIRA_URL="https://${JIRA_URL}"
+  fi
+
+  case "${subcommand}" in
+    jql)    cmd_jql "$@" ;;
+    issues) cmd_issues "$@" ;;
+    fields) cmd_fields "$@" ;;
+    *)      die "Unknown subcommand: ${subcommand}" ;;
+  esac
+}
+
+main "$@"
