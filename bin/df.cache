@@ -1,0 +1,352 @@
+#!/usr/bin/env zsh
+#
+# df.cache - Encrypted cache utility (standalone).
+# Extracted from src/zsh/functions/cache.zsh for portability.
+
+emulate -LR zsh
+setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL
+
+0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
+typeset -r SCRIPT_DIR="${0:A:h}"
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+readonly CACHE_BASE_DIR="${HOME}/.cache/dotfiles"
+readonly CACHE_KEY_SERVICE="dotfiles-cache-key"
+readonly USER_NAME="${USER:-$(whoami)}"
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+err() {
+  print -r -- "df.cache: $*" >&2
+}
+
+# ---------------------------------------------------------------------------
+# Keychain
+# ---------------------------------------------------------------------------
+
+#######################################
+# Retrieve a value from the OS keychain.
+# Arguments:
+#   $1 - Service name.
+# Outputs:
+#   Secret value to stdout.
+#######################################
+_keychain_get() {
+  local svc="dotfiles/${1#dotfiles/}"
+  if command -v security >/dev/null; then
+    security find-generic-password -a "${USER_NAME}" -s "${svc}" -w 2>/dev/null
+  elif command -v secret-tool >/dev/null; then
+    secret-tool lookup service "${svc}" account "${USER_NAME}" 2>/dev/null
+  fi
+}
+
+#######################################
+# Store a value in the OS keychain.
+# Arguments:
+#   $1 - Service name.
+#   $2 - Value to store.
+#######################################
+_keychain_store() {
+  local svc="dotfiles/${1#dotfiles/}" val="$2"
+  if command -v security >/dev/null; then
+    security delete-generic-password -a "${USER_NAME}" -s "${svc}" &>/dev/null
+    security add-generic-password -a "${USER_NAME}" -s "${svc}" -w "${val}" -U &>/dev/null
+  elif command -v secret-tool >/dev/null; then
+    print -nr -- "${val}" \
+        | secret-tool store --label="Dotfiles: ${svc}" service "${svc}" account "${USER_NAME}"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Encryption
+# ---------------------------------------------------------------------------
+
+#######################################
+# Hash a key for filesystem storage.
+# Arguments:
+#   $1 - Cache key string.
+# Outputs:
+#   SHA-256 hex digest to stdout.
+#######################################
+_hash_key() {
+  print -n -- "${1:?}" | sha256sum | awk '{print $1}'
+}
+
+#######################################
+# Get or generate the encryption key from the OS keyring.
+# Outputs:
+#   Hex-encoded encryption key to stdout.
+#######################################
+_get_enc_key() {
+  local key
+  key="$(_keychain_get "${CACHE_KEY_SERVICE}")"
+  if [[ -z "${key}" ]]; then
+    key="$(openssl rand -hex 32 2>/dev/null)"
+    if [[ -n "${key}" ]]; then
+      _keychain_store "${CACHE_KEY_SERVICE}" "${key}" >/dev/null 2>&1
+    fi
+  fi
+  print -r -- "${key}"
+}
+
+#######################################
+# Check whether openssl is available.
+# Returns:
+#   0 if available, 1 otherwise.
+#######################################
+_can_encrypt() {
+  command -v openssl >/dev/null
+}
+
+#######################################
+# Encrypt a value.
+# Arguments:
+#   $1 - Plaintext value.
+#   $2 - Encryption key.
+# Outputs:
+#   Base64-encoded ciphertext to stdout.
+#######################################
+_encrypt() {
+  local value="$1" key="$2"
+  print -n -- "${value}" \
+      | openssl enc -aes-256-cbc -pbkdf2 -salt -pass "pass:${key}" -base64 -A 2>/dev/null
+}
+
+#######################################
+# Decrypt a value.
+# Arguments:
+#   $1 - Base64-encoded ciphertext.
+#   $2 - Encryption key.
+# Outputs:
+#   Decrypted plaintext to stdout.
+#######################################
+_decrypt() {
+  local encrypted="$1" key="$2"
+  print -n -- "${encrypted}" \
+      | openssl enc -d -aes-256-cbc -pbkdf2 -pass "pass:${key}" -base64 -A 2>/dev/null
+}
+
+# ---------------------------------------------------------------------------
+# Platform helpers
+# ---------------------------------------------------------------------------
+
+#######################################
+# Get file modification time (cross-platform).
+# Arguments:
+#   $1 - File path.
+# Outputs:
+#   Epoch seconds to stdout.
+#######################################
+_file_mtime() {
+  if [[ "${OSTYPE}" == darwin* ]]; then
+    stat -f %m "$1"
+  else
+    stat -c %Y "$1"
+  fi
+}
+
+#######################################
+# Ensure the cache base directory exists with strict permissions.
+#######################################
+_ensure_dir() {
+  if [[ ! -d "${CACHE_BASE_DIR}" ]]; then
+    mkdir -p "${CACHE_BASE_DIR}"
+    chmod 700 "${CACHE_BASE_DIR}"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Sub-commands
+# ---------------------------------------------------------------------------
+
+#######################################
+# Get a cached value.
+# Arguments:
+#   $1 - Namespace.
+#   $2 - Key.
+#   $3 - TTL in seconds (default: 86400).
+# Outputs:
+#   Cached value to stdout.
+# Returns:
+#   0 on hit, 1 on miss/expired.
+#######################################
+cmd_get() {
+  local ns="${1:?namespace required}"
+  local key="${2:?key required}"
+  local ttl="${3:-86400}"
+  local hashed_key
+  hashed_key="$(_hash_key "${key}")"
+  local enc_file="${CACHE_BASE_DIR}/${ns}/${hashed_key}.enc.cache"
+  local plain_file="${CACHE_BASE_DIR}/${ns}/${hashed_key}.cache"
+  local cache_file=""
+
+  if [[ -f "${enc_file}" ]]; then
+    cache_file="${enc_file}"
+  elif [[ -f "${plain_file}" ]]; then
+    cache_file="${plain_file}"
+  fi
+
+  if [[ -n "${cache_file}" ]]; then
+    local now
+    now="$(date +%s)"
+    local mtime
+    mtime="$(_file_mtime "${cache_file}")"
+    if (( now - mtime < ttl )); then
+      local content
+      content="$(<"${cache_file}")"
+      if [[ "${cache_file}" == *.enc.cache ]]; then
+        local enc_key
+        enc_key="$(_get_enc_key)"
+        local decrypted
+        decrypted="$(_decrypt "${content}" "${enc_key}")"
+        if [[ -n "${decrypted}" ]]; then
+          print -r -- "${decrypted}"
+          return 0
+        fi
+      else
+        print -r -- "${content}"
+        return 0
+      fi
+    fi
+  fi
+  return 1
+}
+
+#######################################
+# Set a cached value (encrypted if possible).
+# Arguments:
+#   $1 - Namespace.
+#   $2 - Key.
+#   $3 - Value.
+#######################################
+cmd_set() {
+  local ns="${1:?namespace required}"
+  local key="${2:?key required}"
+  local value="${3:?value required}"
+  local cache_dir="${CACHE_BASE_DIR}/${ns}"
+  local hashed_key
+  hashed_key="$(_hash_key "${key}")"
+  local enc_file="${CACHE_BASE_DIR}/${ns}/${hashed_key}.enc.cache"
+  local plain_file="${CACHE_BASE_DIR}/${ns}/${hashed_key}.cache"
+
+  if [[ ! -d "${cache_dir}" ]]; then
+    mkdir -p "${cache_dir}"
+    chmod 700 "${cache_dir}"
+  fi
+
+  if _can_encrypt; then
+    local enc_key
+    enc_key="$(_get_enc_key)"
+    local encrypted
+    encrypted="$(_encrypt "${value}" "${enc_key}")"
+    if [[ -n "${encrypted}" ]]; then
+      print -r -- "${encrypted}" > "${enc_file}"
+      rm -f -- "${plain_file}"
+      chmod 600 "${enc_file}"
+      return 0
+    fi
+  fi
+
+  print -r -- "${value}" > "${plain_file}"
+  rm -f -- "${enc_file}"
+  chmod 600 "${plain_file}"
+}
+
+#######################################
+# Delete a cached entry.
+# Arguments:
+#   $1 - Namespace.
+#   $2 - Key.
+#######################################
+cmd_del() {
+  local ns="${1:?namespace required}"
+  local key="${2:?key required}"
+  local hashed_key
+  hashed_key="$(_hash_key "${key}")"
+  rm -f -- "${CACHE_BASE_DIR}/${ns}/${hashed_key}.enc.cache" \
+          "${CACHE_BASE_DIR}/${ns}/${hashed_key}.cache"
+}
+
+#######################################
+# Clear a namespace or all caches.
+# Arguments:
+#   $1 - (optional) Namespace to clear. Clears all if omitted.
+#######################################
+cmd_clear() {
+  local ns="${1:-}"
+  if [[ -n "${ns}" ]]; then
+    rm -rf -- "${CACHE_BASE_DIR}/${ns}"
+  else
+    rm -rf -- "${CACHE_BASE_DIR}"/*
+  fi
+}
+
+#######################################
+# Check if a cache entry is stored encrypted.
+# Arguments:
+#   $1 - Namespace.
+#   $2 - Key.
+# Returns:
+#   0 if encrypted, 1 if not.
+#######################################
+cmd_is_encrypted() {
+  local ns="${1:?namespace required}"
+  local key="${2:?key required}"
+  local hashed_key
+  hashed_key="$(_hash_key "${key}")"
+  [[ -f "${CACHE_BASE_DIR}/${ns}/${hashed_key}.enc.cache" ]]
+}
+
+#######################################
+# Check if encryption is available.
+# Returns:
+#   0 if available, 1 otherwise.
+#######################################
+cmd_can_encrypt() {
+  _can_encrypt && _get_enc_key >/dev/null 2>&1
+}
+
+_usage() {
+  print -r -- "Usage: df.cache <command> [args...]"
+  print -r -- ""
+  print -r -- "Commands:"
+  print -r -- "  get <ns> <key> [ttl]     Get cached value (default TTL: 86400s)"
+  print -r -- "  set <ns> <key> <value>   Set cached value (encrypted if possible)"
+  print -r -- "  del <ns> <key>           Delete cached entry"
+  print -r -- "  clear [ns]               Clear namespace or all caches"
+  print -r -- "  is-encrypted <ns> <key>  Check if entry is encrypted (exit code)"
+  print -r -- "  can-encrypt              Check if encryption is available (exit code)"
+}
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+main() {
+  _ensure_dir
+
+  local cmd="${1:-}"
+  shift
+
+  case "${cmd}" in
+    get)          cmd_get "$@" ;;
+    set)          cmd_set "$@" ;;
+    del)          cmd_del "$@" ;;
+    clear)        cmd_clear "$@" ;;
+    is-encrypted) cmd_is_encrypted "$@" ;;
+    can-encrypt)  cmd_can_encrypt ;;
+    -h|--help)    _usage ;;
+    *)
+      err "Unknown command: ${cmd:-<none>}"
+      _usage >&2
+      return 1
+      ;;
+  esac
+}
+
+main "$@"
