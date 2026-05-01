@@ -1,118 +1,44 @@
-# KeePassXC database path
+# KeePassXC shell integration
+# Thin interactive wrapper around df.secrets.kp binary.
+
 export KEEPASS_DB_PATH="${KEEPASS_DB_PATH:-$HOME/.keepass/Accounts.kdbx}"
 
 ##
 # Main wrapper function for keepassxc-cli
 #
-# Provides a convenient interface to keepassxc-cli
+# Delegates to df.secrets.kp for all vault operations.
+# Special cases: "forget" and "help" are handled directly.
+# All other commands are passed through via `df.secrets.kp exec`.
 #
 # @param string $1 Command (show, ls, search, etc.) or empty for help
 # @param mixed ... Additional arguments passed to keepassxc-cli
 # @return 0 on success, 1 on error
 ##
 kp() {
-    [[ "$1" == "forget" ]] && { kp.forget; return 0 }
+    [[ "$1" == "forget" ]] && { df.secrets.kp forget; return 0 }
+    [[ -z "$1" || "$1" == "help" ]] && { df.secrets.kp --help; return 0 }
 
-    local cli_path; cli_path=$(kp.cli) || { echo "Error: keepassxc-cli not found." >&2; return 1 }
-    local -a command_array=(${(z)cli_path})
-
-    # Show help if no command or help requested
-    [[ -z "$1" || "$1" == "help" ]] && { "${command_array[@]}" --help; return 0 }
-
-    kp.login || return 1
-
-    # Execute with password piped from keychain
-    printf '%s' "$(secrets.get keepassxc)" | "${command_array[@]}" "$1" "$KEEPASS_DB_PATH" "${@:2}" -q
-}
-
-##
-# Verify KeePass database existence
-##
-kp.verify_db() {
-    if [[ -z "$KEEPASS_DB_PATH" ]]; then
-        echo "Error: KEEPASS_DB_PATH is not set." >&2
-        return 1
-    fi
-    if [[ ! -f "$KEEPASS_DB_PATH" ]]; then
-        echo "Error: KeePass database not found at '$KEEPASS_DB_PATH'." >&2
-        return 1
-    fi
+    df.secrets.kp exec "$@"
 }
 
 ##
 # Clear cached credentials from keychain
 ##
 kp.forget() {
-    secrets.delete "keepassxc"
+    df.secrets.kp forget
 }
 
 ##
-# Detect keepassxc-cli installation and return the command
-#
-# Checks for keepassxc-cli in PATH, flatpak, or snap installations
-#
-# @return string The CLI command to use, or empty string if not found
-##
-kp.cli() {
-    if (( $+commands[keepassxc-cli] )); then
-        echo "keepassxc-cli"
-        return 0
-    fi
-
-    if (( $+commands[flatpak] )); then
-        if flatpak list 2>/dev/null | grep -q "org.keepassxc.KeePassXC"; then
-            echo "flatpak run --command=keepassxc-cli org.keepassxc.KeePassXC"
-            return 0
-        fi
-    fi
-
-    if (( $+commands[snap] )); then
-        if snap list 2>/dev/null | grep -q "keepassxc"; then
-            echo "snap run keepassxc.cli"
-            return 0
-        fi
-    fi
-
-    return 1
-}
-
-##
-# Verify access to the database
-#
-# Logic:
-# 1. Attempt to get password from keychain via secrets.get (non-interactive).
-# 2. If no password found, call secrets.store "keepassxc" "-" to prompt and save.
-# 3. Verify the password against the DB.
-# 4. If verification fails, delete from keychain.
+# Verify access to the database (login/prompt flow)
 #
 # @return 0 on success, 1 on failure
 ##
 kp.login() {
-    kp.verify_db || return 1
-
-    local cli_path; cli_path=$(kp.cli) || { echo "Error: keepassxc-cli not found." >&2; return 1 }
-    local -a command_array=(${(z)cli_path})
-
-    local password; password=$(secrets.get "keepassxc")
-
-    # If no password in keychain, prompt and store
-    if [[ -z "$password" ]]; then
-        secrets.store "keepassxc" "-" || return 1
-        password=$(secrets.get "keepassxc")
-    fi
-
-    # Verify the password against the DB
-    if [[ -n "$password" ]] && printf '%s' "$password" | "${command_array[@]}" db-info "$KEEPASS_DB_PATH" >/dev/null 2>&1; then
-        return 0
-    else
-        echo "Invalid password." >&2
-        kp.forget
-        return 1
-    fi
+    df.secrets.kp login
 }
 
 ##
-# Search for KeePass entries and return paths
+# Search for KeePass entries and return exact tail-matched paths
 #
 # @param string $1 Search query
 # @return 0 on success, 1 on error/no results
@@ -123,11 +49,9 @@ kp.search() {
         return 1
     fi
 
-    kp.login || return $?
-
-    # Simplified search using awk for exact tail matching (case-insensitive)
     local search_results
-    search_results=$(kp search "$1" | awk -F/ -v search="$1" 'tolower($NF) == tolower(search)')
+    search_results=$(df.secrets.kp search "$1" 2>/dev/null \
+        | awk -F/ -v search="$1" 'tolower($NF) == tolower(search)')
 
     if [[ -z "$search_results" ]]; then
         echo "No exact matches found for '$1'" >&2
@@ -144,14 +68,7 @@ kp.search() {
 # @return 0 on success, 1 on error/no results
 ##
 kp.search.first() {
-    local first_match
-    first_match=$(kp.search "$1" 2>/dev/null | head -n 1)
-
-    if [[ -z "$first_match" ]]; then
-        return 1
-    fi
-
-    echo "$first_match"
+    df.secrets.kp search-first "$1"
 }
 
 ##
