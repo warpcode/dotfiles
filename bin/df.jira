@@ -270,7 +270,7 @@ cmd_fields() {
 # ---------------------------------------------------------------------------
 
 usage() {
-  cat <<EOF
+  print -r -- "\
 Usage: df.jira <subcommand> [options]
 
 Subcommands:
@@ -301,8 +301,7 @@ General Options:
 
 Authentication:
   Can be provided via flags or environment variables:
-  JIRA_URL, JIRA_USER, JIRA_API_KEY
-EOF
+  JIRA_URL, JIRA_USER, JIRA_API_KEY"
   exit 1
 }
 
@@ -310,26 +309,34 @@ main() {
   check_deps
 
   # Parse global options first, leaving subcommand and its args in $@
-  local -a opts
-  zparseopts -D -E -a opts \
-    -url:=opts \
-    -user:=opts \
-    -token:=opts \
-    -raw=opts \
-    v=opts -verbose=opts \
-    h=opts -help=opts
+  local -A opts
+  zparseopts -D -E -A opts \
+    -url: \
+    -user: \
+    -token: \
+    -raw \
+    v -verbose \
+    h -help
 
-  local opt
-  for opt in "${opts[@]}"; do
-    case "${opt}" in
-      --url)    JIRA_URL="${opts[$((opts[(i)$opt] + 1))]}";;
-      --user)   JIRA_USER="${opts[$((opts[(i)$opt] + 1))]}";;
-      --token)  JIRA_TOKEN="${opts[$((opts[(i)$opt] + 1))]}";;
-      --raw)    RAW_OUTPUT=1 ;;
-      -v|--verbose) VERBOSE=1 ;;
-      -h|--help)    usage ;;
-    esac
-  done
+  if (( ${+opts[-h]} || ${+opts[--help]} )); then
+    usage
+  fi
+
+  if (( ${+opts[--url]} )); then
+    JIRA_URL="${opts[--url]}"
+  fi
+  if (( ${+opts[--user]} )); then
+    JIRA_USER="${opts[--user]}"
+  fi
+  if (( ${+opts[--token]} )); then
+    JIRA_TOKEN="${opts[--token]}"
+  fi
+  if (( ${+opts[--raw]} )); then
+    RAW_OUTPUT=1
+  fi
+  if (( ${+opts[-v]} || ${+opts[--verbose]} )); then
+    VERBOSE=1
+  fi
 
   local subcommand="${1:-}"
   [[ -z "${subcommand}" ]] && usage
