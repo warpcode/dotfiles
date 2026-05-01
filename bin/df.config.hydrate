@@ -1,0 +1,151 @@
+#!/bin/zsh
+#
+# df.config.hydrate - Template a file using gomplate and JSON configs.
+# Extracted from src/zsh/functions/config.zsh
+
+emulate -LR zsh
+setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL
+
+# Determine DOTFILES root
+0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
+typeset -r SCRIPT_DIR="${0:A:h}"
+typeset -r DOTFILES="${DOTFILES:-${0:A:h:h}}"
+
+#######################################
+# Print error message to stderr.
+# Arguments:
+#   All arguments are printed.
+# Outputs:
+#   Writes error string to stderr.
+#######################################
+err() {
+  print -r -- "df.config.hydrate: $*" >&2
+}
+
+#######################################
+# Resolve an asset path.
+# Arguments:
+#   $1 - Asset type (e.g., configs, templates).
+#   $2 - Path to resolve.
+# Outputs:
+#   Writes absolute path to stdout.
+# Returns:
+#   0 if found, 1 otherwise.
+#######################################
+_resolve_path() {
+  local type="${1}"
+  local path="${2}"
+
+  if [[ -e "${path}" ]]; then
+    print -r -- "${path:a:P}"
+    return 0
+  fi
+
+  local full="${DOTFILES}/assets/${type}/${path}"
+  if [[ -e "${full}" ]]; then
+    print -r -- "${full:a:P}"
+    return 0
+  fi
+
+  return 1
+}
+
+#######################################
+# Print usage information.
+# Outputs:
+#   Writes usage string to stdout.
+#######################################
+_usage() {
+  print -r -- "Usage: df.config.hydrate <template> [--config-file <path>] [--config-json <json>] [--output <path>]"
+}
+
+#######################################
+# Entry point for df.config.hydrate.
+# Arguments:
+#   $1... - Script arguments.
+#######################################
+main() {
+  local -A opts
+  zparseopts -E -D -K -A opts -config-file: -config-json: -output: h -help
+
+  if (( ${+opts[-h]} || ${+opts[--help]} )); then
+    _usage
+    return 0
+  fi
+
+  local tpl_in="${1:-}"
+  if [[ -z "${tpl_in}" ]]; then
+    _usage
+    return 1
+  fi
+  shift
+
+  local tpl
+  tpl=$(_resolve_path templates "${tpl_in}") || {
+    err "Template not found: ${tpl_in}"
+    return 1
+  }
+
+  local merged='{}'
+
+  # Handle --config-file
+  if [[ -n "${opts[--config-file]:-}" ]]; then
+    local cfg
+    cfg=$(_resolve_path configs "${opts[--config-file]}") || return 1
+    merged=$(jq -s '.[0] * .[1]' <<<"${merged}" <"${cfg}")
+  fi
+
+  # Handle --config-json
+  if [[ -n "${opts[--config-json]:-}" ]]; then
+    merged=$(jq -s '.[0] * $n' --argjson n "${opts[--config-json]}" <<<"${merged}")
+  fi
+
+  # Resolve secrets in the merged JSON
+  local aliases_out
+  aliases_out=$(print -r -- "${merged}" | jq -r '.. | strings | select(startswith("{secret:") and endswith("}")) | sub("^{secret:"; "") | sub("}$"; "")' | sort -u)
+
+  local -a aliases=()
+  if [[ -n "${aliases_out}" ]]; then
+    aliases=( ${(f)aliases_out} )
+  fi
+
+  local alias_item
+  local secret_val
+  for alias_item in "${aliases[@]}"; do
+    secret_val=$("${SCRIPT_DIR}/df.secrets" get "${alias_item}" 2>/dev/null)
+    if [[ -n "${secret_val}" ]]; then
+      # Replace the token with the actual secret value
+      merged=$(jq --arg a "{secret:${alias_item}}" --arg v "${secret_val}" 'walk(if type == "string" and . == $a then $v else . end)' <<<"${merged}")
+    else
+      err "Warning: Could not resolve secret: ${alias_item}"
+    fi
+  done
+
+  merged=$(jq --arg now "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" '.secrets |= (. // {}) | .created |= (. // $now)' <<<"${merged}")
+
+  local tmp
+  tmp="$(mktemp)"
+
+  {
+    print -r -- "${merged}" > "${tmp}"
+    local -a args=(--missing-key=zero -f "${tpl}" -c "config=file://${tmp}?type=application/json")
+
+    if [[ "${tpl_in}" == */* ]]; then
+      local base_dir="${DOTFILES}/assets/templates/${tpl_in%%/*}"
+      if [[ -d "${base_dir}/partials" ]]; then
+        args+=(--template "tpls=${base_dir}/partials/")
+      fi
+    fi
+
+    if [[ -n "${opts[--output]:-}" ]]; then
+      mkdir -p "${opts[--output]:h}"
+      gomplate "${args[@]}" > "${opts[--output]}"
+    else
+      gomplate "${args[@]}"
+    fi
+  } always {
+    rm -f "${tmp}"
+  }
+}
+
+main "$@"

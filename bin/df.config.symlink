@@ -1,0 +1,125 @@
+#!/bin/zsh
+#
+# df.config.symlink - Symlink configuration files from assets.
+# Extracted from src/zsh/functions/config.zsh
+
+emulate -LR zsh
+setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL EXTENDED_GLOB
+
+# Determine DOTFILES root
+0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
+typeset -r DOTFILES="${DOTFILES:-${0:A:h:h}}"
+
+#######################################
+# Print error message to stderr.
+# Arguments:
+#   All arguments are printed.
+# Outputs:
+#   Writes error string to stderr.
+#######################################
+err() {
+  print -r -- "df.config.symlink: $*" >&2
+}
+
+#######################################
+# Resolve an asset path.
+# Arguments:
+#   $1 - Asset type (e.g., configs, templates).
+#   $2 - Path to resolve.
+# Outputs:
+#   Writes absolute path to stdout.
+# Returns:
+#   0 if found, 1 otherwise.
+#######################################
+_resolve_path() {
+  local type="${1}"
+  local path="${2}"
+
+  if [[ -e "${path}" ]]; then
+    print -r -- "${path:a:P}"
+    return 0
+  fi
+
+  local full="${DOTFILES}/assets/${type}/${path}"
+  if [[ -e "${full}" ]]; then
+    print -r -- "${full:a:P}"
+    return 0
+  fi
+
+  return 1
+}
+
+#######################################
+# Print usage information.
+# Outputs:
+#   Writes usage string to stdout.
+#######################################
+_usage() {
+  print -r -- "Usage: df.config.symlink [--contents] <source> <destination>"
+}
+
+#######################################
+# Entry point for df.config.symlink.
+# Arguments:
+#   $1... - Script arguments.
+#######################################
+main() {
+  local -A opts
+  zparseopts -E -D -K -A opts -contents -help h
+
+  if (( ${+opts[-h]} || ${+opts[--help]} )); then
+    _usage
+    return 0
+  fi
+
+  local src="${1:-}"
+  local dst="${2:-}"
+
+  if [[ -z "${src}" || -z "${dst}" ]]; then
+    _usage
+    return 1
+  fi
+
+  local resolved
+  resolved=$(_resolve_path configs "${src}") || {
+    err "Source not found: ${src}"
+    return 1
+  }
+
+  if (( ${+opts[--contents]} )); then
+    if [[ ! -d "${resolved}" ]]; then
+      err "Source is not a directory: ${resolved}"
+      return 1
+    fi
+    
+    if [[ -L "${dst}" || -f "${dst}" ]]; then
+      rm -f "${dst}"
+    fi
+    mkdir -p "${dst}"
+    
+    local item
+    for item in "${resolved}"/*(DN); do
+      # Recursive call to the script itself for items
+      "$0" "${item}" "${dst}/${item:t}"
+    done
+    return 0
+  fi
+
+  if [[ -d "${dst}" && ! -L "${dst}" ]]; then
+    err "Destination is a directory: ${dst}"
+    return 1
+  fi
+
+  if [[ -L "${dst}" && "${dst:a:P}" == "${resolved}" ]]; then
+    return 0
+  fi
+
+  if [[ -e "${dst}" || -L "${dst}" ]]; then
+    rm -f "${dst}"
+  fi
+
+  mkdir -p "${dst:h}"
+  ln -s "${resolved}" "${dst}"
+}
+
+main "$@"

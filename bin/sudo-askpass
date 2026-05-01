@@ -1,0 +1,15 @@
+#!/bin/zsh
+#
+# sudo-askpass - Retrieve sudo password from keychain for sudo -A.
+# Outputs password to stdout for consumption by sudo's askpass protocol.
+
+emulate -LR zsh
+setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL WARN_NESTED_VAR
+
+0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
+typeset -r SCRIPT_DIR="${0:A:h}"
+
+"${SCRIPT_DIR}/df.secrets.keychain" get "sudo" || {
+  print -r -- "sudo-askpass: keychain lookup failed" >&2
+  return 1
+}
