@@ -46,7 +46,7 @@ main() {
     print -r -- "${lead}" > "${file}"
     print -r -- "${repl}" >> "${file}"
     print -r -- "${tail}" >> "${file}"
-  elif ! grep -qE -- "${lead}" "${file}" || ! grep -qE -- "${tail}" "${file}"; then
+  elif [[ ! "$(<"${file}")" =~ "${lead}" ]] || [[ ! "$(<"${file}")" =~ "${tail}" ]]; then
     print -r -- "${lead}" >> "${file}"
     print -r -- "${repl}" >> "${file}"
     print -r -- "${tail}" >> "${file}"

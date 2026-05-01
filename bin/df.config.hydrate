@@ -6,6 +6,8 @@
 emulate -LR zsh
 setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL
 
+zmodload zsh/datetime
+
 # Determine DOTFILES root
 0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
 typeset -r SCRIPT_DIR="${0:A:h}"
@@ -121,7 +123,7 @@ main() {
     fi
   done
 
-  merged=$(jq --arg now "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" '.secrets |= (. // {}) | .created |= (. // $now)' <<<"${merged}")
+  merged=$(jq --arg now "$(TZ=UTC0 strftime "%Y-%m-%dT%H:%M:%SZ" "${EPOCHSECONDS}")" '.secrets |= (. // {}) | .created |= (. // $now)' <<<"${merged}")
 
   local tmp
   tmp="$(mktemp)"

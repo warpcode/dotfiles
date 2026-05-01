@@ -4,7 +4,7 @@
 # Extracted from src/zsh/functions/os.zsh for portability.
 
 emulate -LR zsh
-setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL
+setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL EXTENDED_GLOB
 
 0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
 typeset -r SCRIPT_DIR="${0:A:h}"

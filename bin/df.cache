@@ -6,6 +6,9 @@
 emulate -LR zsh
 setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL
 
+zmodload zsh/datetime
+zmodload zsh/stat
+
 0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
 typeset -r SCRIPT_DIR="${0:A:h}"
 
@@ -74,7 +77,9 @@ _keychain_store() {
 #   SHA-256 hex digest to stdout.
 #######################################
 _hash_key() {
-  print -n -- "${1:?}" | sha256sum | awk '{print $1}'
+  local sum
+  sum="$(print -n -- "${1:?}" | sha256sum)"
+  print -n -- "${sum%% *}"
 }
 
 #######################################
@@ -143,11 +148,7 @@ _decrypt() {
 #   Epoch seconds to stdout.
 #######################################
 _file_mtime() {
-  if [[ "${OSTYPE}" == darwin* ]]; then
-    stat -f %m "$1"
-  else
-    stat -c %Y "$1"
-  fi
+  zstat +mtime "$1" 2>/dev/null
 }
 
 #######################################
@@ -192,8 +193,7 @@ cmd_get() {
   fi
 
   if [[ -n "${cache_file}" ]]; then
-    local now
-    now="$(date +%s)"
+    local now="${EPOCHSECONDS}"
     local mtime
     mtime="$(_file_mtime "${cache_file}")"
     if (( now - mtime < ttl )); then
