@@ -20,7 +20,7 @@ function dotfiles.setup.zshrc() {
     [[ -L "$zshrc" && ! -e "$zshrc" ]] && rm "$zshrc"
     [[ ! -e "$zshrc" ]] && touch "$zshrc"
     chmod 0600 "$zshrc"
-    config.markers.replace "$zshrc" '# BEGIN dotfiles' '# END dotfiles' "source '$(fs.dotfiles.path "src/zsh/init.zsh")'"
+    config.block "$zshrc" '# BEGIN dotfiles' '# END dotfiles' "source '$(fs.dotfiles.path "src/zsh/init.zsh")'"
 }
 
 function dotfiles.setup.submodules() {

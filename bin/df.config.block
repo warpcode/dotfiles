@@ -1,0 +1,74 @@
+#!/bin/zsh
+#
+# df.config.block - Replace content between markers in a file.
+# Extracted from src/zsh/functions/config.zsh
+
+emulate -LR zsh
+setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL
+
+#######################################
+# Print usage information.
+# Outputs:
+#   Writes usage string to stdout.
+#######################################
+_usage() {
+  print -r -- "Usage: df.config.block <file> <lead_marker> <tail_marker> <replacement_content>"
+}
+
+#######################################
+# Entry point for df.config.block.
+# Arguments:
+#   $1 - File to modify.
+#   $2 - Lead marker string.
+#   $3 - Tail marker string.
+#   $4 - Replacement content.
+#######################################
+main() {
+  local -A opts
+  zparseopts -E -D -A opts -- h -help
+
+  if (( ${+opts[-h]} || ${+opts[--help]} )); then
+    _usage
+    return 0
+  fi
+
+  local file="${1:-}"
+  local lead="${2:-}"
+  local tail="${3:-}"
+  local repl="${4:-}"
+
+  if [[ -z "${file}" || -z "${lead}" || -z "${tail}" || -z "${repl}" ]]; then
+    _usage
+    return 1
+  fi
+
+  if [[ ! -f "${file}" ]]; then
+    print -r -- "${lead}" > "${file}"
+    print -r -- "${repl}" >> "${file}"
+    print -r -- "${tail}" >> "${file}"
+  elif ! grep -qE -- "${lead}" "${file}" || ! grep -qE -- "${tail}" "${file}"; then
+    print -r -- "${lead}" >> "${file}"
+    print -r -- "${repl}" >> "${file}"
+    print -r -- "${tail}" >> "${file}"
+  else
+    local -a lines=( ${(f)"$(<"${file}")"} )
+    local -a new_lines=()
+    local block=0
+    local line
+
+    for line in "${lines[@]}"; do
+      if [[ "${line}" =~ "${lead}" ]]; then
+        new_lines+=("${line}" "${repl}")
+        block=1
+      elif [[ "${block}" -eq 1 && "${line}" =~ "${tail}" ]]; then
+        block=0
+        new_lines+=("${line}")
+      elif [[ "${block}" -eq 0 ]]; then
+        new_lines+=("${line}")
+      fi
+    done
+    print -rl -- "${new_lines[@]}" > "${file}"
+  fi
+}
+
+main "$@"
