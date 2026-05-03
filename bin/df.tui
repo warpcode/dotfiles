@@ -1,0 +1,482 @@
+#!/bin/zsh
+#
+# df.tui - Terminal UI Components for Dotfiles (standalone).
+# Extracted from src/zsh/functions/tui.zsh.
+
+emulate -LR zsh
+setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL
+
+0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
+local -r SCRIPT_DIR="${0:A:h}"
+
+zmodload zsh/zutil    # For zparseopts
+zmodload zsh/datetime # For tui.date and tui.time
+zmodload zsh/pcre     # For [[ =~ ]]
+
+# --- Internal Helpers ---
+
+typeset -gi TUI_INDENT_LEVEL=${TUI_INDENT_LEVEL:-0}
+typeset -gi TUI_INDENT_WIDTH=${TUI_INDENT_WIDTH:-4}
+
+_indent() {
+    printf '%*s' $(( TUI_INDENT_LEVEL * TUI_INDENT_WIDTH )) ''
+}
+
+_err() { _error "$1"; return 1; }
+
+# --- Formatters ---
+_task() { print -P -- "$(_indent)%F{blue}⚙︎ $*%f"; }
+_start() { print -P -- "$(_indent)%F{blue}🔧 $*%f"; }
+_step() { print -P -- "$(_indent)%F{blue}📝 $*%f"; }
+_info() { print -P -- "$(_indent)%F{blue}ℹ $*%f"; }
+_success() { print -P -- "$(_indent)%F{green}✓ $*%f"; }
+_done() { print -P -- "$(_indent)%F{green}✨ $*%f"; }
+_warn() { print -P -- "$(_indent)%F{yellow}⚠ $*%f"; }
+_error() { print -P -- "$(_indent)%F{red}✖ $*%f" >&2; }
+_fatal() { print -P -- "$(_indent)%F{red}❌ $*%f" >&2; }
+_heading() { print -P -- "$(_indent)%F{blue}$*%f"; }
+
+_banner() {
+    local text="$1"
+    local char="${2:--}"
+    local -i width="${3:-0}"
+    local indent="$(_indent)"
+    local line
+
+    [[ -z "$char" ]] && char='-'
+    (( width < ${#text} )) && width=${#text}
+    (( width <= 0 )) && width=20 # Minimum width fallback
+
+    line=$(printf '%*s' "$width" '')
+    line=${line// /$char}
+
+    print -r -- "${indent}${line}"
+    print -r -- "${indent}${text}"
+    print -r -- "${indent}${line}"
+}
+
+_progress() {
+    print -Pn -- "\r$(_indent)%F{blue}🔍%f $*" >&2
+}
+
+_progress_clear() {
+    print -Pn -- "\r\033[K" >&2
+}
+
+# --- Indentation Helpers ---
+
+_with_indent() {
+    local delta="${1:-1}"
+    shift
+    local -i TUI_INDENT_LEVEL=$(( TUI_INDENT_LEVEL + delta ))
+    "$@"
+}
+
+# --- Public API UI ---
+
+#######################################
+# Reads user input from the terminal with optional default and validation.
+# Globals:
+#   None
+# Arguments:
+#   $1 - Prompt text.
+#   -d <default> - Default value.
+#   -v <regex>   - Validation regex.
+#   -o           - Allow empty output without returning error.
+# Outputs:
+#   Writes the valid input string to stdout.
+# Returns:
+#   0 on valid input, 1 on cancellation/EOF.
+#######################################
+_input() {
+    local -A opts; zparseopts -E -D -K -A opts d: o v: h -help=h
+    if (( ${+opts[-h]} )); then
+        print -r -- "Usage: df.tui input [-d default] [-v regex] [-o] [prompt]"
+        return 0
+    fi
+    local prompt="${1:-Input}" default="${opts[-d]:-}" validation="${opts[-v]:-}"
+    local value=""
+
+    local display_prompt="$prompt${default:+ [%B$default%b]}: "
+
+    while true; do
+        print -Pn "%F{blue}➜%f $display_prompt" > /dev/tty
+        if read -r value < /dev/tty; then
+            value="${value:-$default}"
+
+            if [[ -z "$value" ]]; then
+                (( ${+opts[-o]} )) && { print -r -- ""; return 0; }
+                continue
+            fi
+
+            if [[ -n "$validation" && ! "$value" =~ $validation ]]; then
+                _err "Invalid input (must match: $validation)"
+                continue
+            fi
+
+            print -r -- "$value"
+            return 0
+        else
+            print -r -- "" >&2
+            (( ${+opts[-o]} )) && return 0 || return 1
+        fi
+    done
+}
+
+#######################################
+# Prompts the user with a Yes/No confirmation.
+# Globals:
+#   None
+# Arguments:
+#   $1 - Prompt text.
+#   -d <default> - Default choice ('y' or 'n').
+# Outputs:
+#   Writes the prompt to the terminal (not stdout).
+# Returns:
+#   0 for Yes, 1 for No or cancellation.
+#######################################
+_confirm() {
+    local -A opts; zparseopts -E -D -K -A opts d: h -help=h
+    if (( ${+opts[-h]} )); then
+        print -r -- "Usage: df.tui confirm [-d default(y|n)] [prompt]"
+        return 0
+    fi
+    local prompt="${1:-Are you sure?}"
+    local -l default="${opts[-d]:-}"
+
+    local suffix="[y/n]"
+    [[ "$default" == "y" ]] && suffix="[%BY%bn/n]"
+    [[ "$default" == "n" ]] && suffix="[y/%BN%bn]"
+
+    print -Pn "%F{yellow}?%f $prompt $suffix " > /dev/tty
+
+    local choice
+    if read -k 1 choice < /dev/tty; then
+        print -r -- "" >&2
+        case "${choice:l}" in
+            y) return 0 ;;
+            n) return 1 ;;
+            $'\n'|$'\r') [[ "$default" == "y" ]] && return 0 || return 1 ;;
+            *) return 1 ;;
+        esac
+    fi
+    return 1
+}
+
+#######################################
+# Presents an interactive selection menu using fzf.
+# Globals:
+#   None
+# Arguments:
+#   $1 - Prompt text.
+#   $@ - Remaining arguments are the list items to select from.
+#   -p <prompt> - Override fzf prompt.
+#   -d <query>  - Initial query or item to highlight.
+#   -m          - Enable multi-select.
+#   -c          - Allow custom input via Ctrl-N.
+#   -o          - Return success even if nothing is selected.
+# Outputs:
+#   Writes the selected item(s) to stdout.
+# Returns:
+#   0 on selection, 1 on cancellation or if fzf is missing.
+#######################################
+_select() {
+    local -A opts; zparseopts -E -D -K -A opts c o m p: d: h -help=h
+    if (( ${+opts[-h]} )); then
+        print -r -- "Usage: df.tui select [-p prompt] [-d query] [-m] [-c] [-o] [prompt] <items...>"
+        return 0
+    fi
+    local prompt="${1:-Select}"
+    shift
+    local fzf_prompt="${opts[-p]:-$prompt}"
+
+    local -a items=( "${(@)@:#}" )
+
+    # If no items provided as arguments, or if stdin is a pipe, read from stdin
+    if [[ ! -t 0 || -p /dev/stdin ]]; then
+        local line
+        while IFS= read -r line; do
+            [[ -n "$line" ]] && items+=( "$line" )
+        done
+    fi
+
+    if (( $#items == 1 && ! ${+opts[-o]} && ! ${+opts[-c]} && ! ${+opts[-m]} )); then
+        print -r -- "$items[1]"
+        return 0
+    fi
+
+    (( $+commands[fzf] )) || { _err "fzf not found"; return 1; }
+
+    local m_hint="" c_hint=""
+    (( ${+opts[-m]} )) && m_hint=", Tab: select"
+    (( ${+opts[-c]} )) && c_hint=", Ctrl-N: custom"
+    local hint="(Enter: confirm${m_hint}${c_hint})"
+    local -a fzf_cmd=( fzf --prompt "$fzf_prompt $hint> " --height 40% --reverse --ansi )
+    (( ${+opts[-m]} )) && fzf_cmd+=( -m )
+
+    if (( ${+opts[-d]} )); then
+        local idx=${items[(i)*${opts[-d]}*]}
+        (( idx <= $#items )) && fzf_cmd+=( --bind "load:pos($idx)" )
+    fi
+
+    local out
+    if (( ${+opts[-c]} )); then
+        local tmp
+        tmp=$(mktemp -t df-tui.XXXXXX) || return 1
+        trap 'rm -f "$tmp"' EXIT
+        print -Pl -- "${items[@]}" > "$tmp"
+
+        local bind="ctrl-n:execute(read -r \"?Custom value: \" val < /dev/tty > /dev/tty; [[ -n \"\$val\" ]] && { print \"\$val\" | cat - \"$tmp\" > \"$tmp.new\" && mv \"$tmp.new\" \"$tmp\"; })+reload(cat \"$tmp\")+first"
+        (( ! ${+opts[-m]} )) && bind+="+accept" || bind+="+toggle+down"
+
+        out=$( "${fzf_cmd[@]}" --bind "$bind" < "$tmp" )
+    else
+        out=$( print -Pl -- "${items[@]}" | "${fzf_cmd[@]}" )
+    fi
+
+    local ret=$?
+    if (( ret == 0 )); then
+        print -r -- "$out"
+    elif (( ${+opts[-o]} )); then
+        return 0
+    fi
+    return $ret
+}
+
+#######################################
+# Presents an interactive multi-selection menu using fzf.
+# Globals:
+#   None
+# Arguments:
+#   Same as _select(), but forces multi-select mode.
+# Outputs:
+#   Writes the selected items to stdout (one per line).
+# Returns:
+#   0 on selection, 1 on cancellation.
+#######################################
+_multiselect() { _select -m "$@"; }
+
+#######################################
+# Presents an interactive date picker using fzf.
+# Globals:
+#   EPOCHSECONDS
+# Arguments:
+#   $1 - Prompt text.
+#   -p <prompt> - Override fzf prompt.
+#   -d <query>  - Initial query/date to highlight.
+# Outputs:
+#   Writes the selected date (YYYY-MM-DD) to stdout.
+# Returns:
+#   0 on selection, 1 on cancellation.
+#######################################
+_date() {
+    local -A opts; zparseopts -E -D -K -A opts d: p: h -help=h
+    if (( ${+opts[-h]} )); then
+        print -r -- "Usage: df.tui date [-p prompt] [-d query] [prompt]"
+        return 0
+    fi
+    local prompt="${opts[-p]:-${1:-Date}}" query="${opts[-d]:-Today}"
+    local -a items=()
+
+    local i ts d day label
+    for i in {-30..90}; do
+        ts=$(( EPOCHSECONDS + i * 86400 ))
+        d=$(strftime "%Y-%m-%d" "${ts}")
+        day=$(strftime "%a" "${ts}")
+        case $i in
+            0) label=" %F{green}[Today]%f" ;;
+            1) label=" %F{blue}[Tomorrow]%f" ;;
+            -1) label=" %F{yellow}[Yesterday]%f" ;;
+            *) label="" ;;
+        esac
+        items+=( "$d ($day)$label" )
+    done
+
+    local selected
+    selected=$(_select -p "$prompt" -d "$query" -c "${items[@]}")
+    print -r -- "${selected%% *}"
+}
+
+#######################################
+# Presents an interactive time picker using fzf for hours, minutes, seconds.
+# Globals:
+#   EPOCHSECONDS
+# Arguments:
+#   $1 - Prompt text.
+#   -p <prompt> - Override fzf prompt.
+#   -d <time>   - Initial time to highlight (HH:MM:SS or HH:MM).
+# Outputs:
+#   Writes the selected time (HH:MM:SS) to stdout.
+# Returns:
+#   0 on selection, 1 on cancellation.
+#######################################
+_time() {
+    local -A opts; zparseopts -E -D -K -A opts d: p: h -help=h
+    if (( ${+opts[-h]} )); then
+        print -r -- "Usage: df.tui time [-p prompt] [-d time] [prompt]"
+        return 0
+    fi
+    local prompt="${opts[-p]:-${1:-Time}}"
+
+    local h m s
+    if [[ "${opts[-d]:-}" =~ ^([0-9]{2}):([0-9]{2})(:([0-9]{2}))?$ ]]; then
+        h="${match[1]}" m="${match[2]}" s="${match[4]}"
+    else
+        h=$(strftime "%H" "${EPOCHSECONDS}")
+        m=$(strftime "%M" "${EPOCHSECONDS}")
+        s=$(strftime "%S" "${EPOCHSECONDS}")
+    fi
+
+    h=$(_select -p "$prompt (Hour)" -d "$h" {00..23}) || return 1
+    m=$(_select -o -p "$prompt (Minute)" -d "$m" -c {00..59}) || return 1
+    s=$(_select -o -p "$prompt (Second)" -d "$s" -c {00..59}) || return 1
+
+    print -r -- "${h:-00}:${m:-00}:${s:-00}"
+}
+
+#######################################
+# Previews a file with syntax highlighting, centering on a specific line.
+# Globals:
+#   commands
+# Arguments:
+#   $1 - Path to the file.
+#   $2 - Line number to highlight (default 0 for no highlight).
+# Outputs:
+#   Writes the formatted file content to stdout.
+# Returns:
+#   0 on success, 1 if file is binary or not found.
+#######################################
+_preview() {
+    local -A opts; zparseopts -E -D -K -A opts h -help=h
+    if (( ${+opts[-h]} )); then
+        print -r -- "Usage: df.tui preview <file> [line]"
+        return 0
+    fi
+    local file="$1" line="${2:-0}"
+    [[ -f "$file" ]] || return 1
+
+    (( $+commands[file] )) && file -bi "$file" | grep -q 'binary' && return 1
+
+    if (( $+commands[bat] )); then
+        local -a args=( --style=numbers --color=always )
+        (( line > 0 )) && args+=( --highlight-line "$line" )
+        bat "${args[@]}" "$file"
+        return
+    fi
+
+    local pcmd=${commands[pygmentize]:-$commands[pygmentise]}
+    if [[ -n "$pcmd" ]]; then
+        $pcmd -f terminal -g "$file" 2>/dev/null | {
+            local i=0 content arrow="${(%):-%F{red}>>>%f}"
+            while IFS= read -r content; do
+                (( ++i ))
+                if (( i == line )); then
+                    print -Pn "\r$arrow %5d: $content\n" "$i"
+                else
+                    print -Pn "    %5d: $content\n" "$i"
+                fi
+            done
+        }
+    else
+        local -a lines=( ${(f)"$(<"$file")"} )
+        local i=0 line_content arrow="${(%):-%F{red}>>>%f}"
+        for line_content in "${lines[@]}"; do
+            (( ++i ))
+            if (( i == line )); then
+                print -Pn "\r$arrow %5d: $line_content\n" "$i"
+            else
+                print -Pn "    %5d: $line_content\n" "$i"
+            fi
+        done
+    fi
+}
+
+#######################################
+# Displays usage information for the df.tui script.
+# Globals:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   Writes the help text to stdout.
+# Returns:
+#   0
+#######################################
+_usage() {
+  print -r -- "Usage: df.tui <command> [args...]"
+  print -r -- ""
+  print -r -- "Formatters:"
+  print -r -- "  task          Output task styling"
+  print -r -- "  start         Output start styling"
+  print -r -- "  step          Output step styling"
+  print -r -- "  info          Output info styling"
+  print -r -- "  success       Output success styling"
+  print -r -- "  done          Output done styling"
+  print -r -- "  warn          Output warn styling"
+  print -r -- "  error         Output error styling"
+  print -r -- "  fatal         Output fatal styling"
+  print -r -- "  heading       Output heading styling"
+  print -r -- "  banner        Output banner styling"
+  print -r -- "  progress      Output progress styling"
+  print -r -- "  progress-clear Clear progress styling"
+  print -r -- ""
+  print -r -- "Indentation Helpers:"
+  print -r -- "  with-indent   Execute a command with increased indent"
+  print -r -- ""
+  print -r -- "UI Components:"
+  print -r -- "  input         Read user input"
+  print -r -- "  confirm       Yes/No confirmation prompt"
+  print -r -- "  select        Select items using fzf"
+  print -r -- "  multiselect   Multi-select items using fzf"
+  print -r -- "  date          Date picker"
+  print -r -- "  time          Time picker"
+  print -r -- "  preview       Preview a file with syntax highlighting"
+}
+
+#######################################
+# Entry point for the df.tui utility. Routes commands to respective functions.
+# Globals:
+#   None
+# Arguments:
+#   $1 - Command name (e.g., input, confirm, select).
+#   $@ - Remaining arguments for the command.
+# Outputs:
+#   Writes command outputs to stdout or stderr.
+# Returns:
+#   0 on success, 1 on unknown command or internal failure.
+#######################################
+main() {
+  local cmd="${1:-}"
+
+  case "${cmd}" in
+    task)            shift; _task "$@" ;;
+    start)           shift; _start "$@" ;;
+    step)            shift; _step "$@" ;;
+    info)            shift; _info "$@" ;;
+    success)         shift; _success "$@" ;;
+    done)            shift; _done "$@" ;;
+    warn)            shift; _warn "$@" ;;
+    error)           shift; _error "$@" ;;
+    fatal)           shift; _fatal "$@" ;;
+    heading)         shift; _heading "$@" ;;
+    banner)          shift; _banner "$@" ;;
+    progress)        shift; _progress "$@" ;;
+    progress-clear)  shift; _progress_clear "$@" ;;
+    with-indent)     shift; _with_indent "$@" ;;
+    input)           shift; _input "$@" ;;
+    confirm)         shift; _confirm "$@" ;;
+    select)          shift; _select "$@" ;;
+    multiselect)     shift; _multiselect "$@" ;;
+    date)            shift; _date "$@" ;;
+    time)            shift; _time "$@" ;;
+    preview)         shift; _preview "$@" ;;
+    ""|-h|--help)    _usage ;;
+    *)
+      _err "Unknown command: ${cmd}"
+      _usage >&2
+      return 1
+      ;;
+  esac
+}
+
+main "$@"
