@@ -13,6 +13,6 @@ ai.providers.groq.enabled() {
 }
 
 ai.providers.groq.credentials() {
-    secrets.resolve "GROQ_API_KEY"
+    "$DOTFILES/bin/df.secrets" get "GROQ_API_KEY"
 }
 

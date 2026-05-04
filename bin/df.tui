@@ -355,7 +355,11 @@ _preview() {
     local file="$1" line="${2:-0}"
     [[ -f "$file" ]] || return 1
 
-    (( $+commands[file] )) && file -bi "$file" | grep -q 'binary' && return 1
+    if (( $+commands[file] )); then
+        local ftype
+        ftype="$(file -bi "$file")"
+        [[ "$ftype" == *binary* ]] && return 1
+    fi
 
     if (( $+commands[bat] )); then
         local -a args=( --style=numbers --color=always )

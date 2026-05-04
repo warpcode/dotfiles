@@ -4,6 +4,8 @@ pkg.recipe.define opencode \
 
 
 pkg.recipe.opencode.configure() {
+    registry.is_enabled pkg opencode pkg.recipe || return 0
+
     tui.task "Configuring opencode..."
     tui.indent.push
     {

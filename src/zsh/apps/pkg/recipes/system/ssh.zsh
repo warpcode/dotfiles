@@ -15,6 +15,8 @@ pkg.recipe.ssh.init() {
 }
 
 pkg.recipe.ssh.configure() {
+    registry.is_enabled pkg ssh pkg.recipe || return 0
+
     tui.task "Configuring ssh..."
     tui.indent.push
     {

@@ -3,6 +3,8 @@ pkg.recipe.define screen \
     managers="apt dnf pacman brew"
 
 pkg.recipe.screen.configure() {
+    registry.is_enabled pkg screen pkg.recipe || return 0
+
     tui.task "Configuring screen..."
     tui.indent.push
     {

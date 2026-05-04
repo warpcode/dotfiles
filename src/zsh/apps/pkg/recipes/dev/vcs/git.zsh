@@ -3,6 +3,8 @@ pkg.recipe.define git \
     managers="apt dnf pacman brew"
 
 pkg.recipe.git.configure() {
+    registry.is_enabled pkg git pkg.recipe || return 0
+
     tui.task "Configuring git..."
     tui.indent.push
     {
