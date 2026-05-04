@@ -55,6 +55,17 @@ code in your zsh dotfiles unless you explicitly need portability.
 - [ ] Separate `local` declaration from command-substitution assignment (`local swallows $?`)
 - [ ] `typeset -g` to explicitly create a global from inside a function (not a bare assignment)
 
+### Conciseness & Readability
+- [ ] **Re-evaluate for Conciseness**: Always re-check the code to ensure it is as concise as possible using Zsh idioms (e.g., nested parameter expansions, zargs). It must preserve all functionality and remain human-readable.
+
+### Native Zsh vs External Pipelines
+- [ ] **Avoid external processes** (`awk`, `sed`, `grep`, `tr`, `head`, `tail`) when pure Zsh features can do the job faster and without forks.
+- [ ] Array filtering: use `${(M)array:#pattern}` instead of piping to `grep`.
+- [ ] Case-insensitive matching: use `(#i)pattern` (requires `EXTENDED_GLOB`) instead of `awk '{tolower}'` or `grep -i`.
+- [ ] String replacement: use `${var//pattern/repl}` instead of `sed 's/.../.../g'`.
+- [ ] Trimming characters: use `${var//$'\n'/}` instead of `tr -d '\n'`.
+- [ ] Parallel execution: Before using `xargs -P` or GNU `parallel` for slow/heavy processes, check if Zsh's native `zargs -P <concurrency>` will do what's required. Because `zargs` evaluates in the current shell, it securely inherits local variables and functions without needing `export`.
+
 ### Parameter Expansion Flags
 - [ ] `${(U)var}` / `${(L)var}` / `${(C)var}` for case transforms — never `tr`
 - [ ] `${(j:sep:)array}` to join array → string; `${(s:sep:)str}` to split string → array

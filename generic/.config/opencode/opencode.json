@@ -12,5 +12,101 @@
     "AI.md",
     ".github/copilot-instructions.md"
   ],
-  "model": "{env:OPENCODE_MODEL}"
+  "model": "opencode/gpt-5-nano",
+  "provider": {
+    "docker": {
+      "name": "Docker (Local Inference)",
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "http://localhost:12434/engines/llama.cpp/v1"
+      },
+      "models": {
+        "ai/smollm3:latest": {
+          "name": "ai/smollm3:latest"
+        },
+        "ai/gemma3": {
+          "name": "ai/gemma3"
+        },
+        "ai/qwen3:latest": {
+          "name": "ai/qwen3:latest"
+        },
+        "huggingface.co/bartowski/mistralai_ministral-3-3b-reasoning-2512-gguf:q4_k_m": {
+          "name": "huggingface.co/bartowski/mistralai_ministral-3-3b-reasoning-2512-gguf:q4_k_m"
+        },
+        "ai/qwen3-embedding:latest": {
+          "name": "ai/qwen3-embedding:latest"
+        },
+        "huggingface.co/liquidai/lfm2.5-1.2b-thinking-gguf:q4_k_m": {
+          "name": "huggingface.co/liquidai/lfm2.5-1.2b-thinking-gguf:q4_k_m"
+        },
+        "huggingface.co/unsloth/qwen3.5-4b-gguf": {
+          "name": "huggingface.co/unsloth/qwen3.5-4b-gguf"
+        },
+        "huggingface.co/unsloth/gemma-4-e4b-it-gguf:Q4_K_M": {
+          "name": "huggingface.co/unsloth/gemma-4-e4b-it-gguf:Q4_K_M"
+        },
+        "huggingface.co/unsloth/gemma-4-e2b-it-gguf:Q4_K_M": {
+          "name": "huggingface.co/unsloth/gemma-4-e2b-it-gguf:Q4_K_M"
+        }
+      }
+    },
+    "opencode": {
+      "name": "OpenCode",
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "https://opencode.ai/zen/v1"
+      },
+      "models": {
+        "gpt-5-nano": {
+          "name": "gpt-5-nano"
+        },
+        "big-pickle": {
+          "name": "big-pickle"
+        },
+        "minimax-m2.5-free": {
+          "name": "minimax-m2.5-free"
+        },
+        "hy3-preview-free": {
+          "name": "hy3-preview-free"
+        },
+        "ling-2.6-flash-free": {
+          "name": "ling-2.6-flash-free"
+        },
+        "trinity-large-preview-free": {
+          "name": "trinity-large-preview-free"
+        },
+        "nemotron-3-super-free": {
+          "name": "nemotron-3-super-free"
+        }
+      }
+    }
+  },
+  "mcp": {
+    "browsermcp": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@browsermcp/mcp@latest"
+      ],
+      "environment": {}
+    },
+    "chrome_devtools": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "chrome-devtools-mcp@latest",
+        "--autoConnect"
+      ],
+      "environment": {}
+    },
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}"
+      }
+    }
+  }
 }

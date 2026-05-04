@@ -59,17 +59,6 @@ check_deps() {
 }
 
 #######################################
-# Sanitize JSON by removing raw control characters.
-# Arguments:
-#   Stdin - Raw JSON.
-# Outputs:
-#   Writes cleaned JSON to stdout.
-#######################################
-_clean_json() {
-  tr -d '\000-\037'
-}
-
-#######################################
 # Call Jira API using curl.
 # Arguments:
 #   $1 - HTTP Method (GET, POST, etc.)
@@ -83,8 +72,9 @@ _call_api() {
   local endpoint="$2"
   local payload="${3:-}"
 
-  local auth_header
-  auth_header="Basic $(print -n "${JIRA_USER}:${JIRA_TOKEN}" | base64 | tr -d '\n')"
+  local b64
+  b64="$(print -n "${JIRA_USER}:${JIRA_TOKEN}" | base64)"
+  local auth_header="Basic ${b64//$'\n'/}"
 
   local -a curl_opts
   curl_opts=(
@@ -185,9 +175,9 @@ cmd_jql() {
   if (( RAW_OUTPUT )); then
     print -r -- "${response}"
   elif [[ -t 1 ]]; then
-    print -r -- "${response}" | _clean_json | jq '.'
+    print -r -- "${response//[[:cntrl:]]/}" | jq '.'
   else
-    print -r -- "${response}"
+    print -r -- "${response//[[:cntrl:]]/}"
   fi
 }
 
@@ -231,9 +221,9 @@ cmd_issues() {
   if (( RAW_OUTPUT )); then
     print -r -- "${response}"
   elif [[ -t 1 ]]; then
-    print -r -- "${response}" | _clean_json | jq '.'
+    print -r -- "${response//[[:cntrl:]]/}" | jq '.'
   else
-    print -r -- "${response}"
+    print -r -- "${response//[[:cntrl:]]/}"
   fi
 }
 
@@ -257,11 +247,11 @@ cmd_fields() {
   if (( RAW_OUTPUT )); then
     print -r -- "${response}"
   elif [[ -n "${filter}" ]]; then
-    print -r -- "${response}" | _clean_json | jq --arg filter "${filter}" 'map(select(.name | test($filter; "i"))) | map({(.id): .name}) | add // {}'
+    print -r -- "${response//[[:cntrl:]]/}" | jq --arg filter "${filter}" 'map(select(.name | test($filter; "i"))) | map({(.id): .name}) | add // {}'
   elif [[ -t 1 ]]; then
-    print -r -- "${response}" | _clean_json | jq 'map({(.id): .name}) | add'
+    print -r -- "${response//[[:cntrl:]]/}" | jq 'map({(.id): .name}) | add'
   else
-    print -r -- "${response}"
+    print -r -- "${response//[[:cntrl:]]/}"
   fi
 }
 

@@ -59,6 +59,35 @@ _usage() {
 }
 
 #######################################
+# Perform the symlinking logic.
+# Arguments:
+#   $1 - Resolved source path.
+#   $2 - Destination path.
+# Returns:
+#   0 on success, 1 on error.
+#######################################
+_do_symlink() {
+  local resolved="$1"
+  local dst="$2"
+
+  if [[ -d "${dst}" && ! -L "${dst}" ]]; then
+    err "Destination is a directory: ${dst}"
+    return 1
+  fi
+
+  if [[ -L "${dst}" && "${dst:a:P}" == "${resolved}" ]]; then
+    return 0
+  fi
+
+  if [[ -e "${dst}" || -L "${dst}" ]]; then
+    rm -f "${dst}"
+  fi
+
+  mkdir -p "${dst:h}"
+  ln -s "${resolved}" "${dst}"
+}
+
+#######################################
 # Entry point for df.config.symlink.
 # Arguments:
 #   $1... - Script arguments.
@@ -99,27 +128,12 @@ main() {
     
     local item
     for item in "${resolved}"/*(DN); do
-      # Recursive call to the script itself for items
-      "$0" "${item}" "${dst}/${item:t}"
+      _do_symlink "${item}" "${dst}/${item:t}"
     done
     return 0
   fi
 
-  if [[ -d "${dst}" && ! -L "${dst}" ]]; then
-    err "Destination is a directory: ${dst}"
-    return 1
-  fi
-
-  if [[ -L "${dst}" && "${dst:a:P}" == "${resolved}" ]]; then
-    return 0
-  fi
-
-  if [[ -e "${dst}" || -L "${dst}" ]]; then
-    rm -f "${dst}"
-  fi
-
-  mkdir -p "${dst:h}"
-  ln -s "${resolved}" "${dst}"
+  _do_symlink "${resolved}" "${dst}"
 }
 
 main "$@"

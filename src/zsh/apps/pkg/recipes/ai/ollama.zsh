@@ -3,7 +3,11 @@ pkg.recipe.define ollama \
     managers="brew mise" \
     models="gemma4:e2b"
 
+pkg.recipe.ollama.enabled() { [[ $(os.family) != "macos" ]] }
+
 pkg.recipe.ollama.configure() {
+    registry.is_enabled pkg ollama pkg.recipe || return 0
+
     # Ensure background jobs don't print PIDs or 'done' messages
     setopt local_options no_monitor
 

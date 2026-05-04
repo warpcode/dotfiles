@@ -130,7 +130,7 @@ _filter() {
   esac
 
   if [[ -n "${1:-}" ]]; then
-    local -a lines=(${(f)1})
+    local -a lines=( ${(f)1} )
     print -l ${(M)lines:#(#i)*$~p*}
   else
     local line
