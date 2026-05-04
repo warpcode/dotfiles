@@ -95,7 +95,8 @@ code in your zsh dotfiles unless you explicitly need portability.
 - [ ] Last element: `$array[-1]`; slice: `$array[2,5]`
 - [ ] Length: `${#array}` (same as bash)
 - [ ] Intersection `${a:*b}`, difference `${a:|b}`, zip `${a:^b}`
-- [ ] Always expand with `"${array[@]}"` (quoted)
+- [ ] Always expand with `"${array[@]}"` (quoted) for iteration or command arguments
+- [ ] **Copying Arrays (Assignment)**: Use `arr=( "$@" )` or `arr=( "$other_arr[@]" )`. Avoid `arr=( "${@}" )` as it can result in an array with one empty string `("")` if the input is empty in certain contexts.
 
 ### Associative Arrays
 - [ ] Declare with `typeset -A mymap`
@@ -241,7 +242,7 @@ print -r -- "${input:u}"
 
 ```zsh
 # Add before compinit
-fpath=("${ZDOTDIR}/functions" "${ZDOTDIR}/completions" "${fpath[@]}")
+fpath=( "${ZDOTDIR}/functions" "${ZDOTDIR}/completions" "$fpath[@]" )
 
 # Autoload everything in the functions directory
 for _f in "${ZDOTDIR}/functions"/*(N.x:t); do
