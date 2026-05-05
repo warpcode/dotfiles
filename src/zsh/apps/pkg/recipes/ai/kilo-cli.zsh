@@ -2,4 +2,4 @@
 #    managers="npm" \
 #    npm="@kilocode/cli"
 #
-#pkg.recipe.kilo_cli.enabled() { [[ $(os.family) != "macos" ]] }
+#pkg.recipe.kilo_cli.enabled() { [[ $(df.os family) != "macos" ]] }

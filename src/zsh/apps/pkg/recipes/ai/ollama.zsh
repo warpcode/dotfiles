@@ -3,7 +3,7 @@ pkg.recipe.define ollama \
     managers="brew mise" \
     models="gemma4:e2b"
 
-pkg.recipe.ollama.enabled() { [[ $(os.family) != "macos" ]] }
+pkg.recipe.ollama.enabled() { [[ $(df.os family) != "macos" ]] }
 
 pkg.recipe.ollama.configure() {
     registry.is_enabled pkg ollama pkg.recipe || return 0

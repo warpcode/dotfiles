@@ -64,8 +64,8 @@ github.install_release() {
 
     local -a assets=( ${(f)"$(github.get_asset_url "$repo" "$target")"} )
     
-    local arch=$(os.arch)
-    local os_fam=$(os.family)
+    local arch=$(df.os arch)
+    local os_fam=$(df.os family)
     local -A os_map=( debian linux fedora linux arch linux macos "darwin|macos" )
     local os_p="${os_map[$os_fam]:-$os_fam}"
     
