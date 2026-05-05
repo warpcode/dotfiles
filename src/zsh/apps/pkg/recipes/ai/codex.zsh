@@ -2,4 +2,4 @@
 #    managers="npm" \
 #    npm="@openai/codex"
 #
-#pkg.recipe.codex.enabled() { [[ $(os.family) != "macos" ]] }
+#pkg.recipe.codex.enabled() { [[ $(df.os family) != "macos" ]] }
