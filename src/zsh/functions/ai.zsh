@@ -12,12 +12,12 @@ _ai.provider.api_executor() {
 
 _ai.provider.models_executor() {
     local pid="$1"
-    local cached=$(cache.get "ai" "models_${pid}")
+    local cached=$(df.cache get "ai" "models_${pid}")
     [[ -n "$cached" ]] && { echo "$cached"; return 0; }
 
     local result=$(ai.providers.${pid}.api "/models" | jq -c -M '.data')
     if [[ -n "$result" && "$result" != "null" ]]; then
-        cache.set "ai" "models_${pid}" "$result"
+        df.cache set "ai" "models_${pid}" "$result"
     fi
     echo "$result"
 }
