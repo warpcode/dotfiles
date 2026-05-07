@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 #
 # df.cache - Encrypted cache utility (standalone).
-# Extracted from src/zsh/functions/cache.zsh for portability.
+# Refactored from the legacy Zsh function for portability.
 
 emulate -LR zsh
 setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL
