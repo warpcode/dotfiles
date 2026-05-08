@@ -1,0 +1,49 @@
+{
+  "opencode": {
+    "type": "openai_compatible",
+    "url": "https://opencode.ai/zen/v1",
+    "api_key": null,
+    "free_models_jq": ".[] | select(.id | (endswith(\"-free\") // . == \"big-pickle\" // startswith(\"grok-code\") // . == \"gpt-5-nano\"))"
+  },
+  "openrouter": {
+    "type": "openai_compatible",
+    "url": "https://openrouter.ai/api/v1",
+    "api_key": "{secret:OPENROUTER_API_KEY}",
+    "free_models_jq": ".[] | select(.pricing.prompt == \"0\" and .pricing.completion == \"0\")"
+  },
+  "groq": {
+    "type": "openai_compatible",
+    "url": "https://api.groq.com/openai/v1",
+    "api_key": "{secret:GROQ_API_KEY}"
+  },
+  "openai": {
+    "type": "openai_compatible",
+    "url": "https://api.openai.com/v1",
+    "api_key": "{secret:OPENAI_API_KEY}"
+  },
+  "ollama": {
+    "type": "openai_compatible",
+    "url": "http://localhost:11434/v1",
+    "api_key": null
+  },
+  "llamacpp": {
+    "type": "openai_compatible",
+    "url": "http://localhost:8080/v1",
+    "api_key": null
+  },
+  "docker": {
+    "type": "openai_compatible",
+    "url": "http://localhost:12434/engines/llama.cpp/v1",
+    "api_key": null
+  },
+  "gemini": {
+    "type": "openai_compatible",
+    "url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+    "api_key": "{secret:GEMINI_API_KEY}"
+  },
+  "nvidia": {
+    "type": "openai_compatible",
+    "url": "https://integrate.api.nvidia.com/v1",
+    "api_key": "{secret:NVIDIA_AI_API_KEY}"
+  }
+}

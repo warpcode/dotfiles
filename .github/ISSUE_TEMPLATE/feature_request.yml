@@ -1,6 +1,6 @@
-name: 💡 Feature Request
+name: Feature Request
 description: Suggest a new feature or improvement for the dotfiles configuration.
-title: "💡 feat: <title>"
+title: "feat: <title>"
 labels: [enhancement]
 body:
 

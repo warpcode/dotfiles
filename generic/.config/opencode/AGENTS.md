@@ -1,5 +1,15 @@
 # AGENT DIRECTIVES
 
+## PRECEDENCE & INTEGRITY
+
+**Mandate:** Expert instructions (from `activate_skill`) and Engineering Standards (from `AGENTS.md`) take absolute precedence over "Context Efficiency" heuristics.
+
+1. **No Short-cutting:** Never skip a procedural step (e.g., writing to a temporary file, running a validation test) to save tokens or turns if a skill or standard mandates it.
+2. **Workflow Stability:** Prefer multi-step, stable workflows (using `write_file` + `--body-file`) over single-turn, complex shell commands that risk quoting or formatting errors.
+3. **Validation First:** Efficiency is a secondary concern. Technical correctness and adherence to the specified workflow are primary.
+
+---
+
 ## 1. RESOURCE SELECTION
 
 Before acting each turn:
