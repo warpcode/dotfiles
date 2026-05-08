@@ -1,0 +1,255 @@
+{
+  "agents": {
+    "code-quality-analyst": {
+      "id": "code-quality-analyst",
+      "name": "Code Quality Analyst",
+      "description": "Expert code quality architect specializing in comprehensive codebase analysis.",
+      "type": "subagent",
+      "targets": [
+        "opencode",
+        "claude",
+        "gemini",
+        "qwen",
+        "vscode",
+        "kilo"
+      ],
+      "capabilities": [
+        "read",
+        "search",
+        "review",
+        "delegate",
+        "mcp"
+      ],
+      "handoffs": [
+        "explore"
+      ],
+      "mcp_tools": [
+        "browsermcp",
+        "context7"
+      ],
+      "skills": [
+        "code-quality/architecture",
+        "code-quality/security"
+      ],
+      "internal_tools": [
+        "grep_search",
+        "read_file",
+        "replace"
+      ],
+      "commands": [
+        "npm test",
+        "ruff check",
+        "eslint"
+      ],
+      "refs": {
+        "opencode": "opencode/agent/code-quality-analyst",
+        "claude": "claude/agent/code-quality-analyst",
+        "gemini": "gemini/agent/code-quality-analyst",
+        "qwen": "qwen/agent/code-quality-analyst",
+        "vscode": "vscode/agent/code-quality-analyst",
+        "kilo": "kilo/agent/code-quality-analyst"
+      },
+      "enabled": true,
+      "source_path": "generic/.config/opencode/agents/code-quality-analyst.md",
+      "model_profile": "advanced-dev",
+      "task_type": "advanced-dev"
+    }
+  },
+  "skills": {
+    "prompt-engineer": {
+      "id": "prompt-engineer",
+      "name": "Prompt Engineer",
+      "description": "Expert prompt engineer for drafting and refactoring reliable prompts, agents, commands, and skills.",
+      "targets": [
+        "opencode",
+        "claude",
+        "gemini",
+        "qwen",
+        "vscode",
+        "kilo"
+      ],
+      "capabilities": [
+        "prompt",
+        "agent",
+        "skill",
+        "instructions"
+      ],
+      "refs": {
+        "opencode": "opencode/skill/prompt-engineer",
+        "claude": "claude/skill/prompt-engineer",
+        "gemini": "gemini/skill/prompt-engineer",
+        "qwen": "qwen/skill/prompt-engineer",
+        "vscode": "vscode/skill/prompt-engineer",
+        "kilo": "kilo/skill/prompt-engineer"
+      },
+      "enabled": true,
+      "source_path": "generic/.config/opencode/skill/prompt-engineer/SKILL.md",
+      "phase": "1"
+    },
+    "ultrathink": {
+      "id": "ultrathink",
+      "name": "Ultrathink",
+      "description": "Deep reasoning protocol for exhaustive analysis and production-ready code generation.",
+      "targets": [
+        "opencode",
+        "claude",
+        "gemini",
+        "qwen",
+        "vscode",
+        "kilo"
+      ],
+      "capabilities": [
+        "analysis",
+        "planning",
+        "reasoning",
+        "implementation"
+      ],
+      "refs": {
+        "opencode": "opencode/skill/ultrathink",
+        "claude": "claude/skill/ultrathink",
+        "gemini": "gemini/skill/ultrathink",
+        "qwen": "qwen/skill/ultrathink",
+        "vscode": "vscode/skill/ultrathink",
+        "kilo": "kilo/skill/ultrathink"
+      },
+      "enabled": true,
+      "source_path": "generic/.config/opencode/skill/ultrathink/SKILL.md",
+      "phase": "1"
+    }
+  },
+  "targets": {
+    "opencode": {
+      "id": "opencode",
+      "name": "OpenCode",
+      "delivery": "native",
+      "agent_support": "native",
+      "skill_support": "native",
+      "mcp_support": "validated",
+      "capabilities": [
+        "native-agent",
+        "native-skill",
+        "mcp",
+        "command",
+        "plugin"
+      ],
+      "enabled": true,
+      "artifact_root": "generic/.config/opencode",
+      "phase": "1"
+    },
+    "claude": {
+      "id": "claude",
+      "name": "Claude Code",
+      "delivery": "native",
+      "agent_support": "native",
+      "skill_support": "native",
+      "mcp_support": "validated",
+      "capabilities": [
+        "native-agent",
+        "native-skill",
+        "mcp",
+        "command",
+        "hook"
+      ],
+      "enabled": true,
+      "phase": "1"
+    },
+    "gemini": {
+      "id": "gemini",
+      "name": "Gemini CLI",
+      "delivery": "native",
+      "agent_support": "native",
+      "skill_support": "native",
+      "mcp_support": "validated",
+      "capabilities": [
+        "native-agent",
+        "native-skill",
+        "mcp",
+        "extension"
+      ],
+      "enabled": true,
+      "artifact_root": "generic/.gemini",
+      "phase": "1"
+    },
+    "qwen": {
+      "id": "qwen",
+      "name": "Qwen Code",
+      "delivery": "native",
+      "agent_support": "native",
+      "skill_support": "native",
+      "mcp_support": "validated",
+      "capabilities": [
+        "native-agent",
+        "native-skill",
+        "mcp",
+        "command"
+      ],
+      "enabled": true,
+      "phase": "1"
+    },
+    "vscode": {
+      "id": "vscode",
+      "name": "VS Code Copilot",
+      "delivery": "native",
+      "agent_support": "native",
+      "skill_support": "native",
+      "mcp_support": "validated",
+      "capabilities": [
+        "native-agent",
+        "native-skill",
+        "mcp",
+        "instruction",
+        "prompt",
+        "hook"
+      ],
+      "enabled": true,
+      "artifact_root": "generic/.github",
+      "phase": "1"
+    },
+    "kilo": {
+      "id": "kilo",
+      "name": "Kilo",
+      "delivery": "native",
+      "agent_support": "native",
+      "skill_support": "native",
+      "mcp_support": "validated",
+      "capabilities": [
+        "native-agent",
+        "native-skill",
+        "mcp",
+        "mode",
+        "opencode-compat"
+      ],
+      "enabled": true,
+      "compatibility": "opencode-fork",
+      "phase": "1-validation"
+    },
+    "aider": {
+      "id": "aider",
+      "name": "Aider",
+      "delivery": "adapter",
+      "agent_support": "adapter",
+      "skill_support": "adapter",
+      "mcp_support": "unverified",
+      "capabilities": [
+        "command",
+        "convention",
+        "config"
+      ],
+      "enabled": true,
+      "phase": "adapter"
+    },
+    "pi": {
+      "id": "pi",
+      "name": "pi",
+      "delivery": "research",
+      "agent_support": "unverified",
+      "skill_support": "unverified",
+      "mcp_support": "unverified",
+      "capabilities": [
+        "unverified"
+      ],
+      "enabled": true,
+      "phase": "research"
+    }
+  }
+}
