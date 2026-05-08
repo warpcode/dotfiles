@@ -12,7 +12,9 @@ pkg.recipe.opencode.configure() {
         (( $+commands[opencode] )) || { tui.warn "opencode command not found, skipping"; return 0; }
         (( $+commands[jq] )) || { tui.warn "jq command not found, skipping"; return 0; }
 
-        local target="${XDG_CONFIG_HOME}/opencode/opencode.json"
+        local config_dir="${XDG_CONFIG_HOME}/opencode"
+        [[ -d "$config_dir" ]] || mkdir -p "$config_dir"
+        local target="${config_dir}/opencode.json"
         tui.step "Updating $target"
         pkg.recipe.opencode.configure.base "$target"
         pkg.recipe.opencode.configure.providers "$target"
@@ -61,7 +63,8 @@ pkg.recipe.opencode.configure.skills() {
 
 
 pkg.recipe.opencode.configure.base() {
-    local target="${1:-${XDG_CONFIG_HOME}/opencode/opencode.json}"
+    local config_dir="${XDG_CONFIG_HOME}/opencode"
+    local target="${1:-${config_dir}/opencode.json}"
     [[ -f "$target" ]] && return 0
     mkdir -p "${target:h}"
     jq -n '{
@@ -76,7 +79,8 @@ pkg.recipe.opencode.configure.base() {
 }
 
 pkg.recipe.opencode.configure.providers() {
-    local target="${1:-${XDG_CONFIG_HOME}/opencode/opencode.json}"
+    local config_dir="${XDG_CONFIG_HOME}/opencode"
+    local target="${1:-${config_dir}/opencode.json}"
     local providers selected_model='' pid
 
     providers="$(ai.models.free)"
@@ -102,7 +106,8 @@ pkg.recipe.opencode.configure.providers() {
 }
 
 pkg.recipe.opencode.configure.mcps() {
-    local target="${1:-${XDG_CONFIG_HOME}/opencode/opencode.json}"
+    local config_dir="${XDG_CONFIG_HOME}/opencode"
+    local target="${1:-${config_dir}/opencode.json}"
     local tmp
     tmp="$(jq --argjson mcps "$(ai.mcps)" '.mcp = $mcps' "$target")" && printf '%s\n' "$tmp" > "$target"
 }
