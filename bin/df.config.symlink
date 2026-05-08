@@ -55,7 +55,7 @@ _resolve_path() {
 #   Writes usage string to stdout.
 #######################################
 _usage() {
-  print -r -- "Usage: df.config.symlink [--contents] <source> <destination>"
+  print -r -- "Usage: df.config.symlink [--contents] [--force] <source> <destination>"
 }
 
 #######################################
@@ -71,8 +71,12 @@ _do_symlink() {
   local dst="$2"
 
   if [[ -d "${dst}" && ! -L "${dst}" ]]; then
-    err "Destination is a directory: ${dst}"
-    return 1
+    if (( ${+opts[--force]} || ${+opts[-f]} )); then
+      rm -rf "${dst}"
+    else
+      err "Destination is a directory: ${dst}"
+      return 1
+    fi
   fi
 
   if [[ -L "${dst}" && "${dst:a:P}" == "${resolved}" ]]; then
@@ -80,7 +84,7 @@ _do_symlink() {
   fi
 
   if [[ -e "${dst}" || -L "${dst}" ]]; then
-    rm -f "${dst}"
+    rm -rf "${dst}"
   fi
 
   mkdir -p "${dst:h}"
@@ -94,7 +98,7 @@ _do_symlink() {
 #######################################
 main() {
   local -A opts
-  zparseopts -E -D -K -A opts -contents -help h
+  zparseopts -E -D -K -A opts -contents -force f -help h
 
   if (( ${+opts[-h]} || ${+opts[--help]} )); then
     _usage
