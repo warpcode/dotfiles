@@ -19,7 +19,7 @@ pkg.recipe.opencode.configure() {
         pkg.recipe.opencode.configure.mcps "$target"
 
         tui.step "Linking skills directory"
-        config.symlink --contents "ai/skills" "${HOME}/.agents/skills"
+        config.symlink --force --contents "ai/skills" "${HOME}/.agents/skills"
         pkg.recipe.opencode.configure.skills
 
         tui.success "Configuration complete"
@@ -52,7 +52,7 @@ pkg.recipe.opencode.configure.skills() {
             tui.step "Skills: ${names} (${repo})"
         fi
 
-        if ! out=$(npx skills add "$repo" "${name_args[@]}" -g --agent universal -y 2>&1); then
+        if ! out=$(npx -y skills add "$repo" "${name_args[@]}" -g --agent universal -y < /dev/null 2>&1); then
             tui.error "Failed to install ${item}"
             echo "$out" | grep -v "█"
         fi

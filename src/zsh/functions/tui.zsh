@@ -4,7 +4,7 @@
 typeset -gi TUI_INDENT_LEVEL=${TUI_INDENT_LEVEL:-0}
 
 # Resolve df.tui binary path relative to this file
-local _tui_bin="${${(%):-%x}:A:h:h:h:h}/bin/df.tui"
+typeset -g _tui_bin="${${(%):-%x}:A:h:h:h:h}/bin/df.tui"
 
 tui.task() { TUI_INDENT_LEVEL=$TUI_INDENT_LEVEL "$_tui_bin" task "$@" }
 tui.start() { TUI_INDENT_LEVEL=$TUI_INDENT_LEVEL "$_tui_bin" start "$@" }

@@ -159,18 +159,18 @@ Only proceed to execution after the user explicitly approves. If they request ch
 
 ### Body text: always use `--body-file`
 
-When any `gh` command needs body text (create, edit, comment), write the content to a temp file first and pass it via `--body-file`. Never use `--body` with inline text — markdown content contains backticks, quotes, and newlines that cause shell quoting problems. The temp-file approach is reliable regardless of body length or content.
+When any `gh` command needs body text (create, edit, comment), you MUST use a two-step process:
+
+1. **Action:** Use your native **file writing tool** to create a temporary markdown file (e.g., `tmp_issue_body.md`) containing the full, unescaped markdown content.
+2. **Action:** Run the `gh` command passing that file path to `--body-file`.
+
+**NEVER** use the `--body` flag with inline text and **NEVER** use shell-based creation (like `mktemp`, `cat`, or redirections) to create the file. Writing the file via your native tool ensures that backticks, quotes, and newlines are preserved exactly as intended without shell quoting or expansion errors.
 
 ```bash
-# Write body to temp file, pass to gh, clean up
-tmpfile=$(mktemp /tmp/gh-issue-XXXXXX.md)
-cat > "$tmpfile" << 'EOF'
-## Description
-Body content goes here — markdown, backticks, quotes, all safe.
-EOF
-
-gh issue create --title "Title" --body-file "$tmpfile" --label "bug"
-rm -f "$tmpfile"
+# Example Workflow:
+# 1. (Tool call) write_to_file "tmp_issue_body.md" "## Description\nContent here..."
+# 2. (Tool call) run_command "gh issue create --title 'Title' --body-file tmp_issue_body.md"
+# 3. (Tool call) run_command "rm tmp_issue_body.md"
 ```
 
 ### Primary method: `gh` CLI
@@ -178,20 +178,15 @@ rm -f "$tmpfile"
 The `gh` CLI is the preferred tool. All commands should run non-interactively by supplying all required flags (especially `--title` and `--body-file` for create).
 
 **Create:**
+1. **Action:** Use a file writing tool to create `tmp_body.md`.
+2. **Action:** Run the command:
 ```bash
-tmpfile=$(mktemp /tmp/gh-issue-XXXXXX.md)
-cat > "$tmpfile" << 'EOF'
-## Description
-Issue body in markdown
-EOF
-
 gh issue create \
   --title "Issue title" \
-  --body-file "$tmpfile" \
+  --body-file "tmp_body.md" \
   --label "bug,help wanted" \
   --assignee "@me" \
-  --milestone "v1.0"
-rm -f "$tmpfile"
+  --milestone "v1.0" && rm "tmp_body.md"
 ```
 
 **Edit:**
@@ -270,25 +265,27 @@ curl -s "https://api.github.com/repos/owner/repo/issues/42"
 curl -s "https://api.github.com/repos/owner/repo/issues/42/comments"
 
 # Create issue (requires auth)
+# 1. Action: Write JSON to tmp_payload.json
+# 2. Action: Run command:
 curl -s -X POST \
   -H "Authorization: Bearer ${GITHUB_TOKEN}" \
   -H "Accept: application/vnd.github+json" \
   "https://api.github.com/repos/owner/repo/issues" \
-  -d '{"title":"Bug report","body":"Description here","labels":["bug"]}'
+  -d @tmp_payload.json && rm tmp_payload.json
 
 # Update issue (requires auth)
 curl -s -X PATCH \
   -H "Authorization: Bearer ${GITHUB_TOKEN}" \
   -H "Accept: application/vnd.github+json" \
   "https://api.github.com/repos/owner/repo/issues/42" \
-  -d '{"title":"Updated title","labels":["bug","priority:high"]}'
+  -d @tmp_payload.json && rm tmp_payload.json
 
 # Add comment (requires auth)
 curl -s -X POST \
   -H "Authorization: Bearer ${GITHUB_TOKEN}" \
   -H "Accept: application/vnd.github+json" \
   "https://api.github.com/repos/owner/repo/issues/42/comments" \
-  -d '{"body":"Comment text here"}'
+  -d @tmp_payload.json && rm tmp_payload.json
 ```
 
 Write operations (create, update, comment, close) require authentication. If no token is available for a private repo, tell the user exactly what they need to do:
