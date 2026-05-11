@@ -324,7 +324,6 @@ main() {
     JIRA_URL="https://${JIRA_URL}"
   fi
 
-  echo $JIRA_URL
   case "${subcommand}" in
     jql)    cmd_jql "$@" ;;
     issues) cmd_issues "$@" ;;
