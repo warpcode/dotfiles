@@ -198,7 +198,7 @@ Body and footer rules are identical to Conventional.
 ```
 feat(auth): add OAuth login
 ```
-`git commit -F /tmp/COMMIT_MSG`
+`git commit -F /tmp/COMMIT_MSG_a1b2c3 && rm /tmp/COMMIT_MSG_a1b2c3`
 
 ### Simple: hotfix on main
 ```
@@ -225,6 +225,11 @@ Closes #89
 [hotfix-login-bug] validate input before auth check
 
 - nil user object caused panic on malformed JWT
+- adds guard clause, existing tests updated
+
+Fixes TIC-9901
+```
+ user object caused panic on malformed JWT
 - adds guard clause, existing tests updated
 
 Fixes TIC-9901
