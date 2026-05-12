@@ -226,7 +226,7 @@ cmd_fields() {
   
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --raw|--verbose|-v|--help|-h) shift ;; # Ignore global flags if they end up here
+      --raw|--verbose|-v|--help|-h) shift ;;
       -*) die "Unknown option for 'fields': $1" ;;
       *) filter="$1"; shift ;;
     esac
@@ -244,6 +244,62 @@ cmd_fields() {
   fi
 }
 
+cmd_statuses() {
+  local response
+  response=$(_call_api "GET" "${JIRA_URL%/}/rest/api/${JIRA_API_VERSION}/status")
+
+  if [[ "${RAW_OUTPUT}" -eq 1 ]]; then
+    echo "${response}"
+  else
+    # Output map of ID -> {name, category}
+    echo "${response}" | jq 'map({(.id): {name: .name, category: .statusCategory.name}}) | add'
+  fi
+}
+
+cmd_types() {
+  local response
+  response=$(_call_api "GET" "${JIRA_URL%/}/rest/api/${JIRA_API_VERSION}/issuetype")
+
+  if [[ "${RAW_OUTPUT}" -eq 1 ]]; then
+    echo "${response}"
+  else
+    echo "${response}" | jq 'map({(.id): {name: .name, subtask: .subtask}}) | add'
+  fi
+}
+
+cmd_priorities() {
+  local response
+  response=$(_call_api "GET" "${JIRA_URL%/}/rest/api/${JIRA_API_VERSION}/priority")
+
+  if [[ "${RAW_OUTPUT}" -eq 1 ]]; then
+    echo "${response}"
+  else
+    echo "${response}" | jq 'map({(.id): .name}) | add'
+  fi
+}
+
+cmd_resolutions() {
+  local response
+  response=$(_call_api "GET" "${JIRA_URL%/}/rest/api/${JIRA_API_VERSION}/resolution")
+
+  if [[ "${RAW_OUTPUT}" -eq 1 ]]; then
+    echo "${response}"
+  else
+    echo "${response}" | jq 'map({(.id): .name}) | add'
+  fi
+}
+
+cmd_projects() {
+  local response
+  response=$(_call_api "GET" "${JIRA_URL%/}/rest/api/${JIRA_API_VERSION}/project")
+
+  if [[ "${RAW_OUTPUT}" -eq 1 ]]; then
+    echo "${response}"
+  else
+    echo "${response}" | jq 'map({(.key): .name}) | add'
+  fi
+}
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -256,6 +312,11 @@ Subcommands:
   jql                   Search for issues
   issues                Fetch details for specific issue(s)
   fields                List or search for Jira fields
+  statuses              List Jira statuses and their categories
+  types                 List available issue types
+  priorities            List priority levels
+  resolutions           List resolution types
+  projects              List accessible projects
 
 General Options:
   --url <url>           Jira workspace URL
@@ -325,10 +386,15 @@ main() {
   fi
 
   case "${subcommand}" in
-    jql)    cmd_jql "$@" ;;
-    issues) cmd_issues "$@" ;;
-    fields) cmd_fields "$@" ;;
-    *)      die "Unknown subcommand: ${subcommand}" ;;
+    jql)         cmd_jql "$@" ;;
+    issues)      cmd_issues "$@" ;;
+    fields)      cmd_fields "$@" ;;
+    statuses)    cmd_statuses "$@" ;;
+    types)       cmd_types "$@" ;;
+    priorities)  cmd_priorities "$@" ;;
+    resolutions) cmd_resolutions "$@" ;;
+    projects)    cmd_projects "$@" ;;
+    *)           die "Unknown subcommand: ${subcommand}" ;;
   esac
 }
 

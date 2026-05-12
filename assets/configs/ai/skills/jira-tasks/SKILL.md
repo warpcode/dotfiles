@@ -45,9 +45,18 @@ Use `fields` to discover field IDs (e.g., finding the ID for "Story Points").
 bash scripts/jira.sh fields "Story Points"
 ```
 
+#### Schema & Metadata Discovery
+Use these subcommands to understand the Jira instance structure.
+- **Statuses**: `bash scripts/jira.sh statuses` (Returns map of ID -> {name, category})
+- **Issue Types**: `bash scripts/jira.sh types` (Returns map of ID -> {name, subtask})
+- **Priorities**: `bash scripts/jira.sh priorities`
+- **Resolutions**: `bash scripts/jira.sh resolutions`
+- **Projects**: `bash scripts/jira.sh projects`
+
 ### 4. Data Synthesis
 - Present search results in a scannable markdown table.
 - For single issues, provide a structured summary of status, assignee, and recent activity.
+- Use status categories (To Do, In Progress, Done) to group and summarize work status.
 - MUST NOT include raw JSON in the final response to the user; format it as clean markdown.
 
 ## CONSTRAINTS
