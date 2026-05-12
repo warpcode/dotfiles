@@ -53,6 +53,13 @@ Use these subcommands to understand the Jira instance structure.
 - **Resolutions**: `bash scripts/jira.sh resolutions`
 - **Projects**: `bash scripts/jira.sh projects`
 
+#### Direct API Call (Escape Hatch)
+Use `call` for any endpoint not covered by specific subcommands.
+```bash
+# Example: Fetch transitions for a specific issue
+bash scripts/jira.sh call GET "/rest/api/3/issue/PROJ-123/transitions"
+```
+
 ### 4. Data Synthesis
 - Present search results in a scannable markdown table.
 - For single issues, provide a structured summary of status, assignee, and recent activity.

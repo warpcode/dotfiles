@@ -19,8 +19,8 @@ readonly JIRA_API_VERSION="3"
 JIRA_URL="${JIRA_URL:-}"
 JIRA_USER="${JIRA_USER:-}"
 JIRA_API_TOKEN="${JIRA_API_TOKEN:-${JIRA_API_KEY:-}}"
-VERBOSE=0
-RAW_OUTPUT=0
+VERBOSE="${VERBOSE:-0}"
+RAW_OUTPUT="${RAW_OUTPUT:-0}"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -138,11 +138,15 @@ _call_api() {
 cmd_jql() {
   local query=""
   local max_results=50
+  local fields=""
+  local expand=""
   declare -A extra_params
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --max-results) max_results="$2"; shift 2 ;;
+      --fields) fields="$2"; shift 2 ;;
+      --expand) expand="$2"; shift 2 ;;
       --param)
         if [[ "$2" != *=* ]]; then
           die "Error: --param requires key=value format (got: $2)"
@@ -158,8 +162,16 @@ cmd_jql() {
 
   [[ -z "${query}" ]] && die "Error: JQL query string is required."
 
-  local jq_filter='{"jql": $jql, "maxResults": ($maxResults | tonumber)}'
-  local -a jq_args=(--arg jql "${query}" --arg maxResults "${max_results}")
+  local jq_filter='{"jql": $jql, "maxResults": ($maxResults | tonumber)}
+                   + (if $fields != "" then {"fields": ($fields | split(",") | map(select(length > 0)))} else {} end)
+                   + (if $expand != "" then {"expand": ($expand | split(",") | map(select(length > 0)))} else {} end)'
+  
+  local -a jq_args=(
+    --arg jql "${query}" 
+    --arg maxResults "${max_results}"
+    --arg fields "${fields}"
+    --arg expand "${expand}"
+  )
   
   local k
   for k in "${!extra_params[@]}"; do
@@ -300,6 +312,23 @@ cmd_projects() {
   fi
 }
 
+cmd_call() {
+  local method="${1:-}"
+  local endpoint="${2:-}"
+  local payload="${3:-}"
+
+  [[ -z "${method}" || -z "${endpoint}" ]] && die "Usage: df.jira call <METHOD> <ENDPOINT> [PAYLOAD]"
+
+  # If endpoint is relative, prepend JIRA_URL
+  if [[ ! "${endpoint}" =~ ^https?:// ]]; then
+    endpoint="${JIRA_URL%/}/${endpoint#/}"
+  fi
+
+  local response
+  response=$(_call_api "${method}" "${endpoint}" "${payload}")
+  echo "${response}"
+}
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -317,6 +346,7 @@ Subcommands:
   priorities            List priority levels
   resolutions           List resolution types
   projects              List accessible projects
+  call                  Direct API call (advanced)
 
 General Options:
   --url <url>           Jira workspace URL
@@ -329,6 +359,8 @@ General Options:
 'jql' Options:
   <query>               JQL query string (positional, required)
   --max-results <int>   Maximum number of results (default: 50)
+  --fields <list>       Comma-separated list of fields to include
+  --expand <list>       Comma-separated list of expand options
   --param <key=val>     Additional parameters to pass to the API
 
 'issues' Options:
@@ -338,6 +370,11 @@ General Options:
 
 'fields' Options:
   <filter>              Optional search pattern to filter fields by name
+
+'call' Options:
+  <method>              HTTP method (GET, POST, PUT, DELETE)
+  <endpoint>            Relative or absolute API endpoint
+  <payload>             Optional JSON payload string
 
 Authentication:
   Can be provided via flags or environment variables:
@@ -394,6 +431,7 @@ main() {
     priorities)  cmd_priorities "$@" ;;
     resolutions) cmd_resolutions "$@" ;;
     projects)    cmd_projects "$@" ;;
+    call)        cmd_call "$@" ;;
     *)           die "Unknown subcommand: ${subcommand}" ;;
   esac
 }
