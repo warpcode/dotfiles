@@ -19,6 +19,7 @@ readonly JIRA_API_VERSION="3"
 JIRA_URL="${JIRA_URL:-}"
 JIRA_USER="${JIRA_USER:-}"
 JIRA_API_TOKEN="${JIRA_API_TOKEN:-${JIRA_API_KEY:-}}"
+JIRA_PROJECT="${JIRA_PROJECT:-}"
 VERBOSE="${VERBOSE:-0}"
 RAW_OUTPUT="${RAW_OUTPUT:-0}"
 
@@ -140,6 +141,7 @@ cmd_jql() {
   local max_results=50
   local fields=""
   local expand=""
+  local full_issue=0
   declare -A extra_params
 
   while [[ $# -gt 0 ]]; do
@@ -147,6 +149,7 @@ cmd_jql() {
       --max-results) max_results="$2"; shift 2 ;;
       --fields) fields="$2"; shift 2 ;;
       --expand) expand="$2"; shift 2 ;;
+      --full-issue) full_issue=1; shift ;;
       --param)
         if [[ "$2" != *=* ]]; then
           die "Error: --param requires key=value format (got: $2)"
@@ -162,9 +165,17 @@ cmd_jql() {
 
   [[ -z "${query}" ]] && die "Error: JQL query string is required."
 
+  # Mandatory fields always included
+  local mandatory_fields="parent,summary,description,status,assignee,issuetype,comment,created,updated,priority,labels"
+  if [[ -n "${fields}" ]]; then
+    fields="${mandatory_fields},${fields}"
+  else
+    fields="${mandatory_fields}"
+  fi
+
   local jq_filter='{"jql": $jql, "maxResults": ($maxResults | tonumber)}
-                   + (if $fields != "" then {"fields": ($fields | split(",") | map(select(length > 0)))} else {} end)
-                   + (if $expand != "" then {"expand": ($expand | split(",") | map(select(length > 0)))} else {} end)'
+                   + {"fields": ($fields | split(",") | map(select(length > 0)) | unique)}
+                   + (if $expand != "" then {"expand": ($expand | split(",") | map(select(length > 0)) | join(","))} else {} end)'
   
   local -a jq_args=(
     --arg jql "${query}" 
@@ -193,7 +204,81 @@ cmd_jql() {
   if [[ "${RAW_OUTPUT}" -eq 1 ]]; then
     echo "${response}"
   else
-    echo "${response}" | jq '.'
+    echo "${response}" | jq --argjson full_issue "${full_issue}" --arg expand "${expand}" '
+      # Recursive function to handle nested ADF content
+      def flatten_adf:
+        if . == null then ""
+        elif type == "array" then map(flatten_adf) | join("")
+        elif .type == "text" then .text
+        elif .type == "hardBreak" then "\n"
+        elif .type == "inlineCard" then .attrs.url
+        elif .type == "mention" then .attrs.text
+        elif .type | IN("paragraph", "heading", "listItem", "tableCell") then
+          (.content | flatten_adf) + "\n"
+        elif .content then
+          .content | flatten_adf
+        else ""
+        end;
+
+      ($expand | split(",") | map(select(length > 0))) as $requested_expands |
+      
+      # Build the root object with pagination metadata
+      {
+        isLast: .isLast,
+        # Jira usually uses startAt + maxResults for pagination
+        # Include these so the LLM knows the "window" it is seeing
+        pagination: {
+            total: .total,
+            maxResults: .maxResults,
+            startAt: .startAt
+        }
+      } 
+      # Include any top-level expands (like names, schema) if present in source
+      + (with_entries(select(.key | IN($requested_expands[]))))
+      + {
+        issues: [.issues[] | {
+            id: .id,
+            key: .key,
+            summary: .fields.summary,
+            description: (.fields.description | flatten_adf | sub("\n$"; "")),
+            comment: {
+                total: .fields.comment.total,
+                comments: [.fields.comment.comments[]? | {
+                    author: .author.displayName,
+                    body: (.body | flatten_adf | sub("\n$"; ""))
+                }]
+            },
+            assignee: (.fields.assignee.displayName // "Unassigned"),
+            status: .fields.status.name,
+            priority: .fields.priority.name,
+            labels: .fields.labels,
+            updated: .fields.updated
+        } 
+        # Include any issue-level expands (like changelog, operations) if present
+        + (with_entries(
+            select(.key | IN($requested_expands[]))
+            | if .key == "changelog" then
+                .value = {
+                    histories: [.value.histories[]? | {
+                        id: .id,
+                        author: .author.displayName,
+                        author_id: .author.accountId,
+                        created: .created,
+                        items: [.items[]? | {
+                            field: .field,
+                            fieldId: .fieldId,
+                            from: .from,
+                            fromString: .fromString,
+                            to: .to,
+                            toString: .toString
+                        }]
+                    }]
+                }
+              else . end
+          ))
+        + (if $full_issue == 1 then {original: .} else {} end)]
+      }
+    '
   fi
 }
 
@@ -257,14 +342,35 @@ cmd_fields() {
 }
 
 cmd_statuses() {
+  local category=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --category|--params) category="$2"; shift 2 ;;
+      --raw|--verbose|-v|--help|-h) shift ;;
+      *) die "Unknown option for 'statuses': $1" ;;
+    esac
+  done
+
+  local endpoint="${JIRA_URL%/}/rest/api/${JIRA_API_VERSION}/status"
+  local jq_filter="map({(.id): {name: .name, category: .statusCategory.name}}) | add"
+
+  if [[ -n "${JIRA_PROJECT:-}" ]]; then
+    endpoint="${JIRA_URL%/}/rest/api/${JIRA_API_VERSION}/project/${JIRA_PROJECT}/statuses"
+    jq_filter="map(.statuses[]) | unique_by(.id) | map({(.id): {name: .name, category: .statusCategory.name}}) | add"
+  fi
+
   local response
-  response=$(_call_api "GET" "${JIRA_URL%/}/rest/api/${JIRA_API_VERSION}/status")
+  response=$(_call_api "GET" "${endpoint}")
 
   if [[ "${RAW_OUTPUT}" -eq 1 ]]; then
     echo "${response}"
   else
-    # Output map of ID -> {name, category}
-    echo "${response}" | jq 'map({(.id): {name: .name, category: .statusCategory.name}}) | add'
+    if [[ -n "${category}" ]]; then
+      echo "${response}" | jq --arg cat "${category}" "${jq_filter}"' | with_entries(select((.value.category | ascii_downcase | gsub(" "; "-")) == $cat))'
+    else
+      echo "${response}" | jq "${jq_filter}"
+    fi
   fi
 }
 
@@ -352,6 +458,7 @@ General Options:
   --url <url>           Jira workspace URL
   --user <email>        Jira user email
   --token <api-token>   Jira API token
+  --project <key>       Jira project key (global)
   --raw                 Output raw response from API
   -v, --verbose         Show verbose request/response details
   -h, --help            Show this help
@@ -361,6 +468,7 @@ General Options:
   --max-results <int>   Maximum number of results (default: 50)
   --fields <list>       Comma-separated list of fields to include
   --expand <list>       Comma-separated list of expand options
+  --full-issue          Include original issue JSON in output
   --param <key=val>     Additional parameters to pass to the API
 
 'issues' Options:
@@ -370,6 +478,10 @@ General Options:
 
 'fields' Options:
   <filter>              Optional search pattern to filter fields by name
+
+'statuses' Options:
+  --params <name>       Filter by category (e.g., in-progress, to-do, done)
+  --category <name>     Alias for --params
 
 'call' Options:
   <method>              HTTP method (GET, POST, PUT, DELETE)
@@ -393,6 +505,7 @@ main() {
       --url) JIRA_URL="$2"; shift 2 ;;
       --user) JIRA_USER="$2"; shift 2 ;;
       --token) JIRA_API_TOKEN="$2"; shift 2 ;;
+      --project) JIRA_PROJECT="$2"; shift 2 ;;
       --raw) RAW_OUTPUT=1; shift ;;
       -v|--verbose) VERBOSE=1; shift ;;
       -h|--help) usage ;;
@@ -412,6 +525,7 @@ main() {
   resolve_secret "JIRA_URL"
   resolve_secret "JIRA_USER"
   resolve_secret "JIRA_API_TOKEN"
+  resolve_secret "JIRA_PROJECT"
 
   # Final validation of mandatory credentials
   [[ -z "${JIRA_URL:-}" ]]   && die "Error: Jira URL is required (or set JIRA_URL)."
