@@ -13,6 +13,96 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 readonly JIRA_API_VERSION="3"
 
+# Shared JQ filter for processing issue lists (JQL results or Bulk Fetch)
+# Expects --arg expand "..." and --argjson full_issue true|false
+readonly ISSUE_PROCESSOR_JQ='
+  # Recursive function to handle nested ADF content
+  def flatten_adf:
+    if . == null then ""
+    elif type == "array" then map(flatten_adf) | join("")
+    elif .type == "text" then .text
+    elif .type == "hardBreak" then "\n"
+    elif .type == "inlineCard" then .attrs.url
+    elif .type == "mention" then .attrs.text
+    elif .type | IN("paragraph", "heading", "listItem", "tableCell") then
+      (.content | flatten_adf) + "\n"
+    elif .content then
+      .content | flatten_adf
+    else ""
+    end;
+
+  ($expand | split(",") | map(select(length > 0))) as $requested_expands |
+
+  def process_issue:
+    {
+        id: .id,
+        key: .key,
+        summary: .fields.summary,
+        description: (.fields.description | flatten_adf | sub("\n$"; "")),
+        comment: {
+            total: .fields.comment.total,
+            comments: [.fields.comment.comments[]? | {
+                author: .author.displayName,
+                body: (.body | flatten_adf | sub("\n$"; ""))
+            }]
+        },
+        assignee: (.fields.assignee.displayName // "Unassigned"),
+        status: .fields.status.name,
+        priority: .fields.priority.name,
+        labels: .fields.labels,
+        updated: .fields.updated
+    }
+    # Include any issue-level expands (like changelog, transitions) if present
+    + (with_entries(
+        select(.key | IN($requested_expands[]))
+        | if .key == "changelog" then
+            .value = {
+                histories: [.value.histories[]? | {
+                    id: .id,
+                    author: .author.displayName,
+                    author_id: .author.accountId,
+                    created: .created,
+                    items: [.items[]? | {
+                        field: .field,
+                        fieldId: .fieldId,
+                        from: .from,
+                        fromString: .fromString,
+                        to: .to,
+                        toString: .toString
+                    }]
+                }]
+            }
+          elif .key == "transitions" then
+            .value = [.value[]? | {
+                transitionId: .id,
+                transitionname: .name,
+                statusId: .to.id,
+                statusName: .to.name,
+                hasScreen: .hasScreen,
+                isGlobal: .isGlobal,
+                isInitial: .isInitial,
+                isAvailable: .isAvailable,
+                isConditional: .isConditional,
+                isLooped: .isLooped
+            }]
+          else . end
+      ))
+    + (if $full_issue == 1 then {original: .} else {} end);
+
+  # Root object processing
+  {
+    isLast: (if .isLast == null then true else .isLast end),
+    pagination: {
+        total: (if .total == null then (.issues | length // 0) else .total end),
+        maxResults: (if .maxResults == null then (.issues | length // 0) else .maxResults end),
+        startAt: (if .startAt == null then 0 else .startAt end)
+    }
+  }
+  # Include any top-level expands (like names, schema) if present in source
+  + (with_entries(select(.key | IN($requested_expands[]))))
+  + { issues: ([.issues[]? | process_issue]) }
+'
+
 # ---------------------------------------------------------------------------
 # State
 # ---------------------------------------------------------------------------
@@ -28,7 +118,7 @@ RAW_OUTPUT="${RAW_OUTPUT:-0}"
 # ---------------------------------------------------------------------------
 
 err() {
-  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')] df.jira: $*" >&2
+  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')] jira.sh: $*" >&2
 }
 
 die() {
@@ -62,7 +152,7 @@ resolve_secret() {
   # 4. Resolve and export
   local value
   value=$($DF_SECRET_GET_CMD "$name")
-  
+
   # 5. Fallback for token if requested name failed
   if [[ -z "$value" && "$name" == "JIRA_API_TOKEN" ]]; then
     value=$($DF_SECRET_GET_CMD "JIRA_API_KEY")
@@ -108,7 +198,7 @@ _call_api() {
 
   local response_file
   response_file=$(mktemp)
-  
+
   local http_code
   http_code=$(curl "${curl_opts[@]}" -o "${response_file}" "${endpoint}")
   local response
@@ -176,14 +266,14 @@ cmd_jql() {
   local jq_filter='{"jql": $jql, "maxResults": ($maxResults | tonumber)}
                    + {"fields": ($fields | split(",") | map(select(length > 0)) | unique)}
                    + (if $expand != "" then {"expand": ($expand | split(",") | map(select(length > 0)) | join(","))} else {} end)'
-  
+
   local -a jq_args=(
-    --arg jql "${query}" 
+    --arg jql "${query}"
     --arg maxResults "${max_results}"
     --arg fields "${fields}"
     --arg expand "${expand}"
   )
-  
+
   local k
   for k in "${!extra_params[@]}"; do
     local v="${extra_params[$k]}"
@@ -204,81 +294,7 @@ cmd_jql() {
   if [[ "${RAW_OUTPUT}" -eq 1 ]]; then
     echo "${response}"
   else
-    echo "${response}" | jq --argjson full_issue "${full_issue}" --arg expand "${expand}" '
-      # Recursive function to handle nested ADF content
-      def flatten_adf:
-        if . == null then ""
-        elif type == "array" then map(flatten_adf) | join("")
-        elif .type == "text" then .text
-        elif .type == "hardBreak" then "\n"
-        elif .type == "inlineCard" then .attrs.url
-        elif .type == "mention" then .attrs.text
-        elif .type | IN("paragraph", "heading", "listItem", "tableCell") then
-          (.content | flatten_adf) + "\n"
-        elif .content then
-          .content | flatten_adf
-        else ""
-        end;
-
-      ($expand | split(",") | map(select(length > 0))) as $requested_expands |
-      
-      # Build the root object with pagination metadata
-      {
-        isLast: .isLast,
-        # Jira usually uses startAt + maxResults for pagination
-        # Include these so the LLM knows the "window" it is seeing
-        pagination: {
-            total: .total,
-            maxResults: .maxResults,
-            startAt: .startAt
-        }
-      } 
-      # Include any top-level expands (like names, schema) if present in source
-      + (with_entries(select(.key | IN($requested_expands[]))))
-      + {
-        issues: [.issues[] | {
-            id: .id,
-            key: .key,
-            summary: .fields.summary,
-            description: (.fields.description | flatten_adf | sub("\n$"; "")),
-            comment: {
-                total: .fields.comment.total,
-                comments: [.fields.comment.comments[]? | {
-                    author: .author.displayName,
-                    body: (.body | flatten_adf | sub("\n$"; ""))
-                }]
-            },
-            assignee: (.fields.assignee.displayName // "Unassigned"),
-            status: .fields.status.name,
-            priority: .fields.priority.name,
-            labels: .fields.labels,
-            updated: .fields.updated
-        } 
-        # Include any issue-level expands (like changelog, operations) if present
-        + (with_entries(
-            select(.key | IN($requested_expands[]))
-            | if .key == "changelog" then
-                .value = {
-                    histories: [.value.histories[]? | {
-                        id: .id,
-                        author: .author.displayName,
-                        author_id: .author.accountId,
-                        created: .created,
-                        items: [.items[]? | {
-                            field: .field,
-                            fieldId: .fieldId,
-                            from: .from,
-                            fromString: .fromString,
-                            to: .to,
-                            toString: .toString
-                        }]
-                    }]
-                }
-              else . end
-          ))
-        + (if $full_issue == 1 then {original: .} else {} end)]
-      }
-    '
+    echo "${response}" | jq --argjson full_issue "${full_issue}" --arg expand "${expand}" "${ISSUE_PROCESSOR_JQ}"
   fi
 }
 
@@ -314,13 +330,13 @@ cmd_issues() {
   if [[ "${RAW_OUTPUT}" -eq 1 ]]; then
     echo "${response}"
   else
-    echo "${response}" | jq '.'
+    echo "${response}" | jq --argjson full_issue 0 --arg expand "${expand}" "${ISSUE_PROCESSOR_JQ}"
   fi
 }
 
 cmd_fields() {
   local filter=""
-  
+
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --raw|--verbose|-v|--help|-h) shift ;;
