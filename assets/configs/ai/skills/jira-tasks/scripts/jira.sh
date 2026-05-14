@@ -423,14 +423,63 @@ cmd_resolutions() {
   fi
 }
 
-cmd_projects() {
+cmd_users() {
+  local query=""
+  local max_results=50
+  local project="${JIRA_PROJECT:-}"
+  local expand=""
+  local full=0
+  local exact=0
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --max-results) max_results="$2"; shift 2 ;;
+      --project) project="$2"; shift 2 ;;
+      --expand) expand="$2"; shift 2 ;;
+      --full) full=1; shift ;;
+      --exact) exact=1; shift ;;
+      --raw|--verbose|-v|--help|-h) shift ;;
+      -*) die "Unknown option for 'users': $1" ;;
+      *) query="$1"; shift ;;
+    esac
+  done
+
+  local endpoint="${JIRA_URL%/}/rest/api/${JIRA_API_VERSION}/user/search"
+  [[ -n "${project}" ]] && endpoint="${JIRA_URL%/}/rest/api/${JIRA_API_VERSION}/user/assignable/search"
+
+  local url="${endpoint}?maxResults=${max_results}"
+
+  if [[ -n "${query}" ]]; then
+    local encoded_query
+    encoded_query=$(jq -nr --arg q "${query}" "\$q | @uri")
+    url="${url}&query=${encoded_query}"
+  fi
+
+  if [[ -n "${project}" ]]; then
+    url="${url}&project=${project}"
+  fi
+  
+  if [[ -n "${expand}" ]]; then
+    url="${url}&expand=${expand}"
+  fi
+
   local response
-  response=$(_call_api "GET" "${JIRA_URL%/}/rest/api/${JIRA_API_VERSION}/project")
+  response=$(_call_api "GET" "${url}")
 
   if [[ "${RAW_OUTPUT}" -eq 1 ]]; then
     echo "${response}"
+    return
+  fi
+
+  local jq_filter='.'
+  if [[ "${exact}" -eq 1 && -n "${query}" ]]; then
+    jq_filter="map(select(.displayName == \$query or .emailAddress == \$query))"
+  fi
+
+  if [[ "${full}" -eq 1 ]]; then
+    echo "${response}" | jq --arg query "${query}" "${jq_filter}"
   else
-    echo "${response}" | jq 'map({(.key): .name}) | add'
+    echo "${response}" | jq --arg query "${query}" "${jq_filter} | map({(.accountId): .displayName}) | add // {}"
   fi
 }
 
@@ -467,14 +516,14 @@ Subcommands:
   types                 List available issue types
   priorities            List priority levels
   resolutions           List resolution types
-  projects              List accessible projects
+  users                 Search for Jira users
   call                  Direct API call (advanced)
 
 General Options:
   --url <url>           Jira workspace URL
   --user <email>        Jira user email
   --token <api-token>   Jira API token
-  --project <key>       Jira project key (global)
+  --project <key>       Jira project key (Required)
   --raw                 Output raw response from API
   -v, --verbose         Show verbose request/response details
   -h, --help            Show this help
@@ -499,6 +548,13 @@ General Options:
   --params <name>       Filter by category (e.g., in-progress, to-do, done)
   --category <name>     Alias for --params
 
+'users' Options:
+  <query>               Optional search string for display name or email
+  --exact               Perform an exact match on display name or email
+  --expand <fields>     Comma-separated list of fields to expand (groups, applicationRoles)
+  --full                Display the full user object (JSON array)
+  --max-results <int>   Maximum number of results (default: 50)
+
 'call' Options:
   <method>              HTTP method (GET, POST, PUT, DELETE)
   <endpoint>            Relative or absolute API endpoint
@@ -506,7 +562,7 @@ General Options:
 
 Authentication:
   Can be provided via flags or environment variables:
-  JIRA_URL, JIRA_USER, JIRA_API_TOKEN (or JIRA_API_KEY)
+  JIRA_URL, JIRA_USER, JIRA_API_TOKEN (or JIRA_API_KEY), JIRA_PROJECT
 EOF
   exit 1
 }
@@ -544,9 +600,10 @@ main() {
   resolve_secret "JIRA_PROJECT"
 
   # Final validation of mandatory credentials
-  [[ -z "${JIRA_URL:-}" ]]   && die "Error: Jira URL is required (or set JIRA_URL)."
-  [[ -z "${JIRA_USER:-}" ]]  && die "Error: Jira User is required (or set JIRA_USER)."
+  [[ -z "${JIRA_URL:-}" ]]      && die "Error: Jira URL is required (or set JIRA_URL)."
+  [[ -z "${JIRA_USER:-}" ]]     && die "Error: Jira User is required (or set JIRA_USER)."
   [[ -z "${JIRA_API_TOKEN:-}" ]] && die "Error: Jira API Token is required (or set JIRA_API_TOKEN/JIRA_API_KEY)."
+  [[ -z "${JIRA_PROJECT:-}" ]]  && die "Error: Jira Project key is required (or set JIRA_PROJECT)."
 
   if [[ ! "${JIRA_URL}" =~ ^https?:// ]]; then
     JIRA_URL="https://${JIRA_URL}"
@@ -560,7 +617,7 @@ main() {
     types)       cmd_types "$@" ;;
     priorities)  cmd_priorities "$@" ;;
     resolutions) cmd_resolutions "$@" ;;
-    projects)    cmd_projects "$@" ;;
+    users)       cmd_users "$@" ;;
     call)        cmd_call "$@" ;;
     *)           die "Unknown subcommand: ${subcommand}" ;;
   esac
