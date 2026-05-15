@@ -370,7 +370,7 @@ _preview() {
 
     local pcmd=${commands[pygmentize]:-$commands[pygmentise]}
     if [[ -n "$pcmd" ]]; then
-        $pcmd -f terminal -g "$file" 2>/dev/null | {
+        "$pcmd" -f terminal -g "$file" 2>/dev/null | {
             local i=0 content arrow="${(%):-%F{red}>>>%f}"
             while IFS= read -r content; do
                 (( ++i ))
