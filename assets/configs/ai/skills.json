@@ -1,0 +1,16 @@
+{
+  "local": {
+    "source": "ai/skills",
+    "target": "~/.agents/skills"
+  },
+  "remote": [
+    {
+      "repo": "anthropics/skills",
+      "skills": ["skill-creator"]
+    },
+    {
+      "repo": "JuliusBrussee/caveman",
+      "skills": ["caveman", "caveman-compress", "caveman-commit", "caveman-help", "caveman-review"]
+    }
+  ]
+}
