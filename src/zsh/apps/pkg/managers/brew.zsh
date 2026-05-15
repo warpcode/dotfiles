@@ -18,11 +18,13 @@ pkg.managers.brew.check() {
     local -a pkgs=( ${=$(pkg.recipe.get "$rid" brew):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
-    local pkg pkg_name
+    local pkg
+    local -a pkg_names
     for pkg in "${pkgs[@]}"; do
-        pkg_name="${${pkg%% --HEAD}%% *}"
-        brew list "$pkg_name" >/dev/null 2>&1 || return 1
+        pkg_names+=( "${${pkg%% --HEAD}%% *}" )
     done
+
+    brew list "${pkg_names[@]}" >/dev/null 2>&1 || return 1
     return 0
 }
 
@@ -42,10 +44,7 @@ pkg.managers.brew.search() {
     local -a pkgs=( ${=$(pkg.recipe.get "$rid" brew):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
-    local pkg
-    for pkg in "${pkgs[@]}"; do
-        brew info "$pkg" >/dev/null 2>&1 || return 1
-    done
+    brew info "${pkgs[@]}" >/dev/null 2>&1 || return 1
     return 0
 }
 
