@@ -18,54 +18,34 @@ pkg.recipe.ai-skills.configure() {
             return 0
         fi
 
+        tui.step "Linking skills directory"
         local source_dir target_dir
-        source_dir=$(jq -r '.local.source // empty' "$skills_file")
-        target_dir=$(jq -r '.local.target // empty' "$skills_file")
+        source_dir=$(jq -r '.local.source // "ai/skills"' "$skills_file")
+        target_dir=$(eval echo "$(jq -r '.local.target // "~/.agents/skills"' "$skills_file")")
+        config.symlink --force --contents "$source_dir" "$target_dir"
 
-        if [[ -n "$source_dir" && -n "$target_dir" ]]; then
-            # eval to expand ~ in target
-            target_dir=$(eval echo "$target_dir")
-            tui.step "Linking skills directory"
-            config.symlink --force --contents "$source_dir" "$target_dir"
-        else
-            tui.step "Linking skills directory"
-            config.symlink --force --contents "ai/skills" "${HOME}/.agents/skills"
-        fi
-
-        local repo names name out
+        local repo skills_str out
         local -a name_args
 
-        # Read remote skills from JSON
-        local remote_items
-        remote_items=$(jq -c '.remote[]?' "$skills_file")
+        while IFS=$'\t' read -r repo skills_str; do
+            [[ -z "$repo" ]] && continue
 
-        if [[ -n "$remote_items" ]]; then
-            echo "$remote_items" | while IFS= read -r item; do
-                repo=$(echo "$item" | jq -r '.repo // empty')
-                [[ -z "$repo" ]] && continue
+            name_args=()
+            if [[ -z "$skills_str" || "$skills_str" == "*" ]]; then
+                name_args=(--skill "*")
+                tui.step "Skills: * (${repo})"
+            else
+                for name in ${(s:,:)skills_str}; do
+                    name_args+=(--skill "$name")
+                done
+                tui.step "Skills: ${skills_str} (${repo})"
+            fi
 
-                name_args=()
-                local skills_str
-                skills_str=$(echo "$item" | jq -r 'if .skills then (.skills | join(",")) else empty end')
-
-                if [[ -z "$skills_str" || "$skills_str" == "*" ]]; then
-                    name_args=(--skill "*")
-                    tui.step "Skills: * (${repo})"
-                else
-                    # Iterate through JSON array
-                    for name in $(echo "$item" | jq -r '.skills[]?'); do
-                        name_args+=(--skill "$name")
-                    done
-                    tui.step "Skills: ${skills_str} (${repo})"
-                fi
-
-                # Note: keeping --agent universal so it works with all agents
-                if ! out=$(npx -y skills add "$repo" "${name_args[@]}" -g --agent universal -y < /dev/null 2>&1); then
-                    tui.error "Failed to install ${repo}"
-                    echo "$out" | grep -v "█"
-                fi
-            done
-        fi
+            if ! out=$(npx -y skills add "$repo" "${name_args[@]}" -g --agent universal -y < /dev/null 2>&1); then
+                tui.error "Failed to install ${repo}"
+                echo "$out" | grep -v "█"
+            fi
+        done < <(jq -r '.remote[]? | "\(.repo)\t\(.skills | join(",") // "")"' "$skills_file")
 
         tui.success "Configuration complete"
     } always {
