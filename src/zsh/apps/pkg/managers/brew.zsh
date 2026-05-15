@@ -18,12 +18,9 @@ pkg.managers.brew.check() {
     local -a pkgs=( ${=$(pkg.recipe.get "$rid" brew):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
-    local pkg pkg_name
-    for pkg in "${pkgs[@]}"; do
-        pkg_name="${${pkg%% --HEAD}%% *}"
-        brew list "$pkg_name" >/dev/null 2>&1 || return 1
-    done
-    return 0
+    local -a pkg_names
+    pkg_names=( "${(@)${(@)pkgs%% --HEAD}%% *}" )
+    brew list "${pkg_names[@]}" >/dev/null 2>&1
 }
 
 pkg.managers.brew.update() {
@@ -42,11 +39,7 @@ pkg.managers.brew.search() {
     local -a pkgs=( ${=$(pkg.recipe.get "$rid" brew):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
-    local pkg
-    for pkg in "${pkgs[@]}"; do
-        brew info "$pkg" >/dev/null 2>&1 || return 1
-    done
-    return 0
+    brew info "${pkgs[@]}" >/dev/null 2>&1
 }
 
 pkg.managers.brew.install() {
@@ -78,6 +71,8 @@ pkg.managers.brew.upgrade() {
 pkg.managers.brew.setup_repos() {
     pkg.managers.brew.is_available || return 0
     local changed=0 rid val t
+    local -a current_taps
+    current_taps=( ${(f)"$(brew tap)"} )
     typeset -A seen_taps
     for rid in $(registry.list pkg); do
         val="$(pkg.recipe.get "$rid" "brew_tap")"
@@ -85,7 +80,7 @@ pkg.managers.brew.setup_repos() {
         for t in ${=val}; do
             [[ -n "${seen_taps[$t]}" ]] && continue
             seen_taps[$t]=1
-            if ! brew tap | grep -q "^$t$"; then
+            if (( ! ${current_taps[(Ie)$t]} )); then
                 echo "   Tapping $t"
                 brew tap "$t" && changed=1
             fi
