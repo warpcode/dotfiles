@@ -24,28 +24,29 @@ pkg.recipe.ai-skills.configure() {
         target_dir=$(eval echo "$(jq -r '.local.target // "~/.agents/skills"' "$skills_file")")
         config.symlink --force --contents "$source_dir" "$target_dir"
 
-        local repo skills_str out
+        local repo skills_str agent out
         local -a name_args
 
-        while IFS=$'\t' read -r repo skills_str; do
+        while IFS=$'\t' read -r repo skills_str agent; do
             [[ -z "$repo" ]] && continue
+            [[ -z "$agent" ]] && agent="universal"
 
             name_args=()
             if [[ -z "$skills_str" || "$skills_str" == "*" ]]; then
                 name_args=(--skill "*")
-                tui.step "Skills: * (${repo})"
+                tui.step "Skills: * (${repo}) for ${agent}"
             else
                 for name in ${(s:,:)skills_str}; do
                     name_args+=(--skill "$name")
                 done
-                tui.step "Skills: ${skills_str} (${repo})"
+                tui.step "Skills: ${skills_str} (${repo}) for ${agent}"
             fi
 
-            if ! out=$(npx -y skills add "$repo" "${name_args[@]}" -g --agent universal -y < /dev/null 2>&1); then
+            if ! out=$(npx -y skills add "$repo" "${name_args[@]}" -g --agent "$agent" -y < /dev/null 2>&1); then
                 tui.error "Failed to install ${repo}"
                 echo "$out" | grep -v "█"
             fi
-        done < <(jq -r '.remote[]? | "\(.repo)\t\(.skills | join(",") // "")"' "$skills_file")
+        done < <(jq -r '.remote[]? | "\(.repo)\t\(.skills | join(",") // "")\t\(.agent // "universal")"' "$skills_file")
 
         tui.success "Configuration complete"
     } always {
