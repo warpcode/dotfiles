@@ -29,7 +29,7 @@ env.lazy.load() {
     deps=( ${=_ENV_LAZY_DEPS[$var]} )
     for dep in $deps; do
       if [[ -z ${seen[$dep]} ]]; then
-        eval "$dep" >/dev/null
+        env.lazy.load "$dep"
         seen[$dep]=1
       fi
     done
