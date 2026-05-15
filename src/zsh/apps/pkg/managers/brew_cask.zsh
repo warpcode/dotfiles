@@ -36,11 +36,7 @@ pkg.managers.brew_cask.search() {
     local -a pkgs=( ${=$(pkg.recipe.get "$rid" brew_cask):-$(pkg.recipe.get "$rid" package)} )
     (( $#pkgs == 0 )) && return 1
 
-    local pkg
-    for pkg in "${pkgs[@]}"; do
-        brew info --cask "$pkg" >/dev/null 2>&1 || return 1
-    done
-    return 0
+    brew info --cask "${pkgs[@]}" >/dev/null 2>&1
 }
 
 pkg.managers.brew_cask.install() {
