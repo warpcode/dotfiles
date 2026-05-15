@@ -20,78 +20,10 @@ pkg.recipe.opencode.configure() {
         pkg.recipe.opencode.configure.providers "$target"
         pkg.recipe.opencode.configure.mcps "$target"
 
-        local skills_file="${DOTFILES_DIR:-${HOME}/.dotfiles}/assets/configs/ai/skills.json"
-
-        # Check if skills manifest exists
-        if [[ -f "$skills_file" ]]; then
-            local source_dir target_dir
-            source_dir=$(jq -r '.local.source // empty' "$skills_file")
-            target_dir=$(jq -r '.local.target // empty' "$skills_file")
-
-            if [[ -n "$source_dir" && -n "$target_dir" ]]; then
-                # eval to expand ~ in target
-                target_dir=$(eval echo "$target_dir")
-                tui.step "Linking skills directory"
-                config.symlink --force --contents "$source_dir" "$target_dir"
-            else
-                tui.step "Linking skills directory"
-                config.symlink --force --contents "ai/skills" "${HOME}/.agents/skills"
-            fi
-        else
-            tui.step "Linking skills directory"
-            config.symlink --force --contents "ai/skills" "${HOME}/.agents/skills"
-        fi
-
-        pkg.recipe.opencode.configure.skills "$skills_file"
-
         tui.success "Configuration complete"
     } always {
         tui.indent.pop
     }
-}
-
-pkg.recipe.opencode.configure.skills() {
-    local skills_file="${1:-}"
-    if [[ ! -f "$skills_file" ]]; then
-        tui.warn "Skills manifest not found: $skills_file"
-        return 0
-    fi
-
-    local repo names name out
-    local -a name_args
-
-    # Read remote skills from JSON
-    local remote_items
-    remote_items=$(jq -c '.remote[]?' "$skills_file")
-
-    if [[ -z "$remote_items" ]]; then
-        return 0
-    fi
-
-    echo "$remote_items" | while IFS= read -r item; do
-        repo=$(echo "$item" | jq -r '.repo // empty')
-        [[ -z "$repo" ]] && continue
-
-        name_args=()
-        local skills_str
-        skills_str=$(echo "$item" | jq -r 'if .skills then (.skills | join(",")) else empty end')
-
-        if [[ -z "$skills_str" || "$skills_str" == "*" ]]; then
-            name_args=(--skill "*")
-            tui.step "Skills: * (${repo})"
-        else
-            # Iterate through JSON array
-            for name in $(echo "$item" | jq -r '.skills[]?'); do
-                name_args+=(--skill "$name")
-            done
-            tui.step "Skills: ${skills_str} (${repo})"
-        fi
-
-        if ! out=$(npx -y skills add "$repo" "${name_args[@]}" -g --agent universal -y < /dev/null 2>&1); then
-            tui.error "Failed to install ${repo}"
-            echo "$out" | grep -v "█"
-        fi
-    done
 }
 
 
