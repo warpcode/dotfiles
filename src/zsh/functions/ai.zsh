@@ -289,3 +289,60 @@ ai.chat() {
 EOF
 }
 
+
+# --- Skills ---
+ai.skills.install() {
+    local agent="${1:-universal}"
+    local skills_file="${DOTFILES_DIR:-${HOME}/.dotfiles}/assets/configs/ai/skills.json"
+
+    if [[ ! -f "$skills_file" ]]; then
+        tui.warn "Skills manifest not found: $skills_file"
+        return 0
+    fi
+
+    tui.task "Configuring ai-skills for agent: $agent"
+    tui.indent.push
+    {
+        (( $+commands[jq] )) || { tui.warn "jq command not found, skipping"; return 0; }
+        (( $+commands[npx] )) || { tui.warn "npx command not found, skipping"; return 0; }
+
+        tui.step "Linking skills directory"
+        local source_dir target_dir
+        source_dir=$(jq -r '.local.source // "ai/skills"' "$skills_file")
+        target_dir=$(eval echo "$(jq -r '.local.target // "~/.agents/skills"' "$skills_file")")
+        config.symlink --force --contents "$source_dir" "$target_dir"
+
+        local repo skills_str agent_config out
+        local -a name_args
+
+        while IFS=$'\t' read -r repo skills_str agent_config; do
+            [[ -z "$repo" ]] && continue
+
+            # Use specific agent passed, or fallback to the one defined in config, or universal
+            local current_agent="$agent"
+            if [[ "$current_agent" == "universal" && -n "$agent_config" && "$agent_config" != "null" ]]; then
+                 current_agent="$agent_config"
+            fi
+
+            name_args=()
+            if [[ -z "$skills_str" || "$skills_str" == "*" ]]; then
+                name_args=(--skill "*")
+                tui.step "Skills: * (${repo}) for ${current_agent}"
+            else
+                for name in ${(s:,:)skills_str}; do
+                    name_args+=(--skill "$name")
+                done
+                tui.step "Skills: ${skills_str} (${repo}) for ${current_agent}"
+            fi
+
+            if ! out=$(npx -y skills add "$repo" "${name_args[@]}" -g --agent "$current_agent" -y < /dev/null 2>&1); then
+                tui.error "Failed to install ${repo}"
+                echo "$out" | grep -v "█"
+            fi
+        done < <(jq -r '.remote[]? | "\(.repo)\t\(.skills | join(",") // "")\t\(.agent // "")"' "$skills_file")
+
+        tui.success "Configuration complete for $agent"
+    } always {
+        tui.indent.pop
+    }
+}
