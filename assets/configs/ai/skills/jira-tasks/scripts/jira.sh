@@ -17,7 +17,7 @@ readonly JIRA_API_VERSION="3"
 
 # Shared JQ filter for processing issue lists (JQL results or Bulk Fetch)
 # Expects --arg expand "..." and --argjson full_issue true|false
-readonly ISSUE_PROCESSOR_JQ='
+ISSUE_PROCESSOR_JQ=$(cat <<'EOF'
   # Recursive function to handle nested ADF content
   def flatten_adf:
     if . == null then ""
@@ -39,12 +39,16 @@ readonly ISSUE_PROCESSOR_JQ='
     {
         id: .id,
         key: .key,
+        parent: .fields.parent.key,
+        type: .fields.issuetype.name,
         summary: .fields.summary,
         description: (.fields.description | flatten_adf | sub("\n$"; "")),
         comment: {
             total: .fields.comment.total,
             comments: [.fields.comment.comments[]? | {
                 author: .author.displayName,
+                created: .created,
+                updated: .updated,
                 body: (.body | flatten_adf | sub("\n$"; ""))
             }]
         },
@@ -52,6 +56,8 @@ readonly ISSUE_PROCESSOR_JQ='
         status: .fields.status.name,
         priority: .fields.priority.name,
         labels: .fields.labels,
+        components: [.fields.components[]? | .name],
+        created: .fields.created,
         updated: .fields.updated
     }
     # Include any issue-level expands (like changelog, transitions) if present
@@ -94,16 +100,15 @@ readonly ISSUE_PROCESSOR_JQ='
   # Root object processing
   {
     isLast: (if .isLast == null then true else .isLast end),
-    pagination: {
-        total: (if .total == null then (.issues | length // 0) else .total end),
-        maxResults: (if .maxResults == null then (.issues | length // 0) else .maxResults end),
-        startAt: (if .startAt == null then 0 else .startAt end)
-    }
+    resultsOnPage: (.issues | length // 0),
+    nextPageToken: .nextPageToken
   }
   # Include any top-level expands (like names, schema) if present in source
   + (with_entries(select(.key | IN($requested_expands[]))))
   + { issues: ([.issues[]? | process_issue]) }
-'
+EOF
+)
+readonly ISSUE_PROCESSOR_JQ
 
 # ---------------------------------------------------------------------------
 # State
@@ -126,6 +131,8 @@ RAW_OUTPUT="${RAW_OUTPUT:-0}"
 #   $* - Error message string.
 # Outputs:
 #   Writes formatted error message to stderr.
+# Returns:
+#   None.
 #######################################
 err() {
   echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')] jira.sh: $*" >&2
@@ -135,6 +142,8 @@ err() {
 # Print error message and exit.
 # Arguments:
 #   $* - Error message string.
+# Outputs:
+#   Writes error message to stderr.
 # Returns:
 #   Exits with status 1.
 #######################################
@@ -146,11 +155,16 @@ die() {
 #######################################
 # Resolve a secret using DF_SECRET_GET_CMD if not already set.
 # Globals:
-#   DF_SECRET_GET_CMD - The command used to retrieve secrets.
-#   JIRA_API_TOKEN - Exported if resolved.
-#   JIRA_API_KEY - Checked as fallback for token.
+#   DF_SECRET_GET_CMD - Read. The command used to retrieve secrets.
+#   JIRA_URL - Modified. Resolved workspace URL.
+#   JIRA_USER - Modified. Resolved user email.
+#   JIRA_API_TOKEN - Modified. Resolved API token.
+#   JIRA_PROJECT - Modified. Resolved project key.
+#   JIRA_API_KEY - Read. Checked as fallback for token.
 # Arguments:
 #   $1 - Variable name to resolve (e.g., JIRA_URL).
+# Outputs:
+#   None.
 # Returns:
 #   0 on success, 1 if secret cannot be resolved.
 #######################################
@@ -192,15 +206,15 @@ resolve_secret() {
 # Verify required dependencies are installed.
 # Arguments:
 #   None
+# Outputs:
+#   None.
 # Returns:
 #   None (dies if dependency missing).
 #######################################
 check_deps() {
   local dep
   for dep in curl jq base64; do
-    if ! command -v "${dep}" >/dev/null; then
-      die "Error: '${dep}' is required but not found."
-    fi
+    command -v "${dep}" >/dev/null || die "Error: '${dep}' is required but not found."
   done
 }
 
@@ -214,6 +228,8 @@ check_deps() {
 #   $@ - Additional JQ arguments.
 # Outputs:
 #   Writes processed JSON to stdout.
+# Returns:
+#   0 on success, non-zero on JQ failure.
 #######################################
 _process_output() {
   local response="${1}"
@@ -221,9 +237,9 @@ _process_output() {
   shift 2
 
   if [[ "${RAW_OUTPUT}" -eq 1 ]]; then
-    echo "${response}"
+    printf '%s\n' "${response}"
   else
-    echo "${response}" | jq "$@" "${jq_filter}"
+    printf '%s\n' "${response}" | jq "$@" "${jq_filter}"
   fi
 }
 
@@ -237,6 +253,7 @@ _process_output() {
 #   $1 - HTTP method (GET, POST, etc.)
 #   $2 - Absolute endpoint URL.
 #   $3 - Optional JSON payload.
+#   $@ - Additional curl options.
 # Outputs:
 #   Writes API response to stdout.
 # Returns:
@@ -246,9 +263,10 @@ _call_api() {
   local method="${1}"
   local endpoint="${2}"
   local payload="${3:-}"
+  shift 3
 
   local auth_header
-  auth_header="Basic $(printf "%s:%s" "${JIRA_USER}" "${JIRA_API_TOKEN}" | base64 | tr -d '\n')"
+  auth_header="Basic $(printf '%s:%s' "${JIRA_USER}" "${JIRA_API_TOKEN}" | base64 | tr -d '\n')"
 
   local -a curl_opts=(
     -s
@@ -257,6 +275,7 @@ _call_api() {
     -H "Authorization: ${auth_header}"
     -H "Content-Type: application/json"
     -H "Accept: application/json"
+    "$@"
   )
 
   if [[ -n "${payload}" ]]; then
@@ -270,12 +289,14 @@ _call_api() {
 
   local response_file
   response_file=$(mktemp)
+  trap 'rm -f "${response_file}"' EXIT
 
   local http_code
   http_code=$(curl "${curl_opts[@]}" -o "${response_file}" "${endpoint}")
   local response
-  response=$(cat "${response_file}")
+  response=$(<"${response_file}")
   rm -f "${response_file}"
+  trap - EXIT
 
   if [[ "${http_code}" -lt 200 || "${http_code}" -ge 300 ]]; then
     if [[ "${VERBOSE}" -eq 1 ]]; then
@@ -307,6 +328,10 @@ _call_api() {
 #   --expand <list> - Expand options.
 #   --full-issue - Include original JSON.
 #   --param <k=v> - Extra API params.
+# Outputs:
+#   Writes processed JSON to stdout.
+# Returns:
+#   0 on success, non-zero on error.
 #######################################
 cmd_jql() {
   local query=""
@@ -338,37 +363,42 @@ cmd_jql() {
   [[ -z "${query}" ]] && die "Error: JQL query string is required."
 
   # Mandatory fields always included
-  local -r mandatory_fields="parent,summary,description,status,assignee,issuetype,comment,created,updated,priority,labels"
+  local -r mandatory_fields="parent,summary,description,status,assignee,issuetype,comment,created,updated,priority,labels,components"
   if [[ -n "${fields}" ]]; then
     fields="${mandatory_fields},${fields}"
   else
     fields="${mandatory_fields}"
   fi
 
-  local jq_filter='{"jql": $jql, "maxResults": ($maxResults | tonumber)}
-                   + {"fields": ($fields | split(",") | map(select(length > 0)) | unique)}
-                   + (if $expand != "" then {"expand": ($expand | split(",") | map(select(length > 0)) | join(","))} else {} end)'
-
-  local -a jq_args=(
-    --arg jql "${query}"
-    --arg maxResults "${max_results}"
-    --arg fields "${fields}"
-    --arg expand "${expand}"
-  )
-
+  local -a jq_args=()
   local k
   for k in "${!extra_params[@]}"; do
-    local v="${extra_params[$k]}"
-    jq_args+=(--arg "$k" "$v")
-    if [[ "$v" =~ ^[0-9]+$ ]]; then
-        jq_filter="${jq_filter} + {(\$ARGS.named | keys_unsorted | map(select(. == \"$k\")) | .[]): (\$ARGS.named[\"$k\"] | tonumber)}"
-    else
-        jq_filter="${jq_filter} + {(\$ARGS.named | keys_unsorted | map(select(. == \"$k\")) | .[]): \$ARGS.named[\"$k\"]}"
-    fi
+    jq_args+=(--arg "${k}" "${extra_params[$k]}")
   done
 
+  local jq_filter
+  jq_filter=$(cat <<'EOF'
+    ($ARGS.named | del(.jql_query, .max_results, .field_list, .expand_list)
+     | map_values(if type == "string" and test("^[0-9]+$") then tonumber else . end)) as $extras |
+    ({
+      "jql": $jql_query,
+      "maxResults": ($max_results | tonumber),
+      "fields": ($field_list | split(",") | map(select(length > 0)) | unique)
+    }
+    + (if $expand_list != "" then {"expand": ($expand_list | split(",") | map(select(length > 0)) | join(","))} else {} end)
+    + $extras)
+    | del(.jql_query, .max_results, .field_list, .expand_list)
+EOF
+)
+
   local payload
-  payload=$(jq -n "${jq_args[@]}" "${jq_filter}")
+  payload=$(jq -n \
+    --arg jql_query "${query}" \
+    --arg max_results "${max_results}" \
+    --arg field_list "${fields}" \
+    --arg expand_list "${expand}" \
+    "${jq_args[@]}" \
+    "${jq_filter}")
 
   local response
   response=$(_call_api "POST" "${JIRA_URL%/}/rest/api/${JIRA_API_VERSION}/search/jql" "${payload}")
@@ -384,16 +414,22 @@ cmd_jql() {
 #   <id/key>... - Issue IDs or keys.
 #   --fields <list> - Fields to include.
 #   --expand <list> - Expand options.
+# Outputs:
+#   Writes processed JSON to stdout.
+# Returns:
+#   0 on success, non-zero on error.
 #######################################
 cmd_issues() {
   local -a issue_ids=()
   local fields=""
   local expand=""
+  local full_issue=0
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --fields) fields="${2}"; shift 2 ;;
       --expand) expand="${2}"; shift 2 ;;
+      --full-issue) full_issue=1; shift ;;
       --raw|--verbose|-v|--help|-h) shift ;; # Ignore global flags
       -*) die "Unknown option for 'issues': $1" ;;
       *) issue_ids+=("$1"); shift ;;
@@ -415,7 +451,7 @@ cmd_issues() {
   response=$(_call_api "POST" "${JIRA_URL%/}/rest/api/${JIRA_API_VERSION}/issue/bulkfetch" "${payload}")
 
   _process_output "${response}" "${ISSUE_PROCESSOR_JQ}" \
-    --argjson full_issue 0 \
+    --argjson full_issue "${full_issue}" \
     --arg expand "${expand}"
 }
 
@@ -425,6 +461,10 @@ cmd_issues() {
 #   $1 - Jira API endpoint path.
 #   $2 - JQ filter for transformation.
 #   $@ - Additional JQ arguments.
+# Outputs:
+#   Writes processed JSON to stdout.
+# Returns:
+#   0 on success, non-zero on error.
 #######################################
 _cmd_metadata() {
   local endpoint="${1}"
@@ -441,6 +481,10 @@ _cmd_metadata() {
 # List or search for Jira fields.
 # Arguments:
 #   $1 - Optional filter string.
+# Outputs:
+#   Writes processed JSON to stdout.
+# Returns:
+#   0 on success, non-zero on error.
 #######################################
 cmd_fields() {
   local filter=""
@@ -468,6 +512,10 @@ cmd_fields() {
 # List Jira statuses and their categories.
 # Arguments:
 #   --category <name> - Filter by category.
+# Outputs:
+#   Writes processed JSON to stdout.
+# Returns:
+#   0 on success, non-zero on error.
 #######################################
 cmd_statuses() {
   local category=""
@@ -499,6 +547,12 @@ cmd_statuses() {
 
 #######################################
 # List available issue types.
+# Arguments:
+#   None.
+# Outputs:
+#   Writes processed JSON to stdout.
+# Returns:
+#   0 on success, non-zero on error.
 #######################################
 cmd_types() {
   _cmd_metadata "issuetype" "map({(.id): {name: .name, subtask: .subtask}}) | add"
@@ -506,6 +560,12 @@ cmd_types() {
 
 #######################################
 # List priority levels.
+# Arguments:
+#   None.
+# Outputs:
+#   Writes processed JSON to stdout.
+# Returns:
+#   0 on success, non-zero on error.
 #######################################
 cmd_priorities() {
   _cmd_metadata "priority" "map({(.id): .name}) | add"
@@ -513,6 +573,12 @@ cmd_priorities() {
 
 #######################################
 # List resolution types.
+# Arguments:
+#   None.
+# Outputs:
+#   Writes processed JSON to stdout.
+# Returns:
+#   0 on success, non-zero on error.
 #######################################
 cmd_resolutions() {
   _cmd_metadata "resolution" "map({(.id): .name}) | add"
@@ -527,6 +593,10 @@ cmd_resolutions() {
 #   --full - Display the full user object.
 #   --max-results <int> - Max results.
 #   --project <key> - Project key for assignable search.
+# Outputs:
+#   Writes processed JSON to stdout.
+# Returns:
+#   0 on success, non-zero on error.
 #######################################
 cmd_users() {
   local query=""
@@ -549,41 +619,34 @@ cmd_users() {
     esac
   done
 
-  local endpoint="${JIRA_URL%/}/rest/api/${JIRA_API_VERSION}/user/search"
-  [[ -n "${project}" ]] && endpoint="${JIRA_URL%/}/rest/api/${JIRA_API_VERSION}/user/assignable/search"
+  local endpoint="user/search"
+  [[ -n "${project}" ]] && endpoint="user/assignable/search"
+  local url="${JIRA_URL%/}/rest/api/${JIRA_API_VERSION}/${endpoint}"
 
-  local url="${endpoint}?maxResults=${max_results}"
-
-  if [[ -n "${query}" ]]; then
-    local encoded_query
-    encoded_query=$(jq -nr --arg q "${query}" "\$q | @uri")
-    url="${url}&query=${encoded_query}"
-  fi
-
-  if [[ -n "${project}" ]]; then
-    url="${url}&project=${project}"
-  fi
-  
-  if [[ -n "${expand}" ]]; then
-    url="${url}&expand=${expand}"
-  fi
+  local -a curl_args=(--get)
+  curl_args+=(--data-urlencode "maxResults=${max_results}")
+  [[ -n "${query}" ]] && curl_args+=(--data-urlencode "query=${query}")
+  [[ -n "${project}" ]] && curl_args+=(--data-urlencode "project=${project}")
+  [[ -n "${expand}" ]] && curl_args+=(--data-urlencode "expand=${expand}")
 
   local response
-  response=$(_call_api "GET" "${url}")
+  response=$(_call_api "GET" "${url}" "" "${curl_args[@]}")
 
-  local jq_filter='.'
-  local -a jq_args=()
+  local jq_filter
+  jq_filter=$(cat <<'EOF'
+    (if $exact == 1 and $query != "" then
+      map(select(.displayName == $query or .emailAddress == $query))
+     else . end)
+    | if $full == 1 then .
+      else map({(.accountId): .displayName}) | add // {}
+      end
+EOF
+)
 
-  if [[ "${exact}" -eq 1 && -n "${query}" ]]; then
-    jq_filter="map(select(.displayName == \$query or .emailAddress == \$query))"
-    jq_args+=(--arg query "${query}")
-  fi
-
-  if [[ "${full}" -ne 1 ]]; then
-    jq_filter="${jq_filter} | map({(.accountId): .displayName}) | add // {}"
-  fi
-
-  _process_output "${response}" "${jq_filter}" "${jq_args[@]}"
+  _process_output "${response}" "${jq_filter}" \
+    --argjson exact "${exact}" \
+    --arg query "${query}" \
+    --argjson full "${full}"
 }
 
 #######################################
@@ -592,6 +655,10 @@ cmd_users() {
 #   $1 - HTTP method (GET, POST, PUT, DELETE).
 #   $2 - Relative or absolute API endpoint.
 #   $3 - Optional JSON payload string.
+# Outputs:
+#   Writes API response to stdout.
+# Returns:
+#   0 on success, non-zero on error.
 #######################################
 cmd_call() {
   local method="${1:-}"
@@ -607,7 +674,7 @@ cmd_call() {
 
   local response
   response=$(_call_api "${method}" "${endpoint}" "${payload}")
-  echo "${response}"
+  printf '%s\n' "${response}"
 }
 
 # ---------------------------------------------------------------------------
@@ -616,6 +683,12 @@ cmd_call() {
 
 #######################################
 # Print usage information and exit.
+# Arguments:
+#   None.
+# Outputs:
+#   Writes usage help to stdout.
+# Returns:
+#   Exits with status 1.
 #######################################
 usage() {
   cat <<EOF
@@ -683,6 +756,10 @@ EOF
 # Entry point for the script.
 # Arguments:
 #   $@ - All script arguments.
+# Outputs:
+#   Executes subcommands which may write to stdout.
+# Returns:
+#   0 on success, non-zero on error.
 #######################################
 main() {
   check_deps
@@ -708,10 +785,10 @@ main() {
   shift
 
   # Resolve secrets if not already in env
-  resolve_secret "JIRA_URL" || true
-  resolve_secret "JIRA_USER" || true
-  resolve_secret "JIRA_API_TOKEN" || true
-  resolve_secret "JIRA_PROJECT" || true
+  resolve_secret "JIRA_URL" || die "Error: Failed to resolve JIRA_URL."
+  resolve_secret "JIRA_USER" || die "Error: Failed to resolve JIRA_USER."
+  resolve_secret "JIRA_API_TOKEN" || die "Error: Failed to resolve JIRA_API_TOKEN."
+  resolve_secret "JIRA_PROJECT" || die "Error: Failed to resolve JIRA_PROJECT."
 
   # Final validation of mandatory credentials
   [[ -z "${JIRA_URL:-}" ]]      && die "Error: Jira URL is required (or set JIRA_URL)."
@@ -723,18 +800,11 @@ main() {
     JIRA_URL="https://${JIRA_URL}"
   fi
 
-  case "${subcommand}" in
-    jql)         cmd_jql "$@" ;;
-    issues)      cmd_issues "$@" ;;
-    fields)      cmd_fields "$@" ;;
-    statuses)    cmd_statuses "$@" ;;
-    types)       cmd_types "$@" ;;
-    priorities)  cmd_priorities "$@" ;;
-    resolutions) cmd_resolutions "$@" ;;
-    users)       cmd_users "$@" ;;
-    call)        cmd_call "$@" ;;
-    *)           die "Unknown subcommand: ${subcommand}" ;;
-  esac
+  if [[ "$(type -t "cmd_${subcommand}")" == "function" ]]; then
+    "cmd_${subcommand}" "$@"
+  else
+    die "Unknown subcommand: ${subcommand}"
+  fi
 }
 
 main "$@"
