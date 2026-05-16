@@ -9,8 +9,8 @@ function _dotfiles_tmux_setup() {
 
 # Install dotfiles bootstrap to ~/.zshrc
 function dotfiles.setup() {
-    dotfiles.setup.submodules
-    dotfiles.setup.zshrc
+    dotfiles.setup.submodules || return 1
+    dotfiles.setup.zshrc || return 1
     events.trigger 'dotfiles.setup.first'
     events.trigger 'dotfiles.setup'
 }
@@ -25,7 +25,9 @@ function dotfiles.setup.zshrc() {
 
 function dotfiles.setup.submodules() {
     (
-        df.cd
-        git submodule update --init --remote --recursive
+        df.cd || return 1
+        if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+            git submodule update --init --remote --recursive || return 1
+        fi
     )
 }
