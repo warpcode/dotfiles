@@ -2,17 +2,23 @@
 name: Test Dotfiles
 on:
   push:
+    branches:
+      - master
     paths:
       - 'src/**/*.zsh'
-      - 'Makefile'
+      - 'install.sh'
       - '.gitmodules'
-      - '.stow-local-ignore'
+      - 'assets/configs/**/*'
+      - 'generic/**/*'
   pull_request:
+    branches:
+      - master
     paths:
       - 'src/**/*.zsh'
-      - 'Makefile'
+      - 'install.sh'
       - '.gitmodules'
-      - '.stow-local-ignore'
+      - 'assets/configs/**/*'
+      - 'generic/**/*'
 
 jobs:
   test-linux:
