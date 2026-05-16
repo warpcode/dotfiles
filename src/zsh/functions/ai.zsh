@@ -333,7 +333,7 @@ ai.skills.install() {
                 tui.error "Failed to install ${repo}"
                 echo "$out" | grep -v "█"
             fi
-        done < <(jq -r '.skills[]? | "\(.repo)\t\(.skills | join(",") // "")"' "$skills_file")
+        done < <(jq -r '.skills[]? | "\(.repo)\t\((.skills // []) | join(","))"' "$skills_file")
 
         tui.success "Configuration complete for $agent"
     } always {
