@@ -8,6 +8,7 @@ ai.provider.define "docker" \
     "priority=60"
 
 ai.providers.docker.enabled() {
+    (( $+commands[docker] )) || return 1
     # Check if docker container is up
-    docker ps --format '{{.Names}}' | grep -q 'docker-model-runner'
+    docker ps --format '{{.Names}}' 2>/dev/null | grep -q 'docker-model-runner'
 }
