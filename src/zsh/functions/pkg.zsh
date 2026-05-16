@@ -240,12 +240,15 @@ pkg.recipe.configure_all() {
         (( $+functions[$func] )) || continue
         "$func" "$id" || tui.error "$func failed for $id"
     done
+    return 0
 }
 
 pkg.recipe.init() {
     local id="${1//-/_}"
     local func="pkg.recipe.${id}.init"
-    (( $+functions[$func] )) && "$func" "$1"
+    if (( $+functions[$func] )); then
+        "$func" "$1" || return 0
+    fi
 }
 
 pkg.recipe.init_all() {
@@ -253,4 +256,5 @@ pkg.recipe.init_all() {
     for id in $(registry.list pkg 2>/dev/null); do
         pkg.recipe.init "$id"
     done
+    return 0
 }
