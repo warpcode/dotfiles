@@ -3,6 +3,12 @@
 _zsh.init() {
     setopt null_glob globstarshort
 
+    if [[ -f ~/.dotfiles_profile ]]; then
+        export DOTFILES_PROFILE="$(<~/.dotfiles_profile)"
+    else
+        export DOTFILES_PROFILE="default"
+    fi
+
     local root f
     local roots=(
         "$HOME/.zshrc.before.d/"
@@ -18,6 +24,11 @@ _zsh.init() {
     done
 
     [[ -f ~/.env ]] && env.source.file ~/.env
+
+    # Load profile init script if exists
+    if [[ -n "$DOTFILES_PROFILE" && -f "$DOTFILES/assets/configs/profiles/$DOTFILES_PROFILE/init.zsh" ]]; then
+        source "$DOTFILES/assets/configs/profiles/$DOTFILES_PROFILE/init.zsh"
+    fi
 
     for root in $roots; do
         for f in "${root}"{config,apps,projects}/**/*.zsh(Nn-); do
