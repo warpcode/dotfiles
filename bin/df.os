@@ -54,7 +54,7 @@ _family() {
         done
 
         local id="${os_info[ID]}"
-        local like="${os_info[ID_LIKE]}"
+        local like="${os_info[ID_LIKE]:-}"
 
         case "${id}" in
           ubuntu|debian|pop|kali|linuxmint) os="debian" ;;
