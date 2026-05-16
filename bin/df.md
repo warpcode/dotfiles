@@ -1,7 +1,5 @@
 #!/usr/bin/env zsh
-#
-# df.md - Markdown and frontmatter utilities.
-# Extracted from src/zsh/apps/markdown.zsh for portability.
+# @description Markdown and frontmatter utilities. Extracted from src/zsh/apps/markdown.zsh for portability.
 
 emulate -LR zsh
 setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL EXTENDED_GLOB
