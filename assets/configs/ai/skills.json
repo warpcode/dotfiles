@@ -1,9 +1,9 @@
 {
-  "local": {
-    "source": "ai/skills",
-    "target": "~/.agents/skills"
-  },
-  "remote": [
+  "skills": [
+    {
+      "repo": "./assets/configs/ai/skills",
+      "agent": "universal"
+    },
     {
       "repo": "anthropics/skills",
       "skills": ["skill-creator"],
