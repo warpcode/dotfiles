@@ -20,45 +20,10 @@ pkg.recipe.opencode.configure() {
         pkg.recipe.opencode.configure.providers "$target"
         pkg.recipe.opencode.configure.mcps "$target"
 
-        tui.step "Linking skills directory"
-        config.symlink --force --contents "ai/skills" "${HOME}/.agents/skills"
-        pkg.recipe.opencode.configure.skills
-
         tui.success "Configuration complete"
     } always {
         tui.indent.pop
     }
-}
-
-pkg.recipe.opencode.configure.skills() {
-    local -a skills=(
-        "anthropics/skills:skill-creator"
-        "JuliusBrussee/caveman:caveman,caveman-compress,caveman-commit,caveman-help,caveman-review"
-    )
-
-    local item repo names name out
-    local -a name_args
-    for item in "${skills[@]}"; do
-        repo="${item%%:*}"
-        names="${item#*:}"
-
-        name_args=()
-        if [[ "$repo" == "$names" || "$names" == "*" ]]; then
-            name_args=(--skill "*")
-            tui.step "Skills: * (${repo})"
-        else
-            # Split comma-separated names into multiple --skill flags
-            for name in ${(s:,:)names}; do
-                name_args+=(--skill "$name")
-            done
-            tui.step "Skills: ${names} (${repo})"
-        fi
-
-        if ! out=$(npx -y skills add "$repo" "${name_args[@]}" -g --agent universal -y < /dev/null 2>&1); then
-            tui.error "Failed to install ${item}"
-            echo "$out" | grep -v "█"
-        fi
-    done
 }
 
 
