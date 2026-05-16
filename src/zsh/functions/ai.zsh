@@ -312,16 +312,17 @@ ai.skills.install() {
         while IFS=$'\t' read -r repo skills_str; do
             [[ -z "$repo" ]] && continue
 
-            # Handle relative local directories by prepending DOTFILES_DIR
+            # Handle relative local directories by prepending DOTFILES
             full_repo="$repo"
             if [[ "$repo" == ./* ]]; then
-                full_repo="${DOTFILES_DIR:-${HOME}/.dotfiles}/${repo#./}"
+                full_repo="${DOTFILES:-${HOME}/.dotfiles}/${repo#./}"
             fi
 
             name_args=()
             if [[ -z "$skills_str" || "$skills_str" == "*" ]]; then
                 tui.step "Skills: * (${repo}) for ${agent}"
             else
+                local name
                 for name in ${(s:,:)skills_str}; do
                     name_args+=(--skill "$name")
                 done
