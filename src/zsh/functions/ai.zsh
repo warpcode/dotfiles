@@ -306,7 +306,7 @@ ai.skills.install() {
         (( $+commands[jq] )) || { tui.warn "jq command not found, skipping"; return 0; }
         (( $+commands[npx] )) || { tui.warn "npx command not found, skipping"; return 0; }
 
-        local repo skills_str out full_repo
+        local repo skills_str out full_repo name
         local -a name_args
 
         while IFS=$'\t' read -r repo skills_str; do
@@ -322,7 +322,6 @@ ai.skills.install() {
             if [[ -z "$skills_str" || "$skills_str" == "*" ]]; then
                 tui.step "Skills: * (${repo}) for ${agent}"
             else
-                local name
                 for name in ${(s:,:)skills_str}; do
                     name_args+=(--skill "$name")
                 done
