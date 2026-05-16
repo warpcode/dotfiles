@@ -1,18 +1,15 @@
 {
   "skills": [
     {
-      "repo": "./assets/configs/ai/skills",
-      "agent": "universal"
+      "repo": "./assets/configs/ai/skills"
     },
     {
       "repo": "anthropics/skills",
-      "skills": ["skill-creator"],
-      "agent": "universal"
+      "skills": ["skill-creator"]
     },
     {
       "repo": "JuliusBrussee/caveman",
-      "skills": ["caveman", "caveman-compress", "caveman-commit", "caveman-help", "caveman-review"],
-      "agent": "universal"
+      "skills": ["caveman", "caveman-compress", "caveman-commit", "caveman-help", "caveman-review"]
     }
   ]
 }

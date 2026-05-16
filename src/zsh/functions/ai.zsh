@@ -306,17 +306,11 @@ ai.skills.install() {
         (( $+commands[jq] )) || { tui.warn "jq command not found, skipping"; return 0; }
         (( $+commands[npx] )) || { tui.warn "npx command not found, skipping"; return 0; }
 
-        local repo skills_str agent_config out full_repo
+        local repo skills_str out full_repo
         local -a name_args
 
-        while IFS=$'\t' read -r repo skills_str agent_config; do
+        while IFS=$'\t' read -r repo skills_str; do
             [[ -z "$repo" ]] && continue
-
-            # Use specific agent passed, or fallback to the one defined in config, or universal
-            local current_agent="$agent"
-            if [[ "$current_agent" == "universal" && -n "$agent_config" && "$agent_config" != "null" ]]; then
-                 current_agent="$agent_config"
-            fi
 
             # Handle relative local directories by prepending DOTFILES_DIR
             full_repo="$repo"
@@ -326,19 +320,19 @@ ai.skills.install() {
 
             name_args=()
             if [[ -z "$skills_str" || "$skills_str" == "*" ]]; then
-                tui.step "Skills: * (${repo}) for ${current_agent}"
+                tui.step "Skills: * (${repo}) for ${agent}"
             else
                 for name in ${(s:,:)skills_str}; do
                     name_args+=(--skill "$name")
                 done
-                tui.step "Skills: ${skills_str} (${repo}) for ${current_agent}"
+                tui.step "Skills: ${skills_str} (${repo}) for ${agent}"
             fi
 
-            if ! out=$(npx -y skills add "$full_repo" "${name_args[@]}" -g --agent "$current_agent" -y < /dev/null 2>&1); then
+            if ! out=$(npx -y skills add "$full_repo" "${name_args[@]}" -g --agent "$agent" -y < /dev/null 2>&1); then
                 tui.error "Failed to install ${repo}"
                 echo "$out" | grep -v "█"
             fi
-        done < <(jq -r '.skills[]? | "\(.repo)\t\(.skills | join(",") // "")\t\(.agent // "")"' "$skills_file")
+        done < <(jq -r '.skills[]? | "\(.repo)\t\(.skills | join(",") // "")"' "$skills_file")
 
         tui.success "Configuration complete for $agent"
     } always {
