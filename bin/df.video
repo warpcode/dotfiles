@@ -1,0 +1,677 @@
+#!/usr/bin/env bash
+
+# Global options
+VERBOSE=0
+
+function print_help {
+    echo "Usage: df.video [options] <subcommand> [args]"
+    echo ""
+    echo "Options:"
+    echo "  --help, -h     Show this help message"
+    echo "  --verbose, -v  Enable verbose output"
+    echo ""
+    echo "Subcommands:"
+    echo "  detect-crop    Detect crop parameters"
+    echo "  detect-gpu     Detect GPU type"
+    echo "  detect-scale   Detect scale parameters"
+    echo "  detect-valid   Detect valid video file"
+    echo "  filter-streams Filter streams from a video"
+    echo "  list-to-chapters Convert a list of videos to metadata chapters"
+    echo "  list-to-input  Convert a list of videos to concat input"
+    echo "  encode         Encode a video"
+    echo "  encode-dir     Encode a directory of videos"
+    echo "  find-all       Find all videos in a directory"
+}
+
+# --- Command functions placeholder ---
+
+function cmd_detect_crop {
+    local SOURCE=""
+    local SCALE=
+    local VF='fps=1/16,cropdetect=24:8:0'
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --scale)
+                VF="scale=$2,${VF}"
+                shift 2
+                ;;
+            *)
+                SOURCE=$1
+                shift
+                break
+                ;;
+        esac
+    done
+
+    if [[ -z "$SOURCE" ]] || [[ ! -r "$SOURCE" ]]; then
+        echo "Source is not readable" >&2
+        return 1;
+    fi
+
+    local max_width=0
+    local max_height=0
+    local min_offsetx=-1
+    local min_offsety=-1
+
+    while read -r line; do
+      local width=$(echo "$line" | awk -F ':' '{print $1}')
+      local height=$(echo "$line" | awk -F ':' '{print $2}')
+      local offsetx=$(echo "$line" | awk -F ':' '{print $3}')
+      local offsety=$(echo "$line" | awk -F ':' '{print $4}')
+
+      [[ $width -gt $max_width ]] && max_width=$width
+      [[ $height -gt $max_height ]] && max_height=$height
+
+      [[ $min_offsetx -lt 0 ]] && min_offsetx=$offsetx
+      [[ $offsetx -lt $min_offsetx ]] && min_offsetx=$offsetx
+
+      [[ $min_offsety -lt 0 ]] && min_offsety=$offsety
+      [[ $offsety -lt $min_offsety ]] && min_offsety=$offsety
+    done < <(ffmpeg \
+        -i "$SOURCE" \
+        -vf "$VF" \
+        -f null - \
+        2>&1 | \
+        awk '{ match($0, /crop=([0-9]+:[0-9]+:[0-9]+:[0-9]+)/, a); if (a[1]) print a[1] }' | \
+        uniq \
+    )
+
+    echo "${max_width}:${max_height}:${min_offsetx}:${min_offsety}"
+}
+
+function cmd_detect_gpu {
+    local GPU_DETECT=$(lspci | grep VGA || true)
+    local GPU=
+    if [[ "$GPU_DETECT" =~ "Intel" ]]; then
+        GPU=intel
+    elif [[ "$GPU_DETECT" =~ "Nvidia" ]]; then
+        GPU=nvidia
+    elif [[ "$GPU_DETECT" =~ "AMD" ]]; then
+        GPU=amd
+    fi
+    echo "$GPU"
+}
+
+function cmd_detect_scale {
+    local SOURCE=""
+    local VIDEO_STREAM=0
+    local MAX_WIDTH=0
+    local MAX_HEIGHT=0
+    local OUTPUT_SEP=":"
+    local FORCE_DAR=0
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --force-dar)
+                FORCE_DAR=1
+                shift
+                ;;
+            --width)
+                MAX_WIDTH=$(echo "$2" | xargs printf "%d" 2>/dev/null)
+                shift 2
+                ;;
+            --height)
+                MAX_HEIGHT=$(echo "$2" | xargs printf "%d" 2>/dev/null)
+                shift 2
+                ;;
+            --stream)
+                VIDEO_STREAM=$(echo "$2" | xargs printf "%d" 2>/dev/null)
+                shift 2
+                ;;
+            *)
+                SOURCE=$1
+                shift
+                break
+                ;;
+        esac
+    done
+
+    if [[ -z "$SOURCE" ]] || [[ ! -r "$SOURCE" ]]; then
+        echo "Source is not readable" >&2
+        return 1;
+    fi
+
+    local ENTRIES="width,height,display_aspect_ratio"
+    local STREAM=$(ffprobe -v quiet \
+        -show_entries stream=$ENTRIES \
+        -select_streams "v:${VIDEO_STREAM}" \
+        -of default=noprint_wrappers=1 \
+        "$SOURCE"
+    )
+
+    local WIDTH=$(echo "$STREAM" | grep 'width' | awk -F"=" '{print $2}' | xargs printf "%d")
+    local HEIGHT=$(echo "$STREAM" | grep 'height' | awk -F"=" '{print $2}' | xargs printf "%d")
+
+    local DAR_RATIO=1
+    local DAR_WIDTH=0
+    local DAR_HEIGHT=0
+
+    if [ $FORCE_DAR -gt 0 ]; then
+        DAR_WIDTH=$(echo "$STREAM" | grep 'display_aspect_ratio' | awk -F"=" '{print $2}' | awk -F":" '{print $1}' | xargs printf "%d" 2>/dev/null)
+        DAR_HEIGHT=$(echo "$STREAM" | grep 'display_aspect_ratio' | awk -F"=" '{print $2}' | awk -F":" '{print $2}' | xargs printf "%d" 2>/dev/null)
+    fi
+
+    if [ $DAR_WIDTH -gt 0 ] && [ $DAR_HEIGHT -gt 0 ]; then
+        # bash doesn't do float math so pass to bc
+        DAR_RATIO=$(echo "scale=2; $DAR_WIDTH / $DAR_HEIGHT" | bc -l)
+    else
+        DAR_RATIO=$(echo "scale=2; $WIDTH / $HEIGHT" | bc -l)
+    fi
+
+    local FINAL_WIDTH=$WIDTH
+    local FINAL_HEIGHT=$HEIGHT
+    MAX_WIDTH=$([[ $MAX_WIDTH -gt 0 ]] && [[ $MAX_WIDTH -lt $WIDTH ]] && echo $MAX_WIDTH || echo $WIDTH)
+    MAX_HEIGHT=$([[ $MAX_HEIGHT -gt 0 ]] && [[ $MAX_HEIGHT -lt $HEIGHT ]] && echo $MAX_HEIGHT || echo $HEIGHT)
+
+    if [[ $FINAL_WIDTH -gt $MAX_WIDTH ]]; then
+        # Scale down based on maximum width, maintaining aspect ratio
+        FINAL_HEIGHT=$(echo "scale=0; $MAX_WIDTH / $DAR_RATIO" | bc -l | xargs printf "%d")
+        FINAL_WIDTH=$MAX_WIDTH
+    fi
+
+    if [[ $FINAL_HEIGHT -gt $MAX_HEIGHT ]]; then
+        # Scale down based on maximum height, maintaining aspect ratio
+        FINAL_WIDTH=$(echo "scale=0; $MAX_HEIGHT * $DAR_RATIO" | bc -l | xargs printf "%d")
+        FINAL_HEIGHT=$MAX_HEIGHT
+    fi
+
+    echo "${FINAL_WIDTH}${OUTPUT_SEP}${FINAL_HEIGHT}"
+}
+
+function cmd_detect_valid {
+    local SOURCE=""
+    for i in "$@"; do
+        case $i in
+            *)
+                SOURCE=$1
+                shift
+                break
+            ;;
+        esac
+    done
+    if [[ -z "$SOURCE" ]] || [[ ! -r "$SOURCE" ]]; then
+        return 1;
+    fi
+    local fullsrcpath=$(readlink -ne "$SOURCE" || true)
+    [[ ! -e "$fullsrcpath" ]] && return 1
+    local fullfilepath=$(readlink -ne "$fullsrcpath" || true)
+    local FILETYPE=$(ffprobe -loglevel error -show_entries stream=codec_type -of default=nw=1 "$fullfilepath" 2> /dev/null < /dev/null || echo "")
+    [[ "$FILETYPE" == *"codec_type=video"* ]] || return 1;
+    [[ "$FILETYPE" == *"codec_type=audio"* ]] || return 1;
+    echo "$SOURCE"
+}
+
+function cmd_filter_streams {
+    local SOURCE=""
+    for i in "$@"; do
+        case $i in
+            *)
+                SOURCE=$1
+                shift
+                break
+            ;;
+        esac
+    done
+    if [[ -z "$SOURCE" ]] || [[ ! -r "$SOURCE" ]]; then
+        return 1;
+    fi
+    local ENTRIES="index,codec_type:stream_disposition=default,forced:stream_tags=language"
+    local AUDIO_STREAMS=$(ffprobe -v error \
+        -show_entries stream=$ENTRIES \
+        -select_streams a \
+        -of compact=p=0 \
+        "$SOURCE" \
+        | grep -i 'default=1\|forced=1\|language=eng\|language=und' || true \
+    )
+    local SUBTITLE_STREAMS=$(ffprobe -v error \
+        -show_entries stream=$ENTRIES \
+        -select_streams s \
+        -of compact=p=0 \
+        "$SOURCE" \
+        | grep -i 'language=eng\|language=und' || true \
+    )
+    declare -a STREAMS_ARRAY=("$AUDIO_STREAMS" "$SUBTITLE_STREAMS")
+    for stream in "${STREAMS_ARRAY[@]}"; do
+        [[ -n "$stream" ]] && echo "$stream"
+    done
+}
+
+function cmd_list_to_chapters {
+    local SOURCE=""
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            *)
+                [[ ! -z "$SOURCE" ]] && return 1;
+                SOURCE=$1
+                shift
+            ;;
+        esac
+    done
+    if [[ -z "$SOURCE" ]] || [[ ! -r "$SOURCE" ]]; then
+        return 1;
+    fi
+    local METADATA_FILE=$(mktemp)
+    local extended_match="-r"
+    echo -n "" | sed ${extended_match} 's|foo|bar|' 2>/dev/null || extended_match="-E"
+    local ts=0
+    ffmpeg -y -i "$(head -1 "${SOURCE}")" -f ffmetadata "${METADATA_FILE}" -v quiet
+    cat "${SOURCE}" | while read file
+    do
+        local ds=$(ffprobe -v quiet -of csv=p=0 -show_entries format=duration "${file}")
+        local escaped_title=$(echo ${file} | sed ${extended_match} -e 's|([=;#\])|\\\1|g' -e 's|.[Mm][Pp]4$||' )
+        echo "[CHAPTER]" >> "${METADATA_FILE}"
+        echo "TIMEBASE=1/1" >> "${METADATA_FILE}"
+        echo "START=${ts}" >> "${METADATA_FILE}"
+        ts=$(awk "BEGIN {print ${ts}+${ds}; exit}")
+        echo "END=${ts}" >> "${METADATA_FILE}"
+        echo "TITLE=${escaped_title}" >> "${METADATA_FILE}"
+    done
+    cat "${METADATA_FILE}"
+    rm -f "${METADATA_FILE}"
+}
+
+function cmd_list_to_input {
+    local SOURCE=""
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            *)
+                [[ ! -z "$SOURCE" ]] && return 1;
+                SOURCE=$1
+                shift
+            ;;
+        esac
+    done
+    if [[ -z "$SOURCE" ]] || [[ ! -r "$SOURCE" ]]; then
+        return 1;
+    fi
+    cat "${SOURCE}" | awk "{printf \"file '$(pwd)/%s'\n\", \$0}"
+}
+function cmd_encode {
+    local PREOPTS=""
+    local HARDWARE_DECODE=1
+    local HARDWARE_ENCODE=0
+    local H264=0
+    local HEVC=0
+    local AV1=0
+    local SOURCE=""
+    local DEST=""
+    local GPU=$(cmd_detect_gpu)
+
+    local CONCAT=0
+    local CONCAT_GEN_CHAPTERS=0
+
+    for i in "$@"; do
+        case $i in
+            --hw)
+                HARDWARE_ENCODE=1
+                shift
+            ;;
+            --h264)
+                H264=1
+                shift
+            ;;
+            --hevc)
+                HEVC=1
+                shift
+            ;;
+            --av1)
+                AV1=1
+                shift
+            ;;
+            --concat)
+                CONCAT=1
+                shift
+            ;;
+            --concat-as-chapters)
+                CONCAT=1
+                CONCAT_GEN_CHAPTERS=1
+                shift
+            ;;
+            *)
+                if [[ -z "$SOURCE" ]]; then
+                    SOURCE=$1
+                elif [[ -z "$DEST" ]]; then
+                    DEST=$1
+                fi
+                shift
+            ;;
+        esac
+    done
+
+    if [[ -z "$SOURCE" ]] || [[ ! -r "$SOURCE" ]]; then
+        echo "Source is not readable" >&2
+        return 1;
+    fi
+
+    if [[ -z "$DEST" ]]; then
+        echo "Destination cannot be empty" >&2
+        return 1;
+    fi
+
+    # Setup the temp files
+    local FILE_LIST_SOURCE_FILE=$(mktemp)
+    local CONCAT_SOURCE_FILE=$(mktemp)
+    local METADATA_CONCAT_CHAPTERS_FILE=$(mktemp)
+
+    local SOURCE_FILE="$SOURCE"
+    local STREAM_SOURCE=""
+
+    if [ $CONCAT == 1 ]; then
+        # Configure concatenation
+        cat "$SOURCE" > "$FILE_LIST_SOURCE_FILE"
+        cmd_list_to_input "$FILE_LIST_SOURCE_FILE" > "$CONCAT_SOURCE_FILE"
+        SOURCE_FILE="$CONCAT_SOURCE_FILE"
+
+        if [ $CONCAT_GEN_CHAPTERS == 1 ]; then
+            cmd_list_to_chapters "$FILE_LIST_SOURCE_FILE" > "$METADATA_CONCAT_CHAPTERS_FILE"
+        fi
+
+        STREAM_SOURCE="$(head -1 "$FILE_LIST_SOURCE_FILE")"
+    else
+        STREAM_SOURCE="$SOURCE_FILE"
+    fi
+
+    local MAPS=""
+    local METADATA=""
+    local DISPOSITION=""
+
+    # Parse the streams
+    for line in $(cmd_filter_streams "$STREAM_SOURCE"); do
+        [ "$line" == "" ] && continue
+
+        MAPS=${MAPS}$(echo -e "$line" | awk -F"|" '{split($1,stream,"=");printf "-map 0:%d ", stream[2]}')
+
+        METADATA=${METADATA}$(echo -e "$line" | awk -F"|" ' \
+            { \
+                split($2,codec_type,"="); \
+                split($5,lang,"="); \
+                printf "-metadata:s:%s:%s language=%s ", substr(codec_type[2],1,1), NR-1, lang[2] \
+            } \
+        ')
+
+        DISPOSITION=${DISPOSITION}$(echo -e "$line" | awk -F"|" ' \
+            { \
+                split($2,codec_type,"="); \
+                split($3,disposition_default,"="); \
+                split($4,forced,"="); \
+                printf "-disposition:%s:%d ", substr(codec_type[2],1,1), NR-1 \
+            }; \
+            { if(forced[2] == 1) print "forced"; else if(disposition_default[2] == 1) print "default"; else print "0";} \
+            { print " " } \
+        ')
+    done
+
+    local ENCODER=""
+    if [ $HARDWARE_DECODE == 1 ] || [ $HARDWARE_ENCODE == 1 ]; then
+        if [ "$GPU" == "amd" ]; then
+            PREOPTS="-hwaccel vaapi -hwaccel_device /dev/dri/renderD128 "
+
+            if [ $HARDWARE_ENCODE == 1 ]; then
+                PREOPTS+="-hwaccel_output_format vaapi "
+            fi
+        fi
+    fi
+
+    # Default encoder
+    if [ $AV1 == 1 ]; then
+        ENCODER="libaom-av1 -crf 28 -row-mt 1 -tiles 2x2"
+        # ENCODER="libsvtav1 -crf 28"
+    elif [ $HEVC == 1 ]; then
+        ENCODER="libx265 -crf 19 -preset veryslow"
+
+        if [ $HARDWARE_ENCODE == 1 ]; then
+            if [ "$GPU" == "amd" ]; then
+                ENCODER="hevc_vaapi -global_quality 18 "
+            fi
+        fi
+    elif [ $H264 == 1 ]; then
+        ENCODER="libx264 -crf 19 -preset veryslow"
+
+        if [ $HARDWARE_ENCODE == 1 ]; then
+            if [ "$GPU" == "amd" ]; then
+                ENCODER="h264_vaapi -rc_mode 1 -qp 25 "
+            fi
+        fi
+    else
+        ENCODER="copy"
+    fi
+
+    local concat_str=""
+    if [ $CONCAT == 1 ]; then
+        concat_str="-f concat -safe 0"
+    fi
+    local chapters_input=""
+    if [ $CONCAT_GEN_CHAPTERS == 1 ]; then
+        chapters_input="-i ${METADATA_CONCAT_CHAPTERS_FILE}"
+    fi
+    local map_metadata_1=""
+    if [ $CONCAT_GEN_CHAPTERS == 1 ]; then
+        map_metadata_1="-map_metadata 1"
+    fi
+    local infer_subs=""
+    if [ "${DEST##*.}" == "mkv" ]; then
+        infer_subs="-default_mode infer_no_subs"
+    fi
+    local faststart=""
+    if [ "${DEST##*.}" == "mp4" ]; then
+        faststart="-movflags +faststart"
+    fi
+
+    if [ "$VERBOSE" == "1" ]; then
+        set -o xtrace
+    fi
+
+    ffmpeg \
+        $PREOPTS \
+        -y \
+        $concat_str \
+        -i "$SOURCE_FILE" \
+        $chapters_input \
+        -map 0:v \
+        $MAPS \
+        -map 0:d? \
+        -map 0:t? \
+        -map_metadata 0 \
+        $METADATA \
+        $map_metadata_1 \
+        $DISPOSITION \
+        -c copy \
+        -c:v $ENCODER \
+        $infer_subs \
+        $faststart \
+        -probesize 2048M \
+        -analyzeduration 2048M \
+        "$DEST" < /dev/null
+
+    local rc=$?
+
+    if [ "$VERBOSE" == "1" ]; then
+        set +o xtrace
+    fi
+
+    rm -f "${FILE_LIST_SOURCE_FILE}" "${CONCAT_SOURCE_FILE}" "${METADATA_CONCAT_CHAPTERS_FILE}"
+    return $rc
+}
+
+function cmd_encode_dir {
+    local SOURCE=""
+    local DEST=""
+    local PASSOPT=""
+    local COPYINVALID=0
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --copy-invalid)
+                COPYINVALID=1
+                shift
+            ;;
+            --)
+                shift
+                PASSOPT="$@"
+                break
+            ;;
+            *)
+                if [[ -z "$SOURCE" ]]; then
+                    SOURCE=$1
+                elif [[ -z "$DEST" ]]; then
+                    DEST=$1
+                fi
+                shift
+            ;;
+        esac
+    done
+
+    if [[ -z "$SOURCE" ]] || [[ ! -d "$SOURCE" ]]; then
+        echo "Source is not a directory" >&2
+        return 1;
+    fi
+
+    if [[ -z "$DEST" ]]; then
+        echo "Destination cannot be empty" >&2
+        return 1;
+    fi
+
+    if [[ -a "$DEST" ]] && [[ ! -d "$DEST" ]]; then
+        echo "Destination exists and is not a directory" >&2
+        return 1
+    fi
+
+    [[ ! -d "$DEST" ]] && mkdir -p "$DEST"
+
+    if [ "$(readlink -f "$SOURCE")" == "$(readlink -f "$DEST")" ]; then
+        echo "Destination cannot be the same as the source" >&2
+        return 1
+    fi
+
+    local fullsrcpath=$(readlink -ne "$SOURCE")
+    find "$SOURCE" -type f -print0 | while IFS= read -r -d '' file;
+    do
+        if [[ ! -e "$file" ]]; then
+            echo "$file does not exist"
+            continue
+        fi
+
+        local fullfilepath=$(readlink -ne "$file")
+        local filename=$(basename "$fullfilepath")
+        local directory=$(dirname "$fullfilepath")
+        local targetdir=${directory#"$fullsrcpath"} # remove the common prefix
+        local destination=$(readlink -m "${DEST}/${targetdir}")
+        local destinationfile="$destination/${filename}"
+
+        # Ensure we have a video with audio
+        # so this ensures we just get videos
+        local INVALID=0
+        cmd_detect_valid "$file" > /dev/null || INVALID=1;
+
+        # echo $FILETYPE
+        [[ "$COPYINVALID" == 0 ]] && [[ "$INVALID" == 1 ]] && continue
+
+        if [ ! -d  "$destination" ]; then
+            mkdir -p "$destination"
+        fi
+
+        if [[ "$INVALID" == 1 ]]; then
+            echo "Copying non-video file: ${file}"
+            cp "${fullfilepath}" "${destinationfile}"
+        else
+            echo "Processing: ${file}"
+            # Pass original arguments to cmd_encode unquoted if that's what PASSOPT contains, but here it's safer to expand
+            cmd_encode $PASSOPT "${fullfilepath}" "${destinationfile}"
+        fi
+
+        echo "Finished: ${file}"
+    done
+}
+
+function cmd_find_all {
+    local SOURCE=""
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            *)
+                [[ ! -z "$SOURCE" ]] && echo "unkown option: $1" >&2 && return 1;
+                SOURCE=$1
+                shift
+            ;;
+        esac
+    done
+
+    if [[ -z "$SOURCE" ]] || [[ ! -d "$SOURCE" ]]; then
+        return 1;
+    fi
+
+    find "$SOURCE" -type f -print0 | sort -zh | while IFS= read -r -d '' file;
+    do
+        cmd_detect_valid "$file" > /dev/null || continue
+        echo "${file}" | sed -e 's|^./||'
+    done
+}
+
+# Parse global options
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --help|-h)
+            print_help
+            return 0 2>/dev/null || exit 0
+            ;;
+        --verbose|-v)
+            VERBOSE=1
+            shift
+            ;;
+        -*)
+            echo "Unknown global option: $1"
+            print_help
+            return 1 2>/dev/null || exit 1
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+if [[ $# -eq 0 ]]; then
+    print_help
+    return 1 2>/dev/null || exit 1
+fi
+
+SUBCOMMAND="$1"
+shift
+
+case "$SUBCOMMAND" in
+    detect-crop)
+        cmd_detect_crop "$@"
+        ;;
+    detect-gpu)
+        cmd_detect_gpu "$@"
+        ;;
+    detect-scale)
+        cmd_detect_scale "$@"
+        ;;
+    detect-valid)
+        cmd_detect_valid "$@"
+        ;;
+    filter-streams)
+        cmd_filter_streams "$@"
+        ;;
+    list-to-chapters)
+        cmd_list_to_chapters "$@"
+        ;;
+    list-to-input)
+        cmd_list_to_input "$@"
+        ;;
+    encode)
+        cmd_encode "$@"
+        ;;
+    encode-dir)
+        cmd_encode_dir "$@"
+        ;;
+    find-all)
+        cmd_find_all "$@"
+        ;;
+    *)
+        echo "Unknown subcommand: $SUBCOMMAND"
+        print_help
+        return 1 2>/dev/null || exit 1
+        ;;
+esac
