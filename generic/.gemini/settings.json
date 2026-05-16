@@ -30,8 +30,5 @@
   },
   "telemetry": {
     "enabled": false
-  },
-  "skills": {
-    "enabled": true
   }
 }

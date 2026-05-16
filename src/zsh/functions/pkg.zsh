@@ -129,6 +129,7 @@ pkg.install_all() {
         (( ${#pending} == 0 )) && { tui.done "Finished in $((pass-1)) passes."; break; }
         tui.info "Pass $pass: ${(j:, :)pending}"
         pkg.manager_func install || { tui.fatal "Failed."; return 1; }
+        rehash 2>/dev/null || true
     done
     pkg.manager_func cleanup
     tui.done "Complete!"
@@ -152,6 +153,7 @@ pkg.update_all() {
     else
         tui.info "Updating: ${(j:, :)pending}"
         pkg.manager_func upgrade || { tui.fatal "Failed."; return 1; }
+        rehash 2>/dev/null || true
     fi
     
     pkg.manager_func cleanup
@@ -170,6 +172,7 @@ pkg.install() {
                 install:*)
                     local m="${action#install:}"
                     "pkg.managers.$m.install" "$rid"
+                    rehash 2>/dev/null || true
                     ;;
                 upgrade:*)
                     tui.info "$rid is already installed (update available)."
@@ -196,6 +199,7 @@ pkg.update() {
                 upgrade:*)
                     local m="${action#upgrade:}"
                     "pkg.managers.$m.upgrade" "$rid"
+                    rehash 2>/dev/null || true
                     ;;
                 install:*)
                     tui.info "$rid is not installed. Use pkg.install $rid"

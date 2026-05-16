@@ -87,12 +87,7 @@ pkg.managers.dnf.setup_repos() {
         repo_filename="${val:t}"
         if [[ ! -f "/etc/yum.repos.d/$repo_filename" ]]; then
             echo "   Adding dnf repo: $repo_filename"
-
-            if dnf --version | grep -q "dnf5"; then
-                _run_sudo dnf config-manager addrepo --from-repofile="$val" && changed=1
-            else
-                _run_sudo dnf config-manager --add-repo "$val" && changed=1
-            fi
+            _run_sudo dnf config-manager --add-repo "$val" && changed=1
         fi
     done
 

@@ -25,7 +25,7 @@ function dotfiles.setup.zshrc() {
 
 function dotfiles.setup.submodules() {
     (
-        df.cd
-        git submodule update --init --remote --recursive
+        cd "$DOTFILES"
+        git submodule update --init --remote --recursive 2>/dev/null || true
     )
 }
