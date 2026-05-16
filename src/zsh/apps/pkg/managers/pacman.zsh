@@ -27,12 +27,12 @@ pkg.managers.pacman.check() {
 
 pkg.managers.pacman.update() {
     pkg.managers.pacman.is_available || return 0
-    sudo pacman -Sy
+    _pkg.sudo pacman -Sy
 }
 
 pkg.managers.pacman.cleanup() {
     pkg.managers.pacman.is_available || return 0
-    sudo pacman -Sc --noconfirm
+    _pkg.sudo pacman -Sc --noconfirm
 }
 
 pkg.managers.pacman.search() {
@@ -58,7 +58,7 @@ pkg.managers.pacman.install() {
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0
-    sudo pacman -S --noconfirm ${=pkgs}
+    _pkg.sudo pacman -S --noconfirm ${=pkgs}
 }
 
 pkg.managers.pacman.upgrade() {

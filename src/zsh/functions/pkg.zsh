@@ -3,6 +3,15 @@
 typeset -gA pkg_action
 typeset -ga PKG_MANAGER_PRIORITY=(flatpak mise snap uv npm cargo brew brew_cask apt dnf pacman)
 
+# --- Internal Helpers ---
+_pkg.sudo() {
+    if (( $+commands[sudo] )); then
+        sudo "$@"
+    else
+        "$@"
+    fi
+}
+
 # --- Manager Definition ---
 pkg.manager.define() {
     local mid="${1//-/_}"; shift
@@ -128,6 +137,7 @@ pkg.install_all() {
         (( ${#pending} == 0 )) && { tui.done "Finished in $((pass-1)) passes."; break; }
         tui.info "Pass $pass: ${(j:, :)pending}"
         pkg.manager_func install || { tui.fatal "Failed."; return 1; }
+        rehash 2>/dev/null || true
     done
     pkg.manager_func cleanup
     tui.done "Complete!"
@@ -195,6 +205,7 @@ pkg.update() {
                 upgrade:*)
                     local m="${action#upgrade:}"
                     "pkg.managers.$m.upgrade" "$rid"
+                    rehash 2>/dev/null || true
                     ;;
                 install:*)
                     tui.info "$rid is not installed. Use pkg.install $rid"
