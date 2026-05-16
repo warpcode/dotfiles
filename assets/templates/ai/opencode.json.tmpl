@@ -12,7 +12,7 @@
     "AI.md",
     ".github/copilot-instructions.md"
   ],
-  "mcp": {{ .config.mcps | toJSON }},
+  "mcp": {{ file.Read (printf "%s/assets/configs/ai/mcp.json" .Env.DOTFILES) }},
   {{- if .config.selected_model }}
   "model": "{{ .config.selected_model }}",
   {{- else }}

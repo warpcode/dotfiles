@@ -17,9 +17,8 @@ pkg.recipe.opencode.configure() {
         local target="${config_dir}/opencode.json"
         tui.step "Updating $target"
 
-        local providers selected_model='' pid mcps
+        local providers selected_model='' pid
         providers="$(ai.models.free)"
-        mcps="$(ai.mcps opencode)"
 
         local sorted_pids pid_priority
         sorted_pids=$(for pid in $(echo "$providers" | jq -r 'keys[]'); do
@@ -34,7 +33,7 @@ pkg.recipe.opencode.configure() {
         done
 
         config.hydrate "ai/opencode.json.tmpl" \
-            --config-json "$(jq -n --argjson p "${providers:-{}}" --argjson m "${mcps:-{}}" --arg sm "$selected_model" '{providers: $p, mcps: $m, selected_model: $sm}')" \
+            --config-json "$(jq -n --argjson p "${providers:-{}}" --arg sm "$selected_model" '{providers: $p, selected_model: $sm}')" \
             --output "$target"
 
         tui.success "Configuration complete"
