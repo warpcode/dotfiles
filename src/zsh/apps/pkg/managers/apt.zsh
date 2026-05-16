@@ -105,12 +105,17 @@ pkg.managers.apt.setup_repos() {
             keyring_path="$gpg_path"
         elif [[ -f "$keyring_path" ]]; then
             if head -1 "$keyring_path" 2>/dev/null | grep -q "BEGIN PGP"; then
-                sudo gpg --dearmor -o "$gpg_path" "$keyring_path" 2>/dev/null && {
-                    sudo rm -f "$keyring_path"
-                    sudo chmod a+r "$gpg_path"
-                    keyring_path="$gpg_path"
-                    changed=1
-                }
+                if [[ "$keyring_name" == *.asc ]]; then
+                    sudo chmod a+r "$keyring_path"
+                else
+                    sudo gpg --dearmor -o "${gpg_path}.tmp" "$keyring_path" 2>/dev/null && {
+                        [[ "$keyring_path" != "$gpg_path" ]] && sudo rm -f "$keyring_path"
+                        sudo mv "${gpg_path}.tmp" "$gpg_path"
+                        sudo chmod a+r "$gpg_path"
+                        keyring_path="$gpg_path"
+                        changed=1
+                    }
+                fi
             else
                 sudo chmod a+r "$keyring_path"
             fi
@@ -118,12 +123,18 @@ pkg.managers.apt.setup_repos() {
             echo "   Adding GPG key: $keyring_name"
             sudo curl -fsSL "$key_url" -o "$keyring_path" 2>/dev/null || continue
             if head -1 "$keyring_path" 2>/dev/null | grep -q "BEGIN PGP"; then
-                sudo gpg --dearmor -o "$gpg_path" "$keyring_path" 2>/dev/null && {
-                    sudo rm -f "$keyring_path"
-                    sudo chmod a+r "$gpg_path"
-                    keyring_path="$gpg_path"
+                if [[ "$keyring_name" == *.asc ]]; then
+                    sudo chmod a+r "$keyring_path"
                     changed=1
-                }
+                else
+                    sudo gpg --dearmor -o "${gpg_path}.tmp" "$keyring_path" 2>/dev/null && {
+                        [[ "$keyring_path" != "$gpg_path" ]] && sudo rm -f "$keyring_path"
+                        sudo mv "${gpg_path}.tmp" "$gpg_path"
+                        sudo chmod a+r "$gpg_path"
+                        keyring_path="$gpg_path"
+                        changed=1
+                    }
+                fi
             else
                 sudo chmod a+r "$keyring_path"
                 changed=1
