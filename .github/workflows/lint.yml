@@ -1,5 +1,6 @@
 name: Lint Zsh Files
 on:
+  workflow_dispatch:
   push:
     paths:
       - 'src/**/*.zsh'
