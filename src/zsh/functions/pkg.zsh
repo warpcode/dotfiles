@@ -129,14 +129,24 @@ pkg.install_all() {
         pkg.compile_actions
 
         local -a pending=()
+        local -a targeted=()
         for m in "${PKG_MANAGER_PRIORITY[@]}"; do
             local r=$(pkg.recipe.by_action "install:$m")
-            [[ -n "$r" ]] && pending+=("install:$m -> $r")
+            [[ -n "$r" ]] && {
+                pending+=("install:$m -> $r")
+                targeted+=(${=r})
+            }
         done
 
         (( ${#pending} == 0 )) && { tui.done "Finished in $((pass-1)) passes."; break; }
         tui.info "Pass $pass: ${(j:, :)pending}"
         pkg.manager_func install || { tui.fatal "Failed."; return 1; }
+        rehash 2>/dev/null || true
+
+        local id
+        for id in "${targeted[@]}"; do
+            pkg.recipe.init "$id"
+        done
         rehash 2>/dev/null || true
     done
     pkg.manager_func cleanup
@@ -223,21 +233,24 @@ pkg.update() {
 
 # --- Recipe Lifecycle Hooks ---
 pkg.recipe.configure_all() {
-    local id rid func
+    local id
     for id in $(registry.list pkg 2>/dev/null); do
-        rid="${id//-/_}"
-        func="pkg.recipe.${rid}.configure"
+        local rid="${id//-/_}"
+        local func="pkg.recipe.${rid}.configure"
         (( $+functions[$func] )) || continue
         "$func" "$id" || tui.error "$func failed for $id"
     done
 }
 
+pkg.recipe.init() {
+    local id="${1//-/_}"
+    local func="pkg.recipe.${id}.init"
+    (( $+functions[$func] )) && "$func" "$1"
+}
+
 pkg.recipe.init_all() {
-    local id rid func
+    local id
     for id in $(registry.list pkg 2>/dev/null); do
-        rid="${id//-/_}"
-        func="pkg.recipe.${rid}.init"
-        (( $+functions[$func] )) || continue
-        "$func" "$id" || tui.error "$func failed for $id"
+        pkg.recipe.init "$id"
     done
 }
