@@ -293,7 +293,7 @@ EOF
 # --- Skills ---
 ai.skills.install() {
     local agent="${1:-universal}"
-    local skills_file="${DOTFILES_DIR:-${HOME}/.dotfiles}/assets/configs/ai/skills.json"
+    local skills_file="${DOTFILES:-${HOME}/.dotfiles}/assets/configs/ai/skills.json"
 
     if [[ ! -f "$skills_file" ]]; then
         tui.warn "Skills manifest not found: $skills_file"
