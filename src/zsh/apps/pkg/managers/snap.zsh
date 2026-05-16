@@ -53,9 +53,9 @@ pkg.managers.snap.install() {
         [[ -z "$pkg" ]] && continue
         if [[ "$pkg" == *" --classic"* ]]; then
             pkg_name="${pkg%% --classic*}"
-            sudo snap install "$pkg_name" --classic || return $?
+            command sudo snap install "$pkg_name" --classic || return $?
         else
-            sudo snap install "$pkg" || return $?
+            command sudo snap install "$pkg" || return $?
         fi
     done
 }
@@ -70,5 +70,5 @@ pkg.managers.snap.upgrade() {
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0
-    sudo snap refresh ${=pkgs}
+    command sudo snap refresh ${=pkgs}
 }

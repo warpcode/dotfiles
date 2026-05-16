@@ -27,12 +27,12 @@ pkg.managers.dnf.check() {
 
 pkg.managers.dnf.update() {
     pkg.managers.dnf.is_available || return 0
-    sudo dnf makecache
+    command sudo dnf makecache
 }
 
 pkg.managers.dnf.cleanup() {
     pkg.managers.dnf.is_available || return 0
-    sudo dnf autoremove -y && sudo dnf clean all
+    command sudo dnf autoremove -y && command sudo dnf clean all
 }
 
 pkg.managers.dnf.search() {
@@ -58,7 +58,7 @@ pkg.managers.dnf.install() {
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0
-    sudo dnf install -y ${=pkgs}
+    command sudo dnf install -y ${=pkgs}
 }
 
 pkg.managers.dnf.upgrade() {
@@ -71,7 +71,7 @@ pkg.managers.dnf.upgrade() {
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0
-    sudo dnf upgrade -y ${=pkgs}
+    command sudo dnf upgrade -y ${=pkgs}
 }
 
 pkg.managers.dnf.setup_repos() {
@@ -87,7 +87,7 @@ pkg.managers.dnf.setup_repos() {
         repo_filename="${val:t}"
         if [[ ! -f "/etc/yum.repos.d/$repo_filename" ]]; then
             echo "   Adding dnf repo: $repo_filename"
-            sudo dnf config-manager --add-repo "$val" && changed=1
+            command sudo dnf config-manager --add-repo "$val" && changed=1
         fi
     done
 
@@ -98,7 +98,7 @@ pkg.managers.dnf.setup_repos() {
         [[ -n "${seen_coprs[$val]}" ]] && continue
         seen_coprs[$val]=1
         echo "   Enabling copr repo: $val"
-        sudo dnf copr enable -y "$val" && changed=1
+        command sudo dnf copr enable -y "$val" && changed=1
     done
-    [[ $changed -eq 1 ]] && sudo dnf makecache
+    [[ $changed -eq 1 ]] && command sudo dnf makecache
 }
