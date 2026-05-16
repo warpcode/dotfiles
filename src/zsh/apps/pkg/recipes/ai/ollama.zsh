@@ -1,6 +1,7 @@
 pkg.recipe.define ollama \
     package="ollama" \
     managers="brew mise" \
+    deps="libatomic" \
     models="gemma4:e2b"
 
 pkg.recipe.ollama.enabled() { [[ $(df.os family) != "macos" ]] }

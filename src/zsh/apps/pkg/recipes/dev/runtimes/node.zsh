@@ -1,3 +1,4 @@
 pkg.recipe.define node \
     package="node" \
-    managers="mise"
+    managers="mise" \
+    deps="libatomic"
