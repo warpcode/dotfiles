@@ -17,6 +17,11 @@ pkg.recipe.ollama.configure() {
     {
         (( $+commands[ollama] )) || { tui.warn "ollama command not found, skipping"; return 0; }
 
+        if [[ -n "$GITHUB_ACTIONS" ]]; then
+            tui.info "Skipping model downloads in GitHub Actions"
+            return 0
+        fi
+
         local -a models=( ${=$(pkg.recipe.get ollama models)} )
         local pid url="http://localhost:11434"
         local started_temp=0
