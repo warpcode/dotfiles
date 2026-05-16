@@ -1,6 +1,7 @@
 ---
 name: Test Dotfiles
 on:
+  workflow_dispatch:
   push:
     branches:
       - master
