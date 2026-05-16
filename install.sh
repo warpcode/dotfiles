@@ -208,24 +208,30 @@ select_profile() {
     options_str=${options_str// / | }
 
     local user_profile=""
-    while true; do
-        read -p "Select a profile [$options_str] (default: $detected_profile): " user_profile
-        user_profile=${user_profile:-$detected_profile}
 
-        local valid=0
-        for p in "${available_profiles[@]}"; do
-            if [ "$user_profile" = "$p" ]; then
-                valid=1
+    if [ -n "$CI" ]; then
+        user_profile="$detected_profile"
+        echo "Running in CI. Automatically selecting profile: $user_profile"
+    else
+        while true; do
+            read -p "Select a profile [$options_str] (default: $detected_profile): " user_profile
+            user_profile=${user_profile:-$detected_profile}
+
+            local valid=0
+            for p in "${available_profiles[@]}"; do
+                if [ "$user_profile" = "$p" ]; then
+                    valid=1
+                    break
+                fi
+            done
+
+            if [ "$valid" -eq 1 ]; then
                 break
+            else
+                echo "Invalid profile selected. Please try again."
             fi
         done
-
-        if [ "$valid" -eq 1 ]; then
-            break
-        else
-            echo "Invalid profile selected. Please try again."
-        fi
-    done
+    fi
 
     echo "$user_profile" > "$HOME/.dotfiles_profile"
     export DOTFILES_PROFILE="$user_profile"
