@@ -27,12 +27,12 @@ pkg.managers.apt.check() {
 
 pkg.managers.apt.update() {
     pkg.managers.apt.is_available || return 0
-    command sudo apt-get update -qq
+    _run_sudo apt-get update -qq
 }
 
 pkg.managers.apt.cleanup() {
     pkg.managers.apt.is_available || return 0
-    command sudo apt-get autoremove -y && command sudo apt-get clean
+    _run_sudo apt-get autoremove -y && _run_sudo apt-get clean
 }
 
 pkg.managers.apt.search() {
@@ -58,7 +58,7 @@ pkg.managers.apt.install() {
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0
-    command sudo apt-get install -y ${=pkgs}
+    _run_sudo apt-get install -y ${=pkgs}
 }
 
 pkg.managers.apt.upgrade() {
@@ -71,7 +71,7 @@ pkg.managers.apt.upgrade() {
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0
-    command sudo apt-get install --only-upgrade -y ${=pkgs}
+    _run_sudo apt-get install --only-upgrade -y ${=pkgs}
 }
 
 pkg.managers.apt.setup_repos() {
@@ -98,7 +98,7 @@ pkg.managers.apt.setup_repos() {
         key_url="${key_url//\%DISTRO\%/$distro}"
         key_url="${key_url//\%KEYRING\%/$keyring_path}"
 
-        command sudo install -dm 755 /etc/apt/keyrings 2>/dev/null
+        _run_sudo install -dm 755 /etc/apt/keyrings 2>/dev/null
 
         local gpg_path="${keyring_path%.*}.gpg"
         if [[ -f "$gpg_path" ]]; then
@@ -106,37 +106,37 @@ pkg.managers.apt.setup_repos() {
         elif [[ -f "$keyring_path" ]]; then
             if head -1 "$keyring_path" 2>/dev/null | grep -q "BEGIN PGP"; then
                 if [[ "$keyring_name" == *.asc ]]; then
-                    command sudo chmod a+r "$keyring_path"
+                    _run_sudo chmod a+r "$keyring_path"
                 else
-                    command sudo gpg --dearmor -o "${gpg_path}.tmp" "$keyring_path" 2>/dev/null && {
-                        [[ "$keyring_path" != "$gpg_path" ]] && command sudo rm -f "$keyring_path"
-                        command sudo mv "${gpg_path}.tmp" "$gpg_path"
-                        command sudo chmod a+r "$gpg_path"
+                    _run_sudo gpg --dearmor -o "${gpg_path}.tmp" "$keyring_path" 2>/dev/null && {
+                        [[ "$keyring_path" != "$gpg_path" ]] && _run_sudo rm -f "$keyring_path"
+                        _run_sudo mv "${gpg_path}.tmp" "$gpg_path"
+                        _run_sudo chmod a+r "$gpg_path"
                         keyring_path="$gpg_path"
                         changed=1
                     }
                 fi
             else
-                command sudo chmod a+r "$keyring_path"
+                _run_sudo chmod a+r "$keyring_path"
             fi
         else
             echo "   Adding GPG key: $keyring_name"
-            command sudo curl -fsSL "$key_url" -o "$keyring_path" 2>/dev/null || continue
+            _run_sudo curl -fsSL "$key_url" -o "$keyring_path" 2>/dev/null || continue
             if head -1 "$keyring_path" 2>/dev/null | grep -q "BEGIN PGP"; then
                 if [[ "$keyring_name" == *.asc ]]; then
-                    command sudo chmod a+r "$keyring_path"
+                    _run_sudo chmod a+r "$keyring_path"
                     changed=1
                 else
-                    command sudo gpg --dearmor -o "${gpg_path}.tmp" "$keyring_path" 2>/dev/null && {
-                        [[ "$keyring_path" != "$gpg_path" ]] && command sudo rm -f "$keyring_path"
-                        command sudo mv "${gpg_path}.tmp" "$gpg_path"
-                        command sudo chmod a+r "$gpg_path"
+                    _run_sudo gpg --dearmor -o "${gpg_path}.tmp" "$keyring_path" 2>/dev/null && {
+                        [[ "$keyring_path" != "$gpg_path" ]] && _run_sudo rm -f "$keyring_path"
+                        _run_sudo mv "${gpg_path}.tmp" "$gpg_path"
+                        _run_sudo chmod a+r "$gpg_path"
                         keyring_path="$gpg_path"
                         changed=1
                     }
                 fi
             else
-                command sudo chmod a+r "$keyring_path"
+                _run_sudo chmod a+r "$keyring_path"
                 changed=1
             fi
         fi
@@ -161,8 +161,8 @@ pkg.managers.apt.setup_repos() {
         local list_file="/etc/apt/sources.list.d/dotfiles-${pkg_name}.list"
         if [[ ! -f "$list_file" ]] || [[ "$(< $list_file)" != "$repo_line" ]]; then
             echo "   Adding apt repo: $pkg_name"
-            echo "$repo_line" | command sudo tee "$list_file" >/dev/null && changed=1
+            echo "$repo_line" | _run_sudo tee "$list_file" >/dev/null && changed=1
         fi
     done
-    [[ $changed -eq 1 ]] && command sudo apt-get update -qq
+    [[ $changed -eq 1 ]] && _run_sudo apt-get update -qq
 }

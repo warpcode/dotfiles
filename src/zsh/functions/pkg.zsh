@@ -1,3 +1,4 @@
+(( $+functions[_run_sudo] )) || source "${0:A:h}/sudo.zsh"
 # pkg.zsh - Staged Package Installer
 
 typeset -gA pkg_action
