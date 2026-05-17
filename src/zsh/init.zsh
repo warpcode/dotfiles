@@ -3,6 +3,8 @@
 _zsh.init() {
     setopt null_glob globstarshort
 
+    export DOTFILES_PROFILE="$("$DOTFILES/bin/df.fs" profile name 2>/dev/null)"
+
     local root f
     local roots=(
         "$HOME/.zshrc.before.d/"
@@ -18,6 +20,11 @@ _zsh.init() {
     done
 
     [[ -f ~/.env ]] && env.source.file ~/.env
+
+    local profile_init="$("$DOTFILES/bin/df.fs" profile list "assets/configs/zsh" "init.zsh" 2>/dev/null | head -n 1)"
+    if [[ -n "$profile_init" ]]; then
+        source "$profile_init"
+    fi
 
     for root in $roots; do
         for f in "${root}"{config,apps,projects}/**/*.zsh(Nn-); do

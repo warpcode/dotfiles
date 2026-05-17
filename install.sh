@@ -172,10 +172,73 @@ set_zsh_default() {
     fi
 }
 
+#;
+# select_profile - Prompts the user to select a profile
+select_profile() {
+    local detected_profile="default"
+
+    # Heuristics
+    if [ "$os" = "termux" ]; then
+        detected_profile="phone"
+    elif [[ "$(hostname 2>/dev/null)" == *work* ]]; then
+        detected_profile="work"
+    fi
+
+    # If ~/.dotfiles_profile exists, use it as default
+    if [ -f "$HOME/.dotfiles_profile" ]; then
+        detected_profile=$(cat "$HOME/.dotfiles_profile")
+    fi
+
+    # Read available profiles
+    local available_profiles=("default" "work" "phone")
+
+    local user_profile=""
+
+    if [ -n "$CI" ]; then
+        user_profile="$detected_profile"
+        echo "Running in CI. Automatically selecting profile: $user_profile"
+    else
+        # Use bin/df.tui for selection
+        if [ -x "$DOTFILES_INSTALL_DIR/bin/df.tui" ]; then
+            user_profile=$("$DOTFILES_INSTALL_DIR/bin/df.tui" select -p "Select a profile" -d "$detected_profile" "${available_profiles[@]}")
+        fi
+    fi
+
+    if [ -z "$user_profile" ]; then
+        # user cancelled the TUI selector
+        user_profile="$detected_profile"
+    fi
+
+    echo "$user_profile" > "$HOME/.dotfiles_profile"
+    export DOTFILES_PROFILE="$user_profile"
+    echo "Profile set to: $user_profile"
+}
+
 # --- Main Execution ---
+
+# Parse args
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --profile)
+            if [ -n "$2" ]; then
+                DOTFILES_PROFILE="$2"
+                shift 2
+            else
+                echo "Error: --profile requires an argument" >&2
+                exit 1
+            fi
+            ;;
+        *) echo "Unknown parameter passed: $1"; exit 1 ;;
+    esac
+done
 
 os=$(detect_os)
 echo "Detected OS: $os"
+
+if [ -n "$DOTFILES_PROFILE" ]; then
+    echo "$DOTFILES_PROFILE" > "$HOME/.dotfiles_profile"
+    echo "Profile set via argument to: $DOTFILES_PROFILE"
+fi
 
 if [ "$os" = "macos" ] && ! command -v brew >/dev/null 2>&1; then
     echo "Installing Homebrew..."
@@ -197,6 +260,11 @@ set_zsh_default "$zsh_path"
 
 # 3. Clone repository
 ensure_dotfiles "$DOTFILES_REPO_URL"
+
+# Prompt for profile if not provided via argument
+if [ -z "$DOTFILES_PROFILE" ]; then
+    select_profile
+fi
 
 # 4. Run staged package installation
 cd "$DOTFILES_INSTALL_DIR"
