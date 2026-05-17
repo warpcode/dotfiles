@@ -8,8 +8,16 @@ setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL
 0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
 typeset -r SCRIPT_DIR="${0:A:h}"
 
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
 # Extract DOTFILES from relative script dir if missing
-readonly DOTFILES_DIR="${DOTFILES:-${SCRIPT_DIR:h}}"
+typeset -r DOTFILES_DIR="${DOTFILES:-${SCRIPT_DIR:h}}"
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 err() {
     print -r -- "df.fs: $*" >&2
@@ -24,6 +32,13 @@ _usage() {
     print -r -- "  profile list <dir> [filename] - List config directories or file paths merging global/default with active profile overrides"
 }
 
+#######################################
+# Get the current active profile name.
+# Outputs:
+#   Writes the active profile name to stdout.
+# Returns:
+#   0 on success.
+#######################################
 _cmd_profile_name() {
     if [[ -n "${DOTFILES_PROFILE:-}" ]]; then
         print -r -- "${DOTFILES_PROFILE}"
@@ -39,6 +54,15 @@ _cmd_profile_name() {
     print -r -- "default"
 }
 
+#######################################
+# Set the current active profile.
+# Arguments:
+#   $1 - The name of the profile to set.
+# Outputs:
+#   Writes confirmation message to stdout.
+# Returns:
+#   0 on success, 1 if no name provided.
+#######################################
 _cmd_profile_set() {
     local target="$1"
     [[ -z "${target}" ]] && { err "profile set requires a profile name"; return 1; }
@@ -48,6 +72,16 @@ _cmd_profile_set() {
     print -r -- "Profile set to: ${target}"
 }
 
+#######################################
+# List paths to profile configuration files or directories, merging profile overrides with global base.
+# Arguments:
+#   $1 - The base directory.
+#   $2 - (Optional) The specific file name/pattern to search for inside the directories.
+# Outputs:
+#   Writes matching file paths to stdout.
+# Returns:
+#   0 on success, 1 if missing base argument, base dir doesn't exist, or no matches found.
+#######################################
 _cmd_profile_list() {
     local dir="$1"
     local filename="${2:-}"
@@ -99,6 +133,15 @@ _cmd_profile_list() {
     return 0
 }
 
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+#######################################
+# Entry point.
+# Arguments:
+#   All script arguments passed through.
+#######################################
 main() {
     local cmd="${1:-}"
     shift || true
