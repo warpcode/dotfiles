@@ -16,8 +16,6 @@ pkg.recipe.git.configure() {
         gitconfig_path="$("$DOTFILES/bin/df.fs" profile list "assets/configs/git" ".gitconfig" 2>/dev/null | head -n 1)"
         if [[ -n "$gitconfig_path" ]]; then
             command git config --global --replace-all include.path "$gitconfig_path"
-        else
-            command git config --global --replace-all include.path "$(fs.dotfiles.path "assets/configs/git/.gitconfig_default")"
         fi
 
         command git config --global core.excludesfile "$(fs.dotfiles.path "assets/configs/git/.gitignore_global")"

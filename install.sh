@@ -201,28 +201,6 @@ select_profile() {
         # Use bin/df.tui for selection
         if [ -x "$DOTFILES_INSTALL_DIR/bin/df.tui" ]; then
             user_profile=$("$DOTFILES_INSTALL_DIR/bin/df.tui" select -p "Select a profile" -d "$detected_profile" "${available_profiles[@]}")
-        else
-            local options_str="${available_profiles[*]}"
-            options_str=${options_str// / | }
-
-            while true; do
-                read -p "Select a profile [$options_str] (default: $detected_profile): " user_profile
-                user_profile=${user_profile:-$detected_profile}
-
-                local valid=0
-                for p in "${available_profiles[@]}"; do
-                    if [ "$user_profile" = "$p" ]; then
-                        valid=1
-                        break
-                    fi
-                done
-
-                if [ "$valid" -eq 1 ]; then
-                    break
-                else
-                    echo "Invalid profile selected. Please try again."
-                fi
-            done
         fi
     fi
 

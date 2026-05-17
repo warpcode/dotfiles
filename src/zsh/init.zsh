@@ -3,11 +3,7 @@
 _zsh.init() {
     setopt null_glob globstarshort
 
-    if [[ -f ~/.dotfiles_profile ]]; then
-        export DOTFILES_PROFILE="$(<~/.dotfiles_profile)"
-    else
-        export DOTFILES_PROFILE="default"
-    fi
+    export DOTFILES_PROFILE="$("$DOTFILES/bin/df.fs" profile name 2>/dev/null)"
 
     local root f
     local roots=(
