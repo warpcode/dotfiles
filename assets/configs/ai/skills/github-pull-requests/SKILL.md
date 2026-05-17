@@ -1,10 +1,10 @@
 ---
 name: github-pull-requests
 description: >
-  Create, update, publish, view, and search pull requests on GitHub using the gh
+  Create, update, publish, view, review, and search pull requests on GitHub using the gh
   CLI. Use this skill whenever the user wants to open a PR, create a pull request,
   submit code for review, or says anything like "open a PR", "create pull request",
-  "submit for review", "PR this branch", "raise a PR", or "send this for review".
+  "submit for review", "PR this branch", "review this PR", or "add comments to PR".
   Also trigger when the user wants to update an existing PR ("update the PR",
   "change the PR title", "add reviewers", "edit PR description"), mark a draft PR
   as ready ("publish the PR", "mark PR ready", "undraft the PR"), view PR details
