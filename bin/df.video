@@ -10,23 +10,23 @@ VERBOSE="${VERBOSE_DEFAULT}"
 
 #######################################
 # Prints the help menu for df.video
-# GlobalsIFS=
+# Globals:
 #   None
-# ArgumentsIFS=
+# Arguments:
 #   None
-# OutputsIFS=
+# Outputs:
 #   Writes help text to stdout.
-# ReturnsIFS=
+# Returns:
 #   0
 #######################################
 print_help() {
-  echo "UsageIFS= df.video [options] <subcommand> [args]"
+  echo "Usage: df.video [options] <subcommand> [args]"
   echo ""
-  echo "OptionsIFS="
+  echo "Options:"
   echo "  --help, -h     Show this help message"
   echo "  --verbose, -v  Enable verbose output"
   echo ""
-  echo "SubcommandsIFS="
+  echo "Subcommands:"
   echo "  detect-crop    Detect crop parameters"
   echo "  detect-gpu     Detect GPU type"
   echo "  detect-scale   Detect scale parameters"
@@ -43,19 +43,19 @@ print_help() {
 
 #######################################
 # Detects the crop parameters for a video.
-# GlobalsIFS=
+# Globals:
 #   None
-# ArgumentsIFS=
+# Arguments:
 #   $@ - Arguments to detect-crop, including --scale and the source file.
-# OutputsIFS=
+# Outputs:
 #   Writes the crop parameters to stdout.
-# ReturnsIFS=
+# Returns:
 #   0 on success, non-zero on error.
 #######################################
 cmd_detect_crop() {
   local source=""
   local scale=""
-  local vf='fps=1/16,cropdetect=24IFS=8IFS=0'
+  local vf='fps=1/16,cropdetect=24:8:0'
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -88,7 +88,7 @@ cmd_detect_crop() {
     local height
     local offsetx
     local offsety
-IFS='IFS=' read -r width height offsetx offsety <<< "${line}"
+    IFS=':' read -r width height offsetx offsety <<< "${line}"
 
     [[ "${width}" -gt "${max_width}" ]] && max_width="${width}"
     [[ "${height}" -gt "${max_height}" ]] && max_height="${height}"
@@ -103,22 +103,22 @@ IFS='IFS=' read -r width height offsetx offsety <<< "${line}"
     -vf "${vf}" \
     -f null - \
     2>&1 | \
-    awk '{ match($0, /crop=([0-9]+IFS=[0-9]+IFS=[0-9]+IFS=[0-9]+)/, a); if (a[1]) print a[1] }' | \
+    awk '{ match($0, /crop=([0-9]+:[0-9]+:[0-9]+:[0-9]+)/, a); if (a[1]) print a[1] }' | \
     uniq \
   )
 
-  echo "${max_width}IFS=${max_height}IFS=${min_offsetx}IFS=${min_offsety}"
+  echo "${max_width}:${max_height}:${min_offsetx}:${min_offsety}"
 }
 
 #######################################
 # Detects the system GPU type.
-# GlobalsIFS=
+# Globals:
 #   None
-# ArgumentsIFS=
+# Arguments:
 #   None
-# OutputsIFS=
+# Outputs:
 #   Writes 'intel', 'nvidia', or 'amd' to stdout.
-# ReturnsIFS=
+# Returns:
 #   0
 #######################################
 cmd_detect_gpu() {
@@ -140,13 +140,13 @@ cmd_detect_gpu() {
 
 #######################################
 # Detects the appropriate scale for a video.
-# GlobalsIFS=
+# Globals:
 #   None
-# ArgumentsIFS=
+# Arguments:
 #   $@ - Arguments to detect-scale, including --width, --height, and source file.
-# OutputsIFS=
-#   Writes widthIFS=height to stdout.
-# ReturnsIFS=
+# Outputs:
+#   Writes width:height to stdout.
+# Returns:
 #   0 on success, non-zero on error.
 #######################################
 cmd_detect_scale() {
@@ -154,7 +154,7 @@ cmd_detect_scale() {
   local video_stream=0
   local max_width_arg=0
   local max_height_arg=0
-  local output_sep="IFS="
+  local output_sep=":"
   local force_dar=0
 
   while [[ $# -gt 0 ]]; do
@@ -195,7 +195,7 @@ cmd_detect_scale() {
   local stream
   stream=$(ffprobe -v quiet \
     -show_entries stream="${entries}" \
-    -select_streams "vIFS=${video_stream}" \
+    -select_streams "v:${video_stream}" \
     -of default=noprint_wrappers=1 \
     "${source}"
   )
@@ -210,8 +210,8 @@ cmd_detect_scale() {
   local dar_height=0
 
   if [[ "${force_dar}" -gt 0 ]]; then
-    dar_width=$(echo "${stream}" | grep 'display_aspect_ratio' | awk -F"=" '{print $2}' | awk -F"IFS=" '{print $1}' | xargs printf "%d" 2>/dev/null || echo "0")
-    dar_height=$(echo "${stream}" | grep 'display_aspect_ratio' | awk -F"=" '{print $2}' | awk -F"IFS=" '{print $2}' | xargs printf "%d" 2>/dev/null || echo "0")
+    dar_width=$(echo "${stream}" | grep 'display_aspect_ratio' | awk -F"=" '{print $2}' | awk -F":" '{print $1}' | xargs printf "%d" 2>/dev/null || echo "0")
+    dar_height=$(echo "${stream}" | grep 'display_aspect_ratio' | awk -F"=" '{print $2}' | awk -F":" '{print $2}' | xargs printf "%d" 2>/dev/null || echo "0")
   fi
 
   if [[ "${dar_width}" -gt 0 ]] && [[ "${dar_height}" -gt 0 ]]; then
@@ -250,13 +250,13 @@ cmd_detect_scale() {
 
 #######################################
 # Detects if a file is a valid video file.
-# GlobalsIFS=
+# Globals:
 #   None
-# ArgumentsIFS=
+# Arguments:
 #   $@ - Arguments, ending with the source file.
-# OutputsIFS=
+# Outputs:
 #   Writes the source file path to stdout if valid.
-# ReturnsIFS=
+# Returns:
 #   0 if valid, non-zero otherwise.
 #######################################
 cmd_detect_valid() {
@@ -287,13 +287,13 @@ cmd_detect_valid() {
 
 #######################################
 # Filters streams for a video file.
-# GlobalsIFS=
+# Globals:
 #   None
-# ArgumentsIFS=
+# Arguments:
 #   $@ - Arguments, ending with the source file.
-# OutputsIFS=
+# Outputs:
 #   Writes valid stream entries to stdout.
-# ReturnsIFS=
+# Returns:
 #   0 on success, non-zero on error.
 #######################################
 cmd_filter_streams() {
@@ -310,7 +310,7 @@ cmd_filter_streams() {
   if [[ -z "${source}" ]] || [[ ! -r "${source}" ]]; then
     return 1;
   fi
-  local entries="index,codec_typeIFS=stream_disposition=default,forcedIFS=stream_tags=language"
+  local entries="index,codec_type:stream_disposition=default,forced:stream_tags=language"
   local audio_streams
   audio_streams=$(ffprobe -v error \
     -show_entries stream="${entries}" \
@@ -336,13 +336,13 @@ cmd_filter_streams() {
 
 #######################################
 # Converts a list of videos to ffmetadata chapters format.
-# GlobalsIFS=
+# Globals:
 #   None
-# ArgumentsIFS=
+# Arguments:
 #   $@ - Arguments, ending with the source file list.
-# OutputsIFS=
+# Outputs:
 #   Writes ffmetadata text to stdout.
-# ReturnsIFS=
+# Returns:
 #   0 on success, non-zero on error.
 #######################################
 cmd_list_to_chapters() {
@@ -386,13 +386,13 @@ cmd_list_to_chapters() {
 
 #######################################
 # Converts a list of videos to concat input format.
-# GlobalsIFS=
+# Globals:
 #   None
-# ArgumentsIFS=
+# Arguments:
 #   $@ - Arguments, ending with the source file list.
-# OutputsIFS=
+# Outputs:
 #   Writes concat inputs to stdout.
-# ReturnsIFS=
+# Returns:
 #   0 on success, non-zero on error.
 #######################################
 cmd_list_to_input() {
@@ -414,13 +414,13 @@ cmd_list_to_input() {
 
 #######################################
 # Encodes a single video file or concatenates multiple video files.
-# GlobalsIFS=
+# Globals:
 #   VERBOSE
-# ArgumentsIFS=
+# Arguments:
 #   $@ - Encoding options followed by source and destination.
-# OutputsIFS=
+# Outputs:
 #   Writes ffmpeg progress to stdout/stderr.
-# ReturnsIFS=
+# Returns:
 #   0 on success, non-zero on error.
 #######################################
 cmd_encode() {
@@ -522,13 +522,13 @@ cmd_encode() {
   for line in $(cmd_filter_streams "${stream_source}"); do
     [[ "${line}" == "" ]] && continue
 
-    maps="${maps}$(echo -e "${line}" | awk -F"|" '{split($1,stream,"=");printf "-map 0IFS=%d ", stream[2]}')"
+    maps="${maps}$(echo -e "${line}" | awk -F"|" '{split($1,stream,"=");printf "-map 0:%d ", stream[2]}')"
 
     metadata="${metadata}$(echo -e "${line}" | awk -F"|" ' \
       { \
         split($2,codec_type,"="); \
         split($5,lang,"="); \
-        printf "-metadataIFS=sIFS=%sIFS=%s language=%s ", substr(codec_type[2],1,1), NR-1, lang[2] \
+        printf "-metadata:s:%s:%s language=%s ", substr(codec_type[2],1,1), NR-1, lang[2] \
       } \
     ')"
 
@@ -537,7 +537,7 @@ cmd_encode() {
         split($2,codec_type,"="); \
         split($3,disposition_default,"="); \
         split($4,forced,"="); \
-        printf "-dispositionIFS=%sIFS=%d ", substr(codec_type[2],1,1), NR-1 \
+        printf "-disposition:%s:%d ", substr(codec_type[2],1,1), NR-1 \
       }; \
       { if(forced[2] == 1) print "forced"; else if(disposition_default[2] == 1) print "default"; else print "0";} \
       { print " " } \
@@ -609,16 +609,16 @@ cmd_encode() {
     ${concat_str} \
     -i "${source_file}" \
     ${chapters_input} \
-    -map 0IFS=v \
+    -map 0:v \
     ${maps} \
-    -map 0IFS=d? \
-    -map 0IFS=t? \
+    -map 0:d? \
+    -map 0:t? \
     -map_metadata 0 \
     ${metadata} \
     ${map_metadata_1} \
     ${disposition} \
     -c copy \
-    -cIFS=v ${encoder} \
+    -c:v ${encoder} \
     ${infer_subs} \
     ${faststart} \
     -probesize 2048M \
@@ -637,13 +637,13 @@ cmd_encode() {
 
 #######################################
 # Encodes a directory of video files.
-# GlobalsIFS=
+# Globals:
 #   None
-# ArgumentsIFS=
+# Arguments:
 #   $@ - Encoding options followed by source dir and destination dir.
-# OutputsIFS=
+# Outputs:
 #   Writes progress text to stdout.
-# ReturnsIFS=
+# Returns:
 #   0 on success, non-zero on error.
 #######################################
 cmd_encode_dir() {
@@ -729,27 +729,27 @@ cmd_encode_dir() {
     fi
 
     if [[ "${invalid}" -eq 1 ]]; then
-      echo "Copying non-video fileIFS= ${file}"
+      echo "Copying non-video file: ${file}"
       cp "${fullfilepath}" "${destinationfile}"
     else
-      echo "ProcessingIFS= ${file}"
-      # NoteIFS= passopt relies on intentional word splitting here
+      echo "Processing: ${file}"
+      # Note: passopt relies on intentional word splitting here
       cmd_encode ${passopt} "${fullfilepath}" "${destinationfile}"
     fi
 
-    echo "FinishedIFS= ${file}"
+    echo "Finished: ${file}"
   done
 }
 
 #######################################
 # Finds all valid video files in a directory.
-# GlobalsIFS=
+# Globals:
 #   None
-# ArgumentsIFS=
+# Arguments:
 #   $1 - The source directory to search.
-# OutputsIFS=
+# Outputs:
 #   Writes valid video file paths to stdout.
-# ReturnsIFS=
+# Returns:
 #   0 on success, non-zero on error.
 #######################################
 cmd_find_all() {
@@ -758,7 +758,7 @@ cmd_find_all() {
   while [[ $# -gt 0 ]]; do
     case $1 in
       *)
-        [[ ! -z "${source}" ]] && echo "unkown optionIFS= $1" >&2 && return 1;
+        [[ ! -z "${source}" ]] && echo "unkown option: $1" >&2 && return 1;
         source="$1"
         shift
       ;;
@@ -779,7 +779,7 @@ cmd_find_all() {
 
 #######################################
 # Main entry point.
-# ArgumentsIFS=
+# Arguments:
 #   $@ - All script arguments
 #######################################
 main() {
@@ -795,7 +795,7 @@ main() {
         shift
         ;;
       -*)
-        echo "Unknown global optionIFS= $1"
+        echo "Unknown global option: $1"
         print_help
         return 1
         ;;
@@ -845,7 +845,7 @@ main() {
       cmd_find_all "$@"
       ;;
     *)
-      echo "Unknown subcommandIFS= ${subcommand}"
+      echo "Unknown subcommand: ${subcommand}"
       print_help
       return 1
       ;;
