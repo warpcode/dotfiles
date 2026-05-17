@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.dotfiles.scheduler.{{ .config.name }}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>-lc</string>
+        <string>{{ .config.command }}</string>
+    </array>
+    {{- if eq .config.schedule "daily" }}
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>0</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+    {{- else if eq .config.schedule "hourly" }}
+    <key>StartInterval</key>
+    <integer>3600</integer>
+    {{- else if eq .config.schedule "weekly" }}
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>0</integer>
+        <key>Hour</key>
+        <integer>0</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+    {{- end }}
+    <key>StandardOutPath</key>
+    <string>{{ getenv "HOME" }}/.local/state/dotfiles/scheduler/{{ .config.name }}.log</string>
+    <key>StandardErrorPath</key>
+    <string>{{ getenv "HOME" }}/.local/state/dotfiles/scheduler/{{ .config.name }}.log</string>
+</dict>
+</plist>
