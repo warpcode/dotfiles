@@ -260,16 +260,9 @@ cmd_detect_scale() {
 #   0 if valid, non-zero otherwise.
 #######################################
 cmd_detect_valid() {
-  local source=""
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      *)
-        source="$1"
-        shift
-        break
-      ;;
-    esac
-  done
+  local source="${1:-}"
+  shift
+
   if [[ -z "${source}" ]] || [[ ! -r "${source}" ]]; then
     return 1;
   fi
@@ -297,16 +290,9 @@ cmd_detect_valid() {
 #   0 on success, non-zero on error.
 #######################################
 cmd_filter_streams() {
-  local source=""
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      *)
-        source="$1"
-        shift
-        break
-      ;;
-    esac
-  done
+  local source="${1:-}"
+  shift
+
   if [[ -z "${source}" ]] || [[ ! -r "${source}" ]]; then
     return 1;
   fi
@@ -346,16 +332,9 @@ cmd_filter_streams() {
 #   0 on success, non-zero on error.
 #######################################
 cmd_list_to_chapters() {
-  local source=""
-  while [[ $# -gt 0 ]]; do
-    case $1 in
-      *)
-        [[ ! -z "${source}" ]] && return 1;
-        source="$1"
-        shift
-      ;;
-    esac
-  done
+  local source="${1:-}"
+  shift
+
   if [[ -z "${source}" ]] || [[ ! -r "${source}" ]]; then
     return 1;
   fi
@@ -396,16 +375,9 @@ cmd_list_to_chapters() {
 #   0 on success, non-zero on error.
 #######################################
 cmd_list_to_input() {
-  local source=""
-  while [[ $# -gt 0 ]]; do
-    case $1 in
-      *)
-        [[ ! -z "${source}" ]] && return 1;
-        source="$1"
-        shift
-      ;;
-    esac
-  done
+  local source="${1:-}"
+  shift
+
   if [[ -z "${source}" ]] || [[ ! -r "${source}" ]]; then
     return 1;
   fi
@@ -753,17 +725,8 @@ cmd_encode_dir() {
 #   0 on success, non-zero on error.
 #######################################
 cmd_find_all() {
-  local source=""
-
-  while [[ $# -gt 0 ]]; do
-    case $1 in
-      *)
-        [[ ! -z "${source}" ]] && echo "unkown option: $1" >&2 && return 1;
-        source="$1"
-        shift
-      ;;
-    esac
-  done
+  local source="${1:-}"
+  shift || true
 
   if [[ -z "${source}" ]] || [[ ! -r "${source}" ]]; then
     return 1;
