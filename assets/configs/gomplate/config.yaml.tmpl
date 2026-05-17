@@ -1,19 +1,24 @@
+{{- $dotfiles := getenv "DOTFILES" -}}
+{{- $binDir := filepath.Join $dotfiles "bin" -}}
+{{- $tplIn := getenv "DF_CONFIG_TPL_IN" -}}
+
 plugins:
   secret:
-    cmd: "{{ getenv `DOTFILES` }}/bin/df.secrets"
+    cmd: "{{ $dotfiles }}/bin/df.secrets"
     args:
       - "get"
-{{- range $bin := (file.ReadDir (filepath.Join (getenv `DOTFILES`) "bin")) }}
-{{- if (strings.HasPrefix "df." $bin) }}
+
+{{- range $bin := (file.ReadDir $binDir) }}
+  {{- if (strings.HasPrefix "df." $bin) }}
   {{ strings.ReplaceAll "." "_" $bin }}:
-    cmd: "{{ getenv `DOTFILES` }}/bin/{{ $bin }}"
+    cmd: "{{ $dotfiles }}/bin/{{ $bin }}"
+  {{- end }}
 {{- end }}
-{{- end }}
-{{- $tplIn := getenv "DF_CONFIG_TPL_IN" }}
+
 {{- if strings.Contains "/" $tplIn }}
-{{- $baseDir := filepath.Join (getenv "DOTFILES") "assets/templates" (index (strings.Split "/" $tplIn) 0) }}
-{{- if file.IsDir (filepath.Join $baseDir "partials") }}
+  {{- $baseDir := filepath.Join $dotfiles "assets/templates" (index (strings.Split "/" $tplIn) 0) }}
+  {{- if file.IsDir (filepath.Join $baseDir "partials") }}
 templates:
   tpls: "{{ $baseDir }}/partials/"
-{{- end }}
+  {{- end }}
 {{- end }}
