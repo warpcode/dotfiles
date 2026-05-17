@@ -9,3 +9,11 @@ plugins:
     cmd: "{{ getenv `DOTFILES` }}/bin/{{ $bin }}"
 {{- end }}
 {{- end }}
+{{- $tplIn := getenv "DF_CONFIG_TPL_IN" }}
+{{- if strings.Contains "/" $tplIn }}
+{{- $baseDir := filepath.Join (getenv "DOTFILES") "assets/templates" (index (strings.Split "/" $tplIn) 0) }}
+{{- if file.IsDir (filepath.Join $baseDir "partials") }}
+templates:
+  tpls: "{{ $baseDir }}/partials/"
+{{- end }}
+{{- end }}
