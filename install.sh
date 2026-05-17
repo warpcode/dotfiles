@@ -175,18 +175,11 @@ set_zsh_default() {
 #;
 # select_profile - Prompts the user to select a profile
 select_profile() {
-    local detected_profile="default"
-
-    # Heuristics
-    if [ "$os" = "termux" ]; then
-        detected_profile="phone"
-    elif [[ "$(hostname 2>/dev/null)" == *work* ]]; then
-        detected_profile="work"
-    fi
+    local detected_profile=""
 
     # If ~/.dotfiles_profile exists, use it as default
-    if [ -f "$HOME/.dotfiles_profile" ]; then
-        detected_profile=$(cat "$HOME/.dotfiles_profile")
+    if [ -x "$DOTFILES_INSTALL_DIR/bin/df.fs" ]; then
+        detected_profile=$("$DOTFILES_INSTALL_DIR/bin/df.fs" profile name)
     fi
 
     # Read available profiles
@@ -206,12 +199,17 @@ select_profile() {
 
     if [ -z "$user_profile" ]; then
         # user cancelled the TUI selector
-        user_profile="$detected_profile"
+        echo "Installation aborted. No profile selected." >&2
+        exit 1
     fi
 
-    echo "$user_profile" > "$HOME/.dotfiles_profile"
-    export DOTFILES_PROFILE="$user_profile"
-    echo "Profile set to: $user_profile"
+    if [ -x "$DOTFILES_INSTALL_DIR/bin/df.fs" ]; then
+        "$DOTFILES_INSTALL_DIR/bin/df.fs" profile set "$user_profile"
+    else
+        echo "$user_profile" > "$HOME/.dotfiles_profile"
+        export DOTFILES_PROFILE="$user_profile"
+        echo "Profile set to: $user_profile"
+    fi
 }
 
 # --- Main Execution ---
