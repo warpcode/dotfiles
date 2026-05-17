@@ -1,5 +1,7 @@
 #!/bin/zsh
-# Description: Markdown and frontmatter utilities. Extracted from src/zsh/apps/markdown.zsh for portability.
+#
+# df.md - Markdown and frontmatter utilities.
+# Extracted from src/zsh/apps/markdown.zsh for portability.
 
 emulate -LR zsh
 setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL EXTENDED_GLOB
@@ -181,7 +183,7 @@ _fm_validate() {
   }
 
   # Validate YAML using yq
-  if echo "${fm:-"{}"}" | yq '.' > /dev/null 2>&1; then
+  if print -r -- "${fm:-"{}"}" | yq '.' > /dev/null 2>&1; then
     return 0
   else
     err "Invalid YAML in frontmatter of '$file'."
