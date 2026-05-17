@@ -18,8 +18,5 @@
   {{- else }}
   "model": "{env:OPENCODE_MODEL}",
   {{- end }}
-  "plugin": [
-    "oh-my-openagent@latest"
-  ],
   "provider": {{ .config.providers | toJSON }}
 }
