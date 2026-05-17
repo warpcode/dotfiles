@@ -102,7 +102,20 @@ ensure_dotfiles() {
 
         if [ -d "$DOTFILES_INSTALL_DIR/.git" ]; then
             echo "Initializing submodules..."
-            (cd "$DOTFILES_INSTALL_DIR" && git submodule update --init --recursive --depth 1 --quiet 2>/dev/null || true)
+            (
+                cd "$DOTFILES_INSTALL_DIR"
+                
+                # Check for SSH connectivity to GitHub
+                if command -v ssh >/dev/null 2>&1 && ssh -o ConnectTimeout=3 -o BatchMode=yes git@github.com 2>&1 | grep -q "successfully authenticated"; then
+                    echo "SSH connectivity to GitHub available."
+                else
+                    echo "SSH connectivity to GitHub unavailable. Forcing submodules to HTTPS..."
+                    git config --local url."https://github.com/".insteadOf "git@github.com:"
+                    git submodule sync --recursive >/dev/null 2>&1 || true
+                fi
+                
+                git submodule update --init --recursive --depth 1 --quiet 2>/dev/null || true
+            )
         fi
         return 0
     fi
@@ -188,6 +201,11 @@ ensure_dotfiles "$DOTFILES_REPO_URL"
 # 4. Run staged package installation
 cd "$DOTFILES_INSTALL_DIR"
 export DOTFILES="$DOTFILES_INSTALL_DIR"
+
+# Mark directory as safe for git (fixes issue in GitHub Actions containers)
+if command -v git >/dev/null 2>&1; then
+    git config --global --add safe.directory "$DOTFILES"
+fi
 
 # Source all functions, run staged installation, then execute recipe configure hooks
 zsh -c "source src/zsh/init.zsh && pkg.install_all && pkg.recipe.configure_all"

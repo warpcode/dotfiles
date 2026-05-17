@@ -27,12 +27,12 @@ pkg.managers.apt.check() {
 
 pkg.managers.apt.update() {
     pkg.managers.apt.is_available || return 0
-    sudo apt-get update -qq
+    _pkg.sudo apt-get update -qq
 }
 
 pkg.managers.apt.cleanup() {
     pkg.managers.apt.is_available || return 0
-    sudo apt-get autoremove -y && sudo apt-get clean
+    _pkg.sudo apt-get autoremove -y && _pkg.sudo apt-get clean
 }
 
 pkg.managers.apt.search() {
@@ -58,7 +58,7 @@ pkg.managers.apt.install() {
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0
-    sudo apt-get install -y ${=pkgs}
+    _pkg.sudo apt-get install -y ${=pkgs}
 }
 
 pkg.managers.apt.upgrade() {
@@ -71,16 +71,25 @@ pkg.managers.apt.upgrade() {
         [[ -n "$p" ]] && pkgs+="${pkgs:+ }$p"
     done
     [[ -z "$pkgs" ]] && return 0
-    sudo apt-get install --only-upgrade -y ${=pkgs}
+    _pkg.sudo apt-get install --only-upgrade -y ${=pkgs}
 }
 
 pkg.managers.apt.setup_repos() {
     pkg.managers.apt.is_available || return 0
     local changed=0 key val key_url keyring_name keyring_path repo_key repo_line pkg_name
     
-    local codename=$(lsb_release -cs 2>/dev/null || echo stable)
+    local codename=$(lsb_release -cs 2>/dev/null)
+    if [[ -z "$codename" && -f /etc/os-release ]]; then
+        codename=$(grep "VERSION_CODENAME=" /etc/os-release | cut -d= -f2 | tr -d '"')
+    fi
+    codename="${codename:-stable}"
+
     local arch=$(dpkg --print-architecture 2>/dev/null || echo amd64)
-    local distro=$(lsb_release -is 2>/dev/null | tr '[:upper:]' '[:lower:]' || echo debian)
+    local distro=$(lsb_release -is 2>/dev/null | tr '[:upper:]' '[:lower:]')
+    if [[ -z "$distro" && -f /etc/os-release ]]; then
+        distro=$(grep "^ID=" /etc/os-release | cut -d= -f2 | tr -d '"')
+    fi
+    distro="${distro:-debian}"
 
     typeset -A seen_keys keyring_map
     local rid
@@ -98,34 +107,34 @@ pkg.managers.apt.setup_repos() {
         key_url="${key_url//\%DISTRO\%/$distro}"
         key_url="${key_url//\%KEYRING\%/$keyring_path}"
 
-        sudo install -dm 755 /etc/apt/keyrings 2>/dev/null
+        _pkg.sudo install -dm 755 /etc/apt/keyrings 2>/dev/null
 
         local gpg_path="${keyring_path%.*}.gpg"
         if [[ -f "$gpg_path" ]]; then
             keyring_path="$gpg_path"
         elif [[ -f "$keyring_path" ]]; then
             if head -1 "$keyring_path" 2>/dev/null | grep -q "BEGIN PGP"; then
-                sudo gpg --dearmor -o "$gpg_path" "$keyring_path" 2>/dev/null && {
-                    sudo rm -f "$keyring_path"
-                    sudo chmod a+r "$gpg_path"
+                _pkg.sudo gpg --dearmor -o "$gpg_path" "$keyring_path" 2>/dev/null && {
+                    _pkg.sudo rm -f "$keyring_path"
+                    _pkg.sudo chmod a+r "$gpg_path"
                     keyring_path="$gpg_path"
                     changed=1
                 }
             else
-                sudo chmod a+r "$keyring_path"
+                _pkg.sudo chmod a+r "$keyring_path"
             fi
         else
             echo "   Adding GPG key: $keyring_name"
-            sudo curl -fsSL "$key_url" -o "$keyring_path" 2>/dev/null || continue
+            _pkg.sudo curl -fsSL "$key_url" -o "$keyring_path" 2>/dev/null || continue
             if head -1 "$keyring_path" 2>/dev/null | grep -q "BEGIN PGP"; then
-                sudo gpg --dearmor -o "$gpg_path" "$keyring_path" 2>/dev/null && {
-                    sudo rm -f "$keyring_path"
-                    sudo chmod a+r "$gpg_path"
+                _pkg.sudo gpg --dearmor -o "$gpg_path" "$keyring_path" 2>/dev/null && {
+                    _pkg.sudo rm -f "$keyring_path"
+                    _pkg.sudo chmod a+r "$gpg_path"
                     keyring_path="$gpg_path"
                     changed=1
                 }
             else
-                sudo chmod a+r "$keyring_path"
+                _pkg.sudo chmod a+r "$keyring_path"
                 changed=1
             fi
         fi
@@ -150,8 +159,8 @@ pkg.managers.apt.setup_repos() {
         local list_file="/etc/apt/sources.list.d/dotfiles-${pkg_name}.list"
         if [[ ! -f "$list_file" ]] || [[ "$(< $list_file)" != "$repo_line" ]]; then
             echo "   Adding apt repo: $pkg_name"
-            echo "$repo_line" | sudo tee "$list_file" >/dev/null && changed=1
+            echo "$repo_line" | _pkg.sudo tee "$list_file" >/dev/null && changed=1
         fi
     done
-    [[ $changed -eq 1 ]] && sudo apt-get update -qq
+    [[ $changed -eq 1 ]] && _pkg.sudo apt-get update -qq
 }

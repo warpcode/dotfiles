@@ -46,6 +46,9 @@ pkg.managers.mise.install() {
     local p; for p in ${=pkgs}; do
         mise use --global "$p" || return $?
     done
+
+    # Refresh environment if mise is activated in the current shell
+    (( $+functions[_mise_hook] )) && _mise_hook
 }
 
 pkg.managers.mise.update() {

@@ -1,6 +1,7 @@
 pkg.recipe.define ollama \
     package="ollama" \
     managers="brew mise" \
+    deps="libatomic" \
     models="gemma4:e2b"
 
 pkg.recipe.ollama.enabled() { [[ $(df.os family) != "macos" ]] }
@@ -15,6 +16,11 @@ pkg.recipe.ollama.configure() {
     tui.indent.push
     {
         (( $+commands[ollama] )) || { tui.warn "ollama command not found, skipping"; return 0; }
+
+        if [[ -n "$GITHUB_ACTIONS" ]]; then
+            tui.info "Skipping model downloads in GitHub Actions"
+            return 0
+        fi
 
         local -a models=( ${=$(pkg.recipe.get ollama models)} )
         local pid url="http://localhost:11434"
