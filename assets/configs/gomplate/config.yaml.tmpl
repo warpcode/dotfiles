@@ -1,0 +1,11 @@
+plugins:
+  secret:
+    cmd: "{{ getenv `DOTFILES` }}/bin/df.secrets"
+    args:
+      - "get"
+{{- range $bin := (file.ReadDir (filepath.Join (getenv `DOTFILES`) "bin")) }}
+{{- if (strings.HasPrefix "df." $bin) }}
+  {{ strings.ReplaceAll "." "_" $bin }}:
+    cmd: "{{ getenv `DOTFILES` }}/bin/{{ $bin }}"
+{{- end }}
+{{- end }}
