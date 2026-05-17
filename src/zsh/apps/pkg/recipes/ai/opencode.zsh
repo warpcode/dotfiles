@@ -33,7 +33,7 @@ pkg.recipe.opencode.configure() {
         done
 
         config.hydrate "ai/opencode.json.tmpl" \
-            --config-json "$(jq -n --argjson p "${providers:-{}}" --arg sm "$selected_model" '{providers: $p, selected_model: $sm}')" \
+            --config-json "$(jq -n --argjson p "${providers:-"{}"}" --arg sm "$selected_model" '{providers: $p, selected_model: $sm}')" \
             --output "$target"
 
         tui.success "Configuration complete"
