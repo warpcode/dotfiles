@@ -178,9 +178,7 @@ select_profile() {
     local detected_profile=""
 
     # If ~/.dotfiles_profile exists, use it as default
-    if [ -x "$DOTFILES_INSTALL_DIR/bin/df.fs" ]; then
-        detected_profile=$("$DOTFILES_INSTALL_DIR/bin/df.fs" profile name)
-    fi
+    detected_profile=$("$DOTFILES_INSTALL_DIR/bin/df.fs" profile name)
 
     # Read available profiles
     local available_profiles=("default" "work" "phone")
@@ -192,9 +190,7 @@ select_profile() {
         echo "Running in CI. Automatically selecting profile: $user_profile"
     else
         # Use bin/df.tui for selection
-        if [ -x "$DOTFILES_INSTALL_DIR/bin/df.tui" ]; then
-            user_profile=$("$DOTFILES_INSTALL_DIR/bin/df.tui" select -p "Select a profile" -d "$detected_profile" "${available_profiles[@]}")
-        fi
+        user_profile=$("$DOTFILES_INSTALL_DIR/bin/df.tui" select -p "Select a profile" -d "$detected_profile" "${available_profiles[@]}")
     fi
 
     if [ -z "$user_profile" ]; then
@@ -203,13 +199,7 @@ select_profile() {
         exit 1
     fi
 
-    if [ -x "$DOTFILES_INSTALL_DIR/bin/df.fs" ]; then
-        "$DOTFILES_INSTALL_DIR/bin/df.fs" profile set "$user_profile"
-    else
-        echo "$user_profile" > "$HOME/.dotfiles_profile"
-        export DOTFILES_PROFILE="$user_profile"
-        echo "Profile set to: $user_profile"
-    fi
+    "$DOTFILES_INSTALL_DIR/bin/df.fs" profile set "$user_profile"
 }
 
 # --- Main Execution ---
