@@ -237,6 +237,7 @@ _select() {
                 return 1
             fi
         done
+        return 1
     fi
 
     local m_hint="" c_hint=""
