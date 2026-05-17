@@ -1,4 +1,4 @@
-#!/usr/bin/env zsh
+#!/bin/zsh
 # @description Markdown and frontmatter utilities. Extracted from src/zsh/apps/markdown.zsh for portability.
 
 emulate -LR zsh
@@ -20,9 +20,14 @@ err() {
 # ---------------------------------------------------------------------------
 
 #######################################
-# Get the body content of a markdown file (everything after frontmatter)
+# @description Get the body content of a markdown file (everything after frontmatter).
 # If no valid frontmatter exists, returns the entire file.
 # Also cleans up leading empty lines from the body.
+#
+# @arg $1 The path to the markdown file.
+# @stdout The body content of the markdown file.
+# @exitcode 0 On success.
+# @exitcode 1 If file is missing or not found.
 #######################################
 _body() {
   local file="${1:-}"
@@ -33,12 +38,17 @@ _body() {
     BEGIN { skip = 0 }
     NR == 1 && /^---$/ { skip = 1; next }
     skip == 1 && /^---$/ { skip = 0; next }
-    skip == 0 { print }
-  ' "$file" | sed '/./,$!d'
+    skip == 0 { if (length($0) > 0 || found) { print; found=1 } }
+  ' "$file"
 }
 
 #######################################
-# Get the inner frontmatter content from a single markdown file
+# @description Get the inner frontmatter content from a single markdown file.
+#
+# @arg $1 The path to the markdown file.
+# @stdout The frontmatter content.
+# @exitcode 0 On success.
+# @exitcode 1 If file is missing, not found, or has no valid frontmatter.
 #######################################
 _fm_get() {
   local file="${1:-}"
@@ -54,8 +64,12 @@ _fm_get() {
 }
 
 #######################################
-# Stream frontmatter from multiple files with 'path' attribute injection
+# @description Stream frontmatter from multiple files with 'path' attribute injection.
 # Returns a multi-document YAML stream suitable for yq processing.
+#
+# @arg $@ Paths to the markdown files.
+# @stdout Multi-document YAML stream.
+# @exitcode 0 Always.
 #######################################
 _fm_get_all() {
   [[ $# -eq 0 ]] && return 0
@@ -79,8 +93,12 @@ _fm_get_all() {
 }
 
 #######################################
-# Remove the entire frontmatter block from a markdown file
+# @description Remove the entire frontmatter block from a markdown file.
 # Atomic: Uses _body to safely extract and replace the file.
+#
+# @arg $1 The path to the markdown file.
+# @exitcode 0 On success or if file has no frontmatter.
+# @exitcode 1 If file is missing, not found, or removal fails.
 #######################################
 _fm_remove() {
   local file="${1:-}"
@@ -88,10 +106,12 @@ _fm_remove() {
   [[ -f "$file" ]] || { err "File '$file' not found."; return 1 }
 
   # Only attempt removal if the file actually starts with frontmatter
-  [[ "$(head -n 1 "$file")" == "---" ]] || return 0
+  local first_line
+  read -r first_line < "$file"
+  [[ "${first_line}" == "---" ]] || return 0
 
   local tmp
-  tmp=$(mktemp)
+  tmp=$(mktemp "${TMPDIR:-/tmp}/df.md.XXXXXX")
   if _body "$file" > "$tmp"; then
     mv "$tmp" "$file"
   else
@@ -102,8 +122,13 @@ _fm_remove() {
 }
 
 #######################################
-# Set/Replace the entire frontmatter in a markdown file
+# @description Set/Replace the entire frontmatter in a markdown file.
 # Atomic: Prepares the new file in a temporary location before replacement.
+#
+# @arg $1 The path to the markdown file.
+# @arg $2 The new frontmatter content (without leading/trailing '---').
+# @exitcode 0 On success.
+# @exitcode 1 If file is missing, not found, or replacement fails.
 #######################################
 _fm_set() {
   local file="${1:-}"
@@ -112,7 +137,7 @@ _fm_set() {
   [[ -f "$file" ]] || { err "File '$file' not found."; return 1 }
 
   local tmp
-  tmp=$(mktemp)
+  tmp=$(mktemp "${TMPDIR:-/tmp}/df.md.XXXXXX")
   {
     echo "---"
     [[ -n "$content" ]] && echo "$content"
@@ -122,8 +147,12 @@ _fm_set() {
 }
 
 #######################################
-# Validate the YAML frontmatter using 'yq'
+# @description Validate the YAML frontmatter using 'yq'.
 # Returns 0 if valid, non-zero otherwise.
+#
+# @arg $1 The path to the markdown file.
+# @exitcode 0 If frontmatter is valid YAML.
+# @exitcode 1 If file is missing, not found, lacks frontmatter, or YAML is invalid.
 #######################################
 _fm_validate() {
   local file="${1:-}"
