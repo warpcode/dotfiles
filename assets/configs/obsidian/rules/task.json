@@ -1,0 +1,16 @@
+{
+  "type": "task",
+  "folder": "Tasks",
+  "validation": {
+    "require_all": ["title", "status", "priority"],
+    "require_any": [
+      ["epic", "project", "area"]
+    ]
+  },
+  "fields": {
+    "priority": { "type": "select", "values": ["low", "medium", "high"] },
+    "epic": { "type": "select", "values_from_note_type": ["epic"] },
+    "project": { "type": "select", "values_from_note_type": ["project"] },
+    "area": { "type": "select", "values_from_note_type": ["area"] }
+  }
+}

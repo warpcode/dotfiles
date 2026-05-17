@@ -1,0 +1,13 @@
+{
+  "type": "epic",
+  "folder": "Epics",
+  "validation": {
+    "require_all": ["title", "status"],
+    "require_any": [
+      ["project"]
+    ]
+  },
+  "fields": {
+    "project": { "type": "select", "values_from_note_type": ["project"] }
+  }
+}

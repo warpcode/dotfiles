@@ -1,0 +1,13 @@
+{
+  "type": "project",
+  "folder": "Projects",
+  "validation": {
+    "require_all": ["title", "status"],
+    "require_any": [
+      ["area"]
+    ]
+  },
+  "fields": {
+    "area": { "type": "select", "values_from_note_type": ["area"] }
+  }
+}
