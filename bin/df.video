@@ -72,8 +72,10 @@ cmd_detect_crop() {
     done
 
     if [[ -z "${source}" ]] || [[ ! -r "${source}" ]]; then
-        echo "Source is not readable" >&2
-        return 1;
+        if [[ -n "${gpu}" ]]; then
+            echo "${gpu}"
+        fi
+        return 0
     fi
 
     local max_width=0
@@ -133,6 +135,9 @@ cmd_detect_gpu() {
     elif [[ "${gpu_detect}" =~ "AMD" ]]; then
         gpu="amd"
     fi
+    if [[ -z "${gpu}" ]]; then
+        return 1
+    fi
     echo "${gpu}"
 }
 
@@ -182,6 +187,9 @@ cmd_detect_scale() {
     done
 
     if [[ -z "${source}" ]] || [[ ! -r "${source}" ]]; then
+        if [[ -n "${gpu}" ]]; then
+            return 0
+        fi
         echo "Source is not readable" >&2
         return 1;
     fi
@@ -256,9 +264,8 @@ cmd_detect_scale() {
 #######################################
 cmd_detect_valid() {
     local source=""
-    local i
-    for i in "$@"; do
-        case $i in
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
             *)
                 source="$1"
                 shift
@@ -294,9 +301,8 @@ cmd_detect_valid() {
 #######################################
 cmd_filter_streams() {
     local source=""
-    local i
-    for i in "$@"; do
-        case $i in
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
             *)
                 source="$1"
                 shift
