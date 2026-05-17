@@ -80,9 +80,14 @@ _cmd_profile_list() {
     if [[ -n "${filename}" ]]; then
         local found=0
         local d
+        # Use zsh globbing to handle wildcards in filename
         for d in "${search_dirs[@]}"; do
-            if [[ -e "${d}/${filename}" ]]; then
-                print -r -- "${d}/${filename}"
+            local -a matches=( ${d}/$~filename(N) )
+            if [[ ${#matches[@]} -gt 0 ]]; then
+                local m
+                for m in "${matches[@]}"; do
+                    [[ -f "${m}" ]] && print -r -- "${m}"
+                done
                 found=1
             fi
         done
