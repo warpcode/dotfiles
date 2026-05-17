@@ -1,1 +1,0 @@
-# Phone profile initialization

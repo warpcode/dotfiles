@@ -25,9 +25,9 @@ _zsh.init() {
 
     [[ -f ~/.env ]] && env.source.file ~/.env
 
-    # Load profile init script if exists
-    if [[ -n "$DOTFILES_PROFILE" && -f "$DOTFILES/assets/configs/profiles/$DOTFILES_PROFILE/init.zsh" ]]; then
-        source "$DOTFILES/assets/configs/profiles/$DOTFILES_PROFILE/init.zsh"
+    local profile_init="$("$DOTFILES/bin/df.fs" profile list "assets/configs/zsh" "init.zsh" 2>/dev/null | head -n 1)"
+    if [[ -n "$profile_init" ]]; then
+        source "$profile_init"
     fi
 
     for root in $roots; do

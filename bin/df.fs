@@ -39,12 +39,6 @@ _cmd_profile_set() {
     local target="$1"
     [[ -z "${target}" ]] && { err "profile set requires a profile name"; return 1; }
 
-    local profiles_dir="${DOTFILES_DIR}/assets/configs/profiles"
-    if [[ ! -d "${profiles_dir}/${target}" ]]; then
-        err "Profile directory '${target}' not found in ${profiles_dir}"
-        return 1
-    fi
-
     echo "${target}" > "${HOME}/.dotfiles_profile"
     export DOTFILES_PROFILE="${target}"
     print -r -- "Profile set to: ${target}"

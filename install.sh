@@ -190,18 +190,7 @@ select_profile() {
     fi
 
     # Read available profiles
-    local available_profiles=()
-    if [ -d "$DOTFILES_INSTALL_DIR/assets/configs/profiles" ]; then
-        for p in "$DOTFILES_INSTALL_DIR/assets/configs/profiles"/*/; do
-            if [ -d "$p" ]; then
-                local p_name=$(basename "$p")
-                available_profiles+=("$p_name")
-            fi
-        done
-    else
-        # Fallback if directory isn't cloned yet, guess standard ones
-        available_profiles=("default" "work" "phone")
-    fi
+    local available_profiles=("default" "work" "phone")
 
     local user_profile=""
 
