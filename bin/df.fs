@@ -1,11 +1,15 @@
 #!/usr/bin/env zsh
 #
 # df.fs - Standalone Filesystem & Profile Utility
+
 emulate -LR zsh
 setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL
 
+0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
+typeset -r SCRIPT_DIR="${0:A:h}"
+
 # Extract DOTFILES from relative script dir if missing
-readonly DOTFILES_DIR="${DOTFILES:-${0:A:h:h}}"
+readonly DOTFILES_DIR="${DOTFILES:-${SCRIPT_DIR:h}}"
 
 err() {
     print -r -- "df.fs: $*" >&2
@@ -74,16 +78,16 @@ _cmd_profile_list() {
          search_dirs=( "${dir}" )
     fi
 
-    local filename="${filename:-*}"
+    local query="${filename:-*}"
     local found=0
     local d
     # Use zsh globbing to handle wildcards in filename
     for d in "${search_dirs[@]}"; do
-        local -a matches=( ${d}/$~filename(N) )
+        local -a matches=( ${d}/$~query(N) )
         if [[ ${#matches[@]} -gt 0 ]]; then
-            local m
-            for m in "${matches[@]}"; do
-                [[ -f "${m}" ]] && print -r -- "${m}"
+            local match_file
+            for match_file in "${matches[@]}"; do
+                [[ -f "${match_file}" ]] && print -r -- "${match_file}"
             done
             found=1
         fi
