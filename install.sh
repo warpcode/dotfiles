@@ -203,34 +203,43 @@ select_profile() {
         available_profiles=("default" "work" "phone")
     fi
 
-    # Format options for prompt
-    local options_str="${available_profiles[*]}"
-    options_str=${options_str// / | }
-
     local user_profile=""
 
     if [ -n "$CI" ]; then
         user_profile="$detected_profile"
         echo "Running in CI. Automatically selecting profile: $user_profile"
     else
-        while true; do
-            read -p "Select a profile [$options_str] (default: $detected_profile): " user_profile
-            user_profile=${user_profile:-$detected_profile}
+        # Use bin/df.tui for selection
+        if [ -x "$DOTFILES_INSTALL_DIR/bin/df.tui" ]; then
+            user_profile=$("$DOTFILES_INSTALL_DIR/bin/df.tui" select -p "Select a profile" -d "$detected_profile" "${available_profiles[@]}")
+        else
+            local options_str="${available_profiles[*]}"
+            options_str=${options_str// / | }
 
-            local valid=0
-            for p in "${available_profiles[@]}"; do
-                if [ "$user_profile" = "$p" ]; then
-                    valid=1
+            while true; do
+                read -p "Select a profile [$options_str] (default: $detected_profile): " user_profile
+                user_profile=${user_profile:-$detected_profile}
+
+                local valid=0
+                for p in "${available_profiles[@]}"; do
+                    if [ "$user_profile" = "$p" ]; then
+                        valid=1
+                        break
+                    fi
+                done
+
+                if [ "$valid" -eq 1 ]; then
                     break
+                else
+                    echo "Invalid profile selected. Please try again."
                 fi
             done
+        fi
+    fi
 
-            if [ "$valid" -eq 1 ]; then
-                break
-            else
-                echo "Invalid profile selected. Please try again."
-            fi
-        done
+    if [ -z "$user_profile" ]; then
+        # user cancelled the TUI selector
+        user_profile="$detected_profile"
     fi
 
     echo "$user_profile" > "$HOME/.dotfiles_profile"
