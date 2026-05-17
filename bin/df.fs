@@ -64,12 +64,9 @@ _cmd_profile_list() {
         search_dirs+=( "${dir}/${active_profile}" )
     fi
 
-    # Include 'global' or 'default' if present and we're not already explicitly default
+    # Include 'global' if present
     if [[ "${active_profile}" != "global" && -d "${dir}/global" ]]; then
         search_dirs+=( "${dir}/global" )
-    fi
-    if [[ "${active_profile}" != "default" && -d "${dir}/default" ]]; then
-        search_dirs+=( "${dir}/default" )
     fi
 
     # If neither the profile nor global/default folders exist but the base dir does
@@ -77,28 +74,23 @@ _cmd_profile_list() {
          search_dirs=( "${dir}" )
     fi
 
-    if [[ -n "${filename}" ]]; then
-        local found=0
-        local d
-        # Use zsh globbing to handle wildcards in filename
-        for d in "${search_dirs[@]}"; do
-            local -a matches=( ${d}/$~filename(N) )
-            if [[ ${#matches[@]} -gt 0 ]]; then
-                local m
-                for m in "${matches[@]}"; do
-                    [[ -f "${m}" ]] && print -r -- "${m}"
-                done
-                found=1
-            fi
-        done
-        # We output all instances across priority, caller decides which to use, e.g. for `df.secrets` merging
-        (( found == 0 )) && return 1
-    else
-        local d
-        for d in "${search_dirs[@]}"; do
-            print -r -- "${d}"
-        done
-    fi
+    local filename="${filename:-*}"
+    local found=0
+    local d
+    # Use zsh globbing to handle wildcards in filename
+    for d in "${search_dirs[@]}"; do
+        local -a matches=( ${d}/$~filename(N) )
+        if [[ ${#matches[@]} -gt 0 ]]; then
+            local m
+            for m in "${matches[@]}"; do
+                [[ -f "${m}" ]] && print -r -- "${m}"
+            done
+            found=1
+        fi
+    done
+
+    # We output all instances across priority, caller decides which to use, e.g. for `df.secrets` merging
+    (( found == 0 )) && return 1
 
     return 0
 }
