@@ -21,10 +21,28 @@ typeset -r OBSIDIAN_RULES="${DOTFILES}/assets/configs/obsidian/rules"
 typeset -r OBSIDIAN_TEMPLATE="${DOTFILES}/assets/templates/obsidian/note.md.tmpl"
 typeset -r OBSIDIAN_DATE_FORMAT="+%Y-%m-%dT%H:%M:%S%z"
 
+#######################################
+# Description: Print error message to stderr.
+# Arguments:
+#   $* Error message to print.
+# Outputs:
+#   Writes error string to stderr.
+# Returns:
+#   None
+#######################################
 err() {
   print -r -- "df.obsidian: $*" >&2
 }
 
+#######################################
+# Description: Print usage information.
+# Arguments:
+#   None
+# Outputs:
+#   Writes usage string to stdout.
+# Returns:
+#   None
+#######################################
 _usage() {
   print -r -- "Usage: df.obsidian <command>"
   print -r -- ""
@@ -41,6 +59,17 @@ _usage() {
 # Queries
 # ---------------------------------------------------------------------------
 
+#######################################
+# Description: Find notes where an attribute matches any provided values.
+# Arguments:
+#   $1 Attribute name to search for.
+#   $@ Search values to match against.
+# Outputs:
+#   Writes list of file paths to stdout.
+# Returns:
+#   0 on success.
+#   1 on failure.
+#######################################
 cmd_find_by_attr() {
   local attribute_name="${1:-}"
   shift
@@ -73,12 +102,31 @@ cmd_find_by_attr() {
   " 2>/dev/null | sort -u
 }
 
+#######################################
+# Description: List all note filenames of specific types.
+# Arguments:
+#   $@ Note types to list.
+# Outputs:
+#   Writes list of base filenames to stdout.
+# Returns:
+#   0 on success.
+#######################################
 cmd_list_types() {
   local -a paths=(${(f)"$(cmd_find_by_attr "type" "$@")"})
   [[ ${#paths} -eq 0 ]] && return 0
   printf "%s\n" "${paths[@]}" | xargs -n1 basename -s .md -- | sort -u
 }
 
+#######################################
+# Description: Collect unique values for a frontmatter attribute.
+# Arguments:
+#   $1 Attribute name.
+# Outputs:
+#   Writes unique values to stdout.
+# Returns:
+#   0 on success.
+#   1 on failure.
+#######################################
 cmd_values() {
   local attribute_name="${1:-}"
   if [[ -z "$attribute_name" ]]; then
@@ -97,6 +145,16 @@ cmd_values() {
   ' 2>/dev/null | sort -u
 }
 
+#######################################
+# Description: Resolve a note path by filename or title.
+# Arguments:
+#   $1 Input path, filename, or title.
+# Outputs:
+#   Writes the absolute resolved path to stdout.
+# Returns:
+#   0 on success.
+#   1 on failure.
+#######################################
 cmd_resolve() {
   local input_path="${1:-}"
   [[ -z "$input_path" ]] && return 1
@@ -117,6 +175,16 @@ cmd_resolve() {
 # Core Rule Resolution
 # ---------------------------------------------------------------------------
 
+#######################################
+# Description: Fetch and resolve a JSON rule by note type, merging with default rules.
+# Arguments:
+#   $1 Note type (e.g., 'task').
+# Outputs:
+#   Writes resolved JSON object to stdout.
+# Returns:
+#   0 on success.
+#   1 on failure.
+#######################################
 _resolve_rule() {
   local note_type="${1:-}"
   [[ -z "$note_type" ]] && return 1
@@ -146,6 +214,18 @@ _resolve_rule() {
 # Interactive Creation
 # ---------------------------------------------------------------------------
 
+#######################################
+# Description: Prompt for a field interactively using df.tui based on rules.
+# Arguments:
+#   $1 Field name.
+#   $2 Field configuration JSON.
+#   $3 Is optional boolean ('true' or 'false').
+# Outputs:
+#   Writes the final field value as a JSON fragment.
+# Returns:
+#   0 on success.
+#   1 on cancellation or failure.
+#######################################
 _prompt_field() {
   local field_name="${1:-}"
   local field_cfg="${2:-}"
@@ -210,6 +290,16 @@ _prompt_field() {
   esac
 }
 
+#######################################
+# Description: Core workflow to create a new note interactively.
+# Arguments:
+#   None
+# Outputs:
+#   Writes the created file path to stdout.
+# Returns:
+#   0 on success.
+#   1 on failure.
+#######################################
 cmd_new() {
   if [[ ! -d "$OBSIDIAN_RULES" ]]; then
     err "Notes rules directory not found at '$OBSIDIAN_RULES'."
@@ -297,6 +387,16 @@ cmd_new() {
 # Validation
 # ---------------------------------------------------------------------------
 
+#######################################
+# Description: Validate a note against its configured schema rules.
+# Arguments:
+#   $1 Path to the markdown note file.
+# Outputs:
+#   Writes validation results to stdout/stderr.
+# Returns:
+#   0 on success.
+#   1 on validation failure or error.
+#######################################
 cmd_validate() {
   local file="${1:-}"
   [[ -n "$file" ]] || { err "Missing file argument."; return 1 }
