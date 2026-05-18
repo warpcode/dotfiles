@@ -18,7 +18,11 @@ pkg.recipe.git.configure() {
             command git config --global --replace-all include.path "$gitconfig_path"
         fi
 
-        command git config --global core.excludesfile "$(fs.dotfiles.path "assets/configs/git/.gitignore_global")"
+        local gitignore_path
+        gitignore_path="$("$DOTFILES/bin/df.fs" profile list "assets/configs/git" ".gitignore_global" 2>/dev/null | head -n 1)"
+        if [[ -n "$gitignore_path" ]]; then
+            command git config --global core.excludesfile "$gitignore_path"
+        fi
 
         tui.success "git configured"
     } always {
