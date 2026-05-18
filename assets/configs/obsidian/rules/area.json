@@ -5,6 +5,7 @@
     "require_all": ["title"]
   },
   "fields": {
-    "context": { "type": "select", "values": ["work", "personal"] }
+    "context": { "type": "select", "values": ["work", "personal"] },
+    "description": { "from_type": "default", "from_field": "description" }
   }
 }

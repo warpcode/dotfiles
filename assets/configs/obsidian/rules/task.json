@@ -9,8 +9,10 @@
   },
   "fields": {
     "priority": { "type": "select", "values": ["low", "medium", "high"] },
-    "epic": { "type": "select", "values_from_note_type": ["epic"] },
-    "project": { "type": "select", "values_from_note_type": ["project"] },
-    "area": { "type": "select", "values_from_note_type": ["area"] }
+    "epic": { "type": "select", "values_from_note_type": ["epic"], "is_link": true },
+    "project": { "type": "select", "values_from_note_type": ["project"], "is_link": true },
+    "area": { "type": "select", "values_from_note_type": ["area"], "is_link": true },
+    "assignee": { "from_type": "default", "from_field": "assignee" },
+    "tags": { "from_type": "default", "from_field": "tags" }
   }
 }

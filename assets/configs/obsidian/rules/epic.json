@@ -8,6 +8,8 @@
     ]
   },
   "fields": {
-    "project": { "type": "select", "values_from_note_type": ["project"] }
+    "project": { "type": "select", "values_from_note_type": ["project"], "is_link": true },
+    "description": { "from_type": "default", "from_field": "description" },
+    "tags": { "from_type": "default", "from_field": "tags" }
   }
 }
