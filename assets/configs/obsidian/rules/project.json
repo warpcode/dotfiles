@@ -1,15 +1,14 @@
 {
   "type": "project",
   "folder": "Projects",
-  "validation": {
-    "require_all": ["title", "status"],
-    "require_any": [
-      ["area"]
-    ]
-  },
+  "prompts": [
+    { "mode": "one", "fields": ["area"], "label": "Parent" },
+    { "mode": "all", "fields": ["status"] },
+    { "mode": "optional", "fields": ["description", "tags"] }
+  ],
   "fields": {
     "area": { "type": "select", "values_from_note_type": ["area"], "is_link": true },
-    "status": { "from_type": "default", "from_field": "status" },
+    "status": { "type": "select", "values": ["discovery", "active", "on-hold", "shipped", "abandoned"] },
     "description": { "from_type": "default", "from_field": "description" },
     "tags": { "from_type": "default", "from_field": "tags" }
   }

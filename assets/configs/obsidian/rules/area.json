@@ -1,11 +1,13 @@
 {
   "type": "area",
   "folder": "Areas",
-  "validation": {
-    "require_all": ["title"]
-  },
+  "prompts": [
+    { "mode": "all", "fields": ["context", "status"] },
+    { "mode": "optional", "fields": ["description"] }
+  ],
   "fields": {
     "context": { "type": "select", "values": ["work", "personal"] },
+    "status": { "type": "select", "values": ["active", "archived"] },
     "description": { "from_type": "default", "from_field": "description" }
   }
 }
