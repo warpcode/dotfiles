@@ -73,7 +73,7 @@ _usage() {
 cmd_find_by_attr() {
   local attribute_name="${1:-}"
   shift
-  local -a search_values=($@)
+  local -a search_values=("$@")
 
   if [[ -z "$attribute_name" ]]; then
     err "Missing attribute name."
@@ -81,7 +81,7 @@ cmd_find_by_attr() {
   fi
   [[ ${#search_values} -eq 0 ]] && return 0
 
-  local -a candidate_files=(${(f)"$(grep -rlE "^${attribute_name}\s*:" "$OBSIDIAN_VAULT" --include="*.md" 2>/dev/null)"})
+  local -a candidate_files=(${(f)"$(grep -rlF "${attribute_name}:" "$OBSIDIAN_VAULT" --include="*.md" 2>/dev/null)"})
   candidate_files=(${candidate_files:#})
   [[ ${#candidate_files} -eq 0 ]] && return 0
 
@@ -94,7 +94,7 @@ cmd_find_by_attr() {
     [[ $i -lt ${#search_values} ]] && match_expr+=' or '
   done
 
-  "$SCRIPT_DIR/df.md" fm get-all "${candidate_files[@]}" | yq 'select(. != null)' | jq -r -s --arg attr "$ATTR" "
+  "$SCRIPT_DIR/df.md" fm get-all "${candidate_files[@]}" | jq 'select(. != null)' | jq -r -s --arg attr "$ATTR" "
     [ .[] | select(type == \"object\" and .[\$attr] != null) |
       { path: .path, val: (.[\$attr] | if type == \"array\" then .[] else . end | tostring | sub(\"^\\\\\\[\\\\\\[\"; \"\") | sub(\"\\\\\\]\\\\\\]$\"; \"\")) } |
       select(${match_expr})
@@ -133,12 +133,12 @@ cmd_values() {
     err "Missing attribute name."
     return 1
   fi
-  local -a candidate_files=(${(f)"$(grep -rlE "^${attribute_name}\s*:" "$OBSIDIAN_VAULT" --include="*.md" 2>/dev/null)"})
+  local -a candidate_files=(${(f)"$(grep -rlF "${attribute_name}:" "$OBSIDIAN_VAULT" --include="*.md" 2>/dev/null)"})
   candidate_files=(${candidate_files:#})
   [[ ${#candidate_files} -eq 0 ]] && return 0
 
   export ATTR="$attribute_name"
-  "$SCRIPT_DIR/df.md" fm get-all "${candidate_files[@]}" | yq 'select(. != null)' | jq -r -s --arg attr "$ATTR" '
+  "$SCRIPT_DIR/df.md" fm get-all "${candidate_files[@]}" | jq 'select(. != null)' | jq -r -s --arg attr "$ATTR" '
     [ .[] | select(type == "object" and .[$attr] != null) |
       (.[$attr] | if type == "array" then .[] else . end | tostring | sub("^\\[\\["; "") | sub("\\]\\]$"; ""))
     ] | unique | .[]
@@ -165,8 +165,8 @@ cmd_resolve() {
   fi
 
   local base_name="${input_path##*/}"
-  local filename_match=$(find "$OBSIDIAN_VAULT" -name "$base_name.md" | head -n 1)
-  [[ -n "$filename_match" ]] && { print -r -- "$filename_match"; return 0; }
+  local -a filename_match=($OBSIDIAN_VAULT/**/$base_name.md(N[1]))
+  [[ ${#filename_match} -gt 0 ]] && { print -r -- "${filename_match[1]}"; return 0; }
 
   cmd_find_by_attr "title" "$base_name" | head -n 1
 }
@@ -201,13 +201,13 @@ _resolve_rule() {
     (if .fields then
        reduce (.fields | to_entries[]) as $e (.;
          if $e.value.from_type == "default" then
-           .fields[$e.key] = $default_fields[$e.value.from_field]
+           .fields[$e.key] = $defaults[0].fields[$e.value.from_field]
          else
            .
          end
        )
      else . end)
-  ' --slurpfile defaults "$OBSIDIAN_RULES/default.json" --argjson default_fields "$(jq '.fields' "$OBSIDIAN_RULES/default.json")" "$rule_path"
+  ' --slurpfile defaults "$OBSIDIAN_RULES/default.json" "$rule_path"
 }
 
 # ---------------------------------------------------------------------------
@@ -326,9 +326,10 @@ cmd_new() {
   local note_title=$("$SCRIPT_DIR/df.tui" input "Title") || return 1
   [[ -z "$note_title" ]] && { err "Title is required."; return 1; }
 
-  local fields_json="{}"
-  fields_json=$(jq -c --arg title "$note_title" '.title = $title' <<< "$fields_json")
-  fields_json=$(jq -c --arg created "$(date "$OBSIDIAN_DATE_FORMAT")" '.created = $created' <<< "$fields_json")
+  local fields_json
+  fields_json=$(jq -n -c --arg title "$note_title" --arg created "$(date "$OBSIDIAN_DATE_FORMAT")" '
+    { title: $title, created: $created }
+  ')
 
   # Process require_any groups
   local any_group
@@ -365,7 +366,7 @@ cmd_new() {
     fi
   done
 
-  local slugified_title=$(print -r -- "${note_title}" | tr '[:upper:]' '[:lower:]' | sed -e 's/[^a-z0-9]/-/g' -e 's/-\+/-/g' -e 's/^-//' -e 's/-$//')
+  local slugified_title=$(print -r -- "${note_title:l}" | sed -e 's/[^a-z0-9]/-/g' -e 's/-\+/-/g' -e 's/^-//' -e 's/-$//')
 
   local target_folder_path="$OBSIDIAN_VAULT/$base_folder"
   mkdir -p "$target_folder_path"
@@ -375,12 +376,13 @@ cmd_new() {
 
   # Use gomplate via df.config hydrate pattern, but directly to keep it simple since we have JSON ready
   local tmp_json=$(mktemp)
-  print -r -- "$full_json" > "$tmp_json"
-
-  gomplate -c "config=file://${tmp_json}?type=application/json" -f "$OBSIDIAN_TEMPLATE" > "$final_note_path"
-
-  rm -f "$tmp_json"
-  print -r -- "Created: $final_note_path"
+  {
+    print -r -- "$full_json" > "$tmp_json"
+    gomplate -c "config=file://${tmp_json}?type=application/json" -f "$OBSIDIAN_TEMPLATE" > "$final_note_path"
+    print -r -- "Created: $final_note_path"
+  } always {
+    rm -f "$tmp_json"
+  }
 }
 
 # ---------------------------------------------------------------------------
