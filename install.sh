@@ -243,15 +243,15 @@ install "openssh" apt=openssh-client dnf=openssh-clients pacman=openssh
 install "tmux" apt=tmux dnf=tmux pacman=tmux brew=tmux snap=tmux termux=tmux
 install "screen" apt=screen dnf=screen pacman=screen brew=screen
 install "rsync" apt=rsync dnf=rsync pacman=rsync brew=rsync
-install "jq" apt=jq dnf=jq pacman=jq brew=jq termux=jq
+install "jq" mise=jq
 install "yq" mise=yq
-install "fzf" apt=fzf dnf=fzf pacman=fzf brew=fzf termux=fzf
-install "bat" apt=bat dnf=bat pacman=bat brew=bat termux=bat
+install "fzf" mise=fzf
+install "bat" mise=bat
 install "gomplate" mise=gomplate
 
 # --- Development & VCS Tools ---
 install "gh" mise=gh
-install "lazygit" mise=lazygit@latest
+install "lazygit" mise=lazygit
 install "neovim" mise=neovim@0.11.6
 install "uv" mise=uv
 
