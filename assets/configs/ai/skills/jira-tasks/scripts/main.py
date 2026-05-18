@@ -11,9 +11,6 @@ import argparse
 import os
 import sys
 
-# Add the parent directory to sys.path to find the jira package
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from jira.utils import die
 from jira.auth import resolve_secret
 from jira.client import JiraClient
@@ -103,7 +100,7 @@ def main():
         url = f"https://{url}"
 
     client = JiraClient(url, user, token, verbose=args.verbose)
-    
+
     # Add project to args if needed for project-specific subcommands
     if hasattr(args, 'project') and not args.project:
         args.project = project
