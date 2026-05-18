@@ -1,0 +1,474 @@
+#!/bin/zsh
+#
+# df.obsidian - Obsidian CLI integration.
+# Replaces src/zsh/apps/obsidian.zsh
+
+emulate -LR zsh
+setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL EXTENDED_GLOB
+
+0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
+typeset -r SCRIPT_DIR="${0:A:h}"
+typeset -r DOTFILES="${DOTFILES:-${SCRIPT_DIR:h}}"
+
+if [[ -z "${OBSIDIAN_VAULT:-}" ]]; then
+  if [[ -d "$DOTFILES/docs" ]]; then
+    export OBSIDIAN_VAULT="$DOTFILES/docs"
+  else
+    export OBSIDIAN_VAULT="$HOME/Documents/Obsidian"
+  fi
+fi
+typeset -r OBSIDIAN_RULES="${DOTFILES}/assets/configs/obsidian/rules"
+typeset -r OBSIDIAN_TEMPLATE="${DOTFILES}/assets/templates/obsidian/note.md.tmpl"
+typeset -r OBSIDIAN_DATE_FORMAT="+%Y-%m-%dT%H:%M:%S%z"
+
+#######################################
+# Description: Print error message to stderr.
+# Arguments:
+#   $* Error message to print.
+# Outputs:
+#   Writes error string to stderr.
+# Returns:
+#   None
+#######################################
+err() {
+  print -r -- "df.obsidian: $*" >&2
+}
+
+#######################################
+# Description: Print usage information.
+# Arguments:
+#   None
+# Outputs:
+#   Writes usage string to stdout.
+# Returns:
+#   None
+#######################################
+_usage() {
+  print -r -- "Usage: df.obsidian <command>"
+  print -r -- ""
+  print -r -- "Commands:"
+  print -r -- "  new           Create a new note interactively"
+  print -r -- "  validate      Validate a note against its schema"
+  print -r -- "  find-by-attr  Find notes by attribute values"
+  print -r -- "  list-types    List all note filenames of specific types"
+  print -r -- "  values        Collect unique values for an attribute"
+  print -r -- "  resolve       Resolve a note path by filename or title"
+}
+
+# ---------------------------------------------------------------------------
+# Queries
+# ---------------------------------------------------------------------------
+
+#######################################
+# Description: Find notes where an attribute matches any provided values.
+# Arguments:
+#   $1 Attribute name to search for.
+#   $@ Search values to match against.
+# Outputs:
+#   Writes list of file paths to stdout.
+# Returns:
+#   0 on success.
+#   1 on failure.
+#######################################
+cmd_find_by_attr() {
+  local attribute_name="${1:-}"
+  shift
+  local -a search_values=("$@")
+
+  if [[ -z "$attribute_name" ]]; then
+    err "Missing attribute name."
+    return 1
+  fi
+  [[ ${#search_values} -eq 0 ]] && return 0
+
+  local -a candidate_files=(${(f)"$(grep -rlF "${attribute_name}:" "$OBSIDIAN_VAULT" --include="*.md" 2>/dev/null)"})
+  candidate_files=(${candidate_files:#})
+  [[ ${#candidate_files} -eq 0 ]] && return 0
+
+  export ATTR="$attribute_name"
+  local match_expr=""
+  local i
+  for i in {1..${#search_values}}; do
+    export "MATCH_VAL_${i}=${search_values[$i]}"
+    match_expr+=".val == env.MATCH_VAL_${i}"
+    [[ $i -lt ${#search_values} ]] && match_expr+=' or '
+  done
+
+  "$SCRIPT_DIR/df.md" fm get-all "${candidate_files[@]}" | jq 'select(. != null)' | jq -r -s --arg attr "$ATTR" "
+    [ .[] | select(type == \"object\" and .[\$attr] != null) |
+      { path: .path, val: (.[\$attr] | if type == \"array\" then .[] else . end | tostring | sub(\"^\\\\\\[\\\\\\[\"; \"\") | sub(\"\\\\\\]\\\\\\]$\"; \"\")) } |
+      select(${match_expr})
+    ] | map(.path) | unique | .[]
+  " 2>/dev/null | sort -u
+}
+
+#######################################
+# Description: List all note filenames of specific types.
+# Arguments:
+#   $@ Note types to list.
+# Outputs:
+#   Writes list of base filenames to stdout.
+# Returns:
+#   0 on success.
+#######################################
+cmd_list_types() {
+  local -a paths=(${(f)"$(cmd_find_by_attr "type" "$@")"})
+  [[ ${#paths} -eq 0 ]] && return 0
+  printf "%s\n" "${paths[@]}" | xargs -n1 basename -s .md -- | sort -u
+}
+
+#######################################
+# Description: Collect unique values for a frontmatter attribute.
+# Arguments:
+#   $1 Attribute name.
+# Outputs:
+#   Writes unique values to stdout.
+# Returns:
+#   0 on success.
+#   1 on failure.
+#######################################
+cmd_values() {
+  local attribute_name="${1:-}"
+  if [[ -z "$attribute_name" ]]; then
+    err "Missing attribute name."
+    return 1
+  fi
+  local -a candidate_files=(${(f)"$(grep -rlF "${attribute_name}:" "$OBSIDIAN_VAULT" --include="*.md" 2>/dev/null)"})
+  candidate_files=(${candidate_files:#})
+  [[ ${#candidate_files} -eq 0 ]] && return 0
+
+  export ATTR="$attribute_name"
+  "$SCRIPT_DIR/df.md" fm get-all "${candidate_files[@]}" | jq 'select(. != null)' | jq -r -s --arg attr "$ATTR" '
+    [ .[] | select(type == "object" and .[$attr] != null) |
+      (.[$attr] | if type == "array" then .[] else . end | tostring | sub("^\\[\\["; "") | sub("\\]\\]$"; ""))
+    ] | unique | .[]
+  ' 2>/dev/null | sort -u
+}
+
+#######################################
+# Description: Resolve a note path by filename or title.
+# Arguments:
+#   $1 Input path, filename, or title.
+# Outputs:
+#   Writes the absolute resolved path to stdout.
+# Returns:
+#   0 on success.
+#   1 on failure.
+#######################################
+cmd_resolve() {
+  local input_path="${1:-}"
+  [[ -z "$input_path" ]] && return 1
+
+  if [[ "$input_path" == */* ]]; then
+    local absolute_path="$OBSIDIAN_VAULT/$input_path.md"
+    [[ -f "$absolute_path" ]] && { print -r -- "$absolute_path"; return 0; }
+  fi
+
+  local base_name="${input_path##*/}"
+  local -a filename_match=($OBSIDIAN_VAULT/**/$base_name.md(N[1]))
+  [[ ${#filename_match} -gt 0 ]] && { print -r -- "${filename_match[1]}"; return 0; }
+
+  cmd_find_by_attr "title" "$base_name" | head -n 1
+}
+
+# ---------------------------------------------------------------------------
+# Core Rule Resolution
+# ---------------------------------------------------------------------------
+
+#######################################
+# Description: Fetch and resolve a JSON rule by note type, merging with default rules.
+# Arguments:
+#   $1 Note type (e.g., 'task').
+# Outputs:
+#   Writes resolved JSON object to stdout.
+# Returns:
+#   0 on success.
+#   1 on failure.
+#######################################
+_resolve_rule() {
+  local note_type="${1:-}"
+  [[ -z "$note_type" ]] && return 1
+
+  local rule_path="$OBSIDIAN_RULES/${note_type}.json"
+  if [[ ! -f "$rule_path" ]]; then
+    err "Rule not found for type: $note_type"
+    return 1
+  fi
+
+  # Merge with default if there are from_type references
+  jq -c '
+    . as $rule |
+    (if .fields then
+       reduce (.fields | to_entries[]) as $e (.;
+         if $e.value.from_type == "default" then
+           .fields[$e.key] = $defaults[0].fields[$e.value.from_field]
+         else
+           .
+         end
+       )
+     else . end)
+  ' --slurpfile defaults "$OBSIDIAN_RULES/default.json" "$rule_path"
+}
+
+# ---------------------------------------------------------------------------
+# Interactive Creation
+# ---------------------------------------------------------------------------
+
+#######################################
+# Description: Prompt for a field interactively using df.tui based on rules.
+# Arguments:
+#   $1 Field name.
+#   $2 Field configuration JSON.
+#   $3 Is optional boolean ('true' or 'false').
+# Outputs:
+#   Writes the final field value as a JSON fragment.
+# Returns:
+#   0 on success.
+#   1 on cancellation or failure.
+#######################################
+_prompt_field() {
+  local field_name="${1:-}"
+  local field_cfg="${2:-}"
+  local is_optional="${3:-false}"
+
+  local field_type=$(jq -r '.type // "text"' <<< "$field_cfg")
+  local -a flags=()
+  [[ "$is_optional" == "true" ]] && flags+=("-o")
+
+  case "$field_type" in
+    select|multi-select)
+      [[ "$field_type" == "multi-select" ]] && flags+=("-m")
+      [[ "$(jq -r '.values_allow_custom // "false"' <<< "$field_cfg")" == "true" ]] && flags+=("-c")
+
+      local -a selection_values=()
+
+      selection_values+=(${(f)"$(jq -r '.values[]?' <<< "$field_cfg" 2>/dev/null)"})
+
+      local -a from_attrs=(${(f)"$(jq -r '.values_from_attr[]?' <<< "$field_cfg" 2>/dev/null)"})
+      for attr in "${from_attrs[@]}"; do
+        selection_values+=(${(f)"$(cmd_values "$attr")"})
+      done
+
+      local -a from_note_types=(${(f)"$(jq -r '.values_from_note_type[]?' <<< "$field_cfg" 2>/dev/null)"})
+      if [[ ${#from_note_types} -gt 0 ]]; then
+        selection_values+=(${(f)"$(cmd_list_types "${from_note_types[@]}")"})
+      fi
+
+      selection_values=(${(u)selection_values#null})
+      selection_values=(${selection_values:#})
+
+      local -a picked=(${(f)"$("$SCRIPT_DIR/df.tui" select "${flags[@]}" "$field_name" "${selection_values[@]}")"}) || return 1
+      [[ ${#picked} -eq 0 ]] && return 0
+
+      local is_link=$(jq -r '.is_link // "false"' <<< "$field_cfg")
+      if [[ "$is_link" == "true" ]]; then
+        local -a processed_links=()
+        for p in "${picked[@]}"; do processed_links+=("[[$p]]"); done
+        if [[ "$field_type" == "multi-select" ]]; then
+          printf "%s\n" "${processed_links[@]}" | jq -R '.' | jq -s -c '.'
+        else
+          jq -n -c --arg v "${processed_links[1]}" '$v'
+        fi
+      else
+        if [[ "$field_type" == "multi-select" ]]; then
+          printf "%s\n" "${picked[@]}" | jq -R '.' | jq -s -c '.'
+        else
+          jq -n -c --arg v "${picked[1]}" '$v'
+        fi
+      fi
+      ;;
+    *)
+      local default_value=""
+      [[ "$field_type" == "date" ]] && default_value=$(date "$OBSIDIAN_DATE_FORMAT")
+      [[ -n "$default_value" ]] && flags+=("-d" "$default_value")
+
+      local user_input=$("$SCRIPT_DIR/df.tui" input "${flags[@]}" "$field_name") || return 1
+      [[ -z "$user_input" ]] && return 0
+
+      jq -n -c --arg v "$user_input" '$v'
+      ;;
+  esac
+}
+
+#######################################
+# Description: Core workflow to create a new note interactively.
+# Arguments:
+#   None
+# Outputs:
+#   Writes the created file path to stdout.
+# Returns:
+#   0 on success.
+#   1 on failure.
+#######################################
+cmd_new() {
+  if [[ ! -d "$OBSIDIAN_RULES" ]]; then
+    err "Notes rules directory not found at '$OBSIDIAN_RULES'."
+    return 1
+  fi
+
+  local -a available_note_types=($OBSIDIAN_RULES/*.json(N:t:r))
+  # Remove 'default' from available types for creation
+  available_note_types=(${available_note_types:#default})
+  if [[ ${#available_note_types} -eq 0 ]]; then
+    err "No note type rules found in '$OBSIDIAN_RULES'."
+    return 1
+  fi
+
+  local chosen_note_type=$("$SCRIPT_DIR/df.tui" select "Type" "${available_note_types[@]}") || return 1
+
+  local rule_json=$(_resolve_rule "$chosen_note_type")
+  local note_type_identifier=$(jq -r '.type' <<< "$rule_json")
+  local base_folder=$(jq -r '.folder // ""' <<< "$rule_json")
+
+  local -a require_all=(${(f)"$(jq -r '.validation.require_all[]?' <<< "$rule_json" 2>/dev/null)"})
+  local -a require_any=(${(f)"$(jq -r '.validation.require_any[]? | join(" ")' <<< "$rule_json" 2>/dev/null)"})
+
+  local note_title=$("$SCRIPT_DIR/df.tui" input "Title") || return 1
+  [[ -z "$note_title" ]] && { err "Title is required."; return 1; }
+
+  local fields_json
+  fields_json=$(jq -n -c --arg title "$note_title" --arg created "$(date "$OBSIDIAN_DATE_FORMAT")" '
+    { title: $title, created: $created }
+  ')
+
+  # Process require_any groups
+  local any_group
+  local pt
+  for any_group in "${require_any[@]}"; do
+    local -a opts=(${=any_group})
+    pt=$("$SCRIPT_DIR/df.tui" select "Select Parent (${opts[*]})" "${opts[@]}") || return 1
+    require_all+=("$pt")
+  done
+
+  # Collect all possible fields configured
+  local -a configured_fields=(${(f)"$(jq -r '.fields | keys[]?' <<< "$rule_json" 2>/dev/null)"})
+
+  local field
+  local field_cfg
+  local field_output
+  for field in "${require_all[@]}"; do
+    [[ "$field" == "title" ]] && continue
+    field_cfg=$(jq -c ".fields[\"$field\"]" <<< "$rule_json")
+    [[ "$field_cfg" == "null" ]] && field_cfg="{}"
+    field_output=$(_prompt_field "$field" "$field_cfg" "false") || return 1
+    if [[ -n "$field_output" ]]; then
+      fields_json=$(jq -c --argjson v "$field_output" ".[\"$field\"] = \$v" <<< "$fields_json")
+    fi
+  done
+
+  for field in "${configured_fields[@]}"; do
+    # Skip if already required or processed
+    if (( ${require_all[(I)$field]} )); then continue; fi
+    field_cfg=$(jq -c ".fields[\"$field\"]" <<< "$rule_json")
+    field_output=$(_prompt_field "$field" "$field_cfg" "true") || return 1
+    if [[ -n "$field_output" ]]; then
+      fields_json=$(jq -c --argjson v "$field_output" ".[\"$field\"] = \$v" <<< "$fields_json")
+    fi
+  done
+
+  local slugified_title=$(print -r -- "${note_title:l}" | sed -e 's/[^a-z0-9]/-/g' -e 's/-\+/-/g' -e 's/^-//' -e 's/-$//')
+
+  local target_folder_path="$OBSIDIAN_VAULT/$base_folder"
+  mkdir -p "$target_folder_path"
+  local final_note_path="$target_folder_path/${slugified_title}.md"
+
+  local full_json=$(jq -n -c --arg type "$note_type_identifier" --argjson fields "$fields_json" '{config: {type: $type, fields: $fields}}')
+
+  # Use gomplate via df.config hydrate pattern, but directly to keep it simple since we have JSON ready
+  local tmp_json=$(mktemp)
+  {
+    print -r -- "$full_json" > "$tmp_json"
+    gomplate -c "config=file://${tmp_json}?type=application/json" -f "$OBSIDIAN_TEMPLATE" > "$final_note_path"
+    print -r -- "Created: $final_note_path"
+  } always {
+    rm -f "$tmp_json"
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------------
+
+#######################################
+# Description: Validate a note against its configured schema rules.
+# Arguments:
+#   $1 Path to the markdown note file.
+# Outputs:
+#   Writes validation results to stdout/stderr.
+# Returns:
+#   0 on success.
+#   1 on validation failure or error.
+#######################################
+cmd_validate() {
+  local file="${1:-}"
+  [[ -n "$file" ]] || { err "Missing file argument."; return 1 }
+  [[ -f "$file" ]] || { err "File '$file' not found."; return 1 }
+
+  "$SCRIPT_DIR/df.md" fm validate "$file" || return 1
+  local fm_json=$("$SCRIPT_DIR/df.md" fm get "$file" | yq 'select(. != null)')
+
+  local note_type=$(jq -r '.type // empty' <<< "$fm_json")
+  [[ -z "$note_type" ]] && { err "No 'type' found in frontmatter of $file"; return 1; }
+
+  local rule_json=$(_resolve_rule "$note_type") || return 1
+
+  # Check required fields
+  local -a require_all=(${(f)"$(jq -r '.validation.require_all[]?' <<< "$rule_json" 2>/dev/null)"})
+  local req
+  for req in "${require_all[@]}"; do
+    local exists=$(jq -r "has(\"$req\")" <<< "$fm_json")
+    if [[ "$exists" != "true" ]]; then
+      err "Validation failed: '$req' is required but missing in $file"
+      return 1
+    fi
+  done
+
+  # Check require_any groups
+  local -a require_any=(${(f)"$(jq -r '.validation.require_any[]? | join(" ")' <<< "$rule_json" 2>/dev/null)"})
+  local any_group
+  local opt
+  for any_group in "${require_any[@]}"; do
+    local -a opts=(${=any_group})
+    local found=0
+    for opt in "${opts[@]}"; do
+      if [[ "$(jq -r "has(\"$opt\")" <<< "$fm_json")" == "true" ]]; then
+        found=1
+        break
+      fi
+    done
+    if [[ $found -eq 0 ]]; then
+      err "Validation failed: Must have at least one of (${opts[*]}) in $file"
+      return 1
+    fi
+  done
+
+  # (Integrity checks for constraints and matching folder could be added here later)
+
+  print -r -- "Validation passed for $file"
+  return 0
+}
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+main() {
+  local cmd="${1:-}"
+
+  case "${cmd}" in
+    new)          shift; cmd_new "$@" ;;
+    validate)     shift; cmd_validate "$@" ;;
+    find-by-attr) shift; cmd_find_by_attr "$@" ;;
+    list-types)   shift; cmd_list_types "$@" ;;
+    values)       shift; cmd_values "$@" ;;
+    resolve)      shift; cmd_resolve "$@" ;;
+    -h|--help)    _usage ;;
+    *)
+      err "Unknown command: ${cmd:-<none>}"
+      _usage >&2
+      return 1
+      ;;
+  esac
+}
+
+main "$@"

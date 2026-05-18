@@ -1,0 +1,12 @@
+{
+  "type": "default",
+  "fields": {
+    "title": { "type": "text" },
+    "created": { "type": "date", "format": "YYYY-MM-DDTHH:mm:ssZ" },
+    "assignee": { "type": "select", "values_from_attr": ["assignee", "owner"], "is_link": true },
+    "tags": { "type": "multi-select", "values_allow_custom": true },
+    "status": { "type": "select", "values": ["todo", "in_progress", "done"] },
+    "description": { "type": "text" },
+    "notes": { "type": "text" }
+  }
+}
