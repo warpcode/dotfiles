@@ -1,6 +1,6 @@
 pkg.recipe.define fzf \
     package="fzf" \
-    managers="apt dnf pacman brew"
+    managers="mise"
 
 pkg.recipe.fzf.init() {
     (( $+commands[fzf] )) || return 0
