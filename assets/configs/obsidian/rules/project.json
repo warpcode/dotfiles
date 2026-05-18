@@ -9,6 +9,7 @@
   },
   "fields": {
     "area": { "type": "select", "values_from_note_type": ["area"], "is_link": true },
+    "status": { "from_type": "default", "from_field": "status" },
     "description": { "from_type": "default", "from_field": "description" },
     "tags": { "from_type": "default", "from_field": "tags" }
   }
