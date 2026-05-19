@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+SOURCE=""
+
+for i in "$@"
+do
+    case $i in
+        *)
+            SOURCE=$1
+            shift
+            break
+        ;;
+    esac
+done
+
+if [[ -z "$SOURCE" ]] || [[ ! -r "$SOURCE" ]]; then
+    exit 1;
+fi
+
+ENTRIES="index,codec_type:stream_disposition=default,forced:stream_tags=language"
+AUDIO_STREAMS=$(ffprobe -v error \
+    -show_entries stream=$ENTRIES \
+    -select_streams a \
+    -of compact=p=0 \
+    "$SOURCE" \
+    | grep -i 'default=1\|forced=1\|language=eng\|language=und' \
+)
+SUBTITLE_STREAMS=$(ffprobe -v error \
+    -show_entries stream=$ENTRIES \
+    -select_streams s \
+    -of compact=p=0 \
+    "$SOURCE" \
+    | grep -i 'language=eng\|language=und' \
+)
+
+declare -a STREAMS_ARRAY=("$AUDIO_STREAMS" "$SUBTITLE_STREAMS")
+
+for stream in "${STREAMS_ARRAY[@]}"
+do
+    [[ -n "$stream" ]] && echo "$stream"
+done
