@@ -29,9 +29,6 @@ _zsh.init() {
             source "$f"
         done
     done
-
-    # Run per-recipe init hooks on shell load
-    pkg.recipe.init_all
 }
 
 # Reload the Zsh configuration
