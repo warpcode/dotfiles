@@ -8,17 +8,11 @@ set -euo pipefail
 # Constants
 # ---------------------------------------------------------------------------
 
-if [[ -z "${DOTFILES_INSTALL_DIR:-}" ]]; then
-  if [[ -n "${DOTFILES:-}" && -d "${DOTFILES}" ]]; then
-    readonly DOTFILES_INSTALL_DIR="${DOTFILES}"
-  elif [[ -d "${HOME}/src/dotfiles" ]]; then
-    readonly DOTFILES_INSTALL_DIR="${HOME}/src/dotfiles"
-  else
-    readonly DOTFILES_INSTALL_DIR="${HOME}/.dotfiles"
-  fi
-else
-  readonly DOTFILES_INSTALL_DIR="${DOTFILES_INSTALL_DIR}"
+DOTFILES_INSTALL_DIR="${DOTFILES_INSTALL_DIR:-${DOTFILES:-}}"
+if [[ -z "${DOTFILES_INSTALL_DIR}" || ! -d "${DOTFILES_INSTALL_DIR}" ]]; then
+  DOTFILES_INSTALL_DIR="${HOME}/.dotfiles"
 fi
+readonly DOTFILES_INSTALL_DIR
 
 readonly DOTFILES_SILENT="${DOTFILES_SILENT:-0}"
 readonly DOTFILES_SKIP_CHSHELL="${DOTFILES_SKIP_CHSHELL:-0}"
@@ -313,31 +307,41 @@ set_zsh_default() {
 
 #######################################
 # Prompts the user to select a dotfiles profile.
-# Uses df.tui if available; auto-selects in CI.
+# Pure bash — no external dependencies.
 # Globals:
-#   DOTFILES_INSTALL_DIR, CI
+#   DOTFILES_PROFILE_FILE, CI
 #######################################
 select_profile() {
-  local detected_profile
-  detected_profile="$("${DOTFILES_INSTALL_DIR}/bin/df.fs" profile name)"
+  local profile_file="${HOME}/.dotfiles_profile"
+  local detected_profile="default"
+  [[ -n "${DOTFILES_PROFILE:-}" ]] && detected_profile="${DOTFILES_PROFILE}"
+  [[ -z "${DOTFILES_PROFILE:-}" && -f "${profile_file}" ]] && detected_profile="$(<"${profile_file}")"
 
-  local available_profiles=("default" "work" "phone")
-  local user_profile=""
+  local -a profiles=("default" "work" "phone")
+  local selection=""
 
   if [[ -n "${CI:-}" ]]; then
-    user_profile="${detected_profile}"
-    echo "Running in CI. Automatically selecting profile: ${user_profile}"
+    selection="${detected_profile}"
+    echo "Running in CI. Automatically selecting profile: ${selection}"
   else
-    user_profile="$("${DOTFILES_INSTALL_DIR}/bin/df.tui" select \
-      -p "Select a profile" -d "${detected_profile}" "${available_profiles[@]}")"
+    local i n=${#profiles[@]} choice
+    echo ""; echo "Available profiles:"
+    for i in "${!profiles[@]}"; do
+      local cur=""; [[ "${profiles[$i]}" == "${detected_profile}" ]] && cur=" (current)"
+      echo "  $((i + 1))) ${profiles[$i]}${cur}"
+    done
+    while true; do
+      read -r -p "Select profile [1-${n}] (default: ${detected_profile}): " choice </dev/tty
+      [[ -z "${choice}" ]] && { selection="${detected_profile}"; break; }
+      [[ "${choice}" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= n )) && { selection="${profiles[$((choice - 1))]}"; break; }
+      echo "Invalid. Enter 1-${n}."
+    done
   fi
 
-  if [[ -z "${user_profile}" ]]; then
-    err "Installation aborted. No profile selected."
-    exit 1
-  fi
-
-  "${DOTFILES_INSTALL_DIR}/bin/df.fs" profile set "${user_profile}"
+  [[ -z "${selection}" ]] && { err "No profile selected."; exit 1; }
+  echo "${selection}" > "${HOME}/.dotfiles_profile"
+  export DOTFILES_PROFILE="${selection}"
+  echo "Profile set to: ${selection}"
 }
 
 # ---------------------------------------------------------------------------
@@ -367,6 +371,15 @@ main() {
     esac
   done
 
+  # 1. Select profile
+  if [[ -n "${dotfiles_profile}" ]]; then
+    echo "${dotfiles_profile}" > "${HOME}/.dotfiles_profile"
+    export DOTFILES_PROFILE="${dotfiles_profile}"
+    echo "Profile set via argument to: ${dotfiles_profile}"
+  else
+    select_profile
+  fi
+
   # Make OS_NAME a global readonly variable for use in helper functions
   local os_val
   os_val="$(detect_os)"
@@ -386,24 +399,27 @@ main() {
   install_pkg "zsh" apt=zsh dnf=zsh pacman=zsh brew=zsh termux=zsh
   install_pkg "curl" apt=curl dnf=curl pacman=curl brew=curl termux=curl
   install_pkg "dialog" apt=dialog dnf=dialog pacman=dialog brew=dialog termux=dialog
+  # Refresh command hash after installations
+  hash -r 2>/dev/null || true
 
   # 2. Set Zsh as default shell
   local zsh_path
-  zsh_path="$(command -v zsh)" || true
+  zsh_path="$(command -v zsh 2>/dev/null)" || zsh_path=""
+  if [[ -z "${zsh_path}" ]]; then
+    local p
+    for p in /usr/bin/zsh /bin/zsh /usr/local/bin/zsh; do
+      if [[ -x "${p}" ]]; then
+        zsh_path="${p}"
+        break
+      fi
+    done
+  fi
   if [[ -n "${zsh_path}" ]]; then
     set_zsh_default "${zsh_path}"
   fi
 
   # 3. Clone repository
   ensure_dotfiles "${DOTFILES_REPO_URL}"
-
-  # 4. Select profile (before remaining installs so they can be profile-aware)
-  if [[ -n "${dotfiles_profile}" ]]; then
-    echo "${dotfiles_profile}" > "${HOME}/.dotfiles_profile"
-    echo "Profile set via argument to: ${dotfiles_profile}"
-  else
-    select_profile
-  fi
 
   # 5. Set up installation directory
   export DOTFILES="${DOTFILES_INSTALL_DIR}"
