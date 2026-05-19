@@ -16,28 +16,63 @@ pkg.recipe.opencode.configure() {
         [[ -d "$config_dir" ]] || mkdir -p "$config_dir"
         local target="${config_dir}/opencode.json"
         tui.step "Updating $target"
-
-        local providers selected_model='' pid
-        providers="$(ai.models.free)"
-
-        local sorted_pids pid_priority
-        sorted_pids=$(for pid in $(echo "$providers" | jq -r 'keys[]'); do
-            pid_priority="$(registry.get ai_provider "$pid" priority)"
-            echo "${pid_priority:-999} $pid"
-        done | sort -n | awk '{print $2}')
-
-        for pid in ${(f)sorted_pids}; do
-            local model
-            model="$(jq -r --arg p "$pid" '.[$p].models | keys_unsorted[0] // empty' <<<"$providers")"
-            [[ -n "$model" ]] && { selected_model="$pid/$model"; break; }
-        done
-
-        config.hydrate "ai/opencode.json.tmpl" \
-            --config-json "$(jq -n --argjson p "${providers:-"{}"}" --arg sm "$selected_model" '{providers: $p, selected_model: $sm}')" \
-            --output "$target"
+        pkg.recipe.opencode.configure.base "$target"
+        pkg.recipe.opencode.configure.providers "$target"
+        pkg.recipe.opencode.configure.mcps "$target"
 
         tui.success "Configuration complete"
     } always {
         tui.indent.pop
     }
+}
+
+
+pkg.recipe.opencode.configure.base() {
+    local config_dir="${XDG_CONFIG_HOME}/opencode"
+    local target="${1:-${config_dir}/opencode.json}"
+    [[ -f "$target" ]] && return 0
+    mkdir -p "${target:h}"
+    jq -n '{
+        "$schema": "https://opencode.ai/config.json",
+        permission: {external_directory: "allow", skill: "allow"},
+        instructions: ["CRUSH.md","GEMINI.md","docs/guidelines.md",".cursor/rules/*.md","AI.md",".github/copilot-instructions.md"],
+        mcp: {},
+        model: "{env:OPENCODE_MODEL}",
+        plugin: ["oh-my-openagent@latest"],
+        provider: {}
+    }' > "$target"
+}
+
+pkg.recipe.opencode.configure.providers() {
+    local config_dir="${XDG_CONFIG_HOME}/opencode"
+    local target="${1:-${config_dir}/opencode.json}"
+    local providers selected_model='' pid
+
+    providers="$(ai.models.free)"
+
+    local sorted_pids pid_priority
+    sorted_pids=$(for pid in $(echo "$providers" | jq -r 'keys[]'); do
+        pid_priority="$(registry.get ai_provider "$pid" priority)"
+        echo "${pid_priority:-999} $pid"
+    done | sort -n | awk '{print $2}')
+
+    for pid in ${(f)sorted_pids}; do
+        local model
+        model="$(jq -r --arg p "$pid" '.[$p].models | keys_unsorted[0] // empty' <<<"$providers")"
+        [[ -n "$model" ]] && { selected_model="$pid/$model"; break; }
+    done
+
+    local tmp
+    tmp="$(jq \
+        --argjson providers "$providers" \
+        --arg model "$selected_model" '
+        .provider = $providers | (if $model != "" then .model = $model else . end)
+    ' "$target")" && printf '%s\n' "$tmp" > "$target"
+}
+
+pkg.recipe.opencode.configure.mcps() {
+    local config_dir="${XDG_CONFIG_HOME}/opencode"
+    local target="${1:-${config_dir}/opencode.json}"
+    local tmp
+    tmp="$(jq --argjson mcps "$(ai.mcps)" '.mcp = $mcps' "$target")" && printf '%s\n' "$tmp" > "$target"
 }

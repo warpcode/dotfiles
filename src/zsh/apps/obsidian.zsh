@@ -55,7 +55,7 @@ obsidian.find.byAttribute() {
     [[ $i -lt ${#search_values} ]] && match_expr+=' or '
   done
 
-  df.md fm get-all "${candidate_files[@]}" | yq -r -N "
+  markdown.frontmatter.get.all "${candidate_files[@]}" | yq -r -N "
     select(
       [ .[strenv(ATTR)] ] | flatten | .[] | select(. != null) |
       ((select(tag == \"!!str\") | sub(\"^\\\\\\\[\\\\\\\[\", \"\") | sub(\"\\\\\\\]\\\\\\\]$\", \"\")) // .) |
@@ -79,7 +79,7 @@ obsidian.attribute.values() {
   [[ ${#candidate_files} -eq 0 ]] && return 0
 
   export ATTR="$attribute_name"
-  df.md fm get-all "${candidate_files[@]}" | yq -r -N '
+  markdown.frontmatter.get.all "${candidate_files[@]}" | yq -r -N '
     [ .[strenv(ATTR)] ] | flatten | .[] | select(. != null) |
     (select(tag == "!!str") | sub("^\\\[\\\[", "") | sub("\\\]\\\]$", "")) // .
   ' 2>/dev/null | sort -u
@@ -115,7 +115,7 @@ obsidian.rules.field() {
   
   # Load rule and determine UI type
   local rule_file=$(obsidian.rules.note "$note_type" "$field_name")
-  local rule_fm=$(df.md fm get "$rule_file" 2>/dev/null)
+  local rule_fm=$(markdown.frontmatter.get "$rule_file" 2>/dev/null)
   local field_type=$(echo "$rule_fm" | yq -r '.type // "text"')
   
   [[ "$is_optional" == "true" ]] && flags+=("-o")
@@ -205,7 +205,7 @@ obsidian.note.new() {
   local chosen_note_type=$(tui.select "Type" "${available_note_types[@]}") || return 1
   
   # 2. Extract configuration from the chosen rule file
-  local rule_fm=$(df.md fm get "$(obsidian.rules.note "$chosen_note_type")")
+  local rule_fm=$(markdown.frontmatter.get "$(obsidian.rules.note "$chosen_note_type")")
   local note_type_identifier=$(echo "$rule_fm" | yq -r '.for')
   
   local -a required_fields=(${(f)"$(echo "$rule_fm" | yq -r '.required_fields[]' 2>/dev/null)"})

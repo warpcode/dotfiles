@@ -129,7 +129,7 @@ ai.models() {
     rm -rf "$tmp_dir"
 
     if [[ -n "$output" && "$output" != "null" ]]; then
-        echo "$output" | jq -c -M .
+        echo "$output" | jq -M .
     else
         echo "{}"
     fi
@@ -185,7 +185,7 @@ ai.models.free() {
     rm -rf "$tmp_dir"
 
     if [[ -n "$output" && "$output" != "null" ]]; then
-        echo "$output" | jq -c -M .
+        echo "$output" | jq -M .
     else
         echo "{}"
     fi
