@@ -5,6 +5,9 @@ export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 export MANPAGER="${MANPAGER:-less -X}"
 
 
+# Secret resolution
+export DF_SECRET_GET_CMD="${DF_SECRET_GET_CMD:-df.secrets get }"
+
 # Setup default editor
 if [[ -z "$EDITOR" ]]; then
     if (( $+commands[nvim] )); then
