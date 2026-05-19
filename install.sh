@@ -453,7 +453,11 @@ main() {
 
   # --- Package Managers & Core Integrations ---
   install_pkg "flatpak" apt=flatpak dnf=flatpak pacman=flatpak
+  if command -v flatpak >/dev/null 2>&1; then
+    flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+  fi
   install_pkg "mise" apt=mise dnf=mise pacman=mise brew=mise
+  export PATH="${HOME}/.local/share/mise/shims:${PATH}"
   install_pkg "docker" brew=docker apt="docker-ce docker-compose-plugin" brew_cask=docker-desktop
 
   # --- Runtimes ---
