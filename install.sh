@@ -134,6 +134,7 @@ install_pkg() {
 setup_debian() {
   echo "🐧 Setting up Debian/Ubuntu..."
   ${SUDO} apt update -qq
+  ${SUDO} apt install -y -qq curl ca-certificates gnupg
 
   local arch
   arch="$(dpkg --print-architecture)"
