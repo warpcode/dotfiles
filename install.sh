@@ -334,8 +334,11 @@ main() {
   install_pkg "git" apt=git dnf=git pacman=git brew=git termux=git
   install_pkg "zsh" apt=zsh dnf=zsh pacman=zsh brew=zsh termux=zsh
   install_pkg "curl" apt=curl dnf=curl pacman=curl brew=curl termux=curl
+  install_pkg "dialog" apt=dialog dnf=dialog pacman=dialog brew=dialog termux=dialog
 
   # --- System Libraries & Dependencies ---
+  install_pkg "build-tools" apt=build-essential dnf="@development-tools" pacman=base-devel
+  install_pkg "make" apt=make dnf=make pacman=make brew=make
   install_pkg "ca-certificates" apt=ca-certificates dnf=ca-certificates pacman=ca-certificates
   install_pkg "gnupg" apt=gnupg2 dnf=gnupg2 brew=gnupg
   install_pkg "libatomic" apt=libatomic1 dnf=libatomic pacman=gcc-libs
