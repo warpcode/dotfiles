@@ -186,15 +186,29 @@ install_pkg() {
   name="${item%%|*}"
   IFS='|' read -r -a specs <<< "${item#*|}"
 
+  local spec key val p=",${DOTFILES_PROFILE:-default},"
+  for spec in "${specs[@]}"; do
+    key="${spec%%=*}"
+    val="${spec#*=}"
+    val="${val// /}"
+    if [[ "${key}" == "only" && ! ",${val}," == *"${p}"* ]] || \
+       [[ "${key}" == "not"  &&   ",${val}," == *"${p}"* ]]; then
+      info "Skipping ${name} (profile constraint: ${key}=${val})" "  "
+      return 0
+    fi
+  done
+
   if command -v "${name}" >/dev/null 2>&1; then
     success "${name} is already installed" "  "
     return 0
   fi
 
-  local spec mgr pkg
+  local mgr pkg
   for spec in "${specs[@]}"; do
     mgr="${spec%%=*}"
     pkg="${spec#*=}"
+
+    if [[ "${mgr}" == "only" || "${mgr}" == "not" ]]; then continue; fi
 
     if [[ "${mgr}" == "termux" ]]; then
       if ! command -v pkg >/dev/null 2>&1; then continue; fi
