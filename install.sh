@@ -154,18 +154,26 @@ readonly NPM_PACKAGES=(
 )
 
 readonly APP_PACKAGES=(
-  "discord|flatpak=com.discordapp.Discord|brew_cask=discord"
-  "ffmpeg|apt=ffmpeg|dnf=ffmpeg|pacman=ffmpeg|brew=ffmpeg"
-  "k8slens|snap=kontena-lens --classic|brew_cask=lens"
-  "keepassxc|flatpak=org.keepassxc.KeePassXC|brew_cask=keepassxc"
+  "discord|flatpak=com.discordapp.Discord|brew_cask=discord|not=work"
+  "ffmpeg|apt=ffmpeg|dnf=ffmpeg|pacman=ffmpeg|brew=ffmpeg|not=work"
+  "k8slens|snap=kontena-lens --classic|brew_cask=lens|not=work"
+  "keepassxc|flatpak=org.keepassxc.KeePassXC|brew_cask=keepassxc|not=work"
+  "code|snap=code --classic|apt=code|dnf=code|brew_cask=visual-studio-code|not=work"
+  "cursor|apt=cursor|dnf=cursor|brew_cask=cursor|not=work"
+  "antigravity|apt=antigravity|dnf=antigravity|brew_cask=antigravity|not=work"
 )
 
 readonly AI_PACKAGES=(
-  "ai_skills|npm=skills@latest"
-  "copilot-cli|npm=@github/copilot"
-  "gemini-cli|npm=@google/gemini-cli"
-  "ollama|mise=ollama"
-  "opencode|npm=opencode-ai@latest"
+  "ai_skills|npm=skills@latest|not=work"
+  "copilot-cli|npm=@github/copilot|not=work"
+  "gemini-cli|npm=@google/gemini-cli|not=work"
+  "ollama|mise=ollama|not=work"
+  "opencode|npm=opencode-ai@latest|not=work"
+  "kilo|npm=@kilocode/cli|not=work"
+  "pi|npm=@mariozechner/pi-coding-agent|not=work"
+  "qwen|npm=@qwen-code/qwen-code@latest|not=work"
+  "codex|npm=@openai/codex|not=work"
+  "claude|npm=@anthropic-ai/claude-code|not=work"
 )
 
 # ---------------------------------------------------------------------------
@@ -182,7 +190,7 @@ readonly AI_PACKAGES=(
 install_pkg() {
   local item="$1"
   local name specs
-  
+
   name="${item%%|*}"
   IFS='|' read -r -a specs <<< "${item#*|}"
 
@@ -219,7 +227,7 @@ install_pkg() {
     local is_installed=1
     local -a pkgs
     read -r -a pkgs <<< "${pkg}"
-    
+
     local p
     for p in "${pkgs[@]}"; do
       [[ "${p}" == -* ]] && continue
@@ -293,14 +301,14 @@ setup_debian() {
 
   local arch
   arch="$(dpkg --print-architecture)"
-  
+
   local id="ubuntu"
   local version_codename=""
   if [[ -f /etc/os-release ]]; then
     id="$(grep -E '^ID=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"' || echo "ubuntu")"
     version_codename="$(grep -E '^VERSION_CODENAME=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"' || true)"
   fi
-  
+
   run_as_root install -m 0755 -d /etc/apt/keyrings
 
   if [[ ! -f /usr/share/keyrings/githubcli-archive-keyring.gpg ]]; then
@@ -322,6 +330,12 @@ setup_debian() {
     echo "deb [arch=${arch} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/${id} ${version_codename} stable" | run_as_root tee /etc/apt/sources.list.d/docker.list > /dev/null
   fi
 
+  if [[ ! -f /etc/apt/sources.list.d/cursor.list ]]; then
+    info "Configuring Cursor repository..."
+    curl -fsSL https://downloads.cursor.com/keys/anysphere.asc | run_as_root gpg --dearmor -o /etc/apt/keyrings/cursor.gpg 2>/dev/null || true
+    echo "deb [arch=amd64,arm64 signed-by=/etc/apt/keyrings/cursor.gpg] https://downloads.cursor.com/aptrepo stable main" | run_as_root tee /etc/apt/sources.list.d/cursor.list > /dev/null
+  fi
+
   run_as_root apt update -qq
 }
 
@@ -334,6 +348,19 @@ setup_fedora() {
   if ! command -v mise >/dev/null; then
     run_as_root dnf copr enable -y jdxcode/mise
   fi
+
+  if [[ ! -f /etc/yum.repos.d/cursor.repo ]]; then
+    info "Configuring Cursor repository..."
+    run_as_root tee /etc/yum.repos.d/cursor.repo << 'EOF' >/dev/null
+[cursor]
+name=Cursor
+baseurl=https://downloads.cursor.com/yumrepo
+enabled=1
+gpgcheck=1
+gpgkey=https://downloads.cursor.com/keys/anysphere.asc
+EOF
+  fi
+
   run_as_root dnf update -y -q
 }
 
