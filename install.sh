@@ -86,18 +86,28 @@ install_pkg() {
     fi
 
     # Check if already installed
-    local is_installed=0
-    case "${mgr}" in
-      apt) dpkg -s "${pkg}" >/dev/null 2>&1 && is_installed=1 ;;
-      dnf) dnf list installed "${pkg}" >/dev/null 2>&1 && is_installed=1 ;;
-      pacman) pacman -Q "${pkg}" >/dev/null 2>&1 && is_installed=1 ;;
-      brew) brew list "${pkg}" >/dev/null 2>&1 && is_installed=1 ;;
-      brew_cask) brew list --cask "${pkg}" >/dev/null 2>&1 && is_installed=1 ;;
-      flatpak) flatpak info "${pkg}" >/dev/null 2>&1 && is_installed=1 ;;
-      snap) snap list "${pkg%% *}" >/dev/null 2>&1 && is_installed=1 ;;
-      mise) mise where "${pkg}" >/dev/null 2>&1 && is_installed=1 ;;
-      npm) npm ls -g "${pkg%%@*}" >/dev/null 2>&1 && is_installed=1 ;;
-    esac
+    local is_installed=1
+    local -a pkgs
+    read -r -a pkgs <<< "${pkg}"
+    
+    local p
+    for p in "${pkgs[@]}"; do
+      [[ "${p}" == -* ]] && continue
+
+      case "${mgr}" in
+        apt) dpkg -s "${p}" >/dev/null 2>&1 || is_installed=0 ;;
+        dnf) dnf list installed "${p}" >/dev/null 2>&1 || is_installed=0 ;;
+        pacman) pacman -Q "${p}" >/dev/null 2>&1 || is_installed=0 ;;
+        brew) brew list "${p}" >/dev/null 2>&1 || is_installed=0 ;;
+        brew_cask) brew list --cask "${p}" >/dev/null 2>&1 || is_installed=0 ;;
+        flatpak) flatpak info "${p}" >/dev/null 2>&1 || is_installed=0 ;;
+        snap) snap list "${p}" >/dev/null 2>&1 || is_installed=0 ;;
+        mise) mise where "${p}" >/dev/null 2>&1 || is_installed=0 ;;
+        npm) npm ls -g "${p%%@*}" >/dev/null 2>&1 || is_installed=0 ;;
+      esac
+
+      [[ "${is_installed}" -eq 0 ]] && break
+    done
 
     if [[ "${is_installed}" -eq 1 ]]; then
       echo "✅ ${name} is already installed via ${mgr}"
@@ -106,15 +116,15 @@ install_pkg() {
 
     echo "📦 Installing ${name} via ${mgr}..."
     case "${mgr}" in
-      apt) ${SUDO} apt install -y "${pkg}" ;;
-      dnf) ${SUDO} dnf install -y "${pkg}" ;;
-      pacman) ${SUDO} pacman -S --noconfirm "${pkg}" ;;
-      brew) brew install "${pkg}" ;;
-      brew_cask) brew install --cask "${pkg}" ;;
-      flatpak) flatpak install -y "${pkg}" ;;
-      snap) ${SUDO} snap install "${pkg}" ;;
-      mise) mise use -g "${pkg}" ;;
-      npm) npm install -g "${pkg}" ;;
+      apt) ${SUDO} apt install -y "${pkgs[@]}" ;;
+      dnf) ${SUDO} dnf install -y "${pkgs[@]}" ;;
+      pacman) ${SUDO} pacman -S --noconfirm "${pkgs[@]}" ;;
+      brew) brew install "${pkgs[@]}" ;;
+      brew_cask) brew install --cask "${pkgs[@]}" ;;
+      flatpak) flatpak install -y "${pkgs[@]}" ;;
+      snap) ${SUDO} snap install "${pkgs[@]}" ;;
+      mise) mise use -g "${pkgs[@]}" ;;
+      npm) npm install -g "${pkgs[@]}" ;;
     esac
     return 0
   done
