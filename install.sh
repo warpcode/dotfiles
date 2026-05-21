@@ -409,6 +409,17 @@ setup_debian() {
       | run_as_root tee /etc/apt/sources.list.d/cursor.list > /dev/null
   fi
 
+  if [[ ! -f /etc/apt/sources.list.d/antigravity.list ]]; then
+    info "Configuring Antigravity repository..."
+    curl -fsSL https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg \
+      | run_as_root gpg --dearmor --yes \
+        -o /etc/apt/keyrings/antigravity-repo-key.gpg 2>/dev/null || true
+    printf 'deb [signed-by=%s] %s antigravity-debian main\n' \
+      "/etc/apt/keyrings/antigravity-repo-key.gpg" \
+      "https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/" \
+      | run_as_root tee /etc/apt/sources.list.d/antigravity.list > /dev/null
+  fi
+
   run_as_root apt update -qq
 }
 
@@ -431,6 +442,17 @@ baseurl=https://downloads.cursor.com/yumrepo
 enabled=1
 gpgcheck=1
 gpgkey=https://downloads.cursor.com/keys/anysphere.asc
+EOF
+  fi
+
+  if [[ ! -f /etc/yum.repos.d/antigravity.repo ]]; then
+    info "Configuring Antigravity repository..."
+    run_as_root tee /etc/yum.repos.d/antigravity.repo << 'EOF' >/dev/null
+[antigravity-rpm]
+name=Antigravity RPM Repository
+baseurl=https://us-central1-yum.pkg.dev/projects/antigravity-auto-updater-dev/antigravity-rpm
+enabled=1
+gpgcheck=0
 EOF
   fi
 
