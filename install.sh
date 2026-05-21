@@ -23,7 +23,9 @@ detect_os() {
       fi
       local os_id="linux"
       if [[ -f /etc/os-release ]]; then
-        os_id="$(grep -E '^ID=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"' || echo "linux")"
+        os_id="$(grep -E '^ID=' /etc/os-release 2>/dev/null \
+          | cut -d= -f2 \
+          | tr -d '"' || echo "linux")"
       fi
       case "${os_id}" in
         ubuntu|debian) echo "debian" ;;
@@ -67,26 +69,66 @@ readonly OS_NAME="$(detect_os)"
 # Logging
 # ---------------------------------------------------------------------------
 
+#######################################
+# Prints messages to stdout unless silent.
+# Globals:
+#   DOTFILES_SILENT
+# Arguments:
+#   $@ - Message to print.
+# Outputs:
+#   Writes message to stdout.
+#######################################
 out() {
   if [[ "${DOTFILES_SILENT}" != "1" ]]; then
-    echo -e "$*"
+    printf '%b\n' "$*"
   fi
 }
 
+#######################################
+# Prints error messages to stderr.
+# Arguments:
+#   $@ - Error message to print.
+# Outputs:
+#   Writes timestamped error message to stderr.
+#######################################
 err() {
-  echo -e "[$(date +'%Y-%m-%dT%H:%M:%S%z')] ❌ $*" >&2
+  printf '[%s] ❌ %b\n' "$(date +'%Y-%m-%dT%H:%M:%S%z')" "$*" >&2
 }
 
+#######################################
+# Prints informational messages.
+# Arguments:
+#   $1 - Info message.
+#   $2 - Prefix (optional).
+# Outputs:
+#   Writes prefixed message to stdout.
+#######################################
 info() {
   local prefix="${2:-}"
   out "${prefix}💬 $1"
 }
 
+#######################################
+# Prints success messages.
+# Arguments:
+#   $1 - Success message.
+#   $2 - Prefix (optional).
+# Outputs:
+#   Writes prefixed message to stdout.
+#######################################
 success() {
   local prefix="${2:-}"
   out "${prefix}✅ $1"
 }
 
+#######################################
+# Prints warning messages to stderr.
+# Arguments:
+#   $1 - Warning message.
+#   $2 - Prefix (optional).
+# Outputs:
+#   Writes prefixed message to stderr.
+#######################################
 warn() {
   local prefix="${2:-}"
   out "${prefix}⚠️  $1" >&2
@@ -233,17 +275,23 @@ install_pkg() {
       [[ "${p}" == -* ]] && continue
 
       case "${mgr}" in
-        apt|termux) dpkg-query -W -f='${Status}' "${p}" 2>/dev/null | grep -q " installed" || is_installed=0 ;;
+        apt|termux)
+          dpkg-query -W -f='${Status}' "${p}" 2>/dev/null \
+            | grep -q " installed" || is_installed=0
+          ;;
         dnf)
           if [[ "${p}" == @* ]]; then
-            dnf group list installed "${p#@}" >/dev/null 2>&1 || is_installed=0
+            dnf group list installed "${p#@}" >/dev/null 2>&1 \
+              || is_installed=0
           else
             dnf list installed "${p}" >/dev/null 2>&1 || is_installed=0
           fi
           ;;
         pacman) pacman -Q "${p}" >/dev/null 2>&1 || is_installed=0 ;;
         brew) brew list "${p}" >/dev/null 2>&1 || is_installed=0 ;;
-        brew_cask) brew list --cask "${p}" >/dev/null 2>&1 || is_installed=0 ;;
+        brew_cask)
+          brew list --cask "${p}" >/dev/null 2>&1 || is_installed=0
+          ;;
         flatpak) flatpak info "${p}" >/dev/null 2>&1 || is_installed=0 ;;
         snap) snap list "${p}" >/dev/null 2>&1 || is_installed=0 ;;
         mise) mise where "${p}" >/dev/null 2>&1 || is_installed=0 ;;
@@ -305,35 +353,60 @@ setup_debian() {
   local id="ubuntu"
   local version_codename=""
   if [[ -f /etc/os-release ]]; then
-    id="$(grep -E '^ID=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"' || echo "ubuntu")"
-    version_codename="$(grep -E '^VERSION_CODENAME=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"' || true)"
+    id="$(grep -E '^ID=' /etc/os-release 2>/dev/null \
+      | cut -d= -f2 | tr -d '"' || echo "ubuntu")"
+    version_codename="$(grep -E '^VERSION_CODENAME=' /etc/os-release \
+      2>/dev/null | cut -d= -f2 | tr -d '"' || true)"
   fi
 
   run_as_root install -m 0755 -d /etc/apt/keyrings
 
   if [[ ! -f /usr/share/keyrings/githubcli-archive-keyring.gpg ]]; then
     info "Configuring GitHub CLI repository..."
-    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | run_as_root dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg 2>/dev/null
-    echo "deb [arch=${arch} signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | run_as_root tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+    curl -fsSL \
+      https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+      | run_as_root dd \
+        of=/usr/share/keyrings/githubcli-archive-keyring.gpg 2>/dev/null
+    printf 'deb [arch=%s signed-by=%s] %s stable main\n' \
+      "${arch}" \
+      "/usr/share/keyrings/githubcli-archive-keyring.gpg" \
+      "https://cli.github.com/packages" \
+      | run_as_root tee /etc/apt/sources.list.d/github-cli.list > /dev/null
   fi
 
   if ! command -v mise >/dev/null; then
     info "Configuring Mise repository..."
-    curl -fsSL https://mise.jdx.dev/gpg-key.pub | run_as_root gpg --dearmor -o /etc/apt/keyrings/mise-archive-keyring.gpg 2>/dev/null || true
-    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/mise-archive-keyring.gpg] https://mise.jdx.dev/deb stable main" | run_as_root tee /etc/apt/sources.list.d/mise.list > /dev/null
+    curl -fsSL https://mise.jdx.dev/gpg-key.pub \
+      | run_as_root gpg --dearmor \
+        -o /etc/apt/keyrings/mise-archive-keyring.gpg 2>/dev/null || true
+    printf 'deb [arch=amd64 signed-by=%s] %s stable main\n' \
+      "/etc/apt/keyrings/mise-archive-keyring.gpg" \
+      "https://mise.jdx.dev/deb" \
+      | run_as_root tee /etc/apt/sources.list.d/mise.list > /dev/null
   fi
 
   if ! command -v docker >/dev/null; then
     info "Configuring Docker repository..."
-    curl -fsSL "https://download.docker.com/linux/${id}/gpg" | run_as_root tee /etc/apt/keyrings/docker.asc >/dev/null
+    curl -fsSL "https://download.docker.com/linux/${id}/gpg" \
+      | run_as_root tee /etc/apt/keyrings/docker.asc >/dev/null
     run_as_root chmod a+r /etc/apt/keyrings/docker.asc
-    echo "deb [arch=${arch} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/${id} ${version_codename} stable" | run_as_root tee /etc/apt/sources.list.d/docker.list > /dev/null
+    printf 'deb [arch=%s signed-by=%s] %s %s stable\n' \
+      "${arch}" \
+      "/etc/apt/keyrings/docker.asc" \
+      "https://download.docker.com/linux/${id}" \
+      "${version_codename}" \
+      | run_as_root tee /etc/apt/sources.list.d/docker.list > /dev/null
   fi
 
   if [[ ! -f /etc/apt/sources.list.d/cursor.list ]]; then
     info "Configuring Cursor repository..."
-    curl -fsSL https://downloads.cursor.com/keys/anysphere.asc | run_as_root gpg --dearmor -o /etc/apt/keyrings/cursor.gpg 2>/dev/null || true
-    echo "deb [arch=amd64,arm64 signed-by=/etc/apt/keyrings/cursor.gpg] https://downloads.cursor.com/aptrepo stable main" | run_as_root tee /etc/apt/sources.list.d/cursor.list > /dev/null
+    curl -fsSL https://downloads.cursor.com/keys/anysphere.asc \
+      | run_as_root gpg --dearmor \
+        -o /etc/apt/keyrings/cursor.gpg 2>/dev/null || true
+    printf 'deb [arch=amd64,arm64 signed-by=%s] %s stable main\n' \
+      "/etc/apt/keyrings/cursor.gpg" \
+      "https://downloads.cursor.com/aptrepo" \
+      | run_as_root tee /etc/apt/sources.list.d/cursor.list > /dev/null
   fi
 
   run_as_root apt update -qq
@@ -379,7 +452,8 @@ setup_macos() {
   info "Setting up macOS..."
   if ! command -v brew >/dev/null; then
     info "Installing Homebrew..."
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    /bin/bash -c "$(curl -fsSL \
+      https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   fi
   brew update
 }
@@ -402,16 +476,20 @@ setup_termux() {
 ensure_dotfiles() {
   local repo_url="$1"
 
-  if [[ -d "${DOTFILES_INSTALL_DIR}" && -f "${DOTFILES_INSTALL_DIR}/install.sh" ]]; then
+  if [[ -d "${DOTFILES_INSTALL_DIR}" && \
+        -f "${DOTFILES_INSTALL_DIR}/install.sh" ]]; then
     success "Dotfiles already present at ${DOTFILES_INSTALL_DIR}"
     if [[ -d "${DOTFILES_INSTALL_DIR}/.git" ]]; then
       cd "${DOTFILES_INSTALL_DIR}" || return 1
       info "Initializing submodules..."
-      if ! git submodule update --init --recursive --depth 1 --quiet 2>/dev/null; then
+      if ! git submodule update --init --recursive --depth 1 --quiet \
+        2>/dev/null; then
         warn "Submodule update failed. Falling back to HTTPS URLs..."
-        git config --local url."https://github.com/".insteadOf "git@github.com:"
+        git config --local \
+          url."https://github.com/".insteadOf "git@github.com:"
         git submodule sync --recursive >/dev/null 2>&1 || true
-        git submodule update --init --recursive --depth 1 --quiet 2>/dev/null || true
+        git submodule update --init --recursive --depth 1 --quiet \
+          2>/dev/null || true
       fi
     fi
     return 0
@@ -424,7 +502,8 @@ ensure_dotfiles() {
 
   info "Cloning dotfiles to ${DOTFILES_INSTALL_DIR}..."
   mkdir -p "$(dirname "${DOTFILES_INSTALL_DIR}")"
-  git clone --depth 1 --recurse-submodules --shallow-submodules "${repo_url}" "${DOTFILES_INSTALL_DIR}"
+  git clone --depth 1 --recurse-submodules --shallow-submodules \
+    "${repo_url}" "${DOTFILES_INSTALL_DIR}"
 }
 
 #######################################
@@ -499,7 +578,8 @@ select_profile() {
   local profile_file="${HOME}/.dotfiles_profile"
   local detected_profile="default"
   [[ -n "${DOTFILES_PROFILE:-}" ]] && detected_profile="${DOTFILES_PROFILE}"
-  [[ -z "${DOTFILES_PROFILE:-}" && -f "${profile_file}" ]] && detected_profile="$(<"${profile_file}")"
+  [[ -z "${DOTFILES_PROFILE:-}" && -f "${profile_file}" ]] && \
+    detected_profile="$(<"${profile_file}")"
 
   local -a profiles=("default" "work" "phone")
   local selection=""
@@ -509,16 +589,20 @@ select_profile() {
     info "Running in CI. Automatically selecting profile: ${selection}"
   else
     local i n=${#profiles[@]} choice
-    echo ""; info "Available profiles:"
+    printf '\n'; info "Available profiles:"
     for i in "${!profiles[@]}"; do
-      local cur=""; [[ "${profiles[$i]}" == "${detected_profile}" ]] && cur=" (current)"
-      echo "  $((i + 1))) ${profiles[$i]}${cur}"
+      local cur=""; [[ "${profiles[$i]}" == "${detected_profile}" ]] && \
+        cur=" (current)"
+      printf '  %s) %s%s\n' "$((i + 1))" "${profiles[$i]}" "${cur}"
     done
     while true; do
-      read -r -p "Select profile [1-${n}] (default: ${detected_profile}): " choice </dev/tty
+      read -r -p "Select profile [1-${n}] (default: ${detected_profile}): " \
+        choice </dev/tty
       [[ -z "${choice}" ]] && { selection="${detected_profile}"; break; }
-      [[ "${choice}" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= n )) && { selection="${profiles[$((choice - 1))]}"; break; }
-      echo "Invalid. Enter 1-${n}."
+      [[ "${choice}" =~ ^[0-9]+$ ]] && \
+        (( choice >= 1 && choice <= n )) && \
+        { selection="${profiles[$((choice - 1))]}"; break; }
+      printf 'Invalid. Enter 1-%s.\n' "${n}"
     done
   fi
 
@@ -614,7 +698,8 @@ main() {
   for pkg in "${INTEGRATION_PACKAGES[@]}"; do install_pkg "${pkg}"; done
 
   if command -v flatpak >/dev/null 2>&1; then
-    flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo >/dev/null 2>&1 || true
+    flatpak remote-add --if-not-exists flathub \
+      https://dl.flathub.org/repo/flathub.flatpakrepo >/dev/null 2>&1 || true
   fi
 
   export PATH="${HOME}/.local/share/mise/shims:${PATH}"
@@ -640,7 +725,7 @@ main() {
   fi
 
   # 8. Hand off to internal Zsh configuration
-  echo -e "\nBootstrapping dotfiles..."
+  printf '\nBootstrapping dotfiles...\n'
   if [[ -f "src/zsh/init.zsh" && -n "${zsh_path}" ]]; then
     "${zsh_path}" -c "source src/zsh/init.zsh && dotfiles.setup"
   fi
