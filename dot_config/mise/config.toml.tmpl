@@ -1,18 +1,21 @@
 [tools]
-python = "3.12"
-node = "latest"
-rust = "latest"
-go = "latest"
-deno = "latest"
-jq = "latest"
-yq = "latest"
-fzf = "latest"
-bat = "latest"
-gomplate = "latest"
-gh = "latest"
-lazygit = "latest"
-neovim = "0.11.6"
-uv = "latest"
-{{- if ne .profile "work" }}
-ollama = "latest"
-{{- end }}
+{{- range $group, $pkgs := .packages -}}
+  {{- range $pkg := $pkgs -}}
+    {{- $allowed := true -}}
+    {{- if hasKey $pkg "only" -}}
+      {{- if ne $pkg.only $.profile -}}{{- $allowed = false -}}{{- end -}}
+    {{- end -}}
+    {{- if hasKey $pkg "not" -}}
+      {{- if eq $pkg.not $.profile -}}{{- $allowed = false -}}{{- end -}}
+    {{- end -}}
+    {{- if and $allowed (hasKey $pkg "mise") -}}
+      {{- $parts := splitList "@" $pkg.mise -}}
+      {{- $tool := index $parts 0 -}}
+      {{- $version := "latest" -}}
+      {{- if gt (len $parts) 1 -}}
+        {{- $version = index $parts 1 -}}
+      {{- end }}
+{{ $tool }} = "{{ $version }}"
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
