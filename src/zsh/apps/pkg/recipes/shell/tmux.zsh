@@ -9,11 +9,7 @@ pkg.recipe.tmux.configure() {
     tui.task "Configuring tmux..."
     tui.indent.push
     {
-        (( $+commands[tmux] )) || { tui.warn "tmux command not found, skipping"; return 0; }
-
-        tui.step "Linking tmux.conf"
-        app.config "tmux/tmux.conf" ~/.tmux.conf
-        tui.success "tmux configured"
+        tui.success "tmux configuration is managed by chezmoi"
     } always {
         tui.indent.pop
     }

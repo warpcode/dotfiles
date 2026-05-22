@@ -1,0 +1,9 @@
+{{- $ai_config_rel_path := "src/ai-config" -}}
+{{- if hasKey . "ai_config_dir" -}}
+  {{- $ai_config_rel_path = .ai_config_dir | replace .chezmoi.homeDir "" | trimPrefix "/" -}}
+{{- end -}}
+
+["{{ $ai_config_rel_path }}"]
+  type = "git-repo"
+  url = "https://github.com/warpcode/ai-config.git"
+  refreshPeriod = "168h"

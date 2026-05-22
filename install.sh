@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Bootstraps the dotfiles repository and dependencies.
+# Bootstraps the dotfiles repository and dependencies using Chezmoi.
 
 set -euo pipefail
 
@@ -135,209 +135,8 @@ warn() {
 }
 
 # ---------------------------------------------------------------------------
-# Declarative Packages
+# OS Setup
 # ---------------------------------------------------------------------------
-
-readonly CORE_PACKAGES=(
-  "git|apt=git|dnf=git|pacman=git|brew=git|termux=git"
-  "zsh|apt=zsh|dnf=zsh|pacman=zsh|brew=zsh|termux=zsh"
-  "curl|apt=curl|dnf=curl|pacman=curl|brew=curl|termux=curl"
-  "dialog|apt=dialog|dnf=dialog|pacman=dialog|brew=dialog|termux=dialog"
-)
-
-readonly SYSTEM_PACKAGES=(
-  "build-tools|apt=build-essential|dnf=@development-tools|pacman=base-devel"
-  "make|apt=make|dnf=make|pacman=make|brew=make"
-  "ca-certificates|apt=ca-certificates|dnf=ca-certificates|pacman=ca-certificates"
-  "gnupg|apt=gnupg2|dnf=gnupg2|brew=gnupg"
-  "libatomic|apt=libatomic1|dnf=libatomic|pacman=gcc-libs"
-  "openssl|apt=openssl|dnf=openssl|brew=openssl"
-  "pkg-config|apt=pkg-config|dnf=pkgconf-pkg-config|brew=pkg-config"
-  "unzip|apt=unzip|dnf=unzip|brew=unzip"
-  "secret-tool|apt=libsecret-tools|dnf=libsecret"
-  "bc|apt=bc|dnf=bc|pacman=bc|brew=bc"
-)
-
-readonly INTEGRATION_PACKAGES=(
-  "flatpak|apt=flatpak|dnf=flatpak|pacman=flatpak"
-  "mise|apt=mise|dnf=mise|pacman=mise|brew=mise"
-  "docker|brew=docker|apt=docker-ce docker-compose-plugin|brew_cask=docker-desktop"
-)
-
-readonly RUNTIME_PACKAGES=(
-  "python3|mise=python@3.12"
-  "node|mise=node@latest"
-  "rust|mise=rust"
-  "go|mise=go"
-  "deno|mise=deno"
-  "php|apt=php-cli|dnf=php-cli|pacman=php|brew=php"
-)
-
-readonly CLI_TOOLS=(
-  "openssh|apt=openssh-client|dnf=openssh-clients|pacman=openssh"
-  "tmux|apt=tmux|dnf=tmux|pacman=tmux|brew=tmux|snap=tmux|termux=tmux"
-  "screen|apt=screen|dnf=screen|pacman=screen|brew=screen"
-  "rsync|apt=rsync|dnf=rsync|pacman=rsync|brew=rsync"
-  "jq|mise=jq"
-  "yq|mise=yq"
-  "fzf|mise=fzf"
-  "bat|mise=bat"
-  "gomplate|mise=gomplate"
-  "gh|mise=gh"
-  "lazygit|mise=lazygit"
-  "neovim|mise=neovim@0.11.6"
-  "uv|mise=uv"
-)
-
-readonly NPM_PACKAGES=(
-  "prettier|npm=prettier"
-  "eslint|npm=eslint"
-  "typescript-language-server|npm=typescript-language-server"
-)
-
-readonly APP_PACKAGES=(
-  "discord|flatpak=com.discordapp.Discord|brew_cask=discord|not=work"
-  "ffmpeg|apt=ffmpeg|dnf=ffmpeg|pacman=ffmpeg|brew=ffmpeg|not=work"
-  "k8slens|snap=kontena-lens --classic|brew_cask=lens|not=work"
-  "keepassxc|flatpak=org.keepassxc.KeePassXC|brew_cask=keepassxc|not=work"
-  "code|snap=code --classic|apt=code|dnf=code|brew_cask=visual-studio-code|not=work"
-  "cursor|apt=cursor|dnf=cursor|brew_cask=cursor|not=work"
-  "antigravity|apt=antigravity|dnf=antigravity|brew_cask=antigravity|not=work"
-)
-
-readonly AI_PACKAGES=(
-  "ai_skills|npm=skills@latest|not=work"
-  "copilot-cli|npm=@github/copilot|not=work"
-  "gemini-cli|npm=@google/gemini-cli|not=work"
-  "ollama|mise=ollama|not=work"
-  "opencode|npm=opencode-ai@latest|not=work"
-  "kilo|npm=@kilocode/cli|not=work"
-  "pi|npm=@mariozechner/pi-coding-agent|not=work"
-  "qwen|npm=@qwen-code/qwen-code@latest|not=work"
-  "codex|npm=@openai/codex|not=work"
-  "claude|npm=@anthropic-ai/claude-code|not=work"
-)
-
-# ---------------------------------------------------------------------------
-# Functions
-# ---------------------------------------------------------------------------
-
-#######################################
-# Installs a package using the appropriate package manager.
-# Arguments:
-#   $1 - Package entry formatted as "name|mgr1=pkg1|mgr2=pkg2".
-# Outputs:
-#   Status messages.
-#######################################
-install_pkg() {
-  local item="$1"
-  local name specs
-
-  name="${item%%|*}"
-  IFS='|' read -r -a specs <<< "${item#*|}"
-
-  local spec key val p=",${DOTFILES_PROFILE:-default},"
-  for spec in "${specs[@]}"; do
-    key="${spec%%=*}"
-    val="${spec#*=}"
-    val="${val// /}"
-    if [[ "${key}" == "only" && ! ",${val}," == *"${p}"* ]] || \
-       [[ "${key}" == "not"  &&   ",${val}," == *"${p}"* ]]; then
-      info "Skipping ${name} (profile constraint: ${key}=${val})" "  "
-      return 0
-    fi
-  done
-
-  if command -v "${name}" >/dev/null 2>&1; then
-    success "${name} is already installed" "  "
-    return 0
-  fi
-
-  local mgr pkg
-  for spec in "${specs[@]}"; do
-    mgr="${spec%%=*}"
-    pkg="${spec#*=}"
-
-    if [[ "${mgr}" == "only" || "${mgr}" == "not" ]]; then continue; fi
-
-    if [[ "${mgr}" == "termux" ]]; then
-      if ! command -v pkg >/dev/null 2>&1; then continue; fi
-    elif ! command -v "${mgr%_cask}" >/dev/null 2>&1; then
-      continue
-    fi
-
-    local is_installed=1
-    local -a pkgs
-    read -r -a pkgs <<< "${pkg}"
-
-    local p
-    for p in "${pkgs[@]}"; do
-      [[ "${p}" == -* ]] && continue
-
-      case "${mgr}" in
-        apt|termux)
-          dpkg-query -W -f='${Status}' "${p}" 2>/dev/null \
-            | grep -q " installed" || is_installed=0
-          ;;
-        dnf)
-          if [[ "${p}" == @* ]]; then
-            dnf group list installed "${p#@}" >/dev/null 2>&1 \
-              || is_installed=0
-          else
-            rpm -q "${p}" >/dev/null 2>&1 || is_installed=0
-          fi
-          ;;
-        pacman) pacman -Q "${p}" >/dev/null 2>&1 || is_installed=0 ;;
-        brew) brew list "${p}" >/dev/null 2>&1 || is_installed=0 ;;
-        brew_cask)
-          brew list --cask "${p}" >/dev/null 2>&1 || is_installed=0
-          ;;
-        flatpak) flatpak info "${p}" >/dev/null 2>&1 || is_installed=0 ;;
-        snap) snap list "${p}" >/dev/null 2>&1 || is_installed=0 ;;
-        mise) mise where "${p}" >/dev/null 2>&1 || is_installed=0 ;;
-        npm) npm ls -g "${p%%@*}" >/dev/null 2>&1 || is_installed=0 ;;
-      esac
-
-      [[ "${is_installed}" -eq 0 ]] && break
-    done
-
-    if [[ "${is_installed}" -eq 1 ]]; then
-      success "${name} is already installed via ${mgr}" "  "
-      return 0
-    fi
-
-    info "Installing ${name} via ${mgr}..." "  "
-    local -a cmd=()
-    case "${mgr}" in
-      apt) cmd=(run_as_root apt install -y "${pkgs[@]}") ;;
-      dnf)
-        if [[ "${pkg}" == *@* ]]; then
-          local -a grps=()
-          local g
-          for g in "${pkgs[@]}"; do grps+=("${g#@}"); done
-          cmd=(run_as_root dnf group install -y "${grps[@]}")
-        else
-          cmd=(run_as_root dnf install -y "${pkgs[@]}")
-        fi
-        ;;
-      pacman) cmd=(run_as_root pacman -S --noconfirm "${pkgs[@]}") ;;
-      brew) cmd=(brew install "${pkgs[@]}") ;;
-      brew_cask) cmd=(brew install --cask "${pkgs[@]}") ;;
-      flatpak) cmd=(flatpak install -y "${pkgs[@]}") ;;
-      snap) cmd=(run_as_root snap install "${pkgs[@]}") ;;
-      mise) cmd=(mise use -g "${pkgs[@]}") ;;
-      npm) cmd=(npm install -g "${pkgs[@]}") ;;
-      termux) cmd=(pkg install -y "${pkgs[@]}") ;;
-    esac
-
-    if [[ ${#cmd[@]} -gt 0 ]]; then
-      "${cmd[@]}" 2>&1 | sed 's/^/    /'
-    fi
-    return 0
-  done
-
-  warn "${name}: no installer available" "  "
-}
 
 #######################################
 # Runs Debian/Ubuntu specific setup.
@@ -509,6 +308,34 @@ setup_macos() {
 setup_termux() {
   info "Setting up Termux..."
   pkg update -q
+}
+
+# ---------------------------------------------------------------------------
+# Prerequisites Setup
+# ---------------------------------------------------------------------------
+
+#######################################
+# Ensures git, zsh, curl are installed on the system.
+#######################################
+ensure_bootstrap_packages() {
+  info "Ensuring bootstrap prerequisites (git, zsh, curl) are installed..."
+  case "${OS_NAME}" in
+    debian)
+      run_as_root apt install -y -qq git zsh curl
+      ;;
+    fedora)
+      run_as_root dnf install -y git zsh curl
+      ;;
+    arch)
+      run_as_root pacman -S --noconfirm git zsh curl
+      ;;
+    macos)
+      brew install git zsh curl || true
+      ;;
+    termux)
+      pkg install -y git zsh curl
+      ;;
+  esac
 }
 
 #######################################
@@ -702,9 +529,8 @@ main() {
     termux) setup_termux ;;
   esac
 
-  # 2. Install core prerequisites
-  local pkg
-  for pkg in "${CORE_PACKAGES[@]}"; do install_pkg "${pkg}"; done
+  # 2. Ensure bootstrap packages (git, zsh, curl)
+  ensure_bootstrap_packages
 
   # Refresh command hash after core installations
   hash -r 2>/dev/null || true
@@ -735,41 +561,31 @@ main() {
     git config --global --add safe.directory "${DOTFILES}"
   fi
 
-  # 6. Install packages
-  info "Installing system libraries..."
-  for pkg in "${SYSTEM_PACKAGES[@]}"; do install_pkg "${pkg}"; done
-
-  info "Installing package managers & integrations..."
-  for pkg in "${INTEGRATION_PACKAGES[@]}"; do install_pkg "${pkg}"; done
-
-  if command -v flatpak >/dev/null 2>&1; then
-    flatpak remote-add --if-not-exists flathub \
-      https://dl.flathub.org/repo/flathub.flatpakrepo >/dev/null 2>&1 || true
+  # 6. Install/bootstrap mise and chezmoi
+  if ! command -v mise >/dev/null && [ ! -f "${HOME}/.local/bin/mise" ]; then
+    info "Installing mise..."
+    mkdir -p "${HOME}/.local/bin"
+    curl -fsSL https://mise.run | sh
   fi
 
-  export PATH="${HOME}/.local/share/mise/shims:${PATH}"
+  if ! command -v chezmoi >/dev/null && [ ! -f "${HOME}/.local/bin/chezmoi" ]; then
+    info "Installing chezmoi..."
+    mkdir -p "${HOME}/.local/bin"
+    curl -fsLS https://chezmoi.io/get | sh -s -- -b "${HOME}/.local/bin"
+  fi
 
-  info "Installing runtimes..."
-  for pkg in "${RUNTIME_PACKAGES[@]}"; do install_pkg "${pkg}"; done
+  export PATH="${HOME}/.local/bin:${PATH}"
 
-  info "Installing CLI tools..."
-  for pkg in "${CLI_TOOLS[@]}"; do install_pkg "${pkg}"; done
+  # 7. Apply dotfiles via chezmoi
+  info "Applying dotfiles via Chezmoi..."
+  chezmoi init --apply --source "${DOTFILES}"
 
-  info "Installing NPM global packages..."
-  for pkg in "${NPM_PACKAGES[@]}"; do install_pkg "${pkg}"; done
-
-  info "Installing apps & productivity tools..."
-  for pkg in "${APP_PACKAGES[@]}"; do install_pkg "${pkg}"; done
-
-  info "Installing AI tools..."
-  for pkg in "${AI_PACKAGES[@]}"; do install_pkg "${pkg}"; done
-
-  # 7. Source all functions, then execute recipe configure hooks
+  # 8. Source all Zsh functions and run recipe configure hooks
   if [[ -f "src/zsh/init.zsh" && -n "${zsh_path}" ]]; then
     "${zsh_path}" -c "source src/zsh/init.zsh && pkg.recipe.configure_all"
   fi
 
-  # 8. Hand off to internal Zsh configuration
+  # 9. Hand off to internal Zsh configuration
   printf '\nBootstrapping dotfiles...\n'
   if [[ -f "src/zsh/init.zsh" && -n "${zsh_path}" ]]; then
     "${zsh_path}" -c "source src/zsh/init.zsh && dotfiles.setup"

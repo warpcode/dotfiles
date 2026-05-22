@@ -1,0 +1,28 @@
+#!/bin/bash
+# Deploy AI configurations and run installer script
+export PATH="${HOME}/.local/share/mise/shims:${PATH}"
+export PATH="${HOME}/.local/bin:${PATH}"
+
+AI_CONFIG_DIR="{{ .ai_config_dir | default (joinPath .chezmoi.homeDir "src/ai-config") }}"
+
+if [ ! -d "${AI_CONFIG_DIR}" ]; then
+  echo "Warning: AI config directory not found at ${AI_CONFIG_DIR}"
+  exit 0
+fi
+
+echo "Deploying AI configurations from ${AI_CONFIG_DIR}..."
+mkdir -p "${HOME}/.config/opencode"
+mkdir -p "${HOME}/.gemini"
+
+# Symlink the config files to ~/.gemini/
+for f in mcp.json providers.json llama_models.ini skills.json; do
+  if [ -f "${AI_CONFIG_DIR}/config/${f}" ]; then
+    ln -sf "${AI_CONFIG_DIR}/config/${f}" "${HOME}/.gemini/${f}"
+  fi
+done
+
+# Run skills installation if zsh and mise are available
+if command -v zsh >/dev/null; then
+  echo "Running skills installer via Zsh..."
+  AI_CONFIG_DIR="${AI_CONFIG_DIR}" zsh -c "source ${HOME}/.zshrc 2>/dev/null || true; ai.skills.install 2>/dev/null || true"
+fi
