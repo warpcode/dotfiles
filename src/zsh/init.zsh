@@ -72,9 +72,6 @@ _zsh.init() {
     if [[ -n "$profile_init" ]]; then
         source "$profile_init"
     fi
-
-    # Run per-recipe init hooks on shell load
-    pkg.recipe.init_all
 }
 
 # Reload the Zsh configuration
