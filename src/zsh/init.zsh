@@ -32,6 +32,17 @@ _zsh.init() {
         done
     done
 
+    # Load profile init script if exists
+    local -a profile_inits
+    profile_inits=( ${(f)"$("$DOTFILES/bin/df.fs" profile list "assets/configs/zsh" "init.zsh" 2>/dev/null)"} )
+    local profile_init=""
+    if (( ${#profile_inits} > 0 )); then
+        profile_init="${profile_inits[1]}"
+    fi
+    if [[ -n "$profile_init" ]]; then
+        source "$profile_init"
+    fi
+
     # Run per-recipe init hooks on shell load
     pkg.recipe.init_all
 }

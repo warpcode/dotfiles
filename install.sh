@@ -284,7 +284,7 @@ install_pkg() {
             dnf group list installed "${p#@}" >/dev/null 2>&1 \
               || is_installed=0
           else
-            dnf list installed "${p}" >/dev/null 2>&1 || is_installed=0
+            rpm -q "${p}" >/dev/null 2>&1 || is_installed=0
           fi
           ;;
         pacman) pacman -Q "${p}" >/dev/null 2>&1 || is_installed=0 ;;
@@ -409,6 +409,17 @@ setup_debian() {
       | run_as_root tee /etc/apt/sources.list.d/cursor.list > /dev/null
   fi
 
+  if [[ ! -f /etc/apt/sources.list.d/vscode.list ]]; then
+    info "Configuring VS Code repository..."
+    curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
+      | run_as_root gpg --dearmor --yes \
+        -o /etc/apt/keyrings/packages.microsoft.gpg 2>/dev/null || true
+    printf 'deb [arch=amd64,arm64,armhf signed-by=%s] %s stable main\n' \
+      "/etc/apt/keyrings/packages.microsoft.gpg" \
+      "https://packages.microsoft.com/repos/code" \
+      | run_as_root tee /etc/apt/sources.list.d/vscode.list > /dev/null
+  fi
+
   if [[ ! -f /etc/apt/sources.list.d/antigravity.list ]]; then
     info "Configuring Antigravity repository..."
     curl -fsSL https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg \
@@ -442,6 +453,18 @@ baseurl=https://downloads.cursor.com/yumrepo
 enabled=1
 gpgcheck=1
 gpgkey=https://downloads.cursor.com/keys/anysphere.asc
+EOF
+  fi
+
+  if [[ ! -f /etc/yum.repos.d/vscode.repo ]]; then
+    info "Configuring VS Code repository..."
+    run_as_root tee /etc/yum.repos.d/vscode.repo << 'EOF' >/dev/null
+[code]
+name=Visual Studio Code
+baseurl=https://packages.microsoft.com/yumrepos/vscode
+enabled=1
+gpgcheck=1
+gpgkey=https://packages.microsoft.com/keys/microsoft.asc
 EOF
   fi
 

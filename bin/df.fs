@@ -115,11 +115,12 @@ _cmd_profile_list() {
     local query="${filename:-*}"
     local found=0
     local d
+    local -a matches
+    local match_file
     # Use zsh globbing to handle wildcards in filename
     for d in "${search_dirs[@]}"; do
-        local -a matches=( ${d}/$~query(N) )
+        matches=( ${d}/$~query(ND) )
         if [[ ${#matches[@]} -gt 0 ]]; then
-            local match_file
             for match_file in "${matches[@]}"; do
                 [[ -f "${match_file}" ]] && print -r -- "${match_file}"
             done

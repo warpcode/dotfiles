@@ -12,10 +12,14 @@ pkg.recipe.git.configure() {
 
         tui.step "Setting global includes and excludes"
 
-        local gitconfig_path
-        gitconfig_path="$("$DOTFILES/bin/df.fs" profile list "assets/configs/git" ".gitconfig" 2>/dev/null | head -n 1)"
-        if [[ -n "$gitconfig_path" ]]; then
-            command git config --global --replace-all include.path "$gitconfig_path"
+        local -a gitconfig_paths
+        gitconfig_paths=( ${(f)"$("$DOTFILES/bin/df.fs" profile list "assets/configs/git" ".gitconfig" 2>/dev/null)"} )
+        if (( ${#gitconfig_paths} > 0 )); then
+            command git config --global --unset-all include.path 2>/dev/null || true
+            local -i i
+            for (( i=${#gitconfig_paths}; i>0; i-- )); do
+                command git config --global --add include.path "${gitconfig_paths[$i]}"
+            done
         fi
 
         local gitignore_path
