@@ -18,7 +18,7 @@ description: >
 
 # GitHub Pull Requests
 
-Create, update, publish, view, and search pull requests on GitHub — safely, consistently, and always as drafts first.
+Create, update, publish, view, review, and search pull requests on GitHub — safely, consistently, and always as drafts first.
 
 ## Operations
 
@@ -30,6 +30,7 @@ Identify the user's intent and read the corresponding reference file from this s
 | **Update** | PR already exists or user asks to edit title, body, labels, reviewers, assignees, or milestone | `references/update.md` |
 | **Publish** | User wants to mark a draft PR as ready for review | `references/publish.md` |
 | **View** | User wants to inspect a specific PR — description, comments, reviews, CI status, merge conflicts, or requested changes | `references/view.md` |
+| **Review** | User wants to add line-level comments or a formal review (Approve/Request Changes) | `references/review.md` |
 | **List** | User wants to search, filter, or browse PRs by state, label, author, assignee, branch, or full-text search | `references/list.md` |
 
 Read **only** the reference you need — do not load all of them.
@@ -52,4 +53,7 @@ These rules apply to **all** operations:
 3. **Always create PRs as drafts.** Never create in ready-for-review state.
 4. **Always use `--body-file`.** Write the body via your native file writing tool, then pass the path to `gh`. Never use `--body` with inline text. Never use shell-based file creation (`cat`, `echo`, `mktemp`, heredocs).
 5. **Always confirm before executing.** Present the full PR/change to the user and wait for explicit approval.
-6. **Always check for existing PRs.** Before creating, verify one doesn't already exist for this branch.
+6. Always check for existing PRs. Before creating, verify one doesn't already exist for this branch.
+7. Always get explicit user permission before posting a review. Present the full list of comments and the review status (e.g., REQUEST_CHANGES) to the user and wait for their approval before submitting.
+8. Use `gh api` for Line-Level Reviews. When adding comments to specific lines/files, use the structured JSON payload and the GitHub Reviews API to ensure atomicity and correctness.
+
