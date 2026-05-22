@@ -1,4 +1,44 @@
 [tools]
+{{- $is_termux := false -}}
+{{- if and (hasKey . "is_termux") .is_termux -}}
+  {{- $is_termux = true -}}
+{{- else if stat "/data/data/com.termux/files/usr/bin" -}}
+  {{- $is_termux = true -}}
+{{- end -}}
+
+{{- $sys_manager := "" -}}
+{{- if eq .chezmoi.os "darwin" -}}
+  {{- $sys_manager = "brew" -}}
+{{- else if $is_termux -}}
+  {{- $sys_manager = "termux" -}}
+{{- else if eq .chezmoi.os "linux" -}}
+  {{- if eq .chezmoi.osRelease.id "ubuntu" "debian" -}}
+    {{- $sys_manager = "apt" -}}
+  {{- else if eq .chezmoi.osRelease.id "fedora" -}}
+    {{- $sys_manager = "dnf" -}}
+  {{- else if eq .chezmoi.osRelease.id "arch" -}}
+    {{- $sys_manager = "pacman" -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $has_snap := false -}}
+{{- if lookPath "snap" -}}
+  {{- $has_snap = true -}}
+{{- end -}}
+
+{{- $hierarchy := list -}}
+{{- if eq .chezmoi.os "darwin" -}}
+  {{- $hierarchy = list "brew_cask" "brew" "mise" "npm" -}}
+{{- else if $is_termux -}}
+  {{- $hierarchy = list "termux" "npm" -}}
+{{- else if eq .chezmoi.os "linux" -}}
+  {{- if $has_snap -}}
+    {{- $hierarchy = list "flatpak" "snap" "mise" "npm" $sys_manager -}}
+  {{- else -}}
+    {{- $hierarchy = list "flatpak" "mise" "npm" $sys_manager -}}
+  {{- end -}}
+{{- end -}}
+
 {{- range $group, $pkgs := .packages -}}
   {{- range $pkg := $pkgs -}}
     {{- $allowed := true -}}
@@ -8,14 +48,24 @@
     {{- if hasKey $pkg "not" -}}
       {{- if eq $pkg.not $.profile -}}{{- $allowed = false -}}{{- end -}}
     {{- end -}}
-    {{- if and $allowed (hasKey $pkg "mise") -}}
-      {{- $parts := splitList "@" $pkg.mise -}}
-      {{- $tool := index $parts 0 -}}
-      {{- $version := "latest" -}}
-      {{- if gt (len $parts) 1 -}}
-        {{- $version = index $parts 1 -}}
-      {{- end }}
+    {{- if $allowed -}}
+      {{- $resolved_mgr := "" -}}
+      {{- $resolved_val := "" -}}
+      {{- range $mgr := $hierarchy -}}
+        {{- if and (eq $resolved_mgr "") (hasKey $pkg $mgr) -}}
+          {{- $resolved_mgr = $mgr -}}
+          {{- $resolved_val = index $pkg $mgr -}}
+        {{- end -}}
+      {{- end -}}
+      {{- if eq $resolved_mgr "mise" -}}
+        {{- $parts := splitList "@" $resolved_val -}}
+        {{- $tool := index $parts 0 -}}
+        {{- $version := "latest" -}}
+        {{- if gt (len $parts) 1 -}}
+          {{- $version = index $parts 1 -}}
+        {{- end }}
 {{ $tool }} = "{{ $version }}"
+      {{- end -}}
     {{- end -}}
   {{- end -}}
 {{- end -}}
