@@ -27,97 +27,21 @@ run_as_root() {
     fi
 
     run_as_root install -m 0755 -d /etc/apt/keyrings
-
-    # Github CLI repo
-    if [[ ! -f /usr/share/keyrings/githubcli-archive-keyring.gpg ]]; then
-      echo "Configuring GitHub CLI repository..."
-      curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | run_as_root dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg 2>/dev/null
-      printf 'deb [arch=%s signed-by=%s] %s stable main\n' "${arch}" "/usr/share/keyrings/githubcli-archive-keyring.gpg" "https://cli.github.com/packages" | run_as_root tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-    fi
-
-    # Mise repo
-    if ! command -v mise >/dev/null && [[ ! -f /etc/apt/sources.list.d/mise.list ]]; then
-      echo "Configuring Mise repository..."
-      curl -fsSL https://mise.jdx.dev/gpg-key.pub | run_as_root gpg --dearmor -o /etc/apt/keyrings/mise-archive-keyring.gpg 2>/dev/null || true
-      printf 'deb [arch=amd64 signed-by=%s] %s stable main\n' "/etc/apt/keyrings/mise-archive-keyring.gpg" "https://mise.jdx.dev/deb" | run_as_root tee /etc/apt/sources.list.d/mise.list > /dev/null
-    fi
-
-    # Docker repo
-    if ! command -v docker >/dev/null 2>&1; then
-      echo "Configuring Docker repository..."
-      curl -fsSL "https://download.docker.com/linux/${id}/gpg" | run_as_root tee /etc/apt/keyrings/docker.asc >/dev/null
-      run_as_root chmod a+r /etc/apt/keyrings/docker.asc
-      printf 'deb [arch=%s signed-by=%s] %s %s stable\n' "${arch}" "/etc/apt/keyrings/docker.asc" "https://download.docker.com/linux/${id}" "${version_codename}" | run_as_root tee /etc/apt/sources.list.d/docker.list > /dev/null
-    fi
-
-    # Cursor repo
-    if [[ ! -f /etc/apt/sources.list.d/cursor.list ]]; then
-      echo "Configuring Cursor repository..."
-      curl -fsSL https://downloads.cursor.com/keys/anysphere.asc | run_as_root gpg --dearmor -o /etc/apt/keyrings/cursor.gpg 2>/dev/null || true
-      printf 'deb [arch=amd64,arm64 signed-by=%s] %s stable main\n' "/etc/apt/keyrings/cursor.gpg" "https://downloads.cursor.com/aptrepo" | run_as_root tee /etc/apt/sources.list.d/cursor.list > /dev/null
-    fi
-
-    # VS Code repo
-    if [[ ! -f /etc/apt/sources.list.d/vscode.list ]]; then
-      echo "Configuring VS Code repository..."
-      curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | run_as_root gpg --dearmor --yes -o /etc/apt/keyrings/packages.microsoft.gpg 2>/dev/null || true
-      printf 'deb [arch=amd64,arm64,armhf signed-by=%s] %s stable main\n' "/etc/apt/keyrings/packages.microsoft.gpg" "https://packages.microsoft.com/repos/code" | run_as_root tee /etc/apt/sources.list.d/vscode.list > /dev/null
-    fi
-
-    # Antigravity repo
-    if [[ ! -f /etc/apt/sources.list.d/antigravity.list ]]; then
-      echo "Configuring Antigravity repository..."
-      curl -fsSL https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg | run_as_root gpg --dearmor --yes -o /etc/apt/keyrings/antigravity-repo-key.gpg 2>/dev/null || true
-      printf 'deb [signed-by=%s] %s antigravity-debian main\n' "/etc/apt/keyrings/antigravity-repo-key.gpg" "https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/" | run_as_root tee /etc/apt/sources.list.d/antigravity.list > /dev/null
-    fi
-
-    run_as_root apt-get update -qq
   {{- else if eq .chezmoi.osRelease.id "fedora" }}
     echo "Configuring repositories for Fedora..."
-    # Mise COPR repo
-    if ! command -v mise >/dev/null; then
-      echo "Configuring Mise Copr repository..."
-      run_as_root dnf copr enable -y jdxcode/mise
-    fi
+  {{- end }}
 
-    # Cursor repo
-    if [[ ! -f /etc/yum.repos.d/cursor.repo ]]; then
-      echo "Configuring Cursor repository..."
-      run_as_root tee /etc/yum.repos.d/cursor.repo << 'EOF' >/dev/null
-[cursor]
-name=Cursor
-baseurl=https://downloads.cursor.com/yumrepo
-enabled=1
-gpgcheck=1
-gpgkey=https://downloads.cursor.com/keys/anysphere.asc
-EOF
-    fi
+  # Include repository setup templates
+  {{ template "repositories/github-cli.tmpl" . }}
+  {{ template "repositories/mise.tmpl" . }}
+  {{ template "repositories/docker.tmpl" . }}
+  {{ template "repositories/cursor.tmpl" . }}
+  {{ template "repositories/vscode.tmpl" . }}
+  {{ template "repositories/antigravity.tmpl" . }}
 
-    # VS Code repo
-    if [[ ! -f /etc/yum.repos.d/vscode.repo ]]; then
-      echo "Configuring VS Code repository..."
-      run_as_root tee /etc/yum.repos.d/vscode.repo << 'EOF' >/dev/null
-[code]
-name=Visual Studio Code
-baseurl=https://packages.microsoft.com/yumrepos/vscode
-enabled=1
-gpgcheck=1
-gpgkey=https://packages.microsoft.com/keys/microsoft.asc
-EOF
-    fi
-
-    # Antigravity repo
-    if [[ ! -f /etc/yum.repos.d/antigravity.repo ]]; then
-      echo "Configuring Antigravity repository..."
-      run_as_root tee /etc/yum.repos.d/antigravity.repo << 'EOF' >/dev/null
-[antigravity-rpm]
-name=Antigravity RPM Repository
-baseurl=https://us-central1-yum.pkg.dev/projects/antigravity-auto-updater-dev/antigravity-rpm
-enabled=1
-gpgcheck=0
-EOF
-    fi
-
+  {{ if eq .chezmoi.osRelease.id "ubuntu" "debian" -}}
+    run_as_root apt-get update -qq
+  {{- else if eq .chezmoi.osRelease.id "fedora" -}}
     run_as_root dnf update -y -q
   {{- end }}
-{{- end }}
+{{ end }}
