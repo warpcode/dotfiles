@@ -1,0 +1,14 @@
+{{- $profile := "default" -}}
+{{- if stat (joinPath .chezmoi.homeDir ".dotfiles_profile") -}}
+  {{- $profile = include (joinPath .chezmoi.homeDir ".dotfiles_profile") | trim -}}
+{{- end -}}
+
+{{- $is_termux := false -}}
+{{- if stat "/data/data/com.termux/files/usr/bin" -}}
+  {{- $is_termux = true -}}
+{{- end -}}
+
+[data]
+    profile = {{ $profile | quote }}
+    is_termux = {{ $is_termux }}
+    ai_config_dir = "{{ .chezmoi.homeDir }}/src/ai-config"

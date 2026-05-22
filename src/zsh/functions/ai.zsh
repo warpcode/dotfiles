@@ -293,7 +293,8 @@ EOF
 # --- Skills ---
 ai.skills.install() {
     local agent="${1:-universal}"
-    local skills_file="${DOTFILES:-${HOME}/.dotfiles}/assets/configs/ai/skills.json"
+    local ai_config_dir="${AI_CONFIG_DIR:-${HOME}/src/ai-config}"
+    local skills_file="${ai_config_dir}/config/skills.json"
 
     if [[ ! -f "$skills_file" ]]; then
         tui.warn "Skills manifest not found: $skills_file"
@@ -312,10 +313,17 @@ ai.skills.install() {
         while IFS=$'\t' read -r repo skills_str; do
             [[ -z "$repo" ]] && continue
 
-            # Handle relative local directories by prepending DOTFILES
+            # Handle relative local directories by prepending AI_CONFIG_DIR or DOTFILES
             full_repo="$repo"
             if [[ "$repo" == ./* ]]; then
-                full_repo="${DOTFILES:-${HOME}/.dotfiles}/${repo#./}"
+                local rel_path="${repo#./}"
+                if [[ -d "${ai_config_dir}/${rel_path}" ]]; then
+                    full_repo="${ai_config_dir}/${rel_path}"
+                elif [[ -d "${ai_config_dir}/${rel_path#assets/configs/ai/}" ]]; then
+                    full_repo="${ai_config_dir}/${rel_path#assets/configs/ai/}"
+                else
+                    full_repo="${DOTFILES:-${HOME}/.dotfiles}/${rel_path}"
+                fi
             fi
 
             name_args=()

@@ -1,0 +1,29 @@
+#!/bin/bash
+# Install AI packages (NPM global tools) for OS: {{ .chezmoi.os }}, Profile: {{ .profile }}
+export PATH="${HOME}/.local/share/mise/shims:${PATH}"
+export PATH="${HOME}/.local/bin:${PATH}"
+
+{{- $profile := .profile -}}
+{{- $npm_pkgs := list -}}
+
+{{- range $pkg := .packages.ai -}}
+  {{- $allowed := true -}}
+  {{- if hasKey $pkg "only" -}}
+    {{- if ne $pkg.only $profile -}}{{- $allowed = false -}}{{- end -}}
+  {{- end -}}
+  {{- if hasKey $pkg "not" -}}
+    {{- if eq $pkg.not $profile -}}{{- $allowed = false -}}{{- end -}}
+  {{- end -}}
+  {{- if $allowed -}}
+    {{- if hasKey $pkg "npm" -}}
+      {{- $npm_pkgs = append $npm_pkgs $pkg.npm -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if gt (len $npm_pkgs) 0 }}
+  if command -v npm >/dev/null; then
+    echo "Installing AI NPM packages..."
+    npm install -g {{ join " " $npm_pkgs }}
+  fi
+{{- end }}
