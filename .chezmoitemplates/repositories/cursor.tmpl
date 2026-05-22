@@ -1,0 +1,23 @@
+{{- if eq .chezmoi.os "linux" -}}
+  {{- if eq .chezmoi.osRelease.id "ubuntu" "debian" -}}
+    # Cursor repo
+    if [[ ! -f /etc/apt/sources.list.d/cursor.list ]]; then
+      echo "Configuring Cursor repository..."
+      curl -fsSL https://downloads.cursor.com/keys/anysphere.asc | run_as_root gpg --dearmor -o /etc/apt/keyrings/cursor.gpg 2>/dev/null || true
+      printf 'deb [arch=amd64,arm64 signed-by=%s] %s stable main\n' "/etc/apt/keyrings/cursor.gpg" "https://downloads.cursor.com/aptrepo" | run_as_root tee /etc/apt/sources.list.d/cursor.list > /dev/null
+    fi
+  {{- else if eq .chezmoi.osRelease.id "fedora" -}}
+    # Cursor repo
+    if [[ ! -f /etc/yum.repos.d/cursor.repo ]]; then
+      echo "Configuring Cursor repository..."
+      run_as_root tee /etc/yum.repos.d/cursor.repo << 'EOF' >/dev/null
+[cursor]
+name=Cursor
+baseurl=https://downloads.cursor.com/yumrepo
+enabled=1
+gpgcheck=1
+gpgkey=https://downloads.cursor.com/keys/anysphere.asc
+EOF
+    fi
+  {{- end -}}
+{{- end -}}
