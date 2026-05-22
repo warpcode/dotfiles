@@ -60,6 +60,8 @@ scheduler.apply() {
     local os_family=$("$DOTFILES/bin/df.os" family)
     local config_file="scheduler/$name.json"
 
+    mkdir -p "$HOME/.local/state/dotfiles/scheduler"
+
     case "$os_family" in
         macos)
             local plist="$HOME/Library/LaunchAgents/com.dotfiles.scheduler.$name.plist"

@@ -8,7 +8,7 @@
     <array>
         <string>/bin/zsh</string>
         <string>-lc</string>
-        <string>{{ .config.command }}</string>
+        <string>{{ .config.command | html }}</string>
     </array>
     {{- if eq .config.schedule "daily" }}
     <key>StartCalendarInterval</key>
