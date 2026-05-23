@@ -1,7 +1,4 @@
-{{- $profile := "default" -}}
-{{- if stat (joinPath .chezmoi.homeDir ".dotfiles_profile") -}}
-  {{- $profile = include (joinPath .chezmoi.homeDir ".dotfiles_profile") | trim -}}
-{{- end -}}
+{{- $profile := promptChoiceOnce . "profile" "Select profile" (list "default" "work" "phone") -}}
 
 {{- $is_termux := false -}}
 {{- if stat "/data/data/com.termux/files/usr/bin" -}}

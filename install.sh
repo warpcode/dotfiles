@@ -221,53 +221,7 @@ ensure_dotfiles() {
     "${repo_url}" "${DOTFILES_INSTALL_DIR}"
 }
 
-#######################################
-# Prompts the user to select a dotfiles profile.
-# Pure bash — no external dependencies.
-# Globals:
-#   DOTFILES_PROFILE_FILE, CI
-#######################################
-select_profile() {
-  local profile_file="${HOME}/.dotfiles_profile"
-  local detected_profile="default"
-  [[ -n "${DOTFILES_PROFILE:-}" ]] && detected_profile="${DOTFILES_PROFILE}"
-  [[ -z "${DOTFILES_PROFILE:-}" && -f "${profile_file}" ]] && \
-    detected_profile="$(<"${profile_file}")"
 
-  local -a profiles=("default" "work" "phone")
-  local selection=""
-
-  if [[ -n "${CI:-}" ]]; then
-    selection="${detected_profile}"
-    info "Running in CI. Automatically selecting profile: ${selection}"
-  else
-    local i n=${#profiles[@]} choice
-    printf '\n'; info "Available profiles:"
-    for i in "${!profiles[@]}"; do
-      local cur=""; [[ "${profiles[$i]}" == "${detected_profile}" ]] && \
-        cur=" (current)"
-      printf '  %s) %s%s\n' "$((i + 1))" "${profiles[$i]}" "${cur}"
-    done
-    while true; do
-      read -r -p "Select profile [1-${n}] (default: ${detected_profile}): " \
-        choice </dev/tty
-      [[ -z "${choice}" ]] && { selection="${detected_profile}"; break; }
-      [[ "${choice}" =~ ^[0-9]+$ ]] && \
-        (( choice >= 1 && choice <= n )) && \
-        { selection="${profiles[$((choice - 1))]}"; break; }
-      printf 'Invalid. Enter 1-%s.\n' "${n}"
-    done
-  fi
-
-  [[ -z "${selection}" ]] && { err "No profile selected."; exit 1; }
-  echo "${selection}" > "${HOME}/.dotfiles_profile"
-  export DOTFILES_PROFILE="${selection}"
-  success "Profile set to: ${selection}"
-}
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 
 #######################################
 # Main execution function.
@@ -276,6 +230,8 @@ select_profile() {
 #######################################
 main() {
   local dotfiles_profile=""
+  local git_name=""
+  local git_email=""
   while [[ "$#" -gt 0 ]]; do
     case "$1" in
       --profile)
@@ -287,17 +243,30 @@ main() {
           exit 1
         fi
         ;;
+      --git-name)
+        if [[ -n "${2:-}" ]]; then
+          git_name="$2"
+          shift 2
+        else
+          err "Error: --git-name requires an argument"
+          exit 1
+        fi
+        ;;
+      --git-email)
+        if [[ -n "${2:-}" ]]; then
+          git_email="$2"
+          shift 2
+        else
+          err "Error: --git-email requires an argument"
+          exit 1
+        fi
+        ;;
       *) err "Unknown parameter: $1"; exit 1 ;;
     esac
   done
 
-  # 1. Select profile
   if [[ -n "${dotfiles_profile}" ]]; then
-    echo "${dotfiles_profile}" > "${HOME}/.dotfiles_profile"
-    export DOTFILES_PROFILE="${dotfiles_profile}"
     success "Profile set via argument to: ${dotfiles_profile}"
-  else
-    select_profile
   fi
 
   info "Detected OS: ${OS_NAME}"
@@ -346,7 +315,17 @@ main() {
   # - run_once_after_08-install-packages.sh (install rest)
   # - run_once_after_10-set-zsh.sh (set default shell)
   # - run_after_99-dotfiles-setup.sh (post-apply hooks)
-  chezmoi init --apply --source "${DOTFILES}"
+  local -a chezmoi_args=(init --apply --source "${DOTFILES}")
+  if [[ -n "${dotfiles_profile}" ]]; then
+    chezmoi_args+=(--data "profile=${dotfiles_profile}")
+  fi
+  if [[ -n "${git_name}" ]]; then
+    chezmoi_args+=(--data "git_name=${git_name}")
+  fi
+  if [[ -n "${git_email}" ]]; then
+    chezmoi_args+=(--data "git_email=${git_email}")
+  fi
+  chezmoi "${chezmoi_args[@]}"
 
   success "Bootstrap complete! Please restart your terminal or run 'exec zsh'."
 }
