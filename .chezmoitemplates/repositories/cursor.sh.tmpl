@@ -1,5 +1,5 @@
 {{- if eq .chezmoi.os "linux" -}}
-  {{- if eq .chezmoi.osRelease.id "ubuntu" "debian" -}}
+  {{- if or (eq .chezmoi.osRelease.id "ubuntu" "debian") (and (hasKey .chezmoi.osRelease "idLike") (regexMatch "(ubuntu|debian)" .chezmoi.osRelease.idLike)) -}}
     # Cursor repo
     # Clean up legacy/conflicting list file if it exists
     if [[ -f /etc/apt/sources.list.d/cursor.list ]]; then

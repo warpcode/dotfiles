@@ -73,6 +73,8 @@ packages:
       pacman: dialog
       brew: dialog
       termux: dialog
+    - name: dnf-plugins-core
+      dnf: dnf-plugins-core
 
   integration:
     - name: flatpak
@@ -80,7 +82,9 @@ packages:
       dnf: flatpak
       pacman: flatpak
     - name: docker
-      apt: "docker-ce docker-compose-plugin"
+      apt: "docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"
+      dnf: "docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"
+      pacman: "docker docker-compose"
       brew_cask: docker-desktop
 
   cli:

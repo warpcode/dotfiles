@@ -9,7 +9,7 @@ main() {
   :
 
 {{ if eq .chezmoi.os "linux" }}
-  {{ if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
+  {{ if or (eq .chezmoi.osRelease.id "ubuntu" "debian") (and (hasKey .chezmoi.osRelease "idLike") (regexMatch "(ubuntu|debian)" .chezmoi.osRelease.idLike)) }}
     info "Configuring repositories for Debian/Ubuntu..."
 
     local arch
@@ -18,8 +18,23 @@ main() {
     local id="ubuntu"
     local version_codename=""
     if [[ -f /etc/os-release ]]; then
-      id="$(grep -E '^ID=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"' || echo "ubuntu")"
-      version_codename="$(grep -E '^VERSION_CODENAME=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"' || true)"
+      local os_id="$(grep -E '^ID=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"' || echo "ubuntu")"
+      local os_like="$(grep -E '^ID_LIKE=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"' || echo "")"
+      
+      # Determine upstream ID for Docker repo
+      if [[ "$os_id" == "debian" || "$os_like" == *"debian"* ]]; then
+        id="debian"
+      elif [[ "$os_id" == "ubuntu" || "$os_like" == *"ubuntu"* ]]; then
+        id="ubuntu"
+      else
+        id="$os_id"
+      fi
+
+      # Determine version codename
+      version_codename="$(grep -E '^UBUNTU_CODENAME=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"' || true)"
+      if [[ -z "$version_codename" ]]; then
+        version_codename="$(grep -E '^VERSION_CODENAME=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"' || true)"
+      fi
     fi
 
     run_as_root install -m 0755 -d /etc/apt/keyrings
@@ -28,7 +43,6 @@ main() {
   {{- end }}
 
   # Include repository setup templates
-  {{ template "repositories/github-cli.sh.tmpl" . }}
   {{ template "repositories/docker.sh.tmpl" . }}
   {{ template "repositories/cursor.sh.tmpl" . }}
   {{ template "repositories/vscode.sh.tmpl" . }}

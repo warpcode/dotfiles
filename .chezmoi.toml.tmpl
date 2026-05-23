@@ -18,11 +18,11 @@
 {{- else if $is_termux -}}
   {{- $sys_manager = "termux" -}}
 {{- else if eq .chezmoi.os "linux" -}}
-  {{- if eq .chezmoi.osRelease.id "ubuntu" "debian" -}}
+  {{- if or (eq .chezmoi.osRelease.id "ubuntu" "debian") (and (hasKey .chezmoi.osRelease "idLike") (regexMatch "(ubuntu|debian)" .chezmoi.osRelease.idLike)) -}}
     {{- $sys_manager = "apt" -}}
-  {{- else if eq .chezmoi.osRelease.id "fedora" -}}
+  {{- else if or (eq .chezmoi.osRelease.id "fedora") (and (hasKey .chezmoi.osRelease "idLike") (regexMatch "fedora" .chezmoi.osRelease.idLike)) -}}
     {{- $sys_manager = "dnf" -}}
-  {{- else if eq .chezmoi.osRelease.id "arch" -}}
+  {{- else if or (eq .chezmoi.osRelease.id "arch") (and (hasKey .chezmoi.osRelease "idLike") (regexMatch "arch" .chezmoi.osRelease.idLike)) -}}
     {{- $sys_manager = "pacman" -}}
   {{- end -}}
 {{- end -}}
