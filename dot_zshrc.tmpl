@@ -1,7 +1,7 @@
 # .zshrc managed by Chezmoi
 
 # Load dotfiles
-export DOTFILES="{{ .chezmoi.homeDir }}/.dotfiles"
+export DOTFILES="{{ .chezmoi.sourceDir }}"
 if [[ -f "${DOTFILES}/src/zsh/init.zsh" ]]; then
     source "${DOTFILES}/src/zsh/init.zsh"
 fi
