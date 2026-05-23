@@ -25,11 +25,11 @@ fs.search() {
     [[ -z "$query" ]] && { echo "Usage: fs.search [-r] [-s] <query> [dir]" >&2; return 1; }
 
     local -a flags=(-n -I)
-    [[ -z "$opts[-r]" ]] && flags+=(-F)
+    (( ${+opts[-r]} )) || flags+=(-F)
 
     if git rev-parse --is-inside-work-tree &>/dev/null; then
         local -a cmd=(git --no-pager grep --recurse-submodules "${flags[@]}")
-        if [[ -n "$opts[-s]" ]]; then
+        if (( ${+opts[-s]} )); then
             $cmd "$query" -- "$dir" | while IFS=: read -r file line_num content; do
                 print "${file}:${line_num}:${content}"
             done
@@ -41,20 +41,20 @@ fs.search() {
         local -a cmd=(grep -r "${flags[@]}")
         local d; for d in $excludes; cmd+=(--exclude-dir=$d)
         
-        if [[ -n "$opts[-s]" ]]; then
+        if (( ${+opts[-s]} )); then
             $cmd "$query" "$dir" | while IFS=: read -r file line_num content; do
                 # Trim leading/trailing whitespace from line_num if needed
                 print "${file}:${line_num}:${content}"
             done
         else
-            local last="" file content
-            $cmd "$query" "$dir" | while IFS=: read -r file content; do
+            local last="" file line_num content
+            $cmd "$query" "$dir" | while IFS=: read -r file line_num content; do
                 if [[ "$file" != "$last" ]]; then
                     [[ -n "$last" ]] && print ""
                     tui.heading "$file"
                     last="$file"
                 fi
-                print -r -- "$content"
+                print -r -- "$line_num:$content"
             done
         fi
     fi
