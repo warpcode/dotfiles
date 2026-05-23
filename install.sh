@@ -243,13 +243,7 @@ main() {
     fi
   fi
 
-  # Install/bootstrap mise and chezmoi
-  if ! command -v mise >/dev/null && [ ! -f "${HOME}/.local/bin/mise" ]; then
-    info "Installing mise..."
-    mkdir -p "${HOME}/.local/bin"
-    curl -fsSL https://mise.run | sh
-  fi
-
+  # Install/bootstrap chezmoi
   if ! command -v chezmoi >/dev/null && [ ! -f "${HOME}/.local/bin/chezmoi" ]; then
     info "Installing chezmoi..."
     mkdir -p "${HOME}/.local/bin"
