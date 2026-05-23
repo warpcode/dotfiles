@@ -3,7 +3,7 @@
     # Mise repo
     if ! command -v mise >/dev/null && [[ ! -f /etc/apt/sources.list.d/mise.list ]]; then
       echo "Configuring Mise repository..."
-      curl -fsSL https://mise.jdx.dev/gpg-key.pub | run_as_root gpg --dearmor -o /etc/apt/keyrings/mise-archive-keyring.gpg 2>/dev/null || true
+      curl -fsSL https://mise.jdx.dev/gpg-key.pub | run_as_root gpg --yes --dearmor -o /etc/apt/keyrings/mise-archive-keyring.gpg 2>/dev/null || true
       printf 'deb [arch=amd64 signed-by=%s] %s stable main\n' "/etc/apt/keyrings/mise-archive-keyring.gpg" "https://mise.jdx.dev/deb" | run_as_root tee /etc/apt/sources.list.d/mise.list > /dev/null
     fi
   {{- else if eq .chezmoi.osRelease.id "fedora" -}}

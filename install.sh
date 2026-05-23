@@ -44,7 +44,7 @@ detect_os() {
 #   $@ - The command to execute.
 #######################################
 run_as_root() {
-  if [[ "$(id -u)" -ne 0 ]]; then
+  if [[ "$(id -u)" -ne 0 ]] && command -v sudo >/dev/null 2>&1; then
     sudo "$@"
   else
     "$@"
@@ -61,8 +61,7 @@ if [[ -z "${DOTFILES_INSTALL_DIR}" ]]; then
 fi
 readonly DOTFILES_INSTALL_DIR
 
-readonly DOTFILES_SILENT="${DOTFILES_SILENT:-0}"
-readonly DOTFILES_SKIP_CHSHELL="${DOTFILES_SKIP_CHSHELL:-0}"
+
 readonly DOTFILES_REPO_URL="${DOTFILES_REPO_URL:-https://github.com/warpcode/dotfiles.git}"
 readonly OS_NAME="$(detect_os)"
 
@@ -70,69 +69,20 @@ readonly OS_NAME="$(detect_os)"
 # Logging
 # ---------------------------------------------------------------------------
 
-#######################################
-# Prints messages to stdout unless silent.
-# Globals:
-#   DOTFILES_SILENT
-# Arguments:
-#   $@ - Message to print.
-# Outputs:
-#   Writes message to stdout.
-#######################################
-out() {
-  if [[ "${DOTFILES_SILENT}" != "1" ]]; then
-    printf '%b\n' "$*"
-  fi
-}
-
-#######################################
-# Prints error messages to stderr.
-# Arguments:
-#   $@ - Error message to print.
-# Outputs:
-#   Writes timestamped error message to stderr.
-#######################################
 err() {
   printf '[%s] ❌ %b\n' "$(date +'%Y-%m-%dT%H:%M:%S%z')" "$*" >&2
 }
 
-#######################################
-# Prints informational messages.
-# Arguments:
-#   $1 - Info message.
-#   $2 - Prefix (optional).
-# Outputs:
-#   Writes prefixed message to stdout.
-#######################################
 info() {
-  local prefix="${2:-}"
-  out "${prefix}💬 $1"
+  printf '💬 %b\n' "$1"
 }
 
-#######################################
-# Prints success messages.
-# Arguments:
-#   $1 - Success message.
-#   $2 - Prefix (optional).
-# Outputs:
-#   Writes prefixed message to stdout.
-#######################################
 success() {
-  local prefix="${2:-}"
-  out "${prefix}✅ $1"
+  printf '✅ %b\n' "$1"
 }
 
-#######################################
-# Prints warning messages to stderr.
-# Arguments:
-#   $1 - Warning message.
-#   $2 - Prefix (optional).
-# Outputs:
-#   Writes prefixed message to stderr.
-#######################################
 warn() {
-  local prefix="${2:-}"
-  out "${prefix}⚠️  $1" >&2
+  printf '⚠️  %b\n' "$1" >&2
 }
 
 # ---------------------------------------------------------------------------
@@ -160,6 +110,8 @@ setup_macos() {
 # Ensures git, zsh, curl are installed on the system.
 #######################################
 ensure_bootstrap_packages() {
+  # These overlap intentionally with chezmoi's 'system' group — we need
+  # git, zsh, and curl available before chezmoi can run.
   info "Ensuring bootstrap prerequisites (git, zsh, curl) are installed..."
   case "${OS_NAME}" in
     debian)
@@ -221,8 +173,6 @@ ensure_dotfiles() {
     "${repo_url}" "${DOTFILES_INSTALL_DIR}"
 }
 
-
-
 #######################################
 # Main execution function.
 # Arguments:
@@ -275,23 +225,25 @@ main() {
     setup_macos
   fi
 
-  # 2. Ensure bootstrap packages (git, zsh, curl)
+  # Ensure bootstrap packages (git, zsh, curl)
   ensure_bootstrap_packages
 
   # Refresh command hash after core installations
   hash -r 2>/dev/null || true
 
-  # 3. Clone repository
+  # Clone repository
   ensure_dotfiles "${DOTFILES_REPO_URL}"
 
-  # 4. Set up installation directory
+  # Set up installation directory
   export DOTFILES="${DOTFILES_INSTALL_DIR}"
   cd "${DOTFILES}" || exit 1
   if command -v git >/dev/null; then
-    git config --global --add safe.directory "${DOTFILES}"
+    if ! git config --global --get-all safe.directory 2>/dev/null | grep -qxF "${DOTFILES}"; then
+      git config --global --add safe.directory "${DOTFILES}"
+    fi
   fi
 
-  # 5. Install/bootstrap mise and chezmoi
+  # Install/bootstrap mise and chezmoi
   if ! command -v mise >/dev/null && [ ! -f "${HOME}/.local/bin/mise" ]; then
     info "Installing mise..."
     mkdir -p "${HOME}/.local/bin"
@@ -306,7 +258,7 @@ main() {
 
   export PATH="${HOME}/.local/bin:${PATH}"
 
-  # 6. Apply dotfiles via chezmoi
+  # Apply dotfiles via chezmoi
   info "Applying dotfiles via Chezmoi..."
   # This will trigger:
   # - run_once_after_05-system.sh (install system pkgs)
@@ -314,7 +266,6 @@ main() {
   # - run_once_after_07-integration.sh (install integration pkgs)
   # - run_once_after_08-install-packages.sh (install rest)
   # - run_once_after_10-set-zsh.sh (set default shell)
-  # - run_after_99-dotfiles-setup.sh (post-apply hooks)
   local -a chezmoi_args=(init --apply --source "${DOTFILES}")
   if [[ -n "${dotfiles_profile}" ]]; then
     chezmoi_args+=(--data "profile=${dotfiles_profile}")
