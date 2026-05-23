@@ -7,16 +7,14 @@ PubkeyAuthentication yes
 ServerAliveInterval 60
 UseKeychain yes
 
-{{- $config := ds "config" }}
-{{- $hosts := index $config "hosts" | default (coll.Slice) }}
-{{ range $hosts }}
+{{- range (default (list) .hosts) }}
 Host {{ .name }}
     HostName {{ .hostname }}
-    User {{ .user | default (env.Getenv "USER") }}
-    {{- if (has . "identity_file") }}
+    User {{ .user | default $.chezmoi.username }}
+    {{- if .identity_file }}
     IdentityFile {{ .identity_file }}
     {{- end }}
-    {{- if (has . "is_dss") }}
+    {{- if .is_dss }}
     PubkeyAcceptedKeyTypes +ssh-dss
     {{- end }}
-{{ end }}
+{{ end -}}
