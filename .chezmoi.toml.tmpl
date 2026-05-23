@@ -23,8 +23,13 @@
   {{- end -}}
 {{- end -}}
 
+{{- $git_name := promptStringOnce . "git_name" "Git User Name" -}}
+{{- $git_email := promptStringOnce . "git_email" "Git User Email" -}}
+
 [data]
     profile = {{ $profile | quote }}
     is_termux = {{ $is_termux }}
     sys_manager = {{ $sys_manager | quote }}
     ai_config_dir = "{{ .chezmoi.homeDir }}/src/ai-config"
+    git_name = {{ $git_name | quote }}
+    git_email = {{ $git_email | quote }}

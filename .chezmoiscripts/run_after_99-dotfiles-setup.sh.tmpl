@@ -8,11 +8,11 @@ main() {
   local zsh_path
   zsh_path="$(command -v zsh 2>/dev/null)" || return 0
 
-  local dotfiles_init="{{ .chezmoi.homeDir }}/.dotfiles/src/zsh/init.zsh"
+  local dotfiles_init="{{ .chezmoi.sourceDir }}/src/zsh/init.zsh"
 
   if [[ -f "$dotfiles_init" ]]; then
     echo "Running post-apply Zsh hooks..."
-    export DOTFILES="{{ .chezmoi.homeDir }}/.dotfiles"
+    export DOTFILES="{{ .chezmoi.sourceDir }}"
     # We run submodules, recipe configuration, and setup events.
     # We skip 'dotfiles.setup.zshrc' because Chezmoi manages .zshrc now.
     "$zsh_path" -c "source '$dotfiles_init' && \
