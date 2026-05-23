@@ -122,7 +122,7 @@ ensure_bootstrap_packages() {
       run_as_root dnf install -y git zsh curl ca-certificates
       ;;
     arch)
-      run_as_root pacman -S --noconfirm git zsh curl
+      run_as_root pacman -Sy --noconfirm git zsh curl
       ;;
     macos)
       brew install git zsh curl || true
@@ -260,17 +260,21 @@ main() {
   # - run_once_after_07-integration.sh (install integration pkgs)
   # - run_once_after_08-install-packages.sh (install rest)
   # - run_once_after_10-set-zsh.sh (set default shell)
-  local -a chezmoi_args=(init --apply --source "${DOTFILES}")
-  if [[ -n "${dotfiles_profile}" ]]; then
-    chezmoi_args+=(--data "profile=${dotfiles_profile}")
+  local -a chezmoi_global_args=()
+  # Build --override-data JSON for template variables
+  # chezmoi --override-data accepts a JSON string as a global flag (before subcommand)
+  local override_data="{}"
+  if [[ -n "${dotfiles_profile}" || -n "${git_name}" || -n "${git_email}" ]]; then
+    local profile_json="null"
+    local git_name_json="null"
+    local git_email_json="null"
+    [[ -n "${dotfiles_profile}" ]] && profile_json="\"${dotfiles_profile}\""
+    [[ -n "${git_name}" ]]        && git_name_json="\"${git_name}\""
+    [[ -n "${git_email}" ]]       && git_email_json="\"${git_email}\""
+    override_data="{\"profile\":${profile_json},\"git_name\":${git_name_json},\"git_email\":${git_email_json}}"
+    chezmoi_global_args+=(--override-data "${override_data}")
   fi
-  if [[ -n "${git_name}" ]]; then
-    chezmoi_args+=(--data "git_name=${git_name}")
-  fi
-  if [[ -n "${git_email}" ]]; then
-    chezmoi_args+=(--data "git_email=${git_email}")
-  fi
-  chezmoi "${chezmoi_args[@]}"
+  chezmoi "${chezmoi_global_args[@]}" init --apply --source "${DOTFILES}"
 
   success "Bootstrap complete! Please restart your terminal or run 'exec zsh'."
 }
