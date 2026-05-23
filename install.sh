@@ -146,19 +146,6 @@ ensure_dotfiles() {
   if [[ -d "${DOTFILES_INSTALL_DIR}" && \
         -f "${DOTFILES_INSTALL_DIR}/install.sh" ]]; then
     success "Dotfiles already present at ${DOTFILES_INSTALL_DIR}"
-    if [[ -d "${DOTFILES_INSTALL_DIR}/.git" ]]; then
-      cd "${DOTFILES_INSTALL_DIR}" || return 1
-      info "Initializing submodules..."
-      if ! git submodule update --init --recursive --depth 1 --quiet \
-        2>/dev/null; then
-        warn "Submodule update failed. Falling back to HTTPS URLs..."
-        git config --local \
-          url."https://github.com/".insteadOf "git@github.com:"
-        git submodule sync --recursive >/dev/null 2>&1 || true
-        git submodule update --init --recursive --depth 1 --quiet \
-          2>/dev/null || true
-      fi
-    fi
     return 0
   fi
 
