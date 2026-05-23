@@ -15,29 +15,11 @@ main() {
     local arch
     arch="$(dpkg --print-architecture)"
 
-    local id="ubuntu"
-    local version_codename=""
-    if [[ -f /etc/os-release ]]; then
-      local os_id="$(grep -E '^ID=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"' || echo "ubuntu")"
-      local os_like="$(grep -E '^ID_LIKE=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"' || echo "")"
-      
-      # Determine upstream ID for Docker repo
-      if [[ "$os_id" == "debian" || "$os_like" == *"debian"* ]]; then
-        id="debian"
-      elif [[ "$os_id" == "ubuntu" || "$os_like" == *"ubuntu"* ]]; then
-        id="ubuntu"
-      else
-        id="$os_id"
-      fi
-
-      # Determine version codename
-      version_codename="$(grep -E '^UBUNTU_CODENAME=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"' || true)"
-      if [[ -z "$version_codename" ]]; then
-        version_codename="$(grep -E '^VERSION_CODENAME=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"' || true)"
-      fi
-    fi
+    local id={{ if or (eq .chezmoi.osRelease.id "ubuntu") (and (hasKey .chezmoi.osRelease "idLike") (regexMatch "ubuntu" .chezmoi.osRelease.idLike)) }}"ubuntu"{{ else }}"debian"{{ end }}
+    local version_codename={{ .chezmoi.osRelease.versionCodename | quote }}
 
     run_as_root install -m 0755 -d /etc/apt/keyrings
+
   {{- else if eq .chezmoi.osRelease.id "fedora" }}
     info "Configuring repositories for Fedora..."
   {{- end }}
