@@ -2,6 +2,7 @@
 
 # Load dotfiles
 export DOTFILES="{{ .chezmoi.sourceDir }}"
+export DOTFILES_PROFILE="{{ .profile }}"
 if [[ -f "${DOTFILES}/src/zsh/init.zsh" ]]; then
     source "${DOTFILES}/src/zsh/init.zsh"
 fi
