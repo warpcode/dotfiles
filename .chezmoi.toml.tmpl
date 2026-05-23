@@ -1,4 +1,11 @@
-{{- $profile := promptChoiceOnce . "profile" "Select profile" (list "default" "work" "phone") -}}
+{{- $profile := "" -}}
+{{- if hasKey . "profile" -}}
+  {{- $profile = .profile -}}
+{{- else if stdinIsATTY -}}
+  {{- $profile = promptChoiceOnce . "profile" "Select profile" (list "default" "work" "phone") -}}
+{{- else -}}
+  {{- $profile = "default" -}}
+{{- end -}}
 
 {{- $is_termux := false -}}
 {{- if stat "/data/data/com.termux/files/usr/bin" -}}
@@ -20,8 +27,23 @@
   {{- end -}}
 {{- end -}}
 
-{{- $git_name := promptStringOnce . "git_name" "Git User Name" -}}
-{{- $git_email := promptStringOnce . "git_email" "Git User Email" -}}
+{{- $git_name := "" -}}
+{{- if hasKey . "git_name" -}}
+  {{- $git_name = .git_name -}}
+{{- else if stdinIsATTY -}}
+  {{- $git_name = promptStringOnce . "git_name" "Git User Name" -}}
+{{- else -}}
+  {{- $git_name = "CI Test" -}}
+{{- end -}}
+
+{{- $git_email := "" -}}
+{{- if hasKey . "git_email" -}}
+  {{- $git_email = .git_email -}}
+{{- else if stdinIsATTY -}}
+  {{- $git_email = promptStringOnce . "git_email" "Git User Email" -}}
+{{- else -}}
+  {{- $git_email = "ci@example.com" -}}
+{{- end -}}
 
 [data]
     profile = {{ $profile | quote }}
