@@ -13,7 +13,7 @@ ai.providers.openrouter.enabled() {
 }
 
 ai.providers.openrouter.credentials() {
-    "$DOTFILES/bin/df.secrets" get "OPENROUTER_API_KEY"
+    "$DOTFILES/bin/df.keepass" get "AI/OpenRouter" "api_key"
 }
 
 ai.providers.openrouter.models.free() {
