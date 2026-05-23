@@ -7,7 +7,7 @@ PubkeyAuthentication yes
 ServerAliveInterval 60
 UseKeychain yes
 
-{{- range (default (list) .hosts) }}
+{{- range (index . "hosts" | default (list)) }}
 Host {{ .name }}
     HostName {{ .hostname }}
     User {{ .user | default $.chezmoi.username }}
