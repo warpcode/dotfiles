@@ -1,0 +1,8 @@
+[project]
+name = "youtube-scripts"
+version = "0.1.0"
+description = "Standalone scripts for YouTube skill"
+dependencies = [
+    "youtube-transcript-api",
+    "yt-dlp",
+]
