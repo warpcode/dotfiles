@@ -46,22 +46,18 @@ obsidian.find.byAttribute() {
   candidate_files=(${candidate_files:#})
   [[ ${#candidate_files} -eq 0 ]] && return 0
 
-  # Export search values as env vars for yq
-  export ATTR="$attribute_name"
-  local match_expr=""
-  for i in {1..${#search_values}}; do
-    export "MATCH_VAL_${i}=${search_values[$i]}"
-    match_expr+=". == strenv(MATCH_VAL_${i})"
-    [[ $i -lt ${#search_values} ]] && match_expr+=' or '
-  done
+  local vals_json=$(printf '%s\n' "${search_values[@]}" | jq -R . | jq -s -c .)
 
-  df.md fm get-all "${candidate_files[@]}" | yq -r -N "
+  df.md fm get-all "${candidate_files[@]}" | yq -r \
+    --arg attr "$attribute_name" \
+    --argjson vals "$vals_json" \
+    '
     select(
-      [ .[strenv(ATTR)] ] | flatten | .[] | select(. != null) |
-      ((select(tag == \"!!str\") | sub(\"^\\\\\\\[\\\\\\\[\", \"\") | sub(\"\\\\\\\]\\\\\\\]$\", \"\")) // .) |
-      select($match_expr)
+      [ .[$attr] ] | flatten | .[] | select(. != null) |
+      ((select(type == "string") | ltrimstr("[[") | rtrimstr("]]")) // .) |
+      . as $v | any($vals[]; . == ($v | tostring))
     ) | .path
-  " 2>/dev/null | sort -u
+  ' 2>/dev/null | sort -u
 }
 
 # @description List all note filenames of specific types
@@ -78,10 +74,11 @@ obsidian.attribute.values() {
   candidate_files=(${candidate_files:#}) 
   [[ ${#candidate_files} -eq 0 ]] && return 0
 
-  export ATTR="$attribute_name"
-  df.md fm get-all "${candidate_files[@]}" | yq -r -N '
-    [ .[strenv(ATTR)] ] | flatten | .[] | select(. != null) |
-    (select(tag == "!!str") | sub("^\\\[\\\[", "") | sub("\\\]\\\]$", "")) // .
+  df.md fm get-all "${candidate_files[@]}" | yq -r \
+    --arg attr "$attribute_name" \
+    '
+    [ .[$attr] ] | flatten | .[] | select(. != null) |
+    (select(type == "string") | ltrimstr("[[") | rtrimstr("]]")) // .
   ' 2>/dev/null | sort -u
 }
 
@@ -252,9 +249,11 @@ obsidian.note.new() {
   local target_folder_path="$OBSIDIAN_VAULT/$base_folder"
   
   for preference in "${write_preferences[@]}"; do
-    local match_val=$(printf "%s\n" "${frontmatter_lines[@]}" | ATTR="$preference" yq -r '
-      [ .[strenv(ATTR)] ] | flatten | .[0] | select(. != null) |
-      (select(tag == "!!str") | sub("^\\\[\\\[", "") | sub("\\\]\\\]$", "")) // .
+    local match_val=$(printf "%s\n" "${frontmatter_lines[@]}" | yq -r \
+      --arg attr "$preference" \
+      '
+      [ .[$attr] ] | flatten | .[0] | select(. != null) |
+      (select(type == "string") | ltrimstr("[[") | rtrimstr("]]")) // .
     ' 2>/dev/null)
     
     if [[ -n "$match_val" ]]; then

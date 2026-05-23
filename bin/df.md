@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 #
 # df.md - Markdown and frontmatter utilities.
 # Extracted from src/zsh/apps/markdown.zsh for portability.
