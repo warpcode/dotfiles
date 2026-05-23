@@ -7,7 +7,7 @@
     fi
 
     if [[ ! -f /etc/apt/sources.list.d/cursor.sources ]]; then
-      echo "Configuring Cursor repository..."
+      info "Configuring Cursor repository..."
       curl -fsSL https://downloads.cursor.com/keys/anysphere.asc | run_as_root gpg --yes --dearmor -o /usr/share/keyrings/anysphere.gpg 2>/dev/null || true
       run_as_root tee /etc/apt/sources.list.d/cursor.sources << 'EOF' >/dev/null
 Types: deb
@@ -21,7 +21,7 @@ EOF
   {{- else if eq .chezmoi.osRelease.id "fedora" -}}
     # Cursor repo
     if [[ ! -f /etc/yum.repos.d/cursor.repo ]]; then
-      echo "Configuring Cursor repository..."
+      info "Configuring Cursor repository..."
       run_as_root tee /etc/yum.repos.d/cursor.repo << 'EOF' >/dev/null
 [cursor]
 name=Cursor

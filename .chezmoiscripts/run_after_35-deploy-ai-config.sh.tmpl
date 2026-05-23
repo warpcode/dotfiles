@@ -1,16 +1,18 @@
 #!/bin/bash
 # Deploy AI configurations and run installer script
+{{ template "script_utils.sh.tmpl" . }}
+
 export PATH="${HOME}/.local/share/mise/shims:${PATH}"
 export PATH="${HOME}/.local/bin:${PATH}"
 
 AI_CONFIG_DIR="{{ .ai_config_dir | default (joinPath .chezmoi.homeDir "src/ai-config") }}"
 
 if [ ! -d "${AI_CONFIG_DIR}" ]; then
-  echo "Warning: AI config directory not found at ${AI_CONFIG_DIR}"
+  warn "AI config directory not found at ${AI_CONFIG_DIR}"
   exit 0
 fi
 
-echo "Deploying AI configurations from ${AI_CONFIG_DIR}..."
+info "Deploying AI configurations from ${AI_CONFIG_DIR}..."
 mkdir -p "${HOME}/.config/opencode"
 mkdir -p "${HOME}/.gemini"
 
@@ -23,6 +25,6 @@ done
 
 # Run skills installation if zsh and mise are available
 if command -v zsh >/dev/null; then
-  echo "Running skills installer via Zsh..."
+  info "Running skills installer via Zsh..."
   AI_CONFIG_DIR="${AI_CONFIG_DIR}" zsh -c "source ${HOME}/.zshrc 2>/dev/null || true; ai.skills.install 2>/dev/null || true"
 fi

@@ -2,18 +2,18 @@
 {{- $sys_manager := .sys_manager -}}
 
 {{- if eq $sys_manager "apt" }}
-  echo "Updating apt repositories..."
+  info "Updating apt repositories..."
   run_as_root apt-get update -qq
 {{- else if eq $sys_manager "dnf" }}
-  echo "Updating dnf repositories..."
+  info "Updating dnf repositories..."
   run_as_root dnf check-update -q || true
 {{- else if eq $sys_manager "pacman" }}
-  echo "Updating pacman repositories..."
+  info "Updating pacman repositories..."
   run_as_root pacman -Sy --noconfirm
 {{- else if eq $sys_manager "brew" }}
-  echo "Updating Homebrew..."
+  info "Updating Homebrew..."
   brew update
 {{- else if eq $sys_manager "termux" }}
-  echo "Updating Termux packages..."
+  info "Updating Termux packages..."
   pkg update -y
 {{- end }}

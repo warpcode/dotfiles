@@ -2,14 +2,14 @@
   {{- if eq .chezmoi.osRelease.id "ubuntu" "debian" -}}
     # Antigravity repo
     if [[ ! -f /etc/apt/sources.list.d/antigravity.list ]]; then
-      echo "Configuring Antigravity repository..."
+      info "Configuring Antigravity repository..."
       curl -fsSL https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg | run_as_root gpg --dearmor --yes -o /etc/apt/keyrings/antigravity-repo-key.gpg 2>/dev/null || true
       printf 'deb [signed-by=%s] %s antigravity-debian main\n' "/etc/apt/keyrings/antigravity-repo-key.gpg" "https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/" | run_as_root tee /etc/apt/sources.list.d/antigravity.list > /dev/null
     fi
   {{- else if eq .chezmoi.osRelease.id "fedora" -}}
     # Antigravity repo
     if [[ ! -f /etc/yum.repos.d/antigravity.repo ]]; then
-      echo "Configuring Antigravity repository..."
+      info "Configuring Antigravity repository..."
       run_as_root tee /etc/yum.repos.d/antigravity.repo << 'EOF' >/dev/null
 [antigravity-rpm]
 name=Antigravity RPM Repository
