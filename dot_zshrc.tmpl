@@ -1,0 +1,12 @@
+# .zshrc managed by Chezmoi
+
+# Load dotfiles
+export DOTFILES="{{ .chezmoi.homeDir }}/.dotfiles"
+if [[ -f "${DOTFILES}/src/zsh/init.zsh" ]]; then
+    source "${DOTFILES}/src/zsh/init.zsh"
+fi
+
+# Load local overrides
+if [[ -f ~/.zshrc.local ]]; then
+    source ~/.zshrc.local
+fi

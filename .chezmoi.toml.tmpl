@@ -8,7 +8,23 @@
   {{- $is_termux = true -}}
 {{- end -}}
 
+{{- $sys_manager := "" -}}
+{{- if eq .chezmoi.os "darwin" -}}
+  {{- $sys_manager = "brew" -}}
+{{- else if $is_termux -}}
+  {{- $sys_manager = "termux" -}}
+{{- else if eq .chezmoi.os "linux" -}}
+  {{- if eq .chezmoi.osRelease.id "ubuntu" "debian" -}}
+    {{- $sys_manager = "apt" -}}
+  {{- else if eq .chezmoi.osRelease.id "fedora" -}}
+    {{- $sys_manager = "dnf" -}}
+  {{- else if eq .chezmoi.osRelease.id "arch" -}}
+    {{- $sys_manager = "pacman" -}}
+  {{- end -}}
+{{- end -}}
+
 [data]
     profile = {{ $profile | quote }}
     is_termux = {{ $is_termux }}
+    sys_manager = {{ $sys_manager | quote }}
     ai_config_dir = "{{ .chezmoi.homeDir }}/src/ai-config"
