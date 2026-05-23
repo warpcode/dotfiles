@@ -7,13 +7,15 @@ source src/zsh/config/70-network.zsh
 test_dataurl_usage() {
     echo "Testing dataurl usage..."
     output=$(dataurl)
+    exit_code=$?
     expected="Usage: dataurl <path/to/file>"
-    if [ "$output" == "$expected" ]; then
+    if [ "$output" == "$expected" ] && [ $exit_code -ne 0 ]; then
         echo "✅ Usage test passed"
     else
         echo "❌ Usage test failed"
-        echo "Expected: $expected"
-        echo "Got: $output"
+        echo "Expected output: $expected"
+        echo "Got output: $output"
+        echo "Expected non-zero exit code, got: $exit_code"
         return 1
     fi
 }
