@@ -1,0 +1,12 @@
+#!/bin/bash
+case "$1" in
+  db-info) exit 0 ;;
+  search) echo "Work/Stripe" ;;
+  show)
+    if [[ "$*" == *"-a Password"* ]]; then
+      echo "secret_password"
+    elif [[ "$*" == *"-a UserName"* ]]; then
+      echo "jules"
+    fi
+    ;;
+esac
