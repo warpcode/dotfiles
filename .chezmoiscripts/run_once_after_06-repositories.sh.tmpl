@@ -5,6 +5,9 @@
 {{ template "script_utils.sh.tmpl" . }}
 
 main() {
+  # Ensure function is not empty on non-Linux systems
+  :
+
 {{ if eq .chezmoi.os "linux" }}
   {{ if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
     info "Configuring repositories for Debian/Ubuntu..."
