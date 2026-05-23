@@ -57,8 +57,8 @@ ZSH_THEME="candy"
 # much, much faster.
 # DISABLE_UNTRACKED_FILES_DIRTY="true"
 
-# Would you like to use another custom folder than $ZSH/custom?
-export ZSH_CUSTOM="${ZSH_CUSTOM:-$DOTFILES/src/ohmyzsh}"
+# Custom plugins/themes dir (separate from the oh-my-zsh core installation)
+export ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 
 # Which plugins would you like to load?
 # Standard plugins can be found in $ZSH/plugins/

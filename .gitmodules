@@ -1,4 +1,0 @@
-[submodule "src/ohmyzsh/plugins/zsh-autosuggestions"]
-	path = src/ohmyzsh/plugins/zsh-autosuggestions
-	url = https://github.com/zsh-users/zsh-autosuggestions.git
-	branch = master
