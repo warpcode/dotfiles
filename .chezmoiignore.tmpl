@@ -1,0 +1,18 @@
+.git
+.github
+.gitignore
+.gitmodules
+README.md
+assets/
+bin/
+bin-old/
+fonts/
+install.sh
+src/
+vendor/
+.pytest_cache/
+
+{{- if not (and (eq .chezmoi.os "linux") (not .is_termux) (eq .profile "default")) -}}
+.local/share/applications/antigravity-hub.desktop
+.local/share/applications/antigravity-ide.desktop
+{{- end -}}
