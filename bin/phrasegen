@@ -3,7 +3,25 @@
 words="${1:-4}"
 delimiter="${2:- }"
 
+# Determine the best available random shuffling tool
+if command -v shuf >/dev/null 2>&1; then
+    shuffle_cmd=(shuf -n "${words}")
+elif command -v gshuf >/dev/null 2>&1; then
+    shuffle_cmd=(gshuf -n "${words}")
+else
+    # Fallback to sort -R if shuf is not available
+    # This is less efficient as it sorts the entire input
+    exec cat ${DOTFILES}/assets/wordlists/google-10000-english-usa-no-swears-*.txt \
+        | sort -R \
+        | head -n "${words}" \
+        | paste -s -d "$delimiter" -
+fi
+
+# Use /dev/urandom for better entropy if available
+if [[ -e /dev/urandom ]]; then
+    shuffle_cmd+=(--random-source=/dev/urandom)
+fi
+
 exec cat ${DOTFILES}/assets/wordlists/google-10000-english-usa-no-swears-*.txt \
-    | sort -R \
-    | head -n "${words}" \
+    | "${shuffle_cmd[@]}" \
     | paste -s -d "$delimiter" -
