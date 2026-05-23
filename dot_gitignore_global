@@ -170,6 +170,7 @@ tags
 # Gemini / Antigravity
 /.gemini/
 /GEMINI.md
+.antigravitycli/
 
 # GitHub Copilot
 /.copilot/

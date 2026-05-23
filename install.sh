@@ -3,6 +3,7 @@
 # Bootstraps the dotfiles repository and dependencies using Chezmoi.
 
 set -euo pipefail
+trap 'printf "\n"; exit 130' INT TERM
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -139,157 +140,6 @@ warn() {
 # ---------------------------------------------------------------------------
 
 #######################################
-# Runs Debian/Ubuntu specific setup.
-#######################################
-setup_debian() {
-  info "Setting up Debian/Ubuntu..."
-  run_as_root apt update -qq
-  run_as_root apt install -y -qq curl ca-certificates gnupg
-
-  local arch
-  arch="$(dpkg --print-architecture)"
-
-  local id="ubuntu"
-  local version_codename=""
-  if [[ -f /etc/os-release ]]; then
-    id="$(grep -E '^ID=' /etc/os-release 2>/dev/null \
-      | cut -d= -f2 | tr -d '"' || echo "ubuntu")"
-    version_codename="$(grep -E '^VERSION_CODENAME=' /etc/os-release \
-      2>/dev/null | cut -d= -f2 | tr -d '"' || true)"
-  fi
-
-  run_as_root install -m 0755 -d /etc/apt/keyrings
-
-  if [[ ! -f /usr/share/keyrings/githubcli-archive-keyring.gpg ]]; then
-    info "Configuring GitHub CLI repository..."
-    curl -fsSL \
-      https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-      | run_as_root dd \
-        of=/usr/share/keyrings/githubcli-archive-keyring.gpg 2>/dev/null
-    printf 'deb [arch=%s signed-by=%s] %s stable main\n' \
-      "${arch}" \
-      "/usr/share/keyrings/githubcli-archive-keyring.gpg" \
-      "https://cli.github.com/packages" \
-      | run_as_root tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-  fi
-
-  if ! command -v mise >/dev/null; then
-    info "Configuring Mise repository..."
-    curl -fsSL https://mise.jdx.dev/gpg-key.pub \
-      | run_as_root gpg --dearmor \
-        -o /etc/apt/keyrings/mise-archive-keyring.gpg 2>/dev/null || true
-    printf 'deb [arch=amd64 signed-by=%s] %s stable main\n' \
-      "/etc/apt/keyrings/mise-archive-keyring.gpg" \
-      "https://mise.jdx.dev/deb" \
-      | run_as_root tee /etc/apt/sources.list.d/mise.list > /dev/null
-  fi
-
-  if ! command -v docker >/dev/null; then
-    info "Configuring Docker repository..."
-    curl -fsSL "https://download.docker.com/linux/${id}/gpg" \
-      | run_as_root tee /etc/apt/keyrings/docker.asc >/dev/null
-    run_as_root chmod a+r /etc/apt/keyrings/docker.asc
-    printf 'deb [arch=%s signed-by=%s] %s %s stable\n' \
-      "${arch}" \
-      "/etc/apt/keyrings/docker.asc" \
-      "https://download.docker.com/linux/${id}" \
-      "${version_codename}" \
-      | run_as_root tee /etc/apt/sources.list.d/docker.list > /dev/null
-  fi
-
-  if [[ ! -f /etc/apt/sources.list.d/cursor.list ]]; then
-    info "Configuring Cursor repository..."
-    curl -fsSL https://downloads.cursor.com/keys/anysphere.asc \
-      | run_as_root gpg --dearmor \
-        -o /etc/apt/keyrings/cursor.gpg 2>/dev/null || true
-    printf 'deb [arch=amd64,arm64 signed-by=%s] %s stable main\n' \
-      "/etc/apt/keyrings/cursor.gpg" \
-      "https://downloads.cursor.com/aptrepo" \
-      | run_as_root tee /etc/apt/sources.list.d/cursor.list > /dev/null
-  fi
-
-  if [[ ! -f /etc/apt/sources.list.d/vscode.list ]]; then
-    info "Configuring VS Code repository..."
-    curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
-      | run_as_root gpg --dearmor --yes \
-        -o /etc/apt/keyrings/packages.microsoft.gpg 2>/dev/null || true
-    printf 'deb [arch=amd64,arm64,armhf signed-by=%s] %s stable main\n' \
-      "/etc/apt/keyrings/packages.microsoft.gpg" \
-      "https://packages.microsoft.com/repos/code" \
-      | run_as_root tee /etc/apt/sources.list.d/vscode.list > /dev/null
-  fi
-
-  if [[ ! -f /etc/apt/sources.list.d/antigravity.list ]]; then
-    info "Configuring Antigravity repository..."
-    curl -fsSL https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg \
-      | run_as_root gpg --dearmor --yes \
-        -o /etc/apt/keyrings/antigravity-repo-key.gpg 2>/dev/null || true
-    printf 'deb [signed-by=%s] %s antigravity-debian main\n' \
-      "/etc/apt/keyrings/antigravity-repo-key.gpg" \
-      "https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/" \
-      | run_as_root tee /etc/apt/sources.list.d/antigravity.list > /dev/null
-  fi
-
-  run_as_root apt update -qq
-}
-
-#######################################
-# Runs Fedora specific setup.
-#######################################
-setup_fedora() {
-  info "Setting up Fedora..."
-  run_as_root dnf check-update -q || true
-  if ! command -v mise >/dev/null; then
-    run_as_root dnf copr enable -y jdxcode/mise
-  fi
-
-  if [[ ! -f /etc/yum.repos.d/cursor.repo ]]; then
-    info "Configuring Cursor repository..."
-    run_as_root tee /etc/yum.repos.d/cursor.repo << 'EOF' >/dev/null
-[cursor]
-name=Cursor
-baseurl=https://downloads.cursor.com/yumrepo
-enabled=1
-gpgcheck=1
-gpgkey=https://downloads.cursor.com/keys/anysphere.asc
-EOF
-  fi
-
-  if [[ ! -f /etc/yum.repos.d/vscode.repo ]]; then
-    info "Configuring VS Code repository..."
-    run_as_root tee /etc/yum.repos.d/vscode.repo << 'EOF' >/dev/null
-[code]
-name=Visual Studio Code
-baseurl=https://packages.microsoft.com/yumrepos/vscode
-enabled=1
-gpgcheck=1
-gpgkey=https://packages.microsoft.com/keys/microsoft.asc
-EOF
-  fi
-
-  if [[ ! -f /etc/yum.repos.d/antigravity.repo ]]; then
-    info "Configuring Antigravity repository..."
-    run_as_root tee /etc/yum.repos.d/antigravity.repo << 'EOF' >/dev/null
-[antigravity-rpm]
-name=Antigravity RPM Repository
-baseurl=https://us-central1-yum.pkg.dev/projects/antigravity-auto-updater-dev/antigravity-rpm
-enabled=1
-gpgcheck=0
-EOF
-  fi
-
-  run_as_root dnf update -y -q
-}
-
-#######################################
-# Runs Arch Linux specific setup.
-#######################################
-setup_arch() {
-  info "Setting up Arch..."
-  run_as_root pacman -Sy -q
-}
-
-#######################################
 # Runs macOS specific setup.
 #######################################
 setup_macos() {
@@ -300,14 +150,6 @@ setup_macos() {
       https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   fi
   brew update || true
-}
-
-#######################################
-# Runs Termux specific setup.
-#######################################
-setup_termux() {
-  info "Setting up Termux..."
-  pkg update -q
 }
 
 # ---------------------------------------------------------------------------
@@ -321,10 +163,11 @@ ensure_bootstrap_packages() {
   info "Ensuring bootstrap prerequisites (git, zsh, curl) are installed..."
   case "${OS_NAME}" in
     debian)
-      run_as_root apt install -y -qq git zsh curl
+      run_as_root apt update -qq
+      run_as_root apt install -y -qq git zsh curl ca-certificates gnupg
       ;;
     fedora)
-      run_as_root dnf install -y git zsh curl
+      run_as_root dnf install -y git zsh curl ca-certificates
       ;;
     arch)
       run_as_root pacman -S --noconfirm git zsh curl
@@ -376,68 +219,6 @@ ensure_dotfiles() {
   mkdir -p "$(dirname "${DOTFILES_INSTALL_DIR}")"
   git clone --depth 1 --recurse-submodules --shallow-submodules \
     "${repo_url}" "${DOTFILES_INSTALL_DIR}"
-}
-
-#######################################
-# Retrieves the current user's default shell.
-# Globals:
-#   OS_NAME
-# Outputs:
-#   Writes the absolute path of the default shell to stdout.
-#######################################
-get_shell() {
-  local u
-  u="$(whoami)"
-
-  if [[ "${OS_NAME}" == "macos" ]]; then
-    dscl . -read "/Users/${u}" UserShell | awk '{print $2}'
-    return 0
-  fi
-
-  if getent passwd "${u}" 2>/dev/null | cut -d: -f7 | grep -q .; then
-    getent passwd "${u}" 2>/dev/null | cut -d: -f7
-  elif grep "^${u}:" /etc/passwd 2>/dev/null | cut -d: -f7 | grep -q .; then
-    grep "^${u}:" /etc/passwd 2>/dev/null | cut -d: -f7
-  else
-    echo "${SHELL}"
-  fi
-}
-
-#######################################
-# Checks if zsh is the default shell and attempts to change it.
-# Arguments:
-#   $1 - Path to zsh.
-#######################################
-set_zsh_default() {
-  local zsh_path="$1"
-  local u
-  u="$(whoami)"
-
-  local current_shell
-  current_shell="$(get_shell)"
-
-  if [[ "${current_shell}" == *"/zsh"* ]]; then
-    success "zsh is already the default shell."
-    return 0
-  fi
-
-  if [[ "${DOTFILES_SKIP_CHSHELL}" == "1" ]]; then
-    info "Skipping shell change (DOTFILES_SKIP_CHSHELL=1)"
-    return 0
-  fi
-
-  info "Changing default shell to zsh..."
-  if ! command -v chsh >/dev/null; then
-    warn "'chsh' not found. Set default shell to ${zsh_path} manually."
-    return 0
-  fi
-
-  if run_as_root chsh -s "${zsh_path}" "${u}"; then
-    success "Default shell changed to zsh successfully."
-  else
-    warn "Failed to change default shell automatically."
-    info "Please run: sudo chsh -s ${zsh_path} ${u}"
-  fi
 }
 
 #######################################
@@ -521,13 +302,9 @@ main() {
 
   info "Detected OS: ${OS_NAME}"
 
-  case "${OS_NAME}" in
-    debian) setup_debian ;;
-    fedora) setup_fedora ;;
-    arch)   setup_arch ;;
-    macos)  setup_macos ;;
-    termux) setup_termux ;;
-  esac
+  if [[ "${OS_NAME}" == "macos" ]]; then
+    setup_macos
+  fi
 
   # 2. Ensure bootstrap packages (git, zsh, curl)
   ensure_bootstrap_packages
@@ -535,33 +312,17 @@ main() {
   # Refresh command hash after core installations
   hash -r 2>/dev/null || true
 
-  # 3. Set Zsh as default shell
-  local zsh_path
-  zsh_path="$(command -v zsh 2>/dev/null)" || zsh_path=""
-  if [[ -z "${zsh_path}" ]]; then
-    local p
-    for p in /usr/bin/zsh /bin/zsh /usr/local/bin/zsh; do
-      if [[ -x "${p}" ]]; then
-        zsh_path="${p}"
-        break
-      fi
-    done
-  fi
-  if [[ -n "${zsh_path}" ]]; then
-    set_zsh_default "${zsh_path}"
-  fi
-
-  # 4. Clone repository
+  # 3. Clone repository
   ensure_dotfiles "${DOTFILES_REPO_URL}"
 
-  # 5. Set up installation directory
+  # 4. Set up installation directory
   export DOTFILES="${DOTFILES_INSTALL_DIR}"
   cd "${DOTFILES}" || exit 1
   if command -v git >/dev/null; then
     git config --global --add safe.directory "${DOTFILES}"
   fi
 
-  # 6. Install/bootstrap mise and chezmoi
+  # 5. Install/bootstrap mise and chezmoi
   if ! command -v mise >/dev/null && [ ! -f "${HOME}/.local/bin/mise" ]; then
     info "Installing mise..."
     mkdir -p "${HOME}/.local/bin"
@@ -576,20 +337,16 @@ main() {
 
   export PATH="${HOME}/.local/bin:${PATH}"
 
-  # 7. Apply dotfiles via chezmoi
+  # 6. Apply dotfiles via chezmoi
   info "Applying dotfiles via Chezmoi..."
+  # This will trigger:
+  # - run_once_after_05-system.sh (install system pkgs)
+  # - run_once_after_06-repositories.sh (setup 3rd party repos)
+  # - run_once_after_07-integration.sh (install integration pkgs)
+  # - run_once_after_08-install-packages.sh (install rest)
+  # - run_once_after_10-set-zsh.sh (set default shell)
+  # - run_after_99-dotfiles-setup.sh (post-apply hooks)
   chezmoi init --apply --source "${DOTFILES}"
-
-  # 8. Source all Zsh functions and run recipe configure hooks
-  if [[ -f "src/zsh/init.zsh" && -n "${zsh_path}" ]]; then
-    "${zsh_path}" -c "source src/zsh/init.zsh && pkg.recipe.configure_all"
-  fi
-
-  # 9. Hand off to internal Zsh configuration
-  printf '\nBootstrapping dotfiles...\n'
-  if [[ -f "src/zsh/init.zsh" && -n "${zsh_path}" ]]; then
-    "${zsh_path}" -c "source src/zsh/init.zsh && dotfiles.setup"
-  fi
 
   success "Bootstrap complete! Please restart your terminal or run 'exec zsh'."
 }

@@ -1,5 +1,23 @@
 packages:
   system:
+    - name: git
+      apt: git
+      dnf: git
+      pacman: git
+      brew: git
+      termux: git
+    - name: zsh
+      apt: zsh
+      dnf: zsh
+      pacman: zsh
+      brew: zsh
+      termux: zsh
+    - name: curl
+      apt: curl
+      dnf: curl
+      pacman: curl
+      brew: curl
+      termux: curl
     - name: gcc
       apt: gcc
       dnf: gcc
@@ -63,7 +81,6 @@ packages:
       pacman: flatpak
     - name: docker
       apt: "docker-ce docker-compose-plugin"
-      brew: docker
       brew_cask: docker-desktop
 
   cli:
@@ -153,7 +170,6 @@ packages:
       brew_cask: keepassxc
       not: work
     - name: code
-      snap: "code --classic"
       apt: code
       dnf: code
       brew_cask: visual-studio-code
