@@ -179,11 +179,6 @@ packages:
       dnf: cursor
       brew_cask: cursor
       not: work
-    - name: antigravity
-      apt: antigravity
-      dnf: antigravity
-      brew_cask: antigravity
-      not: work
 
   ai:
     - name: ollama
