@@ -32,7 +32,12 @@ Comments MUST NOT use 'caveman' style.
 - **Approval**: If approving a pull request, NEVER add NEW comments to files. Do not provide a summary if there is nothing new to add; just ask to approve.
 - **Replies**: Only reply if needed (with user approval). Give a thumbs up (👍) ONLY if the developer replied saying they fixed a requested change.
 - **Resolution**: Proactively resolve GitHub pull request review threads when the code changes addressing them have been verified. Use `scripts/resolve_review_thread.sh <thread_id>`. If the developer asks a question, alert the user for a response.
-- **Format**: Use line-level comments for specific issues and file-level comments for file-wide concerns. If nothing is wrong, do not add any comments. Use plain English to describe the issue, explain why it is a problem, and suggest a potential solution.
+- **Format**: For each technical finding, use line-level comments that include:
+  1. **Severity**: High, Medium, or Low (written in words).
+  2. **Description**: Clear explanation of the issue.
+  3. **Impact**: Why this is a problem for the codebase (security, performance, stability).
+  4. **Proposed Solution**: Technical fix with a code example if it clarifies the implementation.
+- **Batching**: Use line-level comments for specific issues and file-level comments for file-wide concerns. If nothing is wrong, do not add any comments. Use plain English to describe the issue, explain why it is a problem, and suggest a potential solution.
 
 ### 4. Batch Submission
 - Draft all findings before posting.
