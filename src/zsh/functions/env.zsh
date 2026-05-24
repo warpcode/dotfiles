@@ -34,7 +34,25 @@ env.lazy.load() {
       fi
     done
 
-    value=$(eval "${_ENV_LAZY_VARS[$var]}") exit_code=$?
+    local -a cmd_parts expanded_parts
+    local p res pre varname post val
+    local -a match mbegin mend
+    setopt LOCAL_OPTIONS EXTENDED_GLOB
+    cmd_parts=( ${(z)_ENV_LAZY_VARS[$var]} )
+    for p in "${cmd_parts[@]}"; do
+      res=""
+      while [[ "$p" == (#b)([^$]#)\$(([a-zA-Z_][a-zA-Z0-9_]#)|\{([a-zA-Z_][a-zA-Z0-9_]#)\})(*) ]]; do
+        pre="${match[1]}"
+        varname="${match[3]:-${match[4]}}"
+        post="${match[5]}"
+        val="${(P)varname}"
+        res="${res}${pre}${val}"
+        p="${post}"
+      done
+      res="${res}${p}"
+      expanded_parts+=( "${(Q)res}" )
+    done
+    value=$("${expanded_parts[@]}") exit_code=$?
     if (( exit_code == 0 )); then
       export "$var=$value"
     else
