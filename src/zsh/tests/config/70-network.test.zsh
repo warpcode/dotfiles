@@ -1,45 +1,44 @@
-#!/bin/bash
+#!/bin/zsh
 
 # Source the file containing dataurl
-# Since it's a zsh file, we hope it's compatible enough with bash for this function
 source src/zsh/config/70-network.zsh
 
 test_dataurl_usage() {
-    echo "Testing dataurl usage..."
+    print "Testing dataurl usage..."
     output=$(dataurl)
     expected="Usage: dataurl <path/to/file>"
-    if [ "$output" == "$expected" ]; then
-        echo "✅ Usage test passed"
+    if [[ "$output" == "$expected" ]]; then
+        print "✅ Usage test passed"
     else
-        echo "❌ Usage test failed"
-        echo "Expected: $expected"
-        echo "Got: $output"
+        print "❌ Usage test failed"
+        print "Expected: $expected"
+        print "Got: $output"
         return 1
     fi
 }
 
 test_dataurl_text() {
-    echo "Testing dataurl with text file..."
+    print "Testing dataurl with text file..."
     tmpfile=$(mktemp)
-    echo -n "hello world" > "$tmpfile"
+    print -n "hello world" > "$tmpfile"
 
     output=$(dataurl "$tmpfile")
     # openssl base64 might add a newline, and the function uses tr -d '\n' to remove it
     # "hello world" in base64 is aGVsbG8gd29ybGQ=
     expected="data:text/plain;charset=utf-8;base64,aGVsbG8gd29ybGQ="
 
-    if [ "$output" == "$expected" ]; then
-        echo "✅ Text file test passed"
+    if [[ "$output" == "$expected" ]]; then
+        print "✅ Text file test passed"
     else
         # Some versions of file might return slightly different mime types
         # or openssl might output different base64 (with/without padding)
         # Let's check if it starts with data:text/plain and contains the expected base64
         if [[ "$output" == data:text/plain* ]] && [[ "$output" == *aGVsbG8gd29ybGQ* ]]; then
-             echo "✅ Text file test passed (partial match)"
+             print "✅ Text file test passed (partial match)"
         else
-            echo "❌ Text file test failed"
-            echo "Expected: $expected"
-            echo "Got: $output"
+            print "❌ Text file test failed"
+            print "Expected: $expected"
+            print "Got: $output"
             rm "$tmpfile"
             return 1
         fi
@@ -48,7 +47,7 @@ test_dataurl_text() {
 }
 
 test_dataurl_binary() {
-    echo "Testing dataurl with binary file..."
+    print "Testing dataurl with binary file..."
     tmpfile=$(mktemp)
     # Create a small binary file (4 bytes of nulls)
     printf "\000\001\002\003" > "$tmpfile"
@@ -58,10 +57,10 @@ test_dataurl_binary() {
     # MIMETYPE for binary might be application/octet-stream
 
     if [[ "$output" == data:*base64,AAECAw== ]]; then
-        echo "✅ Binary file test passed"
+        print "✅ Binary file test passed"
     else
-        echo "❌ Binary file test failed"
-        echo "Got: $output"
+        print "❌ Binary file test failed"
+        print "Got: $output"
         rm "$tmpfile"
         return 1
     fi
@@ -74,10 +73,10 @@ test_dataurl_usage || errors=$((errors+1))
 test_dataurl_text || errors=$((errors+1))
 test_dataurl_binary || errors=$((errors+1))
 
-if [ $errors -eq 0 ]; then
-    echo "All tests in 70-network.test.sh passed!"
+if [[ $errors -eq 0 ]]; then
+    print "All tests in 70-network.test.zsh passed!"
     exit 0
 else
-    echo "$errors tests failed in 70-network.test.sh"
+    print "$errors tests failed in 70-network.test.zsh"
     exit 1
 fi
