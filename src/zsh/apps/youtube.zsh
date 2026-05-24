@@ -27,5 +27,5 @@ youtube.channel.latest() {
 ##
 youtube.channel.all() {
     local script_dir="${DOTFILES:-${HOME}/.dotfiles}/assets/configs/ai/skills/youtube/scripts"
-    uv run --project "$script_dir" "$script_dir/channel.py" "$1"
+    uv run --project "$script_dir" "$script_dir/channel.py" --raw "$1"
 }

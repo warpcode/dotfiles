@@ -16,7 +16,11 @@ To get the full context of a video, use the `transcript.py` script. It extracts 
 
 **Usage:**
 ```bash
+# Get formatted Markdown (default)
 uv run --project assets/configs/ai/skills/youtube/scripts assets/configs/ai/skills/youtube/scripts/transcript.py "https://www.youtube.com/watch?v=VIDEO_ID"
+
+# Get raw JSON payload
+uv run --project assets/configs/ai/skills/youtube/scripts assets/configs/ai/skills/youtube/scripts/transcript.py --raw "https://www.youtube.com/watch?v=VIDEO_ID"
 ```
 
 ### 2. List Channel/Playlist Videos
@@ -24,12 +28,20 @@ To browse a channel or see the contents of a playlist, use the `channel.py` scri
 
 **Usage:**
 ```bash
-# List all videos
+# List latest 10 videos (default truncation)
 uv run --project assets/configs/ai/skills/youtube/scripts assets/configs/ai/skills/youtube/scripts/channel.py "https://www.youtube.com/channel/CHANNEL_ID"
 
-# List latest 5 videos
+# List specific number of videos
 uv run --project assets/configs/ai/skills/youtube/scripts assets/configs/ai/skills/youtube/scripts/channel.py --count 5 "https://www.youtube.com/channel/CHANNEL_ID"
+
+# Get all videos (raw mode, no truncation)
+uv run --project assets/configs/ai/skills/youtube/scripts assets/configs/ai/skills/youtube/scripts/channel.py --raw "https://www.youtube.com/channel/CHANNEL_ID"
 ```
+
+## Templates
+
+Markdown output for video transcripts follows the structure defined in:
+`assets/configs/ai/skills/youtube/templates/video_transcript.md.tmpl`
 
 ## Tools
 
@@ -38,18 +50,12 @@ Extracts metadata and transcript from a YouTube video URL.
 
 **Arguments:**
 - `url` (string, required): The YouTube video URL.
-
-**Example:**
-Input: `https://www.youtube.com/watch?v=dQw4w9WgXcQ`
-Output: Markdown formatted metadata followed by the timestamped transcript.
+- `raw` (boolean, optional): If true, returns the raw JSON metadata and transcript payload.
 
 ### youtube_channel_videos
 Lists videos from a YouTube channel or playlist.
 
 **Arguments:**
 - `url` (string, required): The YouTube channel or playlist URL.
-- `count` (integer, optional): Number of videos to list (default: all).
-
-**Example:**
-Input: `https://www.youtube.com/c/YouTube`, `count: 3`
-Output: A sequence of JSON objects, one per video.
+- `count` (integer, optional): Number of videos to list. Defaults to 10.
+- `raw` (boolean, optional): If true, returns the full payload without truncation.

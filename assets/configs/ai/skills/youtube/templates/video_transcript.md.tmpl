@@ -1,0 +1,16 @@
+# {{ .title }}
+
+**URL:** {{ .url }}
+**Channel:** {{ .uploader }}
+**Published:** {{ .upload_date }}
+**Duration:** {{ .duration_string }}
+
+## Description
+
+{{ .description }}
+
+## Transcript
+
+{{ range .transcript -}}
+[{{ .start_display }}] {{ .text }}
+{{ end -}}
