@@ -4,5 +4,5 @@ Description=Dotfiles Scheduled Task: {{ .config.name }}
 [Service]
 Type=oneshot
 ExecStart=/bin/zsh -lc {{ .config.command | quote }}
-StandardOutput=append:{{ getenv "HOME" }}/.local/state/dotfiles/scheduler/{{ .config.name }}.log
-StandardError=append:{{ getenv "HOME" }}/.local/state/dotfiles/scheduler/{{ .config.name }}.log
+StandardOutput=file:{{ getenv "HOME" }}/.local/state/dotfiles/scheduler/{{ .config.name }}.log
+StandardError=file:{{ getenv "HOME" }}/.local/state/dotfiles/scheduler/{{ .config.name }}.log

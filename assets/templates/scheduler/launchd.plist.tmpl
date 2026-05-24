@@ -8,7 +8,7 @@
     <array>
         <string>/bin/zsh</string>
         <string>-lc</string>
-        <string>{{ .config.command | html }}</string>
+        <string>{{ .config.command | html }} &gt; {{ getenv "HOME" | html }}/.local/state/dotfiles/scheduler/{{ .config.name | html }}.log 2&gt;&amp;1</string>
     </array>
     {{- if eq .config.schedule "daily" }}
     <key>StartCalendarInterval</key>
@@ -32,9 +32,5 @@
         <integer>0</integer>
     </dict>
     {{- end }}
-    <key>StandardOutPath</key>
-    <string>{{ getenv "HOME" }}/.local/state/dotfiles/scheduler/{{ .config.name }}.log</string>
-    <key>StandardErrorPath</key>
-    <string>{{ getenv "HOME" }}/.local/state/dotfiles/scheduler/{{ .config.name }}.log</string>
 </dict>
 </plist>

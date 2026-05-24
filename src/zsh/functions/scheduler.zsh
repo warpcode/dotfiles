@@ -54,6 +54,25 @@ scheduler.remove() {
     tui.success "Task removed: $name"
 }
 
+# View logs for a scheduled task
+scheduler.logs() {
+    local name="$1"
+    [[ -z "$name" ]] && { tui.error "Usage: scheduler.logs <name>"; return 1; }
+
+    local log_file="$HOME/.local/state/dotfiles/scheduler/$name.log"
+    if [[ ! -f "$log_file" ]]; then
+        tui.error "No logs found for task: $name"
+        return 1
+    fi
+
+    tui.banner "Logs: $name" "-" 40
+    if (( $+commands[bat] )); then
+        bat --style=plain "$log_file"
+    else
+        cat "$log_file"
+    fi
+}
+
 # Apply a scheduled task configuration (internal)
 scheduler.apply() {
     local name="$1"
@@ -67,9 +86,12 @@ scheduler.apply() {
             local plist="$HOME/Library/LaunchAgents/com.dotfiles.scheduler.$name.plist"
             config.hydrate "scheduler/launchd.plist.tmpl" \
                 --config-file "$config_file" \
-                --output "$plist"
+                --output "$plist" || return 1
             launchctl unload "$plist" 2>/dev/null || true
-            launchctl load "$plist"
+            launchctl load "$plist" || {
+                tui.error "Failed to load launchd agent: $name"
+                return 1
+            }
             ;;
         debian|fedora|arch|linux)
             local service_file="$HOME/.config/systemd/user/dotfiles-scheduler-$name.service"
@@ -77,14 +99,20 @@ scheduler.apply() {
 
             config.hydrate "scheduler/systemd.service.tmpl" \
                 --config-file "$config_file" \
-                --output "$service_file"
+                --output "$service_file" || return 1
             config.hydrate "scheduler/systemd.timer.tmpl" \
                 --config-file "$config_file" \
-                --output "$timer_file"
+                --output "$timer_file" || return 1
 
             systemctl --user daemon-reload
-            systemctl --user enable "dotfiles-scheduler-$name.timer"
-            systemctl --user restart "dotfiles-scheduler-$name.timer"
+            systemctl --user enable "dotfiles-scheduler-$name.timer" || {
+                tui.error "Failed to enable systemd timer: $name"
+                return 1
+            }
+            systemctl --user restart "dotfiles-scheduler-$name.timer" || {
+                tui.error "Failed to start systemd timer: $name"
+                return 1
+            }
             ;;
         *)
             tui.error "Unsupported OS family for scheduler: $os_family"
@@ -121,6 +149,10 @@ scheduler.add() {
         '{name: $name, schedule: $schedule, command: $command}' \
         > "$config_file"
 
-    scheduler.apply "$name"
-    tui.success "Task added/updated: $name"
+    if scheduler.apply "$name"; then
+        tui.success "Task added/updated: $name"
+    else
+        tui.error "Failed to apply task configuration: $name"
+        return 1
+    fi
 }
