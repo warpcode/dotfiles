@@ -64,6 +64,12 @@ Comments MUST NOT use 'caveman' style.
 
 ## Procedures
 
+### Review Thread Resolution
+Use this procedure to close addressed feedback loops:
+1. **Batch Discovery**: Use `scripts/fetch_all_pr_threads.sh` to identify threads across all open PRs.
+2. **Verification**: Compare the current diff/files against the feedback in the thread.
+3. **Resolution**: Use `scripts/resolve_review_thread.sh <thread_id>` once the fix is verified in the remote branch.
+
 ### Non-Invasive PR Verification
 Use this procedure to verify PR changes and resolve review threads without repository mutation:
 
