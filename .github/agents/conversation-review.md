@@ -97,19 +97,22 @@ IF an existing memory is no longer relevant or applicable:
 
 ---
 
-## Phase 2 — File Review
+## Phase 2 — Rule & Instruction Alignment (Workspace Rules, Agents, Workflows, Skills, & Hooks)
 
 ### Step 1 — Locate files
 
 Attempt to read the following files. Report each as `found` or `not found`:
 
-| File | Common paths to check |
-|---|---|
-| `.antigravityrules` | `./.antigravityrules` |
-| `CLAUDE.md` | `./CLAUDE.md`, `~/.claude/CLAUDE.md` |
-| `AGENTS.md` | `./AGENTS.md` |
-| `GEMINI.md` | `./GEMINI.md` |
-| Skills directory | `./skills/`, `./.claude/skills/`, `/mnt/skills/user/` |
+| Category | File / Path Description | Common Paths to Check |
+|---|---|---|
+| **IDE & LLM Rules** | IDE instructions, protocol declarations, and assistant behavior rules | `./.antigravityrules`, `./.cursorrules`, `./.copilotzone`, `./.claudeprotocol` |
+| **Workspace Instructions** | Global workspace guides, project-specific overrides | `./CLAUDE.md`, `./AGENTS.md`, `./GEMINI.md` |
+| **Custom Agents & Subagents** | Custom system prompts, configuration schemas, and subagent prompt definitions | `./.github/agents/`, `./.agents/`, `./agents/` |
+| **Workflows** | Google Antigravity markdown-based agent workflows, orchestrator scripts | `./.agents/workflows/`, `./.github/workflows/`, `./workflows/` |
+| **Local Skills** | Modular skill directories and SKILL.md blueprints | `./skills/`, `./.claude/skills/`, `./.github/skills/` |
+| **Global Skills** | User-wide or environment-wide shared skill registries | `/mnt/skills/user/`, `~/.config/antigravity/skills/` |
+| **Hooks & Automations** | Git hooks, pre-commit pipelines, pre-processing / post-processing lifecycle hooks | `./.git/hooks/`, `./hooks/`, `./scripts/hooks/` |
+| **IDE & MCP Settings** | Model configuration parameters, tool server settings, workspace preferences | `./mcp-servers.json`, `./.vscode/settings.json`, `./.antigravity/config.json` |
 
 MUST NOT fabricate file contents — if a file is not found, skip it and note it as absent.
 
@@ -194,76 +197,77 @@ MUST NOT flag as reusable:
 
 ## Output Format
 
-Output the source confirmation line first, then a single JSON object covering all three phases.  
-No preamble, no markdown fences around the JSON, no explanation after it.
+Output the source confirmation line first, followed by a structured Markdown report covering all three phases. Keep the document structure clean, readable, and well-organized.
 
-> **Note**: If the user explicitly asks for a human-readable summary or markdown report, generate a markdown artifact containing the findings in addition to (or instead of, if requested) the raw JSON.
+```markdown
+Source: [inline conversation | file: <path> | url: <url>]
 
-```json
-{
-  "memory": {
-    "additions": [
-      {
-        "category": "communication_preference | technical_context | decision | correction | project_state",
-        "fact": "string — one concise sentence, third-person, user as subject",
-        "confidence": "high | medium",
-        "rationale": "string — one phrase (e.g. 'stated explicitly', 'corrected AI twice')"
-      }
-    ],
-    "updates": [
-      {
-        "replaces_text": "exact text of the memory item being superseded",
-        "fact": "string — replacement",
-        "category": "string"
-      }
-    ],
-    "removals": ["exact text of memory items that are now stale or invalidated"],
-    "skipped": ["string — candidate observed but excluded, with reason"]
-  },
+# Conversation Review Report
 
-  "file_review": {
-    "files_found": ["list of file paths successfully read"],
-    "files_absent": ["list of paths checked but not found"],
-    "recommendations": [
-      {
-        "action": "update | create_skill | flag_mcp | flag_pipeline",
-        "target_file": "path to the file to update, or proposed path for new skill",
-        "section": "string — section heading to modify (for updates only)",
-        "proposed_content": "string — the exact text to add, replace, or use as the new skill body",
-        "rationale": "string — what in the conversation triggered this recommendation"
-      }
-    ]
-  },
+## 1. Memory Extraction & Management
 
-  "reusables": {
-    "artifacts": [
-      {
-        "name": "string — suggested filename or function name",
-        "type": "script | snippet | command",
-        "language": "string — bash | python | zsh | jq | etc.",
-        "content": "string — the full artifact content",
-        "suggested_location": "string — file path or skill scripts/ directory",
-        "routing": "bundled_script | standalone | mcp_candidate",
-        "rationale": "string — why this is worth preserving"
-      }
-    ],
-    "patterns": [
-      {
-        "name": "string — short descriptive label",
-        "type": "skill | pipeline",
-        "description": "string — what the pattern does and when to apply it",
-        "suggested_skill_name": "string — kebab-case name (for skill type only)",
-        "skeleton": "string — proposed SKILL.md frontmatter + outline body (for skill type only)",
-        "rationale": "string — pattern observed in conversation"
-      }
-    ],
-    "skipped": ["string — candidate observed but excluded, with reason"]
-  }
-}
+### Additions
+- **[<category>]** <fact> (Confidence: <high|medium> | Rationale: <reason>)
+
+### Updates
+- **[<category>]** <fact>
+  - *Replaces:* "<exact text of superseded memory item>"
+  - *Rationale:* <reason>
+
+### Removals
+- "<exact text of stale/invalidated memory item>" (Reason: <reason>)
+
+### Skipped
+- <fact candidate> (Reason: <reason>)
+
+## 2. Rule & Instruction Alignment (Workspace Rules, Agents, Workflows, Skills, & Hooks)
+
+- **Instruction Files Located**: `path/to/file1`, `path/to/file2`
+- **Instruction Files Absent**: `path/to/file3`
+
+### Rule & Instruction Gaps (Recommendations)
+
+#### [<action: update|create_skill|flag_mcp|flag_pipeline>] - [<target_file>]
+- **Section / Target Area**: <section name (for updates) or target folder (for new files/hooks)>
+- **Gap / Rationale**: <what missing coverage or outdated instruction/workflow in the conversation triggered this change>
+- **Proposed Content / Skeleton**:
+  ```[language]
+  <exact text to add, replace, or use as the new skill body, hook script, or agent configuration>
+  ```
+
+---
+
+## 3. Reusables Identification
+
+### Artifacts
+
+#### [<name>] ([<type>])
+- **Language**: <language>
+- **Suggested Location**: `<path/to/location>`
+- **Routing**: <routing>
+- **Rationale**: <why this is worth preserving>
+- **Content**:
+  ```[language]
+  <full artifact content>
+  ```
+
+### Patterns
+
+#### [<name>] ([<type>])
+- **Description**: <what the pattern does and when to apply it>
+- **Suggested Skill Name**: <kebab-case name (for skill type)>
+- **Rationale**: <pattern observed in conversation>
+- **Skeleton**:
+  ```markdown
+  <proposed SKILL.md frontmatter + outline body (for skill type)>
+  ```
+
+### Skipped
+- <candidate> (Reason: <reason>)
 ```
 
-Return empty arrays for any section with no items.  
-`memory.skipped` and `reusables.skipped` are mandatory — account for every candidate considered but not promoted.
+If a section has no items, output a single bullet point stating "None" under that heading.
+The skipped lists (`memory.skipped` and `reusables.skipped` equivalents) are mandatory. Account for every candidate considered but not promoted.
 
 ---
 
@@ -272,11 +276,11 @@ Return empty arrays for any section with no items.
 | Condition | Behaviour |
 |---|---|
 | Source file or URL cannot be read | Report the error; do not proceed |
-| No config files found | Set `file_review.files_found` to `[]`; omit `recommendations` |
-| Transcript contains no extractable memory signal | Return empty memory arrays; MUST NOT fabricate additions |
-| A correction is identified | Always set `confidence` to `high` |
+| No config files found | Set `Files Found` to `None`; omit `Recommendations` |
+| Transcript contains no extractable memory signal | Return `None` for Additions, Updates, and Removals; MUST NOT fabricate additions |
+| A correction is identified | Always set confidence to `high` |
 | Confidence cannot be determined | Default to `medium` |
-| Reusable candidate is already covered by an existing skill | Add to `reusables.skipped` with reason "already covered by <skill-name>" |
+| Reusable candidate is already covered by an existing skill | Add to `Skipped` under Reusables with reason "already covered by <skill-name>" |
 | Proposed new skill overlaps an existing skill | Recommend extending the existing skill instead of creating a new one |
 
 ---

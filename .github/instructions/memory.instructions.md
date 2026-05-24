@@ -15,6 +15,9 @@ These instructions capture persistent memories, behavioral guardrails, and techn
    - Always verify the current state before taking proactive actions like creating snapshots.
    - Verify that file updates were actually saved to disk after making edits.
 
+4. **UI Stability**:
+   - **Never call `update_topic` and `ask_user` in the same turn.** Sequencing these tools in a single turn causes the CLI to display raw JSON instead of the interactive menu. Always call `update_topic` to set context, then issue `ask_user` in a separate, subsequent turn.
+
 ## 🛠️ Technical Context & Preferences
 
 - **Git Workflow**:
@@ -22,12 +25,12 @@ These instructions capture persistent memories, behavioral guardrails, and techn
   - Prefer squash-and-merge for pull requests.
   - Remote branches MUST be deleted immediately after merging.
 - **Code Review Style**:
-  - **Tone & Content**: Strictly neutral and formal. Avoid conversational filler, encouraging remarks, or summarizing work the user is already aware of. Never use "LGTM" or unnecessary affirmations. Do not repeat yourself.
-  - **Commentary**: Do not provide summaries of work done if it was explicitly requested by the user or is already visible in the PR; provide only the review findings.
+  - **Tone & Content**: Strictly neutral and formal. Avoid conversational filler, encouraging remarks, or summarizing work the user is already aware of. Never use "LGTM" or unnecessary affirmations. Do not repeat yourself. For each technical issue, the comment MUST state: **Severity** (High, Medium, or Low), **Description** of the issue, **Impact** (why it is a problem), and a **Proposed Solution** (including code examples where applicable).
+  - **Commentary**: Do not provide summaries of work done if it was explicitly requested by the user or is already visible in the PR; provide only the technical review findings. Do not paraphrase the task or the developer's work.
   - **Approval**: If approving a pull request, NEVER add NEW comments to files. Do not provide a summary if there is nothing new to add; just ask to approve.
   - **Replies**: Only reply if needed (with user approval). Give a thumbs up (👍) ONLY if the developer replied saying they fixed a requested change.
   - **Resolution**: Proactively resolve review threads once the corresponding changes have been verified in the diff. If the developer asks a question, alert the user for a response.
-  - **Format**: Use line-level comments for specific issues and file-level comments for file-wide concerns. If nothing is wrong, do not add any comments. Comments MUST NOT use 'caveman' style. Use plain English to describe the issue, explain why it is a problem, and suggest a potential solution.
+  - **Format**: Use line-level comments for specific issues and file-level comments for file-wide concerns. If nothing is wrong, do not add any comments. Comments MUST NOT use 'caveman' style. Use plain English to describe the issue, explain why it is a problem, and suggest a potential solution using the mandatory structure defined in Tone & Content.
 - **Skill Blueprint Design**: Resources should **not** be marked as required in simple skill blueprints.
 - **AI Tooling / Infrastructure**:
   - Use **Docker Model Runner** (which runs `llama.cpp`) for running local models directly, rather than defaulting to `ollama`.
