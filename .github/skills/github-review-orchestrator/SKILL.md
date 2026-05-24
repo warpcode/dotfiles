@@ -21,8 +21,7 @@ Unless a specific PR or branch is provided by the user, always perform a discove
 
 ### 2. Non-Invasive Inspection
 Perform the review without checking out branches or modifying the workspace:
-- Remain on your current branch.
-- Use `gh pr diff` to get the changes.
+- Use the bundled `scripts/get_pr_context.sh` script to retrieve the head OID and diff context (e.g., `./scripts/get_pr_context.sh <owner> <repo> <pr_number>`).
 - Use the bundled `scripts/fetch_file.sh` script to retrieve full file contents via API if needed for context (e.g., `./scripts/fetch_file.sh <owner> <repo> <path> <branch> <tmp_path>`).
 - **Verification**: Cross-reference current diff against discovered review threads to identify candidates for resolution.
 - Verify findings locally if applicable, but never commit or change branch.
@@ -38,7 +37,7 @@ Comments MUST NOT use 'caveman' style.
 ### 4. Batch Submission
 - Draft all findings before posting.
 - Present the full list of comments to the user for approval.
-- Submit the review using `scripts/submit_review.sh <number> <payload_file>`.
+- Submit the review using `scripts/submit_review.sh <owner> <repo> <pr_number> <payload_file>`.
 
 ## Operations
 
@@ -52,7 +51,8 @@ Comments MUST NOT use 'caveman' style.
 | Resource | Path | Purpose | Usage |
 |----------|------|---------|-------|
 | Fetch Script | `scripts/fetch_file.sh` | Fetch remote PR files without checkout. | `./scripts/fetch_file.sh <owner> <repo> <path> <branch> <tmp_path>` |
-| Submit Script | `scripts/submit_review.sh` | Submit atomic JSON reviews via API. | `./scripts/submit_review.sh <pr_number> <payload_file>` |
+| Context Script | `scripts/get_pr_context.sh` | Fetch PR head OID and diff for review context. | `./scripts/get_pr_context.sh <owner> <repo> <pr_number>` |
+| Submit Script | `scripts/submit_review.sh` | Submit atomic JSON reviews via API. | `./scripts/submit_review.sh <owner> <repo> <pr_number> <payload_file>` |
 | Resolve Review Thread Script | `scripts/resolve_review_thread.sh` | Resolve GitHub PR review threads via GraphQL. | `./scripts/resolve_review_thread.sh <thread_id>` |
 | Review Threads Query | `queries/review_threads.gql` | GraphQL query to list review threads and status. | `gh api graphql -F owner=<owner> -F repo=<repo> -F pr=<number> -f query=@queries/review_threads.gql` |
 | Resolve Review Thread Query | `queries/resolve_review_thread.gql` | GraphQL mutation to resolve review threads. | Used internally by `resolve_review_thread.sh` |
