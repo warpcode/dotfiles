@@ -1,22 +1,27 @@
 #!/bin/bash
 # Get PR head OID and diff for review context
-# Usage: ./get_pr_context.sh <pr_number>
+# Usage: ./get_pr_context.sh <owner> <repo> <pr_number>
 
-PR_NUMBER=$1
-
-if [[ -z "$PR_NUMBER" ]]; then
-    echo "Usage: $0 <pr_number>" >&2
+if [[ "$#" -ne 3 ]]; then
+    echo "Usage: $0 <owner> <repo> <pr_number>" >&2
     exit 1
 fi
 
+OWNER=$1
+REPO=$2
+PR_NUMBER=$3
+REPO_FLAG=("--repo" "${OWNER}/${REPO}")
+
 # Fetch head OID
-HEAD_OID=$(gh pr view "$PR_NUMBER" --json headRefOid --template '{{.headRefOid}}')
+HEAD_OID=$(gh pr view "$PR_NUMBER" "${REPO_FLAG[@]}" --json headRefOid --template '{{.headRefOid}}')
 
 if [[ -z "$HEAD_OID" ]]; then
-    echo "Error: Could not fetch headRefOid for PR #$PR_NUMBER" >&2
+    echo "Error: Could not fetch headRefOid for PR #$PR_NUMBER in $OWNER/$REPO" >&2
     exit 1
 fi
 
 # Output OID and then the diff
 echo "HEAD_OID:$HEAD_OID"
-gh pr diff "$PR_NUMBER"
+gh pr diff "$PR_NUMBER" "${REPO_FLAG[@]}"
+
+
