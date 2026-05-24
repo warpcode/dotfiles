@@ -24,3 +24,4 @@ Repository-specific guidance for Zsh work:
 - Never edit stowed files in `$HOME`. Edit the source files under `generic/` or `work/`.
 - Use `$DOTFILES` for repository-root paths instead of hardcoded absolute paths.
 - For package installation logic, use the repo's `pkg.install` and recipe system instead of direct `apt`, `brew`, or similar package-manager commands in scripts.
+- **Dynamic Backreference Evaluation**: When using `${var//(#b)pattern/repl}`, Zsh re-evaluates the `repl` string for each match. This enables patterns like `${(P)match[2]}` to dynamically look up variable names captured in the `match` array during the substitution process.
