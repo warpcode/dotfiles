@@ -19,6 +19,10 @@ These instructions capture persistent memories, behavioral guardrails, and techn
 4. **UI Stability**:
    - **Never call `update_topic` and `ask_user` in the same turn.** Sequencing these tools in a single turn causes the CLI to display raw JSON instead of the interactive menu. Always call `update_topic` to set context, then issue `ask_user` in a separate, subsequent turn.
 
+5. **Approval Workflow**:
+   - **Always ask for explicit user approval before approving or merging a pull request**, regardless of whether verification was successful.
+   - **Approval for Batching**: ALWAYS obtain explicit user permission before processing multiple pull requests in a single review session.
+
 ## 🛠️ Technical Context & Preferences
 
 - **Git Workflow**:
@@ -45,6 +49,7 @@ These instructions capture persistent memories, behavioral guardrails, and techn
 - **Script & Tool Efficiency**:
   - All scripts interacting with APIs (GitHub, etc.) MUST implement batching by default when dealing with multiple entities.
   - Avoid iterative per-item network calls in shell loops or high-level orchestration logic.
+  - **Stdout Preference**: Prefer scripts that output data directly to `stdout` rather than requiring a temporary file path, especially for data intended for immediate consumption.
   - When using `gh api graphql`, pass queries via variable injection to avoid shell quoting and path resolution issues.
 - **Package Management Architecture**: The legacy `zinstall` logic is deprecated. The project is migrating towards a unified `pkg.zsh` architecture using a `recipe` dictionary format that explicitly defines methods for checking, updating, installing, and enabling packages.
 - **Skill Development Standards**:

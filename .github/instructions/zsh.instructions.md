@@ -25,3 +25,9 @@ Repository-specific guidance for Zsh work:
 - Use `$DOTFILES` for repository-root paths instead of hardcoded absolute paths.
 - For package installation logic, use the repo's `pkg.install` and recipe system instead of direct `apt`, `brew`, or similar package-manager commands in scripts.
 - **Dynamic Backreference Evaluation**: When using `${var//(#b)pattern/repl}`, Zsh re-evaluates the `repl` string for each match. This enables patterns like `${(P)match[2]}` to dynamically look up variable names captured in the `match` array during the substitution process.
+  ```zsh
+  # Example: Expanding environment variables in a string
+  local input='$HOME/test'
+  local expanded="${input//(#b)\$(([a-zA-Z_][a-zA-Z0-9_]#)|\{([a-zA-Z_][a-zA-Z0-9_]#)\})/${(P)match[2]:-${(P)match[3]}}}"
+  # If $HOME is /home/user, expanded becomes /home/user/test
+  ```

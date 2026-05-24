@@ -23,7 +23,7 @@ Unless a specific PR or branch is provided by the user, always perform a discove
 ### 2. Non-Invasive Inspection
 Perform the review without checking out branches or modifying the workspace:
 - Use the bundled `scripts/get_pr_context.sh` script to retrieve the head OID and diff context (e.g., `./scripts/get_pr_context.sh <owner> <repo> <pr_number>`).
-- Use the bundled `scripts/fetch_file.sh` script to retrieve full file contents via API if needed for context (e.g., `./scripts/fetch_file.sh <owner> <repo> <path> <branch> <tmp_path>`).
+- Use the bundled `scripts/fetch_file.sh` script to retrieve full file contents via API if needed for context (e.g., `./scripts/fetch_file.sh <owner> <repo> <path> <branch>`).
 - **Verification**: Cross-reference current diff against discovered review threads to identify candidates for resolution.
 - Verify findings locally if applicable, but never commit or change branch.
 
@@ -56,7 +56,7 @@ Comments MUST NOT use 'caveman' style.
 
 | Resource | Path | Purpose | Usage |
 |----------|------|---------|-------|
-| Fetch Script | `scripts/fetch_file.sh` | Fetch remote PR files without checkout. | `./scripts/fetch_file.sh <owner> <repo> <path> <branch> <tmp_path>` |
+| Fetch Script | `scripts/fetch_file.sh` | Fetch remote PR files without checkout. | `./scripts/fetch_file.sh <owner> <repo> <path> <branch>` |
 | Context Script | `scripts/get_pr_context.sh` | Fetch PR head OID and diff for review context. | `./scripts/get_pr_context.sh <owner> <repo> <pr_number>` |
 | Submit Script | `scripts/submit_review.sh` | Submit atomic JSON reviews via API. | `./scripts/submit_review.sh <owner> <repo> <pr_number> <payload_file>` |
 | Resolve Review Thread Script | `scripts/resolve_review_thread.sh` | Resolve GitHub PR review threads via GraphQL. | `./scripts/resolve_review_thread.sh <thread_id>` |
