@@ -5,4 +5,5 @@ description = "Standalone scripts for YouTube skill"
 dependencies = [
     "youtube-transcript-api",
     "yt-dlp",
+    "jinja2",
 ]

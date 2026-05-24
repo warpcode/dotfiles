@@ -6,6 +6,7 @@ import json
 import os
 from youtube_transcript_api import YouTubeTranscriptApi
 import yt_dlp
+from jinja2 import Environment, FileSystemLoader
 
 def extract_video_id(url):
     match = re.search(r'(?:v=|/)([a-zA-Z0-9_-]{11})', url)
@@ -50,37 +51,17 @@ def get_transcript_data(url):
 
 def format_with_template(data):
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    template_path = os.path.join(script_dir, '..', 'templates', 'video_transcript.md.tmpl')
+    templates_dir = os.path.join(script_dir, '..', 'templates')
+    template_file = 'video_transcript.md.tmpl'
 
-    if not os.path.exists(template_path):
-        print(f"Warning: Template not found at {template_path}. Falling back to basic output.", file=sys.stderr)
+    if not os.path.exists(os.path.join(templates_dir, template_file)):
+        print(f"Warning: Template not found at {templates_dir}/{template_file}. Falling back to JSON.", file=sys.stderr)
         return json.dumps(data, indent=2)
 
-    with open(template_path, 'r') as f:
-        template = f.read()
+    env = Environment(loader=FileSystemLoader(templates_dir), trim_blocks=True, lstrip_blocks=True)
+    template = env.get_template(template_file)
 
-    # Simple template rendering
-    rendered = template
-    rendered = rendered.replace('{{ .title }}', data['title'])
-    rendered = rendered.replace('{{ .url }}', data['url'])
-    rendered = rendered.replace('{{ .uploader }}', data['uploader'])
-    rendered = rendered.replace('{{ .upload_date }}', data['upload_date'])
-    rendered = rendered.replace('{{ .duration_string }}', data['duration_string'])
-    rendered = rendered.replace('{{ .description }}', data['description'])
-
-    # Handle the range loop for transcript
-    transcript_placeholder = re.search(r'{{ range \.transcript -}}(.*?){{ end -}}', rendered, re.DOTALL)
-    if transcript_placeholder:
-        loop_content = transcript_placeholder.group(1)
-        transcript_lines = []
-        for s in data['transcript']:
-            line = loop_content.replace('{{ .start_display }}', s['start_display'])
-            line = line.replace('{{ .text }}', s['text'])
-            transcript_lines.append(line)
-
-        rendered = rendered[:transcript_placeholder.start()] + ''.join(transcript_lines) + rendered[transcript_placeholder.end():]
-
-    return rendered.strip()
+    return template.render(**data).strip()
 
 def main():
     parser = argparse.ArgumentParser(description='Fetch YouTube video transcript and metadata.')
