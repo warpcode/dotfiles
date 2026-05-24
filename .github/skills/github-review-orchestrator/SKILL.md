@@ -12,6 +12,7 @@ Orchestrate non-invasive code reviews with a user-centric selection process and 
 ### 1. Discovery & Selection
 Unless a specific PR or branch is provided by the user, always perform a discovery phase:
 - List open PRs with `gh pr list`.
+- **Review Thread Discovery**: Fetch existing PR review threads via GraphQL (using `queries/review_threads.gql`) to identify pending feedback or addressed comments.
 - Identify candidates based on:
   - Age (oldest first).
   - Unanswered questions or pending review comments.
@@ -22,15 +23,16 @@ Unless a specific PR or branch is provided by the user, always perform a discove
 Perform the review without checking out branches or modifying the workspace:
 - Remain on your current branch.
 - Use `gh pr diff` to get the changes.
-- Use the bundled `scripts/fetch_file.sh` script to retrieve full file contents via API if needed for context.
+- Use the bundled `scripts/fetch_file.sh` script to retrieve full file contents via API if needed for context (e.g., `./scripts/fetch_file.sh <owner> <repo> <path> <branch> <tmp_path>`).
+- **Verification**: Cross-reference current diff against discovered review threads to identify candidates for resolution.
 - Verify findings locally if applicable, but never commit or change branch.
 
 ### 3. Professional Feedback Standards
 Comments MUST NOT use 'caveman' style.
-- **Tone**: Short, professional, and to the point. Never use "LGTM" or unnecessary affirmations. Do not repeat yourself.
+- **Tone & Content**: Strictly neutral and formal. Avoid encouraging or conversational summaries; focus exclusively on specific technical findings or corrections. Never use "LGTM" or unnecessary affirmations. Do not repeat yourself.
 - **Approval**: If approving a pull request, NEVER add NEW comments to files. Do not provide a summary if there is nothing new to add; just ask to approve.
 - **Replies**: Only reply if needed (with user approval). Give a thumbs up (👍) ONLY if the developer replied saying they fixed a requested change.
-- **Interaction**: If no further questions or modifications are required, mark the thread as resolved. If the developer asks a question, alert the user for a response.
+- **Resolution**: Proactively resolve GitHub pull request review threads when the code changes addressing them have been verified. Use `scripts/resolve_review_thread.sh <thread_id>`. If the developer asks a question, alert the user for a response.
 - **Format**: Use line-level comments for specific issues and file-level comments for file-wide concerns. If nothing is wrong, do not add any comments. Use plain English to describe the issue, explain why it is a problem, and suggest a potential solution.
 
 ### 4. Batch Submission
@@ -43,12 +45,15 @@ Comments MUST NOT use 'caveman' style.
 | Operation | Description |
 |-----------|-------------|
 | **Orchestrate** | Run the full discovery -> inspection -> feedback loop. |
+| **Resolve Review Threads** | List and resolve addressed PR review threads using GraphQL. |
 
 ## Shared Resources
 
-| Resource | Path | Purpose |
-|----------|------|---------|
-| Fetch Script | `scripts/fetch_file.sh` | Fetch remote PR files without checkout. |
-. |
-| Submit Script | `scripts/submit_review.sh` | Submit atomic JSON reviews via API. |
-| Fetch Script | `scripts/fetch_file.sh` | Fetch remote PR files without checkout. |
+| Resource | Path | Purpose | Usage |
+|----------|------|---------|-------|
+| Fetch Script | `scripts/fetch_file.sh` | Fetch remote PR files without checkout. | `./scripts/fetch_file.sh <owner> <repo> <path> <branch> <tmp_path>` |
+| Submit Script | `scripts/submit_review.sh` | Submit atomic JSON reviews via API. | `./scripts/submit_review.sh <pr_number> <payload_file>` |
+| Resolve Review Thread Script | `scripts/resolve_review_thread.sh` | Resolve GitHub PR review threads via GraphQL. | `./scripts/resolve_review_thread.sh <thread_id>` |
+| Review Threads Query | `queries/review_threads.gql` | GraphQL query to list review threads and status. | `gh api graphql -F owner=<owner> -F repo=<repo> -F pr=<number> -f query=@queries/review_threads.gql` |
+| Resolve Review Thread Query | `queries/resolve_review_thread.gql` | GraphQL mutation to resolve review threads. | Used internally by `resolve_review_thread.sh` |
+

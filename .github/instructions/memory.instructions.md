@@ -22,10 +22,11 @@ These instructions capture persistent memories, behavioral guardrails, and techn
   - Prefer squash-and-merge for pull requests.
   - Remote branches MUST be deleted immediately after merging.
 - **Code Review Style**:
-  - **Tone**: Short, professional, and to the point. Never use "LGTM" or unnecessary affirmations. Do not repeat yourself.
+  - **Tone & Content**: Strictly neutral and formal. Avoid conversational filler, encouraging remarks, or summarizing work the user is already aware of. Never use "LGTM" or unnecessary affirmations. Do not repeat yourself.
+  - **Commentary**: Do not provide summaries of work done if it was explicitly requested by the user or is already visible in the PR; provide only the review findings.
   - **Approval**: If approving a pull request, NEVER add NEW comments to files. Do not provide a summary if there is nothing new to add; just ask to approve.
   - **Replies**: Only reply if needed (with user approval). Give a thumbs up (👍) ONLY if the developer replied saying they fixed a requested change.
-  - **Resolution**: If no further questions or modifications are required, mark the thread as resolved. If the developer asks a question, alert the user for a response.
+  - **Resolution**: Proactively resolve review threads once the corresponding changes have been verified in the diff. If the developer asks a question, alert the user for a response.
   - **Format**: Use line-level comments for specific issues and file-level comments for file-wide concerns. If nothing is wrong, do not add any comments. Comments MUST NOT use 'caveman' style. Use plain English to describe the issue, explain why it is a problem, and suggest a potential solution.
 - **Skill Blueprint Design**: Resources should **not** be marked as required in simple skill blueprints.
 - **AI Tooling / Infrastructure**:
