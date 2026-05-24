@@ -22,7 +22,7 @@ fs.find.root() {
 fs.search() {
     local -A opts; zparseopts -E -D -K -A opts r s
     local query="$1" dir="${2:-.}"
-    [[ -z "$query" ]] && { echo "Usage: fs.search [-r] [-s] <query> [dir]" >&2; return 1; }
+    [[ -z "$query" ]] && { print -r -- "Usage: fs.search [-r] [-s] <query> [dir]" >&2; return 1; }
 
     local -a flags=(-n -I)
     (( ${+opts[-r]} )) || flags+=(-F)
@@ -43,7 +43,6 @@ fs.search() {
         
         if (( ${+opts[-s]} )); then
             $cmd "$query" "$dir" | while IFS=: read -r file line_num content; do
-                # Trim leading/trailing whitespace from line_num if needed
                 print "${file}:${line_num}:${content}"
             done
         else

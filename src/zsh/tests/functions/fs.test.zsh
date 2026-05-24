@@ -1,7 +1,7 @@
 #!/bin/zsh
 
 # Setup DOTFILES environment
-export DOTFILES="${PWD:A}"
+export DOTFILES="${${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}:A:h:h:h:h:h}"
 source src/zsh/init.zsh
 
 test_fs_search_usage() {
