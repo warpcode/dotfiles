@@ -52,6 +52,8 @@ Extract ONLY facts that are:
 - Explicitly stated or strongly implied by repeated behaviour
 - Likely to recur across future sessions
 - Not specific to a one-off request in this conversation
+- **Formatting Standards**: Capture any specific formatting requirements (e.g., 'Severity, Description, Impact, Solution' for reviews).
+- **Tool Stability**: Identify any tool sequencing anti-patterns (e.g., calling `update_topic` and `ask_user` in the same turn).
 
 ### 2. Ad Hoc Memories
 - If the user explicitly requests to add a memory (ad hoc), ALWAYS add it, bypassing standard extraction constraints.

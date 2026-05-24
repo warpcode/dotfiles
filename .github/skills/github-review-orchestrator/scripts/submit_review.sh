@@ -1,16 +1,26 @@
 #!/bin/bash
 # Submit a PR review using a JSON payload
-# Usage: ./submit_review.sh <owner> <repo> <pr_number> <payload_file>
+# Usage: ./submit_review.sh <owner> <repo> <pr_number> <payload_file> [--raw]
 
-if [[ "$#" -ne 4 ]]; then
-    echo "Usage: $0 <owner> <repo> <pr_number> <payload_file>" >&2
+RAW_OUTPUT=false
+ARGS=()
+for arg in "$@"; do
+    if [[ "$arg" == "--raw" ]]; then
+        RAW_OUTPUT=true
+    else
+        ARGS+=("$arg")
+    fi
+done
+
+OWNER=${ARGS[0]}
+REPO=${ARGS[1]}
+PR_NUMBER=${ARGS[2]}
+PAYLOAD_FILE=${ARGS[3]}
+
+if [[ -z "$OWNER" || -z "$REPO" || -z "$PR_NUMBER" || -z "$PAYLOAD_FILE" ]]; then
+    echo "Usage: $0 <owner> <repo> <pr_number> <payload_file> [--raw]" >&2
     exit 1
 fi
-
-OWNER=$1
-REPO=$2
-PR_NUMBER=$3
-PAYLOAD_FILE=$4
 
 if [[ ! -f "$PAYLOAD_FILE" ]]; then
     echo "Error: Payload file not found: $PAYLOAD_FILE" >&2
@@ -18,5 +28,16 @@ if [[ ! -f "$PAYLOAD_FILE" ]]; then
 fi
 
 # Submit review
-gh api "repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/reviews" --input "$PAYLOAD_FILE"
+RESPONSE=$(gh api "repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/reviews" --input "$PAYLOAD_FILE")
+
+if [[ "$RAW_OUTPUT" == "true" ]]; then
+    echo "$RESPONSE"
+else
+    # Token-efficient plain-text summary
+    echo "$RESPONSE" | jq -r '
+      "Review ID: \(.id)",
+      "State: \(.state)",
+      "URL: \(.html_url)"
+    '
+fi
 

@@ -14,6 +14,7 @@ These instructions capture persistent memories, behavioral guardrails, and techn
 3. **State Verification**:
    - Always verify the current state before taking proactive actions like creating snapshots.
    - Verify that file updates were actually saved to disk after making edits.
+   - **Symlink Safety**: NEVER perform bulk deletion operations (`rm -rf`) on directories without first verifying if the target is a symlink (`readlink` or `ls -l`). If replacing a symlinked folder, remove the symlink itself, not its contents.
 
 4. **UI Stability**:
    - **Never call `update_topic` and `ask_user` in the same turn.** Sequencing these tools in a single turn causes the CLI to display raw JSON instead of the interactive menu. Always call `update_topic` to set context, then issue `ask_user` in a separate, subsequent turn.
