@@ -51,12 +51,11 @@ obsidian.find.byAttribute() {
   local match_expr=""
   for i in {1..${#search_values}}; do
     export "MATCH_VAL_${i}=${search_values[$i]}"
-    match_expr+=". == (strenv(MATCH_VAL_${i}) | tostring)"
+    match_expr+=". == strenv(MATCH_VAL_${i})"
     [[ $i -lt ${#search_values} ]] && match_expr+=' or '
   done
 
-  # Use single quotes for the main filter, and double quotes only for the interpolated match_expr
-  # to keep escaping manageable while ensuring compatibility across yq versions.
+  # Use double quotes for the entire filter to allow $match_expr interpolation.
   df.md fm get-all "${candidate_files[@]}" | yq -r "
     select(
       [ .[strenv(ATTR)] ] | flatten | .[] | select(. != null) |
