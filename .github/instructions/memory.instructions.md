@@ -21,9 +21,13 @@ These instructions capture persistent memories, behavioral guardrails, and techn
   - All GitHub Actions MUST pass before any merge.
   - Prefer squash-and-merge for pull requests.
   - Remote branches MUST be deleted immediately after merging.
-- **Code Review Style**: Code reviews should be formatted in `caveman-review` style (terse, actionable, one-liners formatted as `Location: problem. fix.` with severity prefixes).
+- **Code Review Style**: Use line-level comments for specific issues and file-level comments for file-wide concerns; avoid summary-only reviews. Comments MUST NOT use 'caveman' style. Use plain English to describe the issue, explain why it is a problem, and suggest a potential solution with examples where helpful. Be concise but descriptive.
 - **Skill Blueprint Design**: Resources should **not** be marked as required in simple skill blueprints.
 - **AI Tooling / Infrastructure**:
+  - Use **Docker Model Runner** (which runs `llama.cpp`) for running local models directly, rather than defaulting to `ollama`.
+  - Deepseek API pricing is $0.48 per million tokens.
+- **Package Management Architecture**: The legacy `zinstall` logic is deprecated. The project is migrating towards a unified `pkg.zsh` architecture using a `recipe` dictionary format that explicitly defines methods for checking, updating, installing, and enabling packages.
+re**:
   - Use **Docker Model Runner** (which runs `llama.cpp`) for running local models directly, rather than defaulting to `ollama`.
   - Deepseek API pricing is $0.48 per million tokens.
 - **Package Management Architecture**: The legacy `zinstall` logic is deprecated. The project is migrating towards a unified `pkg.zsh` architecture using a `recipe` dictionary format that explicitly defines methods for checking, updating, installing, and enabling packages.
