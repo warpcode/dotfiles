@@ -11,6 +11,6 @@ fi
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 
-gh api graphql -f query="@${SCRIPT_DIR}/../queries/resolve_review_thread.gql" -f threadId="$THREAD_ID"
+gh api graphql -F query="@${SCRIPT_DIR}/../queries/resolve_review_thread.gql" -f threadId="$THREAD_ID"
 
 
