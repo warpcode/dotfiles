@@ -52,15 +52,22 @@ obsidian.find.byAttribute() {
 
   # Export search values as env vars for yq (mikefarah/yq compatibility)
   export ATTR="$attribute_name"
-  export SEARCH_VALS=$(printf "%s\n" "${search_values[@]}" | jq -R . | jq -s -c .)
+  local match_expr=""
+  for i in {1..${#search_values}}; do
+    export "MATCH_VAL_${i}=${search_values[$i]}"
+    match_expr+=". == strenv(MATCH_VAL_${i})"
+    [[ $i -lt ${#search_values} ]] && match_expr+=' or '
+  done
 
-  df.md fm get-all "${candidate_files[@]}" | yq -r '
+  # Use double quotes for the entire filter to allow $match_expr interpolation.
+  # Konstrukt using strenv for values is safe against injection as values are not interpolated directly.
+  df.md fm get-all "${candidate_files[@]}" | yq -r "
     select(
       [ .[strenv(ATTR)] ] | flatten | .[] | select(. != null) |
-      ((select(tag == "!!str") | sub("^[[]{2}", "") | sub("[]]{2}$", "")) // .) |
-      . as $v | env(SEARCH_VALS) | any(. == $v)
+      ((select(tag == \"!!str\") | sub(\"^[[]{2}\", \"\") | sub(\"[]]{2}$\", \"\")) // .) |
+      select($match_expr)
     ) | .path
-  ' 2>/dev/null | sort -u
+  " 2>/dev/null | sort -u
 }
 
 # @description List all note filenames of specific types
