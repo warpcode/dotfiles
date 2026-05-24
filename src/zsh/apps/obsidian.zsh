@@ -2,6 +2,8 @@
 
 # ─── Configuration ─────────────────────────────────────────────────────────
 
+setopt EXTENDED_GLOB
+
 # Default to docs directory in dotfiles if it exists
 if [[ -z "$OBSIDIAN_VAULT" || "$OBSIDIAN_VAULT" == "." ]]; then
     if [[ -d "$DOTFILES/docs" ]]; then
@@ -42,7 +44,9 @@ obsidian.find.byAttribute() {
   [[ ${#search_values} -eq 0 ]] && return 0
 
   # Discover candidate files first for speed
-  local -a candidate_files=(${(f)"$(grep -rlE "^${attribute_name}\s*:" "$OBSIDIAN_VAULT" --include="*.md" 2>/dev/null)"})
+  # Escaping attribute_name to prevent regex injection
+  local esc_attr="${attribute_name//(#m)[.\\^$[()|*+?]/\\$MATCH}"
+  local -a candidate_files=(${(f)"$(grep -rlE "^${esc_attr}\s*:" "$OBSIDIAN_VAULT" --include="*.md" 2>/dev/null)"})
   candidate_files=(${candidate_files:#})
   [[ ${#candidate_files} -eq 0 ]] && return 0
 
@@ -75,7 +79,9 @@ obsidian.type.filenames() {
 # @description Collect unique values for a frontmatter attribute
 obsidian.attribute.values() {
   local attribute_name="$1"
-  local -a candidate_files=(${(f)"$(grep -rlE "^${attribute_name}\s*:" "$OBSIDIAN_VAULT" --include="*.md" 2>/dev/null)"})
+  # Escaping attribute_name to prevent regex injection
+  local esc_attr="${attribute_name//(#m)[.\\^$[()|*+?]/\\$MATCH}"
+  local -a candidate_files=(${(f)"$(grep -rlE "^${esc_attr}\s*:" "$OBSIDIAN_VAULT" --include="*.md" 2>/dev/null)"})
   candidate_files=(${candidate_files:#}) 
   [[ ${#candidate_files} -eq 0 ]] && return 0
 
@@ -96,10 +102,10 @@ obsidian.note.resolve_path() {
   fi
 
   # 2. Exact filename match anywhere in vault (fast)
-  # Strip folder prefix if present for the find command
+  # Use Zsh glob qualifiers for better performance and consistency
   local base_name="${input_path##*/}"
-  local filename_match=$(find "$OBSIDIAN_VAULT" -name "$base_name.md" | head -n 1)
-  [[ -n "$filename_match" ]] && { echo "$filename_match"; return 0; }
+  local -a matches=($OBSIDIAN_VAULT/**/$base_name.md(N[1]))
+  [[ -n "$matches" ]] && { echo "$matches"; return 0; }
 
   # 3. Search by title attribute in frontmatter
   obsidian.find.byAttribute "title" "$base_name" | head -n 1
