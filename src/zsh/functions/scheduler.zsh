@@ -41,12 +41,10 @@ scheduler.remove() {
         debian|fedora|arch|linux)
             local service_file="$HOME/.config/systemd/user/dotfiles-scheduler-$name.service"
             local timer_file="$HOME/.config/systemd/user/dotfiles-scheduler-$name.timer"
-            if [[ -f "$timer_file" ]]; then
-                systemctl --user stop "dotfiles-scheduler-$name.timer" 2>/dev/null || true
-                systemctl --user disable "dotfiles-scheduler-$name.timer" 2>/dev/null || true
-                rm -f "$service_file" "$timer_file"
-                systemctl --user daemon-reload
-            fi
+            systemctl --user stop "dotfiles-scheduler-$name.timer" 2>/dev/null || true
+            systemctl --user disable "dotfiles-scheduler-$name.timer" 2>/dev/null || true
+            rm -f "$service_file" "$timer_file"
+            systemctl --user daemon-reload
             ;;
     esac
 
@@ -59,18 +57,30 @@ scheduler.logs() {
     local name="$1"
     [[ -z "$name" ]] && { tui.error "Usage: scheduler.logs <name>"; return 1; }
 
-    local log_file="$HOME/.local/state/dotfiles/scheduler/$name.log"
-    if [[ ! -f "$log_file" ]]; then
-        tui.error "No logs found for task: $name"
-        return 1
-    fi
+    local os_family=$("$DOTFILES/bin/df.os" family)
 
     tui.banner "Logs: $name" "-" 40
-    if (( $+commands[bat] )); then
-        bat --style=plain "$log_file"
-    else
-        cat "$log_file"
-    fi
+    case "$os_family" in
+        macos)
+            local log_file="$HOME/.local/state/dotfiles/scheduler/$name.log"
+            if [[ ! -f "$log_file" ]]; then
+                tui.error "No logs found for task: $name"
+                return 1
+            fi
+            if (( $+commands[bat] )); then
+                bat --style=plain "$log_file" | tail -n 100
+            else
+                tail -n 100 "$log_file"
+            fi
+            ;;
+        debian|fedora|arch|linux)
+            journalctl --user -u "dotfiles-scheduler-$name.service" -n 100
+            ;;
+        *)
+            tui.error "Unsupported OS family for logs: $os_family"
+            return 1
+            ;;
+    esac
 }
 
 # Apply a scheduled task configuration (internal)
@@ -92,6 +102,11 @@ scheduler.apply() {
                 tui.error "Failed to load launchd agent: $name"
                 return 1
             }
+            # Verify status
+            launchctl list "com.dotfiles.scheduler.$name" >/dev/null 2>&1 || {
+                tui.error "launchd agent failed to register: $name"
+                return 1
+            }
             ;;
         debian|fedora|arch|linux)
             local service_file="$HOME/.config/systemd/user/dotfiles-scheduler-$name.service"
@@ -111,6 +126,11 @@ scheduler.apply() {
             }
             systemctl --user restart "dotfiles-scheduler-$name.timer" || {
                 tui.error "Failed to start systemd timer: $name"
+                return 1
+            }
+            # Verify status
+            systemctl --user is-active --quiet "dotfiles-scheduler-$name.timer" || {
+                tui.error "systemd timer failed to start: $name"
                 return 1
             }
             ;;
@@ -153,6 +173,7 @@ scheduler.add() {
         tui.success "Task added/updated: $name"
     else
         tui.error "Failed to apply task configuration: $name"
+        rm -f "$config_file"
         return 1
     fi
 }
