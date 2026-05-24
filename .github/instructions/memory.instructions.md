@@ -21,13 +21,14 @@ These instructions capture persistent memories, behavioral guardrails, and techn
   - All GitHub Actions MUST pass before any merge.
   - Prefer squash-and-merge for pull requests.
   - Remote branches MUST be deleted immediately after merging.
-- **Code Review Style**: Use line-level comments for specific issues and file-level comments for file-wide concerns; avoid summary-only reviews. Comments MUST NOT use 'caveman' style. Use plain English to describe the issue, explain why it is a problem, and suggest a potential solution with examples where helpful. Be concise but descriptive.
+- **Code Review Style**:
+  - **Tone**: Short, professional, and to the point. Never use "LGTM" or unnecessary affirmations. Do not repeat yourself.
+  - **Approval**: If approving a pull request, NEVER add NEW comments to files. Do not provide a summary if there is nothing new to add; just ask to approve.
+  - **Replies**: Only reply if needed (with user approval). Give a thumbs up (👍) ONLY if the developer replied saying they fixed a requested change.
+  - **Resolution**: If no further questions or modifications are required, mark the thread as resolved. If the developer asks a question, alert the user for a response.
+  - **Format**: Use line-level comments for specific issues and file-level comments for file-wide concerns. If nothing is wrong, do not add any comments. Comments MUST NOT use 'caveman' style. Use plain English to describe the issue, explain why it is a problem, and suggest a potential solution.
 - **Skill Blueprint Design**: Resources should **not** be marked as required in simple skill blueprints.
 - **AI Tooling / Infrastructure**:
-  - Use **Docker Model Runner** (which runs `llama.cpp`) for running local models directly, rather than defaulting to `ollama`.
-  - Deepseek API pricing is $0.48 per million tokens.
-- **Package Management Architecture**: The legacy `zinstall` logic is deprecated. The project is migrating towards a unified `pkg.zsh` architecture using a `recipe` dictionary format that explicitly defines methods for checking, updating, installing, and enabling packages.
-re**:
   - Use **Docker Model Runner** (which runs `llama.cpp`) for running local models directly, rather than defaulting to `ollama`.
   - Deepseek API pricing is $0.48 per million tokens.
 - **Package Management Architecture**: The legacy `zinstall` logic is deprecated. The project is migrating towards a unified `pkg.zsh` architecture using a `recipe` dictionary format that explicitly defines methods for checking, updating, installing, and enabling packages.
