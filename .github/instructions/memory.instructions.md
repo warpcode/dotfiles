@@ -32,4 +32,8 @@ These instructions capture persistent memories, behavioral guardrails, and techn
 - **AI Tooling / Infrastructure**:
   - Use **Docker Model Runner** (which runs `llama.cpp`) for running local models directly, rather than defaulting to `ollama`.
   - Deepseek API pricing is $0.48 per million tokens.
+- **Script & Tool Efficiency**:
+  - All scripts interacting with APIs (GitHub, etc.) MUST implement batching by default when dealing with multiple entities.
+  - Avoid iterative per-item network calls in shell loops or high-level orchestration logic.
+  - When using `gh api graphql`, pass queries via variable injection to avoid shell quoting and path resolution issues.
 - **Package Management Architecture**: The legacy `zinstall` logic is deprecated. The project is migrating towards a unified `pkg.zsh` architecture using a `recipe` dictionary format that explicitly defines methods for checking, updating, installing, and enabling packages.
