@@ -14,8 +14,8 @@ description: Extract durable memory facts, recommend skill/config file updates, 
 
 Process a conversation log in three sequential phases:
 
-1. **Memory extraction** — extract durable user facts for future sessions
-2. **File review** — recommend updates to skills, AGENTS.md, CLAUDE.md, GEMINI.md
+1. **Memory extraction & management** — extract durable user facts for future sessions, add ad hoc memories, and remove stale memories from the memory file.
+2. **File review** — recommend updates to skills, AGENTS.md, CLAUDE.md, GEMINI.md, and collate skills where appropriate.
 3. **Reusables identification** — surface scripts, snippets, and procedures worth preserving
 
 Complete all three phases before producing output.
@@ -43,12 +43,22 @@ IF the source is a large JSON/JSONL log file (like `logs.json`) → DO NOT rely 
 
 ---
 
-## Phase 1 — Memory Extraction
+## Phase 1 — Memory Extraction & Management
 
+**Target File**: All memories MUST ALWAYS be written to `./.github/instructions/memory.instructions.md` in the workspace. Read this file at the start of Phase 1 to understand current memories.
+
+### 1. Extracting New Memories
 Extract ONLY facts that are:
 - Explicitly stated or strongly implied by repeated behaviour
 - Likely to recur across future sessions
 - Not specific to a one-off request in this conversation
+
+### 2. Ad Hoc Memories
+- If the user explicitly requests to add a memory (ad hoc), ALWAYS add it, bypassing standard extraction constraints.
+
+### 3. Removing Stale Memories
+- Actively review the existing `./.github/instructions/memory.instructions.md` file.
+- Identify and recommend removal for any memories that are stale, no longer relevant, or directly contradicted by the current conversation.
 
 ### Extraction Categories
 
@@ -70,17 +80,20 @@ MUST NOT record:
 
 MUST prioritise corrections and explicit decisions — these carry higher reliability than implied preferences.
 
-### Conflict Resolution
+### Conflict Resolution & Deduplication
 
 ```
-IF a new fact contradicts something already in memory:
+IF a new fact contradicts something already in memory.instructions.md:
   THEN record as `update`, include the original text in `replaces_text`
 
 IF a new fact extends an existing item with more detail:
   THEN record as `update` with the enriched version
+
+IF an existing memory is no longer relevant or applicable:
+  THEN record as `removal`
 ```
 
-> **Note:** Without access to the live memory store at invocation time, `updates` and `removals` are best-effort. The agent flags likely conflicts based on log content only. For true deduplication, pass the current memory dump in at invocation.
+> **Note:** Because memories are stored in `./.github/instructions/memory.instructions.md`, base your `updates` and `removals` on the actual contents of this file.
 
 ---
 
@@ -100,13 +113,17 @@ Attempt to read the following files. Report each as `found` or `not found`:
 
 MUST NOT fabricate file contents — if a file is not found, skip it and note it as absent.
 
-### Step 2 — Analyse for gaps
+### Step 2 — Analyse for gaps & Skill Collation
 
 Cross-reference the conversation against all located files. Identify:
 
 - **Outdated content** — instructions contradicted or superseded by something in the conversation
 - **Missing coverage** — a pattern, tool, or convention used in the conversation that no existing skill or config addresses
 - **New skill candidate** — a coherent workflow or set of rules that recurs or has clear future utility
+
+**Skill Collation Strategy**:
+- **General Rule**: Initially, prefer creating small, separate, focused skills.
+- **Collation**: During the review, look for opportunities to collate smaller, related skills into one bigger, more comprehensive skill where appropriate to reduce fragmentation.
 
 Apply the agentic architecture decision tree when routing recommendations:
 
