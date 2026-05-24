@@ -32,7 +32,7 @@ Comments MUST NOT use 'caveman' style.
 - **Approval**: If approving a pull request, NEVER add NEW comments to files. Do not provide a summary if there is nothing new to add; just ask to approve.
 - **Replies**: Only reply if needed (with user approval). Give a thumbs up (👍) ONLY if the developer replied saying they fixed a requested change.
 - **Resolution**: Proactively resolve GitHub pull request review threads when the code changes addressing them have been verified. Use `scripts/resolve_review_thread.sh <thread_id>`. If the developer asks a question, alert the user for a response.
-- **Format**: For each technical finding, use line-level comments that include:
+- **Format**: For each technical finding, use line-level comments structured according to the `templates/github/review_comment.md` template, which includes:
   1. **Severity**: High, Medium, or Low (written in words).
   2. **Description**: Clear explanation of the issue.
   3. **Impact**: Why this is a problem for the codebase (security, performance, stability).
@@ -61,4 +61,17 @@ Comments MUST NOT use 'caveman' style.
 | Resolve Review Thread Script | `scripts/resolve_review_thread.sh` | Resolve GitHub PR review threads via GraphQL. | `./scripts/resolve_review_thread.sh <thread_id>` |
 | Review Threads Query | `queries/review_threads.gql` | GraphQL query to list review threads and status. | `gh api graphql -F owner=<owner> -F repo=<repo> -F pr=<number> -f query=@queries/review_threads.gql` |
 | Resolve Review Thread Query | `queries/resolve_review_thread.gql` | GraphQL mutation to resolve review threads. | Used internally by `resolve_review_thread.sh` |
+
+## Procedures
+
+### Non-Invasive PR Verification
+Use this procedure to verify PR changes and resolve review threads without repository mutation:
+
+1. **Get Context**: Use `scripts/get_pr_context.sh <owner> <repo> <number>` to view the head OID and current diff.
+2. **Fetch Files**: For files requiring full context, fetch the remote version to the project's temporary directory:
+   `./scripts/fetch_file.sh <owner> <repo> <path> <branch> <tmp_path>`
+3. **Verify Threads**: Cross-reference the fetched file content against the threads discovered in the `Discovery` phase.
+4. **Local Audit**: Perform a read-only audit of the fetched files to identify new risks or verify that old bugs remain fixed.
+5. **Resolve**: Use `scripts/resolve_review_thread.sh <thread_id>` for all addressed items identified during the audit.
+
 
