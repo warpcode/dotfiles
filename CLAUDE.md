@@ -1,1 +1,1 @@
-.antigravityrules
+.github/instructions/memory.instructions.md
