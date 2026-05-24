@@ -25,17 +25,18 @@ Perform the review without checking out branches or modifying the workspace:
 - Use the bundled `scripts/fetch_file.sh` script to retrieve full file contents via API if needed for context.
 - Verify findings locally if applicable, but never commit or change branch.
 
-### 3. Descriptive Feedback
+### 3. Professional Feedback Standards
 Comments MUST NOT use 'caveman' style.
-- Use **line-level comments** for specific code defects.
-- Use **file-level comments** for architectural or broader file concerns.
-- Format: Plain English. Describe the issue, explain the impact/why it is a problem, and suggest a concrete solution with examples where helpful.
-- Be concise but descriptive.
+- **Tone**: Short, professional, and to the point. Never use "LGTM" or unnecessary affirmations. Do not repeat yourself.
+- **Approval**: If approving a pull request, NEVER add NEW comments to files. Do not provide a summary if there is nothing new to add; just ask to approve.
+- **Replies**: Only reply if needed (with user approval). Give a thumbs up (👍) ONLY if the developer replied saying they fixed a requested change.
+- **Interaction**: If no further questions or modifications are required, mark the thread as resolved. If the developer asks a question, alert the user for a response.
+- **Format**: Use line-level comments for specific issues and file-level comments for file-wide concerns. If nothing is wrong, do not add any comments. Use plain English to describe the issue, explain why it is a problem, and suggest a potential solution.
 
 ### 4. Batch Submission
 - Draft all findings before posting.
 - Present the full list of comments to the user for approval.
-- Submit the review as a single unit (e.g., using `gh api` or a JSON payload).
+- Submit the review using `scripts/submit_review.sh <number> <payload_file>`.
 
 ## Operations
 
@@ -47,4 +48,7 @@ Comments MUST NOT use 'caveman' style.
 
 | Resource | Path | Purpose |
 |----------|------|---------|
+| Fetch Script | `scripts/fetch_file.sh` | Fetch remote PR files without checkout. |
+. |
+| Submit Script | `scripts/submit_review.sh` | Submit atomic JSON reviews via API. |
 | Fetch Script | `scripts/fetch_file.sh` | Fetch remote PR files without checkout. |
