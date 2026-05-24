@@ -33,6 +33,12 @@ These instructions capture persistent memories, behavioral guardrails, and techn
   - **Resolution**: Proactively resolve review threads once the corresponding changes have been verified in the diff. If the developer asks a question, alert the user for a response.
   - **Format**: Use line-level comments for specific issues and file-level comments for file-wide concerns. If nothing is wrong, do not add any comments. Comments MUST NOT use 'caveman' style. Use plain English to describe the issue, explain why it is a problem, and suggest a potential solution using the mandatory structure defined in Tone & Content.
 - **Skill Blueprint Design**: Resources should **not** be marked as required in simple skill blueprints.
+- **Skill Naming Convention**: All custom skills MUST be named using the format `prefix-{specific-area}-guidelines`.
+  - For skills, agents, or agentic instructions (using markdown, etc.): `prompt-*` must always be the prefix (e.g., `prompt-guidelines` for general rules, `prompt-skills-guidelines` for creating/updating skills, `prompt-agents-guidelines` for agent instructions).
+  - For GitHub-related skills/instructions: `github-{specific-area}-guidelines` (e.g., `github-review-guidelines`).
+- **Skill Lifecycle & Granularity**: When creating or reviewing skills, explicitly evaluate whether to:
+  - **Merge**: Collate smaller, overlapping, or fragmented skills into a unified capability.
+  - **Break Up**: Deconstruct large, multi-purpose skills into smaller, single-responsibility skills.
 - **AI Tooling / Infrastructure**:
   - Use **Docker Model Runner** (which runs `llama.cpp`) for running local models directly, rather than defaulting to `ollama`.
   - Deepseek API pricing is $0.48 per million tokens.
@@ -41,6 +47,10 @@ These instructions capture persistent memories, behavioral guardrails, and techn
   - Avoid iterative per-item network calls in shell loops or high-level orchestration logic.
   - When using `gh api graphql`, pass queries via variable injection to avoid shell quoting and path resolution issues.
 - **Package Management Architecture**: The legacy `zinstall` logic is deprecated. The project is migrating towards a unified `pkg.zsh` architecture using a `recipe` dictionary format that explicitly defines methods for checking, updating, installing, and enabling packages.
+- **Skill Development Standards**:
+  - All new skills MUST align with `prompt-skills-guidelines`.
+  - **Raw Output**: Scripts intended for AI consumption MUST implement a `--raw` (or `--raw-output`) flag to provide unformatted data (e.g., JSON).
+  - **Template Externalization**: Fixed output structures (like Markdown reports) MUST be externalized into a `templates/` directory within the skill folder.
 
 ## 🤖 Autonomous VM Agents (Jules)
 

@@ -162,9 +162,13 @@ Map the output type to the appropriate file structures and paths for the target 
 *   **Rule / Instruction**: `./.github/copilot-instructions.md`
 *   **Command / Prompt File**: `./.github/prompts/<name>.prompt.md` (referenced via `/name`)
 
-#### 3. Skill Collation Strategy
-*   **General Rule**: Initially, prefer creating small, separate, focused skills to avoid bloat and ensure separation of concerns.
-*   **Collation**: During the review, look for opportunities to collate smaller, related skills into one bigger, more comprehensive skill where appropriate to reduce fragmentation.
+#### 3. Skill Lifecycle, Granularity & Naming Strategy
+*   **Naming Conventions**: All recommended custom skill names MUST follow the `prefix-{specific-area}-guidelines` structure:
+    - **Agentic Instructions / Skills / Prompts (Markdown, etc.)**: MUST use the `prompt-*` prefix (e.g., `prompt-guidelines` for general rules, `prompt-skills-guidelines` for creating/updating skills, `prompt-agents-guidelines` for agent system prompts).
+    - **GitHub Actions / Integrations / APIs**: MUST use the `github-*` prefix (e.g., `github-review-guidelines`, `github-orchestrator-guidelines`).
+*   **Granularity Review**: For every skill recommendation, explicitly evaluate whether to:
+    - **Merge / Collate**: Recommend merging if existing skills are highly fragmented, overlap in features, or share redundant shell scripts/configs. This reduces fragmentation.
+    - **Break Up / Deconstruct**: Recommend breaking up if a skill has grown too large, handles multiple unrelated areas, or violates the single-responsibility principle. Deconstruct it into separate, focused, single-purpose skills.
 
 #### 4. Architectural Self-Evolution Note
 *   When a custom system or workflow (such as conversation review itself) grows too complex for a single system prompt or LLM turn, recommend transitioning to a **Custom Agent employing Subagents** (e.g., Master Orchestrator, Memory Manager, Gaps Auditor, Scaffold Generator) to isolate concerns.
@@ -288,7 +292,7 @@ Source: [inline conversation | file: <path> | url: <url>]
 
 #### [<name>] ([<type>])
 - **Description**: <what the pattern does and when to apply it>
-- **Suggested Skill/Agent/Rule/Prompt Name**: <kebab-case name>
+- **Suggested Skill/Agent/Rule/Prompt Name**: <kebab-case name (MUST follow prefix-{specific-area}-guidelines format: prompt-* for agentic, github-* for GitHub)>
 - **Rationale**: <pattern observed in conversation>
 - **Skeleton**:
   ```markdown
