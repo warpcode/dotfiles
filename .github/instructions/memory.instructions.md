@@ -51,6 +51,13 @@ These instructions capture persistent memories, behavioral guardrails, and techn
   - All new skills MUST align with `prompt-skills-guidelines`.
   - **Raw Output**: Scripts intended for AI consumption MUST implement a `--raw` (or `--raw-output`) flag to provide unformatted data (e.g., JSON).
   - **Template Externalization**: Fixed output structures (like Markdown reports) MUST be externalized into a `templates/` directory within the skill folder.
+- **Tool Compatibility**:
+  - **yq**: The environment uses `mikefarah/yq` (v4). Avoid `jq`-specific functions like `any()` or `from_json` unless verified. Pass search values via individual environment variables or delimited strings with `split()`.
+- **Zsh Nuances**:
+  - **Dynamic Substitution**: Zsh's `${var//pat/repl}` with `(#b)` allows dynamic expansion of backreferences within `${(P)...}` for each match. This is the preferred way to safely expand environment variables in lazy-loaded commands.
+- **Architectural Decisions**:
+  - **Log Rotation (macOS)**: Preferred log rotation for `launchd` agents is via shell redirection (`>`) in the `ProgramArguments` block to ensure truncation on every run, rather than using `StandardOutPath`.
+  - **Service Logging (Linux)**: `systemd` services should delegate log management to `journald` via `StandardOutput=journal` instead of writing to static files.
 
 ## 🤖 Autonomous VM Agents (Jules)
 

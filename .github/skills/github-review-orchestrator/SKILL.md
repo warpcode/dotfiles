@@ -17,6 +17,7 @@ Unless a specific PR or branch is provided by the user, always perform a discove
   - Age (oldest first).
   - Unanswered questions or pending review comments.
   - Stale status (no updates for > 1 hour after user response).
+- **Batching Permission**: ALWAYS obtain explicit user permission before processing multiple pull requests in a single review session. Users typically prefer reviewing one PR at a time for focus. Only batch if the user explicitly requests "all", a specific list, or confirms the batching proposal.
 - Present a curated list of candidates to the user and wait for explicit approval.
 
 ### 2. Non-Invasive Inspection
@@ -70,14 +71,13 @@ Use this procedure to close addressed feedback loops:
 2. **Verification**: Compare the current diff/files against the feedback in the thread.
 3. **Resolution**: Use `scripts/resolve_review_thread.sh <thread_id>` once the fix is verified in the remote branch.
 
-### Non-Invasive PR Verification
-Use this procedure to verify PR changes and resolve review threads without repository mutation:
-
-1. **Get Context**: Use `scripts/get_pr_context.sh <owner> <repo> <number>` to view the head OID and current diff.
-2. **Fetch Files**: For files requiring full context, fetch the remote version to the project's temporary directory:
-   `./scripts/fetch_file.sh <owner> <repo> <path> <branch> <tmp_path>`
-3. **Verify Threads**: Cross-reference the fetched file content against the threads discovered in the `Discovery` phase.
-4. **Local Audit**: Perform a read-only audit of the fetched files to identify new risks or verify that old bugs remain fixed.
-5. **Resolve**: Use `scripts/resolve_review_thread.sh <thread_id>` for all addressed items identified during the audit.
+### Non-Invasive Review Orchestration
+Use this procedure to audit pull requests without workspace mutation:
+1. **Discovery**: Batch fetch all open PRs and active review threads using `fetch_all_pr_threads.sh`.
+2. **Selection**: Present candidates and get user approval (respecting the Batching Permission rule).
+3. **Inspection**: Use `get_pr_context.sh` and `fetch_file.sh` to retrieve diffs and full file context for the target PR(s).
+4. **Audit**: Perform read-only verification of fixes and identify regressions against local files fetched to temporary paths.
+5. **Batching**: Construct atomic JSON review payloads using `templates/github/review_comment.md`.
+6. **Submission**: Submit as a single review event (COMMENT, APPROVE, or REQUEST_CHANGES) via `submit_review.sh`.
 
 
