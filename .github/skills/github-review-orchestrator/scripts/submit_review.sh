@@ -28,7 +28,17 @@ if [[ ! -f "$PAYLOAD_FILE" ]]; then
 fi
 
 # Submit review
-RESPONSE=$(gh api "repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/reviews" --input "$PAYLOAD_FILE")
+RESPONSE=$(gh api "repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/reviews" --input "$PAYLOAD_FILE" 2>&1)
+GH_STATUS=$?
+
+if [[ $GH_STATUS -ne 0 ]]; then
+    echo "Error: Failed to submit review (exit code: $GH_STATUS)." >&2
+    echo "Details: $RESPONSE" >&2
+    if echo "$RESPONSE" | grep -iq -e "token" -e "auth" -e "connect"; then
+        echo "Tip: Run 'gh auth login' to re-authenticate or check your internet connection." >&2
+    fi
+    exit 1
+fi
 
 if [[ "$RAW_OUTPUT" == "true" ]]; then
     echo "$RESPONSE"

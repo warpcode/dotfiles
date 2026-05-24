@@ -37,7 +37,17 @@ JSON_RESPONSE=$(gh api graphql \
   -F repo="$REPO" \
   -F limit="$LIMIT" \
   -F direction="$DIRECTION" \
-  -f query="$(cat "$QUERY_FILE")")
+  -f query="$(cat "$QUERY_FILE")" 2>&1)
+GH_STATUS=$?
+
+if [[ $GH_STATUS -ne 0 ]]; then
+    echo "Error: Failed to query GitHub API (exit code: $GH_STATUS)." >&2
+    echo "Details: $JSON_RESPONSE" >&2
+    if echo "$JSON_RESPONSE" | grep -iq -e "token" -e "auth" -e "connect"; then
+        echo "Tip: Run 'gh auth login' to re-authenticate or check your internet connection." >&2
+    fi
+    exit 1
+fi
 
 if [[ "$RAW_OUTPUT" == "true" ]]; then
     echo "$JSON_RESPONSE"

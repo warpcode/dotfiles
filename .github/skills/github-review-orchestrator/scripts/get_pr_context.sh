@@ -24,24 +24,47 @@ fi
 REPO_FLAG=("--repo" "${OWNER}/${REPO}")
 
 # Fetch head OID
-HEAD_OID=$(gh pr view "$PR_NUMBER" "${REPO_FLAG[@]}" --json headRefOid --template '{{.headRefOid}}')
+HEAD_OID_RESPONSE=$(gh pr view "$PR_NUMBER" "${REPO_FLAG[@]}" --json headRefOid --template '{{.headRefOid}}' 2>&1)
+GH_STATUS=$?
 
-if [[ -z "$HEAD_OID" ]]; then
-    echo "Error: Could not fetch headRefOid for PR #$PR_NUMBER in $OWNER/$REPO" >&2
+if [[ $GH_STATUS -ne 0 ]]; then
+    echo "Error: Failed to fetch PR head OID (exit code: $GH_STATUS)." >&2
+    echo "Details: $HEAD_OID_RESPONSE" >&2
+    if echo "$HEAD_OID_RESPONSE" | grep -iq -e "token" -e "auth" -e "connect"; then
+        echo "Tip: Run 'gh auth login' to re-authenticate or check your internet connection." >&2
+    fi
     exit 1
 fi
 
+HEAD_OID="$HEAD_OID_RESPONSE"
+
 if [[ "$RAW_OUTPUT" == "true" ]]; then
-    DIFF=$(gh pr diff "$PR_NUMBER" "${REPO_FLAG[@]}")
-    if [[ $? -ne 0 ]]; then
-        echo "Error: Failed to fetch diff for PR #$PR_NUMBER" >&2
+    DIFF_RESPONSE=$(gh pr diff "$PR_NUMBER" "${REPO_FLAG[@]}" 2>&1)
+    GH_STATUS=$?
+    if [[ $GH_STATUS -ne 0 ]]; then
+        echo "Error: Failed to fetch diff for PR #$PR_NUMBER (exit code: $GH_STATUS)." >&2
+        echo "Details: $DIFF_RESPONSE" >&2
+        if echo "$DIFF_RESPONSE" | grep -iq -e "token" -e "auth" -e "connect"; then
+            echo "Tip: Run 'gh auth login' to re-authenticate or check your internet connection." >&2
+        fi
         exit 1
     fi
+    DIFF="$DIFF_RESPONSE"
     jq -n --arg headRefOid "$HEAD_OID" --arg diff "$DIFF" \
         '{headRefOid: $headRefOid, diff: $diff}'
 else
     # Token-efficient summary displaying all required metadata without truncating
-    gh pr view "$PR_NUMBER" "${REPO_FLAG[@]}" --json headRefOid,title,body,additions,deletions,changedFiles,files | jq -r '
+    PR_VIEW_RESPONSE=$(gh pr view "$PR_NUMBER" "${REPO_FLAG[@]}" --json headRefOid,title,body,additions,deletions,changedFiles,files 2>&1)
+    GH_STATUS=$?
+    if [[ $GH_STATUS -ne 0 ]]; then
+        echo "Error: Failed to view PR #$PR_NUMBER (exit code: $GH_STATUS)." >&2
+        echo "Details: $PR_VIEW_RESPONSE" >&2
+        if echo "$PR_VIEW_RESPONSE" | grep -iq -e "token" -e "auth" -e "connect"; then
+            echo "Tip: Run 'gh auth login' to re-authenticate or check your internet connection." >&2
+        fi
+        exit 1
+    fi
+    echo "$PR_VIEW_RESPONSE" | jq -r '
       "HEAD_OID: \(.headRefOid)",
       "Title: \(.title)",
       "Description:",
