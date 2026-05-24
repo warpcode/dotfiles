@@ -41,3 +41,22 @@ These instructions capture persistent memories, behavioral guardrails, and techn
   - Avoid iterative per-item network calls in shell loops or high-level orchestration logic.
   - When using `gh api graphql`, pass queries via variable injection to avoid shell quoting and path resolution issues.
 - **Package Management Architecture**: The legacy `zinstall` logic is deprecated. The project is migrating towards a unified `pkg.zsh` architecture using a `recipe` dictionary format that explicitly defines methods for checking, updating, installing, and enabling packages.
+
+## 🤖 Autonomous VM Agents (Jules)
+
+When operating as an autonomous agent in a remote virtual machine (e.g., Jules):
+
+1. **Active Memory and Context Retrieval**:
+   - Before drafting any implementation plan or modifying code, you MUST read `./.github/instructions/memory.instructions.md` to load active user preferences, past corrections, and decision records.
+   - If the task involves modifying Zsh configuration or Zsh scripts, you MUST read and follow `./.github/instructions/zsh.instructions.md`.
+
+2. **Leverage Local Skills & Workflows**:
+   - Do not write redundant scripts or reinvent existing logic. Review the custom skills in `./.github/skills/` (such as `github-review-orchestrator` and `technical-review-guidelines`) and agent workflows in `./.github/agents/` to leverage existing automation patterns and CLI utilities.
+
+3. **Conventions & Safe Operations**:
+   - Adhere strictly to the package management guidelines. Do not install packages using raw `apt` or `brew` commands. Use the modular `pkg.zsh` recipe structure.
+   - Do not edit stowed files in the home directory directly. Make modifications in the source files located under the `generic/` directory.
+
+4. **Plan Affirmation**:
+   - In your initial implementation plan presented to the user, explicitly confirm that you have read `memory.instructions.md`, `zsh.instructions.md` (if applicable), and any relevant local skill blueprints.
+
