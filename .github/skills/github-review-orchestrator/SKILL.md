@@ -12,7 +12,7 @@ Orchestrate non-invasive code reviews with a user-centric selection process and 
 ### 1. Discovery & Selection
 Unless a specific PR or branch is provided by the user, always perform a discovery phase:
 - List open PRs with `gh pr list`.
-- **Review Thread Discovery**: Fetch existing PR review threads via GraphQL (using `queries/review_threads.gql`) to identify pending feedback or addressed comments.
+- **Review Thread Discovery**: Use `./scripts/fetch_all_pr_threads.sh` to retrieve all threads for active PRs in a single batch query. Do NOT query PRs individually.
 - Identify candidates based on:
   - Age (oldest first).
   - Unanswered questions or pending review comments.
