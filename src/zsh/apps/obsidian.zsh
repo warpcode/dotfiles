@@ -2,6 +2,8 @@
 
 # ─── Configuration ─────────────────────────────────────────────────────────
 
+setopt EXTENDED_GLOB
+
 # Default to docs directory in dotfiles if it exists
 if [[ -z "$OBSIDIAN_VAULT" || "$OBSIDIAN_VAULT" == "." ]]; then
     if [[ -d "$DOTFILES/docs" ]]; then
@@ -42,11 +44,13 @@ obsidian.find.byAttribute() {
   [[ ${#search_values} -eq 0 ]] && return 0
 
   # Discover candidate files first for speed
-  local -a candidate_files=(${(f)"$(grep -rlE "^${attribute_name}\s*:" "$OBSIDIAN_VAULT" --include="*.md" 2>/dev/null)"})
+  # Escaping attribute_name to prevent regex injection
+  local esc_attr="${attribute_name//(#m)[.\\^$[()|*+?]/\\$MATCH}"
+  local -a candidate_files=(${(f)"$(grep -rlE "^${esc_attr}\s*:" "$OBSIDIAN_VAULT" --include="*.md" 2>/dev/null)"})
   candidate_files=(${candidate_files:#})
   [[ ${#candidate_files} -eq 0 ]] && return 0
 
-  # Export search values as env vars for yq
+  # Export search values as env vars for yq (mikefarah/yq compatibility)
   export ATTR="$attribute_name"
   local match_expr=""
   for i in {1..${#search_values}}; do
@@ -55,10 +59,12 @@ obsidian.find.byAttribute() {
     [[ $i -lt ${#search_values} ]] && match_expr+=' or '
   done
 
-  df.md fm get-all "${candidate_files[@]}" | yq -r -N "
+  # Use double quotes for the entire filter to allow $match_expr interpolation.
+  # Konstrukt using strenv for values is safe against injection as values are not interpolated directly.
+  df.md fm get-all "${candidate_files[@]}" | yq -r "
     select(
       [ .[strenv(ATTR)] ] | flatten | .[] | select(. != null) |
-      ((select(tag == \"!!str\") | sub(\"^\\\\\\\[\\\\\\\[\", \"\") | sub(\"\\\\\\\]\\\\\\\]$\", \"\")) // .) |
+      ((select(tag == \"!!str\") | sub(\"^[[]{2}\", \"\") | sub(\"[]]{2}$\", \"\")) // .) |
       select($match_expr)
     ) | .path
   " 2>/dev/null | sort -u
@@ -74,14 +80,16 @@ obsidian.type.filenames() {
 # @description Collect unique values for a frontmatter attribute
 obsidian.attribute.values() {
   local attribute_name="$1"
-  local -a candidate_files=(${(f)"$(grep -rlE "^${attribute_name}\s*:" "$OBSIDIAN_VAULT" --include="*.md" 2>/dev/null)"})
+  # Escaping attribute_name to prevent regex injection
+  local esc_attr="${attribute_name//(#m)[.\\^$[()|*+?]/\\$MATCH}"
+  local -a candidate_files=(${(f)"$(grep -rlE "^${esc_attr}\s*:" "$OBSIDIAN_VAULT" --include="*.md" 2>/dev/null)"})
   candidate_files=(${candidate_files:#}) 
   [[ ${#candidate_files} -eq 0 ]] && return 0
 
   export ATTR="$attribute_name"
-  df.md fm get-all "${candidate_files[@]}" | yq -r -N '
+  df.md fm get-all "${candidate_files[@]}" | yq -r '
     [ .[strenv(ATTR)] ] | flatten | .[] | select(. != null) |
-    (select(tag == "!!str") | sub("^\\\[\\\[", "") | sub("\\\]\\\]$", "")) // .
+    (select(tag == "!!str") | sub("^[[]{2}", "") | sub("[]]{2}$", "")) // .
   ' 2>/dev/null | sort -u
 }
 
@@ -95,10 +103,10 @@ obsidian.note.resolve_path() {
   fi
 
   # 2. Exact filename match anywhere in vault (fast)
-  # Strip folder prefix if present for the find command
+  # Use Zsh glob qualifiers for better performance and consistency
   local base_name="${input_path##*/}"
-  local filename_match=$(find "$OBSIDIAN_VAULT" -name "$base_name.md" | head -n 1)
-  [[ -n "$filename_match" ]] && { echo "$filename_match"; return 0; }
+  local -a matches=($OBSIDIAN_VAULT/**/$base_name.md(N[1]))
+  [[ -n "$matches" ]] && { echo "$matches"; return 0; }
 
   # 3. Search by title attribute in frontmatter
   obsidian.find.byAttribute "title" "$base_name" | head -n 1
@@ -254,7 +262,7 @@ obsidian.note.new() {
   for preference in "${write_preferences[@]}"; do
     local match_val=$(printf "%s\n" "${frontmatter_lines[@]}" | ATTR="$preference" yq -r '
       [ .[strenv(ATTR)] ] | flatten | .[0] | select(. != null) |
-      (select(tag == "!!str") | sub("^\\\[\\\[", "") | sub("\\\]\\\]$", "")) // .
+      (select(tag == "!!str") | sub("^[[]{2}", "") | sub("[]]{2}$", "")) // .
     ' 2>/dev/null)
     
     if [[ -n "$match_val" ]]; then
