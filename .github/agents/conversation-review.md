@@ -118,38 +118,69 @@ Attempt to read the following files. Report each as `found` or `not found`:
 
 MUST NOT fabricate file contents — if a file is not found, skip it and note it as absent.
 
-### Step 2 — Analyse for gaps & Skill Collation
+### Step 2 — Analyse for Gaps, Alignments & Structural Extrability
 
 Cross-reference the conversation against all located files. Identify:
 
-- **Outdated content** — instructions contradicted or superseded by something in the conversation
-- **Missing coverage** — a pattern, tool, or convention used in the conversation that no existing skill or config addresses
-- **New skill candidate** — a coherent workflow or set of rules that recurs or has clear future utility
+- **Outdated content** — instructions/rules contradicted or superseded by something in the conversation.
+- **Missing coverage** — a pattern, tool, or convention used in the conversation that no existing workspace instruction, skill, agent, or hook addresses.
+- **New architectural candidate** — a pattern or procedure that should be codified into a skill, custom agent/subagent, rule, hook, or command/prompt file.
+- **Self-Review Alignment** — cross-reference the conversation to identify gaps, inaccuracies, or opportunities to optimize the **conversation review subagent prompt itself** (`conversation-review.md`). Recommend updates to its own logic, decision criteria, target environment paths, or output format schemas if the conversation exposed a deficiency or new structural preference.
 
-**Skill Collation Strategy**:
-- **General Rule**: Initially, prefer creating small, separate, focused skills.
-- **Collation**: During the review, look for opportunities to collate smaller, related skills into one bigger, more comprehensive skill where appropriate to reduce fragmentation.
+#### 1. Customization & Extraction Decision Matrix
 
-Apply the agentic architecture decision tree when routing recommendations:
+To determine the correct level of extraction, apply these cognitive boundaries and lifecycle triggers:
 
-```
-Is this a convention, recipe, or rule for Claude to follow?
-  YES → recommend a skill update or new skill
+| Output Type | Cognitive/Complexity Boundary | Workspace Lifecycle Trigger |
+| :--- | :--- | :--- |
+| **Skill** | Low-to-Medium complexity. Represents a discrete, repeatable capability requiring specific tools or a shell script wrapper (e.g., a zsh package helper or Git PR context fetcher). | Explicitly called by an agent via standard tools/MCP. |
+| **Custom Agent / Subagent** | High complexity. Requires a specialized persona, narrow system prompt, custom tool permissions, or model constraints. Operates in an isolated loop/sandbox. | Mentions/Delegation (`@agent-name`) or spawned asynchronously by a master coordinator. |
+| **Hook** | No cognitive choice (deterministic). Executed as a simple, automated trigger bound to specific IDE events (e.g., linting, auto-saving, pre/post command execution). | Triggered automatically on lifecycle events without user intervention. |
+| **Rule / Instruction** | Low complexity, highly static. Defines global behaviors, stylistic rules, or library constraints that must apply to all contexts at all times. | Ingested automatically at session start for every single turn. |
+| **Command / Prompt File / Workflow** | Medium-to-High procedural complexity. A step-by-step, interactive recipe that requires explicit user invocation but operates under the same agent persona. | Manually invoked via slash commands (e.g., `/create-pr`) in the chat view. |
 
-Is this a reusable capability or external integration?
-  YES → recommend an MCP server (flag only; do not design it)
+#### 2. Environment Mapping Rules
 
-Would this run unattended or outside any AI context?
-  YES → recommend a standalone pipeline (flag only)
-```
+Map the output type to the appropriate file structures and paths for the target environments:
 
-### Step 3 — Produce recommendations
+##### Google Antigravity
+*   **Custom Agent / Subagent**: `./.github/agents/<agent-name>.md` or `./.agents/workflows/<agent-name>.agent.md`
+*   **Hook**: `./hooks.json` or `./.github/hooks.json`
+*   **Rule / Instruction**: `./.antigravityrules`, `./.agents/rules/<topic>.instructions.md`, `./CLAUDE.md`, `./AGENTS.md`, `./GEMINI.md`
+*   **Command / Prompt File / Workflow**: Workflows in `./.agents/workflows/<name>.md`
+*   **Skill**: `./.github/skills/<skill-name>/SKILL.md` (local modular skills)
 
-Each recommendation MUST include enough proposed content to be applied directly — not just a vague flag.
+##### OpenCode.ai
+*   **Custom Agent / Subagent**: `./.github/agents/<agent-name>.json` or `./.agents/<agent-name>.md`
+*   **Hook / Automation**: `./.github/plugins/` (TypeScript plugins) or `hooks.json`
+*   **Rule / Instruction**: `AGENTS.md` (project root) or `~/.config/opencode/AGENTS.md`
+*   **Command / Prompt File**: Custom commands in `AGENTS.md` (under custom commands config)
 
-For `update` recommendations, specify the exact section and the replacement or addition text.
+##### VS Code Copilot
+*   **Custom Agent**: Custom agent in Agent Customizations editor (`Chat: Open Customizations`)
+*   **Hook**: `./.github/hooks/<hook-name>.json` (events: `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`)
+*   **Rule / Instruction**: `./.github/copilot-instructions.md`
+*   **Command / Prompt File**: `./.github/prompts/<name>.prompt.md` (referenced via `/name`)
 
-For `create_skill` recommendations, provide a complete SKILL.md frontmatter block and a skeleton body.
+#### 3. Skill Collation Strategy
+*   **General Rule**: Initially, prefer creating small, separate, focused skills to avoid bloat and ensure separation of concerns.
+*   **Collation**: During the review, look for opportunities to collate smaller, related skills into one bigger, more comprehensive skill where appropriate to reduce fragmentation.
+
+#### 4. Architectural Self-Evolution Note
+*   When a custom system or workflow (such as conversation review itself) grows too complex for a single system prompt or LLM turn, recommend transitioning to a **Custom Agent employing Subagents** (e.g., Master Orchestrator, Memory Manager, Gaps Auditor, Scaffold Generator) to isolate concerns.
+
+---
+
+### Step 3 — Produce Recommendations
+
+Each recommendation MUST include enough proposed content to be applied directly — not just a vague flag or placeholder.
+
+*   **For `create_agent`**: Provide a complete markdown system prompt skeleton (defining role, behavior, allowed tools) and a JSON config structure.
+*   **For `create_hook`**: Provide a valid, complete JSON event configuration mapping the trigger event (e.g., `PostToolUse`) to the script or command.
+*   **For `create_rule`**: Provide the exact, high-fidelity markdown rules block to be appended or created.
+*   **For `create_command` or `create_prompt`**: Provide a complete markdown prompt file skeleton containing any frontmatter variables and instructions.
+*   **For `create_skill`**: Provide a complete, valid `SKILL.md` file featuring a fully formed frontmatter block and skeleton capabilities.
+*   **For `update`**: Provide the exact target file path, target section, and precise replacement content.
 
 ---
 
@@ -181,8 +212,8 @@ IF the artifact implements a general capability (API wrapper, data transform):
 A repeatable multi-step procedure, decision process, or methodology that is not a single script but a way of working.
 
 ```
-IF the pattern shapes how Claude should reason or act in a bounded context:
-  THEN recommend: new skill or addition to an existing skill
+IF the pattern shapes how the agent should reason or act in a bounded context:
+  THEN recommend: new skill, rule, custom agent, prompt file, or addition to an existing one based on the Decision Matrix
 
 IF the pattern is a workflow that runs without an AI agent:
   THEN recommend: standalone pipeline (flag only)
@@ -229,12 +260,12 @@ Source: [inline conversation | file: <path> | url: <url>]
 
 ### Rule & Instruction Gaps (Recommendations)
 
-#### [<action: update|create_skill|flag_mcp|flag_pipeline>] - [<target_file>]
+#### [<action: update|create_skill|create_agent|create_hook|create_rule|create_command|flag_mcp|flag_pipeline>] - [<target_file>]
 - **Section / Target Area**: <section name (for updates) or target folder (for new files/hooks)>
 - **Gap / Rationale**: <what missing coverage or outdated instruction/workflow in the conversation triggered this change>
 - **Proposed Content / Skeleton**:
   ```[language]
-  <exact text to add, replace, or use as the new skill body, hook script, or agent configuration>
+  <exact text to add, replace, or use as the new skill body, hook script, agent configuration, rule block, or prompt file skeleton>
   ```
 
 ---
@@ -257,11 +288,11 @@ Source: [inline conversation | file: <path> | url: <url>]
 
 #### [<name>] ([<type>])
 - **Description**: <what the pattern does and when to apply it>
-- **Suggested Skill Name**: <kebab-case name (for skill type)>
+- **Suggested Skill/Agent/Rule/Prompt Name**: <kebab-case name>
 - **Rationale**: <pattern observed in conversation>
 - **Skeleton**:
   ```markdown
-  <proposed SKILL.md frontmatter + outline body (for skill type)>
+  <proposed SKILL.md frontmatter + outline body, or custom agent/rule/prompt skeleton>
   ```
 
 ### Skipped
