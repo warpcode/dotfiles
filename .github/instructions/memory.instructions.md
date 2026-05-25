@@ -37,6 +37,7 @@ These instructions capture persistent memories, behavioral guardrails, and techn
   - **Replies**: Only reply if needed (with user approval). Give a thumbs up (👍) ONLY if the developer replied saying they fixed a requested change.
   - **Resolution**: Proactively resolve review threads once the corresponding changes have been verified in the diff. If the developer asks a question, alert the user for a response.
   - **Format**: Use line-level comments for specific issues and file-level comments for file-wide concerns. If nothing is wrong, do not add any comments. Comments MUST NOT use 'caveman' style. Use plain English to describe the issue, explain why it is a problem, and suggest a potential solution using the mandatory structure defined in Tone & Content.
+  - **Execution Robustness**: Always write the review body to a temporary file (e.g. using `write_to_file`) and submit it using `gh pr review <number> -F <file>`. Never pass the body directly via inline CLI flags to prevent command-line parsing or quote-escaping failures.
 - **Skill Blueprint Design**: Resources should **not** be marked as required in simple skill blueprints.
 - **Skill Naming Convention**: All custom skills MUST be named using the format `prefix-{specific-area}-guidelines`.
   - For skills, agents, or agentic instructions (using markdown, etc.): `prompt-*` must always be the prefix (e.g., `prompt-guidelines` for general rules, `prompt-skills-guidelines` for creating/updating skills, `prompt-agents-guidelines` for agent instructions).
