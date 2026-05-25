@@ -1,3 +1,7 @@
+[user]
+    name = {{ .git_name }}
+    email = {{ .git_email }}
+
 [color]
     ui = auto
     status = auto
@@ -125,3 +129,7 @@
 
 [init]
     defaultBranch = main
+
+[safe]
+    directory = {{ .chezmoi.homeDir }}/src/dotfiles
+
