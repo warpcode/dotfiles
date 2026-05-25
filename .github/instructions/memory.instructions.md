@@ -26,6 +26,8 @@ These instructions capture persistent memories, behavioral guardrails, and techn
    - **Review Orchestration**: Formal pull request reviews SHOULD be performed using the `review-pull-request` agent. This ensures a consistent lifecycle including discovery, specialized subagent audits (e.g., `file-cleaner`), and automatic memory extraction via `conversation-review`.
 ## 🛠️ Technical Context & Preferences
 
+- **Source of Truth Hierarchy**: `AGENTS.md` is the authoritative source for stable, graduated rules and conventions. `memory.instructions.md` acts as a volatile extension for recent, maturing facts. When a memory matures, it should be promoted to `AGENTS.md` or a dedicated skill.
+- **Memory Tiers**: Memory is strictly split between Workspace memory (`.github/instructions/memory.instructions.md` for repo-specific facts) and Global memory (`~/src/ai-config/instructions/memory.instructions.md` for user-wide facts). Do not mix scopes.
 - **Git Workflow**:
   - All GitHub Actions MUST pass before any merge.
   - Prefer squash-and-merge for pull requests.
@@ -40,8 +42,9 @@ These instructions capture persistent memories, behavioral guardrails, and techn
   - **Execution Robustness**: Always write the review body to a temporary file (e.g. using `write_to_file`) and submit it using `gh pr review <number> -F <file>`. Never pass the body directly via inline CLI flags to prevent command-line parsing or quote-escaping failures.
 - **Skill Blueprint Design**: Resources should **not** be marked as required in simple skill blueprints.
 - **Skill Naming Convention**: All custom skills MUST be named using the format `prefix-{specific-area}-guidelines`.
-  - For skills, agents, or agentic instructions (using markdown, etc.): `prompt-*` must always be the prefix (e.g., `prompt-guidelines` for general rules, `prompt-skills-guidelines` for creating/updating skills, `prompt-agents-guidelines` for agent instructions).
-  - For GitHub-related skills/instructions: `github-{specific-area}-guidelines` (e.g., `github-review-guidelines`).
+  - For LLM instructions, agent orchestration, or prompt engineering: `prompt-*` MUST be the prefix (e.g., `prompt-guidelines`, `prompt-skills-guidelines`).
+  - For memory management, extraction, and lifecycle operations: `memory-*` MUST be the prefix (e.g., `memory-analysis-guidelines`, `memory-operations-guidelines`). Note: Memory operations are distinct from prompt engineering.
+  - For GitHub-related skills/integrations: `github-*` MUST be the prefix (e.g., `github-review-guidelines`).
 - **Skill Lifecycle & Granularity**: When creating or reviewing skills, explicitly evaluate whether to:
   - **Merge**: Collate smaller, overlapping, or fragmented skills into a unified capability.
   - **Break Up**: Deconstruct large, multi-purpose skills into smaller, single-responsibility skills.
