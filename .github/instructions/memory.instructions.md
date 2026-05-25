@@ -22,7 +22,8 @@ These instructions capture persistent memories, behavioral guardrails, and techn
 5. **Approval Workflow**:
    - **Always ask for explicit user approval before approving or merging a pull request**, regardless of whether verification was successful.
    - **Approval for Batching**: ALWAYS obtain explicit user permission before processing multiple pull requests in a single review session.
-
+   - **Review Boundaries**: When discovering multiple PRs, strictly limit auditing and commentary to the specific PR(s) selected by the user. Do not proactively audit other candidates in the same turn or session unless explicitly requested.
+   - **Review Orchestration**: Formal pull request reviews SHOULD be performed using the `review-pull-request` agent. This ensures a consistent lifecycle including discovery, specialized subagent audits (e.g., `file-cleaner`), and automatic memory extraction via `conversation-review`.
 ## 🛠️ Technical Context & Preferences
 
 - **Git Workflow**:
@@ -63,6 +64,11 @@ These instructions capture persistent memories, behavioral guardrails, and techn
 - **Architectural Decisions**:
   - **Log Rotation (macOS)**: Preferred log rotation for `launchd` agents is via shell redirection (`>`) in the `ProgramArguments` block to ensure truncation on every run, rather than using `StandardOutPath`.
   - **Service Logging (Linux)**: `systemd` services should delegate log management to `journald` via `StandardOutput=journal` instead of writing to static files.
+
+- **PR Review & Function Hygiene**:
+  - **Interactive Safety**: Always use `return` instead of `exit` within Zsh functions intended for interactive use to prevent accidental session termination.
+  - **API Constraints**: GitHub PR Review API returns HTTP 422 if line-level comments are placed on lines outside the current diff hunks. Use the main review body for findings in unchanged code.
+  - **Robustness**: Functions performing file operations (like `dataurl`) must verify file existence and readability using `[ -f "$file" ]` before processing to avoid malformed output and stderr noise.
 
 ## 🤖 Autonomous VM Agents (Jules)
 
