@@ -1,0 +1,30 @@
+{{- /* script_utils.tmpl: Common bash functions to be included in scripts */ -}}
+
+# Ensure local paths and mise shims are in PATH
+export PATH="${HOME}/.local/share/mise/shims:${HOME}/.local/bin:${PATH}"
+
+# Helper to run commands as root if needed
+run_as_root() {
+  if [[ "$(id -u)" -ne 0 ]] && command -v sudo >/dev/null 2>&1; then
+    sudo "$@"
+  else
+    "$@"
+  fi
+}
+
+err() {
+  printf '[%s] ❌ %b\n' "$(date +'%Y-%m-%dT%H:%M:%S%z')" "$*" >&2
+}
+
+info() {
+  printf '💬 %b\n' "$1"
+}
+
+success() {
+  printf '✅ %b\n' "$1"
+}
+
+warn() {
+  printf '⚠️  %b\n' "$1" >&2
+}
+

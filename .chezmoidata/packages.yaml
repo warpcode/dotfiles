@@ -1,0 +1,217 @@
+packages:
+  system:
+    - name: git
+      apt: git
+      dnf: git
+      pacman: git
+      brew: git
+      termux: git
+    - name: zsh
+      apt: zsh
+      dnf: zsh
+      pacman: zsh
+      brew: zsh
+      termux: zsh
+    - name: curl
+      apt: curl
+      dnf: curl
+      pacman: curl
+      brew: curl
+      termux: curl
+    - name: gcc
+      apt: gcc
+      dnf: gcc
+      pacman: gcc
+      brew: gcc
+      termux: clang
+    - name: make
+      apt: make
+      dnf: make
+      pacman: make
+      brew: make
+      termux: make
+    - name: ca-certificates
+      apt: ca-certificates
+      dnf: ca-certificates
+      pacman: ca-certificates
+    - name: gnupg
+      apt: gnupg2
+      dnf: gnupg2
+      brew: gnupg
+      termux: gnupg
+    - name: libatomic
+      apt: libatomic1
+      dnf: libatomic
+      pacman: gcc-libs
+    - name: openssl
+      apt: openssl
+      dnf: openssl
+      brew: openssl
+      termux: openssl
+    - name: pkg-config
+      apt: pkg-config
+      dnf: pkgconf-pkg-config
+      brew: pkg-config
+      termux: pkg-config
+    - name: unzip
+      apt: unzip
+      dnf: unzip
+      brew: unzip
+      termux: unzip
+    - name: secret-tool
+      apt: libsecret-tools
+      dnf: libsecret
+    - name: bc
+      apt: bc
+      dnf: bc
+      pacman: bc
+      brew: bc
+      termux: bc
+    - name: dialog
+      apt: dialog
+      dnf: dialog
+      pacman: dialog
+      brew: dialog
+      termux: dialog
+    - name: dnf-plugins-core
+      dnf: dnf-plugins-core
+
+  integration:
+    - name: flatpak
+      apt: flatpak
+      dnf: flatpak
+      pacman: flatpak
+    - name: docker
+      apt: "docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"
+      dnf: "docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"
+      pacman: "docker docker-compose"
+      brew_cask: docker-desktop
+
+  cli:
+    - name: openssh
+      apt: openssh-client
+      dnf: openssh-clients
+      pacman: openssh
+      termux: openssh
+    - name: tmux
+      apt: tmux
+      dnf: tmux
+      pacman: tmux
+      brew: tmux
+      termux: tmux
+    - name: screen
+      apt: screen
+      dnf: screen
+      pacman: screen
+      brew: screen
+      termux: screen
+    - name: rsync
+      apt: rsync
+      dnf: rsync
+      pacman: rsync
+      brew: rsync
+      termux: rsync
+    - name: jq
+      mise: jq
+    - name: yq
+      mise: yq
+    - name: fzf
+      mise: fzf
+    - name: bat
+      mise: bat
+    - name: gomplate
+      mise: gomplate
+    - name: gh
+      mise: gh
+    - name: lazygit
+      mise: lazygit
+    - name: neovim
+      mise: neovim@0.11.6
+    - name: uv
+      mise: uv
+
+  development:
+    - name: python3
+      mise: python@3.12
+    - name: node
+      mise: node@latest
+    - name: rust
+      mise: rust
+    - name: go
+      mise: go
+    - name: deno
+      mise: deno
+    - name: php
+      apt: php-cli
+      dnf: php-cli
+      pacman: php
+      brew: php
+    - name: prettier
+      npm: prettier
+    - name: eslint
+      npm: eslint
+    - name: typescript-language-server
+      npm: typescript-language-server
+
+  apps:
+    - name: discord
+      flatpak: com.discordapp.Discord
+      brew_cask: discord
+      not: work
+    - name: ffmpeg
+      apt: ffmpeg
+      dnf: ffmpeg
+      pacman: ffmpeg
+      brew: ffmpeg
+      termux: ffmpeg
+      not: work
+    - name: k8slens
+      snap: "kontena-lens --classic"
+      brew_cask: lens
+      not: work
+    - name: keepassxc
+      flatpak: org.keepassxc.KeePassXC
+      brew_cask: keepassxc
+      not: work
+    - name: code
+      apt: code
+      dnf: code
+      brew_cask: visual-studio-code
+      not: work
+    - name: cursor
+      apt: cursor
+      dnf: cursor
+      brew_cask: cursor
+      not: work
+
+  ai:
+    - name: ollama
+      mise: ollama
+      not: work
+    - name: ai_skills
+      npm: "skills@latest"
+      not: work
+    - name: copilot-cli
+      npm: "@github/copilot"
+      not: work
+    - name: gemini-cli
+      npm: "@google/gemini-cli"
+      not: work
+    - name: opencode
+      npm: "opencode-ai@latest"
+      not: work
+    - name: kilo
+      npm: "@kilocode/cli"
+      not: work
+    - name: pi
+      npm: "@mariozechner/pi-coding-agent"
+      not: work
+    - name: qwen
+      npm: "@qwen-code/qwen-code@latest"
+      not: work
+    - name: codex
+      npm: "@openai/codex"
+      not: work
+    - name: claude
+      npm: "@anthropic-ai/claude-code"
+      not: work
