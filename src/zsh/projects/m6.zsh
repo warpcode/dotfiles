@@ -13,7 +13,23 @@ alias m6.sh="(m6.cd && docker compose exec web bash)"
 
 # Database management
 alias m6.db="(m6.cd && docker compose exec web martini-db.sh)"
-alias m6.db.dump="(m6.cd && docker compose exec mysql mysqldump -u\$(_m6_get_config_json martini-db '.username') -p\$(_m6_get_config_json martini-db '.password') \$(_m6_get_config_json martini-db '.name'))"
+
+# Dump Martini database
+m6.db.dump() {
+  local config
+  config=$(_m6_get_config_json martini-db) || return 1
+
+  local user pass name
+  user=$(jq -r '.username' <<< "$config")
+  pass=$(jq -r '.password' <<< "$config")
+  name=$(jq -r '.name' <<< "$config")
+
+  (
+    m6.cd && \
+    print -rn -- "$pass" | docker compose exec -T mysql sh -c 'export MYSQL_PWD=$(cat); exec mysqldump -u"$1" "$2"' -- "$user" "$name"
+  )
+}
+
 alias m6.db.query="(m6.cd && docker compose exec web martini-db.sh -e"
 alias m6.db.tables="(m6.cd && docker compose exec web martini-db.sh -e 'SHOW TABLES;')"
 

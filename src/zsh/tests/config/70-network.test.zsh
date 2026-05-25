@@ -1,63 +1,62 @@
-#!/bin/bash
+#!/bin/zsh
 
 # Source the file containing dataurl
-# Since it's a zsh file, we hope it's compatible enough with bash for this function
 source src/zsh/config/70-network.zsh
 
 test_dataurl_usage() {
-    echo "Testing dataurl usage..."
+    print "Testing dataurl usage..."
     output=$(dataurl)
     exit_code=$?
     expected="Usage: dataurl <path/to/file>"
-    if [ "$output" == "$expected" ] && [ $exit_code -ne 0 ]; then
-        echo "✅ Usage test passed"
+    if [[ "$output" == "$expected" ]] && [[ $exit_code -ne 0 ]]; then
+        print "✅ Usage test passed"
     else
-        echo "❌ Usage test failed"
-        echo "Expected output: $expected"
-        echo "Got output: $output"
-        echo "Expected non-zero exit code, got: $exit_code"
+        print "❌ Usage test failed"
+        print "Expected output: $expected"
+        print "Got output: $output"
+        print "Expected non-zero exit code, got: $exit_code"
         return 1
     fi
 }
 
 test_dataurl_missing_file() {
-    echo "Testing dataurl with missing file..."
+    print "Testing dataurl with missing file..."
     output=$(dataurl "/path/to/nonexistent/file" 2>&1)
     exit_code=$?
     expected="Error: file '/path/to/nonexistent/file' not found"
-    if [ "$output" == "$expected" ] && [ $exit_code -ne 0 ]; then
-        echo "✅ Missing file test passed"
+    if [[ "$output" == "$expected" ]] && [[ $exit_code -ne 0 ]]; then
+        print "✅ Missing file test passed"
     else
-        echo "❌ Missing file test failed"
-        echo "Expected output: $expected"
-        echo "Got output: $output"
-        echo "Expected non-zero exit code, got: $exit_code"
+        print "❌ Missing file test failed"
+        print "Expected output: $expected"
+        print "Got output: $output"
+        print "Expected non-zero exit code, got: $exit_code"
         return 1
     fi
 }
 
 test_dataurl_text() {
-    echo "Testing dataurl with text file..."
+    print "Testing dataurl with text file..."
     tmpfile=$(mktemp)
-    echo -n "hello world" > "$tmpfile"
+    print -n "hello world" > "$tmpfile"
 
     output=$(dataurl "$tmpfile")
     # openssl base64 might add a newline, and the function uses tr -d '\n' to remove it
     # "hello world" in base64 is aGVsbG8gd29ybGQ=
     expected="data:text/plain;charset=utf-8;base64,aGVsbG8gd29ybGQ="
 
-    if [ "$output" == "$expected" ]; then
-        echo "✅ Text file test passed"
+    if [[ "$output" == "$expected" ]]; then
+        print "✅ Text file test passed"
     else
         # Some versions of file might return slightly different mime types
         # or openssl might output different base64 (with/without padding)
         # Let's check if it starts with data:text/plain and contains the expected base64
         if [[ "$output" == data:text/plain* ]] && [[ "$output" == *aGVsbG8gd29ybGQ* ]]; then
-             echo "✅ Text file test passed (partial match)"
+             print "✅ Text file test passed (partial match)"
         else
-            echo "❌ Text file test failed"
-            echo "Expected: $expected"
-            echo "Got: $output"
+            print "❌ Text file test failed"
+            print "Expected: $expected"
+            print "Got: $output"
             rm "$tmpfile"
             return 1
         fi
@@ -66,7 +65,7 @@ test_dataurl_text() {
 }
 
 test_dataurl_binary() {
-    echo "Testing dataurl with binary file..."
+    print "Testing dataurl with binary file..."
     tmpfile=$(mktemp)
     # Create a small binary file (4 bytes of nulls)
     printf "\000\001\002\003" > "$tmpfile"
@@ -76,10 +75,10 @@ test_dataurl_binary() {
     # MIMETYPE for binary might be application/octet-stream
 
     if [[ "$output" == data:*base64,AAECAw== ]]; then
-        echo "✅ Binary file test passed"
+        print "✅ Binary file test passed"
     else
-        echo "❌ Binary file test failed"
-        echo "Got: $output"
+        print "❌ Binary file test failed"
+        print "Got: $output"
         rm "$tmpfile"
         return 1
     fi
@@ -93,10 +92,10 @@ test_dataurl_missing_file || errors=$((errors+1))
 test_dataurl_text || errors=$((errors+1))
 test_dataurl_binary || errors=$((errors+1))
 
-if [ $errors -eq 0 ]; then
-    echo "All tests in 70-network.test.sh passed!"
+if [[ $errors -eq 0 ]]; then
+    print "All tests in 70-network.test.zsh passed!"
     exit 0
 else
-    echo "$errors tests failed in 70-network.test.sh"
+    print "$errors tests failed in 70-network.test.zsh"
     exit 1
 fi
