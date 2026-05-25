@@ -21,6 +21,9 @@ typeset -r OBSIDIAN_RULES="${DOTFILES}/assets/configs/obsidian/rules"
 typeset -r OBSIDIAN_TEMPLATE="${DOTFILES}/assets/templates/obsidian/note.md.tmpl"
 typeset -r OBSIDIAN_DATE_FORMAT="+%Y-%m-%dT%H:%M:%S%z"
 
+# Load profile configuration utilities
+source "${DOTFILES}/src/zsh/functions/profile_loader.zsh"
+
 #######################################
 # Description: Print error message to stderr.
 # Arguments:
@@ -189,25 +192,32 @@ _resolve_rule() {
   local note_type="${1:-}"
   [[ -z "$note_type" ]] && return 1
 
-  local rule_path="$OBSIDIAN_RULES/${note_type}.json"
-  if [[ ! -f "$rule_path" ]]; then
+  # Load profile-specific default.json and note_type.json
+  local default_json
+  default_json=$(fs.profile.load "assets/configs/obsidian/rules" "default.json") || {
+    err "Failed to load default rules"
+    return 1
+  }
+
+  local rule_json
+  rule_json=$(fs.profile.load "assets/configs/obsidian/rules" "${note_type}.json") || {
     err "Rule not found for type: $note_type"
     return 1
-  fi
+  }
 
   # Merge with default if there are from_type references
-  jq -c '
+  jq -c --argjson defaults "$default_json" '
     . as $rule |
     (if .fields then
        reduce (.fields | to_entries[]) as $e (.;
-         if $e.value.from_type == "default" then
-           .fields[$e.key] = $defaults[0].fields[$e.value.from_field]
-         else
-           .
-         end
+          if $e.value.from_type == "default" then
+            .fields[$e.key] = $defaults.fields[$e.value.from_field]
+          else
+            .
+          end
        )
      else . end)
-  ' --slurpfile defaults "$OBSIDIAN_RULES/default.json" "$rule_path"
+  ' <<< "$rule_json"
 }
 
 # ---------------------------------------------------------------------------
@@ -306,8 +316,22 @@ cmd_new() {
     return 1
   fi
 
-  local -a available_note_types=($OBSIDIAN_RULES/*.json(N:t:r))
-  # Remove 'default' from available types for creation
+  local -a available_note_types=()
+  local active_profile=$("$DOTFILES/bin/df.fs" profile name 2>/dev/null || echo "default")
+
+  # Discover base note types
+  available_note_types+=($OBSIDIAN_RULES/*.json(N:t:r))
+
+  # Discover profile-specific note types
+  if [[ -d "$OBSIDIAN_RULES/$active_profile" ]]; then
+    available_note_types+=($OBSIDIAN_RULES/$active_profile/*.json(N:t:r))
+  fi
+  if [[ -d "$OBSIDIAN_RULES/global" ]]; then
+    available_note_types+=($OBSIDIAN_RULES/global/*.json(N:t:r))
+  fi
+
+  # Unique and remove 'default'
+  available_note_types=(${(u)available_note_types})
   available_note_types=(${available_note_types:#default})
   if [[ ${#available_note_types} -eq 0 ]]; then
     err "No note type rules found in '$OBSIDIAN_RULES'."

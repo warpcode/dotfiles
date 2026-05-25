@@ -17,20 +17,21 @@ fs.profile.load() {
     local f
     local -i i
 
-    # Load profile-specific config files in priority order
+    # Always start with the base configuration file as the foundation
+    local fallback_path="${DOTFILES:-$HOME/.config/dotfiles}/$config_subdir/$config_name"
+    if [[ -f "$fallback_path" ]]; then
+        config_files+=( "$fallback_path" )
+    fi
+
+    # Load profile-specific config files in priority order (base -> global -> profile)
     for (( i=${#profile_files[@]}; i>0; i-- )); do
         f="${profile_files[$i]}"
         [[ -n "$f" ]] && config_files+=( "${f}" )
     done
 
-    # Fallback to default if no profile-specific files found
+    # If no configuration files were found at all, return failure
     if (( ${#config_files[@]} == 0 )); then
-        local fallback_path="${DOTFILES:-$HOME/.config/dotfiles}/$config_subdir/$config_name"
-        if [[ -f "$fallback_path" ]]; then
-            config_files+=( "$fallback_path" )
-        else
-            return 1
-        fi
+        return 1
     fi
 
     # Merge all discovered configs using jq
