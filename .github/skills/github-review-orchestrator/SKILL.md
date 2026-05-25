@@ -78,7 +78,12 @@ Use this procedure to audit pull requests without workspace mutation:
 2. **Selection**: Present candidates and get user approval (respecting the Batching Permission rule).
 3. **Inspection**: Use `get_pr_context.sh` and `fetch_file.sh` to retrieve diffs and full file context for the target PR(s).
 4. **Audit**: Perform read-only verification of fixes and identify regressions against local files fetched to temporary paths.
-5. **Batching**: Construct atomic JSON review payloads using `templates/github/review_comment.md`.
-6. **Submission**: Submit as a single review event (COMMENT, APPROVE, or REQUEST_CHANGES) via `submit_review.sh`.
+5. **Architectural Audit**: If files are emptied or renamed:
+    - Identify target files in the diff.
+    - Perform a global `grep_search` for the file names and common command aliases.
+    - Verify if call sites expect logic that has been removed.
+    - Cross-reference with project-specific environment generation scripts.
+6. **Batching**: Construct atomic JSON review payloads using `templates/github/review_comment.md`.
+7. **Submission**: Submit as a single review event (COMMENT, APPROVE, or REQUEST_CHANGES) via `submit_review.sh`.
 
 

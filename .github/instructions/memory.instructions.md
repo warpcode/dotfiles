@@ -91,7 +91,9 @@ When operating as an autonomous agent in a remote virtual machine (e.g., Jules):
 
    ### `technical_context`
    - **Obsidian Migration**: The project has migrated Obsidian management from Zsh-based logic and Markdown rules to a standalone `bin/df.obsidian` utility with JSON validation rules. `src/zsh/apps/obsidian.zsh` now serves as a thin wrapper for this utility. Legacy Zsh functions and Markdown rule paths should be avoided.
-   - **Secrets Architecture**: The `bin/df.secrets` utility currently has a regression where it performs a simple lexical merge of all `*.json` files in `assets/configs/secrets`, ignoring the previous priority-aware profile resolution logic (e.g., `work/` overriding `global/`).
+   - **Secrets Architecture**: The `bin/df.secrets` utility is undergoing an architectural split. Its "unified resolver" role is being transitioned, which led to a regression in PR #51 where the file was emptied while dependencies (like `df.keepass` and existing projects) still relied on it.
+   - **Config Hydration**: As of PR #51, `df.config hydrate` has lost its secret resolution logic and requires restoration to function correctly with the new secrets architecture.
+   - **AI Backend Flexibility**: AI providers should not be hardcoded to specific backends (e.g., KeePassXC). Maintain modularity to allow switching or supporting multiple secret providers.
 
    ### `correction`
    - **Obsidian Slugification**: Resolved. The regression in PR #40 where slugification was too aggressive was fixed by restoring the legacy ${note_title// /-} logic in `bin/df.obsidian`.

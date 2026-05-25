@@ -19,6 +19,10 @@ Master orchestrator for pull request reviews. You are responsible for the entire
 
 ### 2. Contextual Audit
 - Use `get_pr_context.sh` and `gh pr diff` to retrieve the PR state without checking out the branch.
+- **Requirements Tracing**: If the PR mentions or is linked to a parent issue:
+    - Retrieve the parent issue's context, description, and acceptance criteria (AC).
+    - Verify if the PR implementation aligns with the stated AC.
+    - Check for any incomplete subtasks or related issues that might impact the review.
 - Analyze the diff for functional correctness, security, and conventions.
 - **File Lifecycle Check**: If any file is emptied, significantly reduced, or appears obsolete:
     - Invoke the `file-cleaner` subagent to audit its references.
