@@ -103,6 +103,7 @@ When operating as an autonomous agent in a remote virtual machine (e.g., Jules):
    - **Obsidian Profile-Based Configuration Overrides**: Configuration overrides for Obsidian rules in `df.obsidian` must support the project's profile-based inheritance hierarchy (e.g., `work/default.json` and `work/${note_type}.json`). Use `df.fs profile list` to discover all profile-specific config files, and merge them in priority order using `jq -s 'reduce .[] as $item ({}; . * $item)'`.
    - **Redundant tostring in yq**: In `mikefarah/yq` (v4), variables retrieved via `strenv()` are already strings; applying `| tostring` to them is redundant. If type conversion is required, it should be applied to the field being compared rather than the strenv variable.
    - **Scheduled Task Framework**: A user-space scheduled task framework (`scheduler.add`, `scheduler.logs`, etc.) is implemented using Gomplate templates to define declarative JSON tasks under `assets/configs/scheduler/`.
+   - **Progressive Profile Overrides**: When building configuration merges across dotfiles profiles, prepend the baseline configuration first in the resolution chain (base -> global -> active profile) so that profile overrides layer correctly using recursive merge engines like jq.
    - **Secrets Architecture**: The `bin/df.secrets` utility is undergoing an architectural split. Its "unified resolver" role is being transitioned, which led to a regression in PR #51 where the file was emptied while dependencies (like `df.keepass` and existing projects) still relied on it.
    - **Config Hydration**: As of PR #51, `df.config hydrate` has lost its secret resolution logic and requires restoration to function correctly with the new secrets architecture.
    - **AI Backend Flexibility**: AI providers should not be hardcoded to specific backends (e.g., KeePassXC). Maintain modularity to allow switching or supporting multiple secret providers.
@@ -110,6 +111,7 @@ When operating as an autonomous agent in a remote virtual machine (e.g., Jules):
    ### `decision`
    - **Prevent Infinite Log Growth in Scheduled Services**: macOS launchd services MUST use shell redirection (`>`) in the `ProgramArguments` block to truncate logs on every run; Linux systemd services MUST delegate logging to `journald` via `StandardOutput=journal` instead of writing to static files.
    - **Interactive Zsh Functions Safety**: Interactive Zsh functions (like `dataurl`) must always use `return <status>` instead of `exit` to prevent terminating the active shell session, and must verify file readability using `[ -f "$file" ]` beforehand.
+   - **Argument-Based JSON in Zsh**: When passing resolved JSON objects between shell functions or into jq, pass them as parsed arguments (e.g., jq --argjson defaults "$default_json") rather than using process substitutions (<(echo ...)) or raw slurping, preventing zsh compatibility issues and descriptor leaks.
 
    ### `correction`
    - **Obsidian Slugification**: Resolved. The regression in PR #40 where slugification was too aggressive was fixed by restoring the legacy ${note_title// /-} logic in `bin/df.obsidian`.
