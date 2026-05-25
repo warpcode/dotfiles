@@ -40,11 +40,10 @@ Comments MUST NOT use 'caveman' style.
   3. **Impact**: Why this is a problem for the codebase (security, performance, stability).
   4. **Proposed Solution**: Technical fix with a code example if it clarifies the implementation.
 - **Batching**: Use line-level comments for specific issues and file-level comments for file-wide concerns. If nothing is wrong, do not add any comments. Use plain English to describe the issue, explain why it is a problem, and suggest a potential solution.
-
-### 4. Batch Submission
-- Draft all findings before posting.
-- Present the full list of comments to the user for approval.
-- Submit the review using `scripts/submit_review.sh <owner> <repo> <pr_number> <payload_file>`.
+- **Review Constraint**: Line-level comments MUST be placed on lines that are part of the current PR diff (within hunks). Attempting to comment on lines outside the diff will result in an HTTP 422 error from the GitHub API.
+- **Handling Findings Outside Diff**:
+    - If a finding is in a line NOT modified/added by the PR (outside the diff hunk), DO NOT use a line-level comment.
+    - Instead, use the main review `body` or a file-level comment to describe the issue, citing the line number and providing the proposed solution in the text.
 
 ## Operations
 
