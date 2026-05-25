@@ -15,6 +15,8 @@ When drafting shell scripts or tools intended primarily for AI consumption, prio
 - **High-Signal Output**: Default to providing a token-efficient Markdown summary. Extract only the essential metadata required for the agent's next logical step to minimize context usage.
 - **Example**: PR #123 (Open) - "Fix bug".
 - **Large Data Truncation**: Truncate verbose bodies or logs in the default output.
+- **Structured Collections**: Multi-item outputs (e.g., lists of issues, commits, or media) returned from scripts MUST be enclosed in a single JSON array or wrapper object rather than a raw sequence of individual JSON lines (NDJSON) to facilitate reliable parsing and manipulation with `jq`.
+- **Sensible Collection Truncation**: Default collection queries must enforce a sensible truncation limit (e.g., latest 10 items) unless explicit count override parameters or the `--raw` flag are supplied.
 
 ### 2. The `--raw` Pattern
 - **Bypass Flag**: Always implement a `--raw` (or `--raw-output`) flag. 

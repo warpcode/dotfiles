@@ -86,15 +86,27 @@ When operating as an autonomous agent in a remote virtual machine (e.g., Jules):
    - Adhere strictly to the package management guidelines. Do not install packages using raw `apt` or `brew` commands. Use the modular `pkg.zsh` recipe structure.
    - Do not edit stowed files in the home directory directly. Make modifications in the source files located under the `generic/` directory.
 
-4. **Plan Affirmation**:
+4. **Scope Hygiene & File Purging**:
+   - Always perform a thorough audit of the pull request file list against `master` using `git diff --name-status master`.
+   - Purge any accidentally restored legacy directories (such as obsolete Zsh package managers or old AI skill configurations), git submodules, or temporary analysis files (like `coding/tmp/`).
+   - Revert all unrelated scope creep modifications (such as git, ssh, or secret configuration moves) to match `master` exactly. Feature branches must strictly contain only files relevant to the target issue.
+
+5. **Plan Affirmation**:
 
    ## 🧠 Technical Memory (Durable Facts)
 
    ### `technical_context`
    - **Obsidian Migration**: The project has migrated Obsidian management from Zsh-based logic and Markdown rules to a standalone `bin/df.obsidian` utility with JSON validation rules. `src/zsh/apps/obsidian.zsh` now serves as a thin wrapper for this utility. Legacy Zsh functions and Markdown rule paths should be avoided.
+   - **Obsidian Profile-Based Configuration Overrides**: Configuration overrides for Obsidian rules in `df.obsidian` must support the project's profile-based inheritance hierarchy (e.g., `work/default.json` and `work/${note_type}.json`). Use `df.fs profile list` to discover all profile-specific config files, and merge them in priority order using `jq -s 'reduce .[] as $item ({}; . * $item)'`.
+   - **Redundant tostring in yq**: In `mikefarah/yq` (v4), variables retrieved via `strenv()` are already strings; applying `| tostring` to them is redundant. If type conversion is required, it should be applied to the field being compared rather than the strenv variable.
+   - **Scheduled Task Framework**: A user-space scheduled task framework (`scheduler.add`, `scheduler.logs`, etc.) is implemented using Gomplate templates to define declarative JSON tasks under `assets/configs/scheduler/`.
    - **Secrets Architecture**: The `bin/df.secrets` utility is undergoing an architectural split. Its "unified resolver" role is being transitioned, which led to a regression in PR #51 where the file was emptied while dependencies (like `df.keepass` and existing projects) still relied on it.
    - **Config Hydration**: As of PR #51, `df.config hydrate` has lost its secret resolution logic and requires restoration to function correctly with the new secrets architecture.
    - **AI Backend Flexibility**: AI providers should not be hardcoded to specific backends (e.g., KeePassXC). Maintain modularity to allow switching or supporting multiple secret providers.
+
+   ### `decision`
+   - **Prevent Infinite Log Growth in Scheduled Services**: macOS launchd services MUST use shell redirection (`>`) in the `ProgramArguments` block to truncate logs on every run; Linux systemd services MUST delegate logging to `journald` via `StandardOutput=journal` instead of writing to static files.
+   - **Interactive Zsh Functions Safety**: Interactive Zsh functions (like `dataurl`) must always use `return <status>` instead of `exit` to prevent terminating the active shell session, and must verify file readability using `[ -f "$file" ]` beforehand.
 
    ### `correction`
    - **Obsidian Slugification**: Resolved. The regression in PR #40 where slugification was too aggressive was fixed by restoring the legacy ${note_title// /-} logic in `bin/df.obsidian`.
