@@ -6,6 +6,14 @@ pkg.recipe.define ssh \
     pacman="openssh" \
     brew="openssh"
 
+pkg.recipe.ssh.init() {
+    [[ -o interactive ]] || return 0
+
+    zstyle ':completion:*:(scp|rsync):*' tag-order ' hosts:-ipaddr:ip\ address hosts:-host:host files'
+    zstyle ':completion:*:(ssh|scp|rsync):*:hosts-host' ignored-patterns '*(.|:)*' loopback ip6-loopback localhost ip6-localhost broadcasthost
+    zstyle ':completion:*:(ssh|scp|rsync):*:hosts-ipaddr' ignored-patterns '^(<->.<->.<->.<->|(|::)([[:xdigit:].]##:(#c,2))##(|%*))' '127.0.0.<->' '255.255.255.255' '::1' 'fe80::*'
+}
+
 pkg.recipe.ssh.configure() {
     registry.is_enabled pkg ssh pkg.recipe || return 0
 

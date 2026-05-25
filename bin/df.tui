@@ -205,40 +205,7 @@ _select() {
         return 0
     fi
 
-    if (( ! $+commands[fzf] )); then
-        # Fallback to text-based selection when fzf is missing
-        local options_str="${(j: | :)items}"
-        local default_val="${opts[-d]:-}"
-        local user_val=""
-
-        while true; do
-            print -Pn "%F{yellow}?%f $fzf_prompt [$options_str] " > /dev/tty
-            [[ -n "$default_val" ]] && print -Pn "(default: $default_val): " > /dev/tty || print -Pn ": " > /dev/tty
-
-            if read -r user_val < /dev/tty; then
-                user_val="${user_val:-$default_val}"
-
-                local valid=0
-                local p
-                for p in "${items[@]}"; do
-                    if [[ "$user_val" == "$p" ]]; then
-                        valid=1
-                        break
-                    fi
-                done
-
-                if (( valid == 1 )); then
-                    print -r -- "$user_val"
-                    return 0
-                else
-                    print -r -- "Invalid selection. Please try again." > /dev/tty
-                fi
-            else
-                return 1
-            fi
-        done
-        return 1
-    fi
+    (( $+commands[fzf] )) || { _err "fzf not found"; return 1; }
 
     local m_hint="" c_hint=""
     (( ${+opts[-m]} )) && m_hint=", Tab: select"
@@ -256,16 +223,13 @@ _select() {
     if (( ${+opts[-c]} )); then
         local tmp
         tmp=$(mktemp -t df-tui.XXXXXX) || return 1
-        {
-            print -Pl -- "${items[@]}" > "$tmp"
+        trap 'rm -f "$tmp"' EXIT
+        print -Pl -- "${items[@]}" > "$tmp"
 
-            local bind="ctrl-n:execute(read -r \"?Custom value: \" val < /dev/tty > /dev/tty; [[ -n \"\$val\" ]] && { print \"\$val\" | cat - \"$tmp\" > \"$tmp.new\" && mv \"$tmp.new\" \"$tmp\"; })+reload(cat \"$tmp\")+first"
-            (( ! ${+opts[-m]} )) && bind+="+accept" || bind+="+toggle+down"
+        local bind="ctrl-n:execute(read -r \"?Custom value: \" val < /dev/tty > /dev/tty; [[ -n \"\$val\" ]] && { print \"\$val\" | cat - \"$tmp\" > \"$tmp.new\" && mv \"$tmp.new\" \"$tmp\"; })+reload(cat \"$tmp\")+first"
+        (( ! ${+opts[-m]} )) && bind+="+accept" || bind+="+toggle+down"
 
-            out=$( "${fzf_cmd[@]}" --bind "$bind" < "$tmp" )
-        } always {
-            rm -f "$tmp"
-        }
+        out=$( "${fzf_cmd[@]}" --bind "$bind" < "$tmp" )
     else
         out=$( print -Pl -- "${items[@]}" | "${fzf_cmd[@]}" )
     fi

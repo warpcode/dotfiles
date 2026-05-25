@@ -18,5 +18,8 @@ done
 if [[ -e /opt/homebrew/bin/brew ]]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
-
+if [[ -n $IS_WORK ]]; then
+  path.prepend "/opt/homebrew/opt/node@18/bin"
+  path.prepend "/opt/homebrew/opt/mysql-client/bin"
+fi
 

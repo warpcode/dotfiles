@@ -1,14 +1,15 @@
 {
   "type": "epic",
   "folder": "Epics",
-  "prompts": [
-    { "mode": "one", "fields": ["project"], "label": "Parent" },
-    { "mode": "all", "fields": ["status"] },
-    { "mode": "optional", "fields": ["description", "tags"] }
-  ],
+  "validation": {
+    "require_all": ["title", "status"],
+    "require_any": [
+      ["project"]
+    ]
+  },
   "fields": {
     "project": { "type": "select", "values_from_note_type": ["project"], "is_link": true },
-    "status": { "type": "select", "values": ["planned", "active", "complete", "cancelled"] },
+    "status": { "from_type": "default", "from_field": "status" },
     "description": { "from_type": "default", "from_field": "description" },
     "tags": { "from_type": "default", "from_field": "tags" }
   }

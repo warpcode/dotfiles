@@ -10,20 +10,20 @@ description: >-
 
 # Jira Tasks
 
-Query and search Jira issues using the bundled `main.py` script. This skill is currently **READ-ONLY**.
+Query and search Jira issues using the bundled `jira.py` script. This skill is currently **READ-ONLY**.
 
 ## EXECUTION PROTOCOL
 
 ### 1. Authentication & Secret Resolution
-- The bundled script `scripts/main.py` automatically resolves `JIRA_URL`, `JIRA_USER`, `JIRA_API_TOKEN`, and `JIRA_PROJECT` using `DF_SECRET_GET_CMD` or existing environment variables.
+- The bundled script `scripts/jira.py` automatically resolves `JIRA_URL`, `JIRA_USER`, `JIRA_API_TOKEN`, and `JIRA_PROJECT` using `DF_SECRET_GET_CMD` or existing environment variables.
 - You do not need to provide these credentials manually.
 - If the script fails due to missing credentials (e.g., "Error: Jira URL is required."), inform the user and stop.
 
 ### 2. Information Gathering
 - IF the user's request is vague (e.g., "find the login bugs"), THEN:
-  1. Use `scripts/main.py fields` to find relevant field names if searching custom fields.
+  1. Use `scripts/jira.py fields` to find relevant field names if searching custom fields.
   2. Construct a broad JQL search to find candidate issues.
-- IF specific ticket keys are mentioned, THEN use `scripts/main.py issues` to fetch full details.
+- IF specific ticket keys are mentioned, THEN use `scripts/jira.py issues` to fetch full details.
 - **Reporting & History**: When asked for "how long" a ticket has been in a status, or to perform any "Aging" or "Metrics" report, ALWAYS include `--expand changelog` in the `issues` or `jql` command to fetch the transition history.
 
 ### 3. Command Selection & Execution
@@ -31,31 +31,31 @@ Query and search Jira issues using the bundled `main.py` script. This skill is c
 #### JQL Search
 Use `jql` for finding issues based on criteria.
 ```bash
-python3 scripts/main.py jql "project = PROJ AND status = 'In Progress' ORDER BY updated DESC" --max-results 10
+python3 scripts/jira.py jql "project = PROJ AND status = 'In Progress' ORDER BY updated DESC" --max-results 10
 ```
 
 #### Pagination & Extra Parameters
 When a `jql` search returns `"isLast": false`, a `"nextPageToken"` will be included in the response. You MUST use this token via the `--param` flag to fetch the next page of results. **DO NOT use `startAt` for pagination.**
 ```bash
 # Example: Fetching the next page
-python3 scripts/main.py jql "project = PROJ" --max-results 10 --param nextPageToken=YOUR_TOKEN_HERE
+python3 scripts/jira.py jql "project = PROJ" --max-results 10 --param nextPageToken=YOUR_TOKEN_HERE
 ```
 The `--param key=value` option can also be used to inject any other arbitrary parameters into the JSON payload of the API request.
 
 #### Fetch Specific Issues
 Use `issues` for deep-dives into known tickets.
 ```bash
-python3 scripts/main.py issues PROJ-123 PROJ-456 --fields "summary,status,description,assignee,priority,comment"
+python3 scripts/jira.py issues PROJ-123 PROJ-456 --fields "summary,status,description,assignee,priority,comment"
 ```
 
 #### Advanced History & Metrics
 To perform analysis on **status aging**, **lead time**, or **history**, include the `--expand changelog` flag. This works with both `jql` and `issues` subcommands.
 ```bash
 # Fetch history for specific issues
-python3 scripts/main.py issues PROJ-123 --expand changelog
+python3 scripts/jira.py issues PROJ-123 --expand changelog
 
 # Fetch history for all issues matching a search
-python3 scripts/main.py jql "project = PROJ AND status = Blocked" --expand changelog
+python3 scripts/jira.py jql "project = PROJ AND status = Blocked" --expand changelog
 ```
 When this flag is used, the script provides a `metrics` object for each issue containing:
 - `time_in_status_seconds`: Total work seconds (excluding weekends) spent in each status.
@@ -67,23 +67,23 @@ When this flag is used, the script provides a `metrics` object for each issue co
 #### List/Filter Fields
 Use `fields` to discover field IDs (e.g., finding the ID for "Story Points").
 ```bash
-python3 scripts/main.py fields "Story Points"
+python3 scripts/jira.py fields "Story Points"
 ```
 
 #### Schema & Metadata Discovery
 Use these subcommands to understand the Jira instance structure.
-- **Statuses**: `python3 scripts/main.py statuses` (Returns map of ID -> {name, category})
-- **Issue Types**: `python3 scripts/main.py types` (Returns map of ID -> {name, subtask})
-- **Priorities**: `python3 scripts/main.py priorities`
-- **Resolutions**: `python3 scripts/main.py resolutions`
-- **Projects**: `python3 scripts/main.py projects`
-- **Users**: `python3 scripts/main.py users "John Doe"` (Search for users by name or email)
+- **Statuses**: `python3 scripts/jira.py statuses` (Returns map of ID -> {name, category})
+- **Issue Types**: `python3 scripts/jira.py types` (Returns map of ID -> {name, subtask})
+- **Priorities**: `python3 scripts/jira.py priorities`
+- **Resolutions**: `python3 scripts/jira.py resolutions`
+- **Projects**: `python3 scripts/jira.py projects`
+- **Users**: `python3 scripts/jira.py users "John Doe"` (Search for users by name or email)
 
 #### Direct API Call (Escape Hatch)
 Use `call` for any endpoint not covered by specific subcommands.
 ```bash
 # Example: Fetch transitions for a specific issue
-python3 scripts/main.py call GET "/rest/api/3/issue/PROJ-123/transitions"
+python3 scripts/jira.py call GET "/rest/api/3/issue/PROJ-123/transitions"
 ```
 
 ### 4. REPORTING RECIPES
@@ -91,7 +91,7 @@ When asked to generate reports, use the following "Discover -> Fetch -> Synthesi
 
 #### A. Queue Aging & Bottleneck Report
 **Goal**: Identify work stuck in "handover" states (e.g., waiting for QA, Review, or UAT).
-1. **Discover**: Run `python3 scripts/main.py statuses` to identify which statuses map to `statusCategory: In Progress` but represent "Passive/Waiting" states in this project.
+1. **Discover**: Run `python3 scripts/jira.py statuses` to identify which statuses map to `statusCategory: In Progress` but represent "Passive/Waiting" states in this project.
 2. **Fetch**: Run `jql` with `--expand changelog` for all non-Done tickets.
 3. **Synthesize**: Use `metrics.current_status_duration_formatted` to list tickets in those passive states, sorted by the longest duration.
 
