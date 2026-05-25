@@ -1,0 +1,18 @@
+{{- if eq .chezmoi.os "linux" -}}
+  {{- if or (eq .chezmoi.osRelease.id "ubuntu" "debian") (and (hasKey .chezmoi.osRelease "idLike") (regexMatch "(ubuntu|debian)" .chezmoi.osRelease.idLike)) -}}
+    # Docker repo
+    if [[ ! -f /etc/apt/sources.list.d/docker.list ]]; then
+      info "Configuring Docker repository..."
+      run_as_root install -m 0755 -d /etc/apt/keyrings
+      curl -fsSL "https://download.docker.com/linux/${id}/gpg" | run_as_root tee /etc/apt/keyrings/docker.asc >/dev/null
+      run_as_root chmod a+r /etc/apt/keyrings/docker.asc
+      printf 'deb [arch=%s signed-by=%s] %s %s stable\n' "${arch}" "/etc/apt/keyrings/docker.asc" "https://download.docker.com/linux/${id}" "${version_codename}" | run_as_root tee /etc/apt/sources.list.d/docker.list > /dev/null
+    fi
+  {{- else if eq .chezmoi.osRelease.id "fedora" -}}
+    # Docker repo
+    if [[ ! -f /etc/yum.repos.d/docker-ce.repo ]]; then
+      info "Configuring Docker repository..."
+      run_as_root dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+    fi
+  {{- end -}}
+{{- end -}}

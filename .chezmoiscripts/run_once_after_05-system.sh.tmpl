@@ -1,0 +1,4 @@
+#!/bin/bash
+{{ template "script_utils.sh.tmpl" . }}
+{{ template "update_package_manager.sh.tmpl" . }}
+{{ template "install_packages.sh.tmpl" (dict "group" "system" "context" .) }}

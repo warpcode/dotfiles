@@ -1,0 +1,19 @@
+{{- /* update_package_manager.tmpl: Helper to update system package manager repositories */ -}}
+{{- $sys_manager := .sys_manager -}}
+
+{{- if eq $sys_manager "apt" }}
+  info "Updating apt repositories..."
+  run_as_root apt-get update -qq
+{{- else if eq $sys_manager "dnf" }}
+  info "Updating dnf repositories..."
+  run_as_root dnf check-update -q || true
+{{- else if eq $sys_manager "pacman" }}
+  info "Updating pacman repositories..."
+  run_as_root pacman -Sy --noconfirm
+{{- else if eq $sys_manager "brew" }}
+  info "Updating Homebrew..."
+  brew update
+{{- else if eq $sys_manager "termux" }}
+  info "Updating Termux packages..."
+  pkg update -y
+{{- end }}
