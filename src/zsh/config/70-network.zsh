@@ -11,6 +11,9 @@ dataurl() {
         # display usage if no parameters given
         echo "Usage: dataurl <path/to/file>"
         return 1
+    elif [ ! -f "$1" ]; then
+        echo "Error: file '$1' not found" >&2
+        return 1
     else
         MIMETYPE=$(file -b --mime-type "$1");
         if [[ $MIMETYPE == text/* ]]; then
