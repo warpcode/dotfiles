@@ -52,12 +52,12 @@ fi
 if [[ "$RAW_OUTPUT" == "true" ]]; then
     echo "$JSON_RESPONSE"
 else
-    # Token-efficient summary
+    # Token-efficient Markdown summary
     echo "$JSON_RESPONSE" | jq -r '
         .data.repository.pullRequests.nodes[] |
-        "#\(.number) \(.title) (Updated: \(.updatedAt))\n" +
+        "### PR #\(.number): \(.title)\n" +
         ([.reviewThreads.nodes[] | select(.isResolved == false) | 
-          "  - Thread \(.id):\n" + ( .comments.nodes[] | "    > \(.body)" )
+          "* **Thread \(.id)**: \(.comments.nodes[-1].body | sub("\n.*"; "..."))"
         ] | join("\n"))
     ' | sed '/^$/d'
 fi
