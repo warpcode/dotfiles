@@ -35,5 +35,10 @@ opendir_server() {
     port="${1:-8000}";
     # Set the default Content-Type to `text/plain` instead of `application/octet-stream`
     # And serve everything as UTF-8 (although not technically correct, this doesn’t break anything for binary files)
-    python3 -c $'import SimpleHTTPServer;\nmap = SimpleHTTPServer.SimpleHTTPRequestHandler.extensions_map;\nmap[""] = "text/plain";\nfor key, value in map.items():\n\tmap[key] = value + ";charset=UTF-8";\nSimpleHTTPServer.test();' "$port";
+    python3 -c 'import http.server, sys, mimetypes;
+class MyHandler(http.server.SimpleHTTPRequestHandler):
+    def guess_type(self, path):
+        mimetype, _ = mimetypes.guess_type(path)
+        return (mimetype or "text/plain") + ";charset=UTF-8"
+http.server.test(HandlerClass=MyHandler, port=int(sys.argv[1]) if len(sys.argv) > 1 else 8000)' "$port";
 }
