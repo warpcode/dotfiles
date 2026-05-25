@@ -5,7 +5,7 @@ function _tmux_basic_git()  {
         return 1
     fi
 
-    tmux.cli att -t "$1" ||
+    tmux att -t "$1" ||
         tmux \
         new -s "$1" -n "editor" \; \
         send-keys 'e .' C-m\; \
@@ -18,4 +18,3 @@ function _tmux_basic_git()  {
         selectw -t editor
 }
 
-bin.wrap tmux tmux tmux.setup.config

@@ -1,5 +1,5 @@
 
-alias git.zip="git.cli archive --format=zip HEAD ':!*.gitignore' -o ${PWD##*/}.zip"
+alias git.zip="git archive --format=zip HEAD ':!*.gitignore' -o ${PWD##*/}.zip"
 
 # Ensure the defaults are loaded
 function _git_clone_and_cd() {
@@ -24,5 +24,4 @@ function _git_clone_and_cd() {
     cd "$dir_name" || { echo "Failed to change directory to '$dir_name'"; return 1; }
 }
 
-bin.wrap git
 
