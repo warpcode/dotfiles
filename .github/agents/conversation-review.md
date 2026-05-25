@@ -52,7 +52,7 @@ Extract ONLY facts that are:
 - Explicitly stated or strongly implied by repeated behaviour
 - Likely to recur across future sessions
 - Not specific to a one-off request in this conversation
-- **Formatting Standards**: Capture any specific formatting requirements (e.g., 'Severity, Description, Impact, Solution' for reviews).
+- **Formatting Standards**: Capture any specific formatting requirements (e.g., 'Severity, Description, Impact, Solution' for reviews) and enforce the **Token-Efficient Output Policy** (Markdown-by-default, Raw-for-debug).
 - **Tool Stability**: Identify any tool sequencing anti-patterns (e.g., calling `update_topic` and `ask_user` in the same turn).
 
 ### 2. Ad Hoc Memories
@@ -125,7 +125,10 @@ Cross-reference the conversation against all located files. Identify:
 - **Outdated content** — instructions/rules contradicted or superseded by something in the conversation.
 - **Missing coverage** — a pattern, tool, or convention used in the conversation that no existing workspace instruction, skill, agent, or hook addresses.
 - **New architectural candidate** — a pattern or procedure that should be codified into a skill, custom agent/subagent, rule, hook, or command/prompt file.
-- **Self-Review Alignment** — cross-reference the conversation to identify gaps, inaccuracies, or opportunities to optimize the **conversation review subagent prompt itself** (`conversation-review.md`). Recommend updates to its own logic, decision criteria, target environment paths, or output format schemas if the conversation exposed a deficiency or new structural preference.
+- **Self-Review Alignment** — cross-reference the conversation to identify gaps, inaccuracies, or opportunities to optimize the **conversation review subagent prompt itself** (`conversation-review.md`). 
+- **Recursive Skill Improvement** — ALWAYS evaluate if a correction or new preference should be codified in the global `prompt-skills-guidelines` or other specialized area-specific skills (e.g., `github-review-orchestrator`).
+- **Trigger & Loading Logic** — Review the `SKILL.md` files for trigger accuracy. Recommend updates to skill descriptions and activation triggers to ensure the correct skills are loaded autonomously by agents when needed.
+- **Enforcement**: If a conversation exposes a violation of a project-wide standard (e.g., token efficiency), the subagent MUST recommend updates to all files defining that standard to ensure consistency.
 
 #### 1. Customization & Extraction Decision Matrix
 

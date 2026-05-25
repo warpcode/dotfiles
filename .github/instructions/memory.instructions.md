@@ -53,8 +53,8 @@ These instructions capture persistent memories, behavioral guardrails, and techn
   - When using `gh api graphql`, pass queries via variable injection to avoid shell quoting and path resolution issues.
 - **Package Management Architecture**: The legacy `zinstall` logic is deprecated. The project is migrating towards a unified `pkg.zsh` architecture using a `recipe` dictionary format that explicitly defines methods for checking, updating, installing, and enabling packages.
 - **Skill Development Standards**:
-  - All new skills MUST align with `prompt-skills-guidelines`.
-  - **Raw Output**: Scripts intended for AI consumption MUST implement a `--raw` (or `--raw-output`) flag to provide unformatted data (e.g., JSON).
+  - **Token Efficiency**: Scripts intended for AI consumption MUST prioritize token-efficient summaries (e.g., Markdown) by default to minimize context usage.
+  - **Raw Output**: All scripts MUST implement a `--raw` (or `--raw-output`) flag. This flag is reserved for debugging, manual inspection, or piping to other tools; it MUST NOT be used by AI agents during standard orchestration phases.
   - **Template Externalization**: Fixed output structures (like Markdown reports) MUST be externalized into a `templates/` directory within the skill folder.
 - **Tool Compatibility**:
   - **yq**: The environment uses `mikefarah/yq` (v4). Avoid `jq`-specific functions like `any()` or `from_json` unless verified. Pass search values via individual environment variables or delimited strings with `split()`.

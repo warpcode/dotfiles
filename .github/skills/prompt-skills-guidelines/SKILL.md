@@ -12,12 +12,13 @@ Design and implement modular capabilities optimized for high-performance, cost-e
 When drafting shell scripts or tools intended primarily for AI consumption, prioritize output density to minimize token overhead and latency.
 
 ### 1. Default Compression
-- **High-Signal Output**: Default to piping verbose API responses (REST, GraphQL, etc.) through tools like `jq` or `sed`. Extract only the essential metadata required for the agent's next logical step.
-- **Example fields**: `ID`, `Status`, `URL`, `Error Message`.
-- **Large Data Truncation**: For commands returning high-volume text (diffs, logs, file lists), apply reasonable default limits (e.g., `head -n 100` or `tail -n 50`) to provide immediate context without exhausting the context window.
+- **High-Signal Output**: Default to providing a token-efficient Markdown summary. Extract only the essential metadata required for the agent's next logical step to minimize context usage.
+- **Example**: PR #123 (Open) - "Fix bug".
+- **Large Data Truncation**: Truncate verbose bodies or logs in the default output.
 
 ### 2. The `--raw` Pattern
-- **Bypass Flag**: Always implement a `--raw` (or `--raw-output`) flag. This allows the agent to bypass formatting or truncation when a full payload is strictly required for exhaustive verification or batch operations.
+- **Bypass Flag**: Always implement a `--raw` (or `--raw-output`) flag. 
+- **AI Constraint**: Agents MUST prioritize the default summary. The `--raw` flag is reserved for debugging, manual inspection, or piping to other tools; it MUST NOT be used by AI agents during standard orchestration phases unless specifically requested.
 - **Implementation Standard**:
   ```bash
   # Check for raw flag
@@ -30,7 +31,8 @@ When drafting shell scripts or tools intended primarily for AI consumption, prio
   if [[ "$RAW_OUTPUT" == "true" ]]; then
       echo "$RESPONSE"
   else
-      echo "$RESPONSE" | jq -r '{id: .id, state: .state}'
+      # Token-efficient Markdown summary (Default)
+      echo "$RESPONSE" | jq -r '...summary logic...'
   fi
   ```
 

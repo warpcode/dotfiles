@@ -12,7 +12,8 @@ Orchestrate non-invasive code reviews with a user-centric selection process and 
 ### 1. Discovery & Selection
 Unless a specific PR or branch is provided by the user, always perform a discovery phase:
 - List open PRs with `gh pr list`.
-- **Review Thread Discovery**: Use `./scripts/fetch_all_pr_threads.sh` to retrieve all threads for active PRs in a single batch query. Do NOT query PRs individually.
+- **Review Thread Discovery**: Use `./scripts/fetch_all_pr_threads.sh <owner> <repo> [limit] [direction] [--raw]` to retrieve all threads for active PRs in a single batch query. Do NOT query PRs individually. Example: `./scripts/fetch_all_pr_threads.sh warpcode dotfiles 10 ASC`.
+- **Efficiency Constraint**: ALWAYS use the default summary output. DO NOT use the `--raw` flag unless specifically instructed for debugging.
 - Identify candidates based on:
   - Age (oldest first).
   - Unanswered questions or pending review comments.
@@ -57,6 +58,7 @@ Comments MUST NOT use 'caveman' style.
 | Resource | Path | Purpose | Usage |
 |----------|------|---------|-------|
 | Fetch Script | `scripts/fetch_file.sh` | Fetch remote PR files without checkout. | `./scripts/fetch_file.sh <owner> <repo> <path> <branch>` |
+| Fetch Threads Script | `scripts/fetch_all_pr_threads.sh` | Batch retrieve active review threads for all open PRs. | `./scripts/fetch_all_pr_threads.sh <owner> <repo> [limit] [direction] [--raw]` |
 | Context Script | `scripts/get_pr_context.sh` | Fetch PR head OID and diff for review context. | `./scripts/get_pr_context.sh <owner> <repo> <pr_number>` |
 | Submit Script | `scripts/submit_review.sh` | Submit atomic JSON reviews via API. | `./scripts/submit_review.sh <owner> <repo> <pr_number> <payload_file>` |
 | Resolve Review Thread Script | `scripts/resolve_review_thread.sh` | Resolve GitHub PR review threads via GraphQL. | `./scripts/resolve_review_thread.sh <thread_id>` |
@@ -67,13 +69,13 @@ Comments MUST NOT use 'caveman' style.
 
 ### Review Thread Resolution
 Use this procedure to close addressed feedback loops:
-1. **Batch Discovery**: Use `scripts/fetch_all_pr_threads.sh` to identify threads across all open PRs.
+1. **Batch Discovery**: Use `scripts/fetch_all_pr_threads.sh <owner> <repo> [limit] [direction] [--raw]` to identify threads across all open PRs.
 2. **Verification**: Compare the current diff/files against the feedback in the thread.
 3. **Resolution**: Use `scripts/resolve_review_thread.sh <thread_id>` once the fix is verified in the remote branch.
 
 ### Non-Invasive Review Orchestration
 Use this procedure to audit pull requests without workspace mutation:
-1. **Discovery**: Batch fetch all open PRs and active review threads using `fetch_all_pr_threads.sh`.
+1. **Discovery**: Batch fetch all open PRs and active review threads using `scripts/fetch_all_pr_threads.sh <owner> <repo> [limit] [direction] [--raw]`.
 2. **Selection**: Present candidates and get user approval (respecting the Batching Permission rule).
 3. **Inspection**: Use `get_pr_context.sh` and `fetch_file.sh` to retrieve diffs and full file context for the target PR(s).
 4. **Audit**: Perform read-only verification of fixes and identify regressions against local files fetched to temporary paths.

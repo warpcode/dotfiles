@@ -67,9 +67,7 @@ else
     echo "$PR_VIEW_RESPONSE" | jq -r '
       "HEAD_OID: \(.headRefOid)",
       "Title: \(.title)",
-      "Description:",
-      "\(.body)",
-      "",
+      "Description: \(.body | sub("\n.*"; "..."))",
       "Stats: \(.changedFiles) files changed, +\(.additions) -\(.deletions) lines",
       "Files:",
       (.files[] | "  - \(.path) (+\(.additions) -\(.deletions))")
