@@ -1,0 +1,15 @@
+[Unit]
+Description=Dotfiles Scheduled Task Timer: {{ .config.name }}
+
+[Timer]
+{{- if eq .config.schedule "daily" }}
+OnCalendar=daily
+{{- else if eq .config.schedule "hourly" }}
+OnCalendar=hourly
+{{- else if eq .config.schedule "weekly" }}
+OnCalendar=weekly
+{{- end }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

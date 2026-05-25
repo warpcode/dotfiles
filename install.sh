@@ -10,7 +10,7 @@ trap 'printf "\n"; exit 130' INT TERM
 # ---------------------------------------------------------------------------
 
 #######################################
-# Detects the operating system and returns a normalized identifier.
+# Detects the operating system and returns a normalised identifier.
 # Outputs:
 #   Writes OS identifier to stdout (macos, debian, fedora, arch, termux, linux).
 #######################################
@@ -107,28 +107,28 @@ setup_macos() {
 # ---------------------------------------------------------------------------
 
 #######################################
-# Ensures git, zsh, curl are installed on the system.
+# Ensures git, zsh, curl, jq are installed on the system.
 #######################################
 ensure_bootstrap_packages() {
   # These overlap intentionally with chezmoi's 'system' group — we need
-  # git, zsh, and curl available before chezmoi can run.
-  info "Ensuring bootstrap prerequisites (git, zsh, curl) are installed..."
+  # git, zsh, curl, and jq available before chezmoi can run.
+  info "Ensuring bootstrap prerequisites (git, zsh, curl, jq) are installed..."
   case "${OS_NAME}" in
     debian)
       run_as_root apt update -qq
-      run_as_root apt install -y -qq git zsh curl ca-certificates gnupg
+      run_as_root apt install -y -qq git zsh curl jq ca-certificates gnupg
       ;;
     fedora)
-      run_as_root dnf install -y git zsh curl ca-certificates
+      run_as_root dnf install -y git zsh curl jq ca-certificates
       ;;
     arch)
-      run_as_root pacman -Sy --noconfirm git zsh curl
+      run_as_root pacman -Sy --noconfirm git zsh curl jq
       ;;
     macos)
-      brew install git zsh curl || true
+      brew install git zsh curl jq || true
       ;;
     termux)
-      pkg install -y git zsh curl
+      pkg install -y git zsh curl jq
       ;;
   esac
 }
