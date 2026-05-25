@@ -15,7 +15,7 @@ typeset -r SCRIPT_DIR="${0:A:h}"
 # ---------------------------------------------------------------------------
 
 readonly KEEPASS_DB_PATH="${KEEPASS_DB_PATH:-${HOME}/.keepass/Accounts.kdbx}"
-readonly KC_SERVICE="keepassxc"
+readonly KC_SERVICE="dotfiles/keepassxc"
 
 # In-process master password cache — avoids redundant keychain round-trips.
 typeset _MASTER_CACHE=""
@@ -171,7 +171,7 @@ cmd_login() {
   fi
 
   # db-info is a fast, non-destructive way to verify the credential
-  if printf '%s' "${master}" | ${(z)cli} db-info "${KEEPASS_DB_PATH}" >/dev/null 2>&1; then
+  if printf '%s' "${master}" | "${(@z)cli}" db-info "${KEEPASS_DB_PATH}" >/dev/null 2>&1; then
     _set_master "${master}"
     return 0
   fi
@@ -197,7 +197,7 @@ _exec() {
   local cli
   cli="$(_kp_cli)" || return 1
 
-  printf '%s' "${master}" | ${(z)cli} "$1" "${KEEPASS_DB_PATH}" "${@:2}" -q
+  printf '%s' "${master}" | "${(@z)cli}" "$1" "${KEEPASS_DB_PATH}" "${@:2}" -q
 }
 
 #######################################
@@ -341,13 +341,13 @@ cmd_export() {
 
     for attr in "${attrs[@]}"; do
       # Pass master password via stdin to worker
-      val=$(printf '%s' "${master}" | ${(z)cli} show "${db}" "${entry_path}" -a "${attr}" -q 2>/dev/null) || val="null"
+      val=$(printf '%s' "${master}" | "${(@z)cli}" show "${db}" "${entry_path}" -a "${attr}" -q 2>/dev/null) || val="null"
       entry_data[${attr}]="${val}"
     done
 
     # Fetch attachments metadata
     local attachments_raw
-    attachments_raw=$(printf '%s' "${master}" | ${(z)cli} attachment-list "${db}" "${entry_path}" -q 2>/dev/null) || attachments_raw=""
+    attachments_raw=$(printf '%s' "${master}" | "${(@z)cli}" attachment-list "${db}" "${entry_path}" -q 2>/dev/null) || attachments_raw=""
     local -a attachments=( ${(f)attachments_raw} )
 
     # Output JSON fragment for this entry
@@ -433,7 +433,7 @@ cmd_attachment() {
 
   # keepassxc-cli attachment-export <db> <entry> <name> <path>
   # We use /dev/stdout to stream directly
-  printf '%s' "${master}" | ${(z)cli} attachment-export "${db}" "${kp_path}" "${filename}" /dev/stdout -q
+  printf '%s' "${master}" | "${(@z)cli}" attachment-export "${db}" "${kp_path}" "${filename}" /dev/stdout -q
 }
 
 #######################################

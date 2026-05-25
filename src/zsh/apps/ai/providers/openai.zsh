@@ -13,6 +13,6 @@ ai.providers.openai.enabled() {
 }
 
 ai.providers.openai.credentials() {
-    "$DOTFILES/bin/df.keepass" get "AI/OpenAI" "api_key"
+    "$DOTFILES/bin/df.secrets" get "OPENAI_API_KEY"
 }
 
