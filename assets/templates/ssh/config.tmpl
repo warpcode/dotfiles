@@ -1,0 +1,22 @@
+# IgnoreUnknown options that may not exist on older SSH versions
+# AddKeysToAgent requires OpenSSH 7.2+, UseKeychain is macOS-only
+IgnoreUnknown AddKeysToAgent,UseKeychain
+
+AddKeysToAgent yes
+PubkeyAuthentication yes
+ServerAliveInterval 60
+UseKeychain yes
+
+{{- $config := ds "config" }}
+{{- $hosts := index $config "hosts" | default (coll.Slice) }}
+{{ range $hosts }}
+Host {{ .name }}
+    HostName {{ .hostname }}
+    User {{ .user | default (env.Getenv "USER") }}
+    {{- if (has . "identity_file") }}
+    IdentityFile {{ .identity_file }}
+    {{- end }}
+    {{- if (has . "is_dss") }}
+    PubkeyAcceptedKeyTypes +ssh-dss
+    {{- end }}
+{{ end }}

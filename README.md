@@ -1,17 +1,18 @@
 # Dotfiles
 
-This is a personal collection of dotfiles for *nix systems, designed to create a consistent and powerful command-line experience across multiple machines. It uses `chezmoi` for managing configurations, templates, and packages, and `mise` for managing runtimes and tools.
+This is a personal collection of dotfiles for \*nix systems, designed to create a consistent and powerful command-line experience across multiple machines. It uses `stow` for managing symlinks and comes with a `Makefile` for easy installation and dependency management.
 
 ## Requirements
 
 The bootstrap script handles most requirements automatically. On a fresh system, you only need:
 
-- **curl** - To download and run the bootstrap script.
-- **sudo** access - To configure repositories and run initial system installs.
+- **curl** or **wget** - To download the bootstrap script.
+- **sudo** access - To install system packages (`git`, `zsh`).
 
-The following will be bootstrapped automatically:
-- **chezmoi** - Dotfiles and state manager.
+The following will be managed by the internal package system:
 - **mise** - Polyglot tool manager.
+- **stow** - Symlink management (used internally).
+- **jq**, **fzf**, etc.
 
 ## Features
 
@@ -116,18 +117,9 @@ make update-submodules
 - For GitHub releases, ensure `curl` and `tar` are available
 
 ### Conflicts with existing configuration?
-- The dotfiles use `chezmoi` to manage configuration files. If there is a conflict in your home directory, `chezmoi diff` or `chezmoi apply` will prompt you to merge or overwrite changes.
+- The dotfiles use `stow` to manage symlinks, which won't overwrite existing files
 - Check for conflicts in `~/.zshrc`, `~/.gitconfig`, etc.
 - User overrides can be added to `~/.zshrc.d/` or `~/.zshrc.{functions,config,apps,projects}/`
-
-### Multi-Repository AI Configuration
-- The AI configuration files are decoupled into their own repository (`warpcode/ai-config`) and loaded as a Chezmoi external repository.
-- You can configure the path to the AI configuration directory by customizing `ai_config_dir` in your Chezmoi config (defaults to `~/src/ai-config`).
-- At runtime, the shell will source active prompts and setup variables using the `AI_CONFIG_DIR` variable.
-
-### Profiles
-- Different configurations and packages are conditionally loaded based on profiles (`default`, `work`, `phone`).
-- The active profile is stored in `~/.dotfiles_profile` and read automatically by Chezmoi to apply profile-specific constraints on packages and configurations.
 
 ### Customizing the setup
 - Add personal aliases/functions to `~/.zshrc.d/`

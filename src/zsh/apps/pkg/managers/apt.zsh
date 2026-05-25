@@ -114,6 +114,9 @@ pkg.managers.apt.setup_repos() {
             keyring_path="$gpg_path"
         elif [[ -f "$keyring_path" ]]; then
             if head -1 "$keyring_path" 2>/dev/null | grep -q "BEGIN PGP"; then
+                if ! command -v gpg >/dev/null 2>&1; then
+                    _pkg.sudo apt-get install -y gnupg 2>/dev/null
+                fi
                 _pkg.sudo gpg --dearmor -o "$gpg_path" "$keyring_path" 2>/dev/null && {
                     _pkg.sudo rm -f "$keyring_path"
                     _pkg.sudo chmod a+r "$gpg_path"
@@ -127,6 +130,9 @@ pkg.managers.apt.setup_repos() {
             echo "   Adding GPG key: $keyring_name"
             _pkg.sudo curl -fsSL "$key_url" -o "$keyring_path" 2>/dev/null || continue
             if head -1 "$keyring_path" 2>/dev/null | grep -q "BEGIN PGP"; then
+                if ! command -v gpg >/dev/null 2>&1; then
+                    _pkg.sudo apt-get install -y gnupg 2>/dev/null
+                fi
                 _pkg.sudo gpg --dearmor -o "$gpg_path" "$keyring_path" 2>/dev/null && {
                     _pkg.sudo rm -f "$keyring_path"
                     _pkg.sudo chmod a+r "$gpg_path"

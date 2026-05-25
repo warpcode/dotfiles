@@ -5,7 +5,7 @@
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
 
 # Path to your oh-my-zsh installation.
-export ZSH="${ZSH:-$HOME/.local/opt/ohmyzsh}"
+export ZSH="${ZSH:-$DOTFILES/vendor/ohmyzsh}"
 
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time oh-my-zsh is loaded, in which case,
@@ -57,8 +57,8 @@ ZSH_THEME="candy"
 # much, much faster.
 # DISABLE_UNTRACKED_FILES_DIRTY="true"
 
-# Custom plugins/themes dir (separate from the oh-my-zsh core installation)
-export ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
+# Would you like to use another custom folder than $ZSH/custom?
+export ZSH_CUSTOM="${ZSH_CUSTOM:-$DOTFILES/src/ohmyzsh}"
 
 # Which plugins would you like to load?
 # Standard plugins can be found in $ZSH/plugins/

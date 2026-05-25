@@ -34,14 +34,7 @@ env.lazy.load() {
       fi
     done
 
-    local -a cmd_parts expanded_parts
-    local p
-    setopt LOCAL_OPTIONS EXTENDED_GLOB
-    cmd_parts=( ${(z)_ENV_LAZY_VARS[$var]} )
-    for p in "${cmd_parts[@]}"; do
-      expanded_parts+=( "${(Q)p//(#b)\$(([a-zA-Z_][a-zA-Z0-9_]#)|\{([a-zA-Z_][a-zA-Z0-9_]#)\})/${(P)match[2]:-${(P)match[3]}}}" )
-    done
-    value=$("${expanded_parts[@]}") exit_code=$?
+    value=$(eval "${_ENV_LAZY_VARS[$var]}") exit_code=$?
     if (( exit_code == 0 )); then
       export "$var=$value"
     else
