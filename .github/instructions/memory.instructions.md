@@ -86,5 +86,12 @@ When operating as an autonomous agent in a remote virtual machine (e.g., Jules):
    - Do not edit stowed files in the home directory directly. Make modifications in the source files located under the `generic/` directory.
 
 4. **Plan Affirmation**:
-   - In your initial implementation plan presented to the user, explicitly confirm that you have read `memory.instructions.md`, `zsh.instructions.md` (if applicable), and any relevant local skill blueprints.
 
+   ## 🧠 Technical Memory (Durable Facts)
+
+   ### `technical_context`
+   - **Obsidian Migration**: The project has migrated Obsidian management from Zsh-based logic and Markdown rules to a standalone `bin/df.obsidian` utility with JSON validation rules. `src/zsh/apps/obsidian.zsh` now serves as a thin wrapper for this utility. Legacy Zsh functions and Markdown rule paths should be avoided.
+   - **Secrets Architecture**: The `bin/df.secrets` utility currently has a regression where it performs a simple lexical merge of all `*.json` files in `assets/configs/secrets`, ignoring the previous priority-aware profile resolution logic (e.g., `work/` overriding `global/`).
+
+   ### `correction`
+   - **Obsidian Slugification**: Resolved. The regression in PR #40 where slugification was too aggressive was fixed by restoring the legacy ${note_title// /-} logic in `bin/df.obsidian`.
