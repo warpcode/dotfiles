@@ -34,9 +34,10 @@ scheduler.remove() {
         macos)
             local plist="$HOME/Library/LaunchAgents/com.dotfiles.scheduler.$name.plist"
             if [[ -f "$plist" ]]; then
-                launchctl unload "$plist" 2>/dev/null || true
+                launchctl bootout "gui/$(id -u)" "$plist" 2>/dev/null || true
                 rm -f "$plist"
             fi
+            rm -f "$HOME/.local/state/dotfiles/scheduler/$name.log"
             ;;
         debian|fedora|arch|linux)
             local service_file="$HOME/.config/systemd/user/dotfiles-scheduler-$name.service"
@@ -68,7 +69,7 @@ scheduler.logs() {
                 return 1
             fi
             if (( $+commands[bat] )); then
-                bat --style=plain "$log_file" | tail -n 100
+                tail -n 100 "$log_file" | bat --style=plain
             else
                 tail -n 100 "$log_file"
             fi
@@ -97,9 +98,9 @@ scheduler.apply() {
             config.hydrate "scheduler/launchd.plist.tmpl" \
                 --config-file "$config_file" \
                 --output "$plist" || return 1
-            launchctl unload "$plist" 2>/dev/null || true
-            launchctl load "$plist" || {
-                tui.error "Failed to load launchd agent: $name"
+            launchctl bootout "gui/$(id -u)" "$plist" 2>/dev/null || true
+            launchctl bootstrap "gui/$(id -u)" "$plist" || {
+                tui.error "Failed to bootstrap launchd agent: $name"
                 return 1
             }
             # Verify status
@@ -146,6 +147,11 @@ scheduler.add() {
     local name="$1" schedule="$2" command="$3"
     [[ -z "$name" || -z "$schedule" || -z "$command" ]] && {
         tui.error "Usage: scheduler.add <name> <schedule> <command>"
+        return 1
+    }
+
+    [[ "$name" =~ ^[a-zA-Z0-9_-]+$ ]] || {
+        tui.error "Invalid task name: $name (use only alphanumeric, underscores, and hyphens)"
         return 1
     }
 
