@@ -79,7 +79,7 @@ When operating as an autonomous agent in a remote virtual machine (e.g., Jules):
    - If the task involves modifying Zsh configuration or Zsh scripts, you MUST read and follow `./.github/instructions/zsh.instructions.md`.
 
 2. **Leverage Local Skills & Workflows**:
-   - Do not write redundant scripts or reinvent existing logic. Review the custom skills in `./.github/skills/` (such as `github-review-orchestrator` and `technical-review-guidelines`) and agent workflows in `./.github/agents/` to leverage existing automation patterns and CLI utilities.
+    - Do not write redundant scripts or reinvent existing logic. Review the custom skills in `./.github/skills/` (such as `github-review-orchestrator`, `technical-review-guidelines`, and `github-pull-guidelines`) and agent workflows in `./.github/agents/` to leverage existing automation patterns and CLI utilities.
 
 3. **Conventions & Safe Operations**:
    - Adhere strictly to the package management guidelines. Do not install packages using raw `apt` or `brew` commands. Use the modular `pkg.zsh` recipe structure.
