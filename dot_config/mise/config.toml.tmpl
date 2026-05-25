@@ -23,8 +23,8 @@ experimental = true
   {{- end -}}
 {{- end -}}
 
-{{- range $group, $pkgs := .packages -}}
-  {{- range $pkg := $pkgs -}}
+{{- range $group, $pkgs := .packages }}
+  {{- range $pkg := $pkgs }}
     {{- $allowed := true -}}
     {{- if hasKey $pkg "only" -}}
       {{- if ne $pkg.only $.profile -}}{{- $allowed = false -}}{{- end -}}
@@ -52,4 +52,4 @@ experimental = true
       {{- end -}}
     {{- end -}}
   {{- end -}}
-{{- end -}}
+{{- end }}

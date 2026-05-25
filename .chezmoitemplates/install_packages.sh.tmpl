@@ -53,6 +53,16 @@ if command -v snap >/dev/null 2>&1; then
   snap_installed=1
 fi
 
+# Detect Mise
+mise_bin=""
+if command -v mise >/dev/null 2>&1; then
+  mise_bin="$(command -v mise)"
+elif [ -f "${HOME}/.local/bin/mise" ]; then
+  mise_bin="${HOME}/.local/bin/mise"
+elif [ -f "/usr/bin/mise" ]; then
+  mise_bin="/usr/bin/mise"
+fi
+
 # npm and uv will be installed by mise, so we assume they are available if needed
 npm_installed=1
 uv_installed=1
@@ -71,29 +81,41 @@ if false; then :
 {{- if eq $ctx.chezmoi.os "darwin" }}
   {{- if hasKey $pkg "npm" }}
 elif [ "$npm_installed" -eq 1 ]; then
-  npm_pkgs+=("{{ $pkg.npm }}")
+  {{- range $p := splitList " " $pkg.npm }}{{ if ne $p "" }}
+  npm_pkgs+=("{{ $p }}")
+  {{- end }}{{ end }}
   {{- end }}
   {{- if hasKey $pkg "uv" }}
 elif [ "$uv_installed" -eq 1 ]; then
-  uv_pkgs+=("{{ $pkg.uv }}")
+  {{- range $p := splitList " " $pkg.uv }}{{ if ne $p "" }}
+  uv_pkgs+=("{{ $p }}")
+  {{- end }}{{ end }}
   {{- end }}
   {{- if hasKey $pkg "mise" }}
-elif command -v mise >/dev/null 2>&1; then
-  mise_pkgs+=("{{ $pkg.mise }}")
+elif [ -n "$mise_bin" ]; then
+  {{- range $p := splitList " " $pkg.mise }}{{ if ne $p "" }}
+  mise_pkgs+=("{{ $p }}")
+  {{- end }}{{ end }}
   {{- end }}
   {{- if hasKey $pkg "brew_cask" }}
 elif command -v brew >/dev/null 2>&1; then
-  brew_cask_pkgs+=("{{ $pkg.brew_cask }}")
+  {{- range $p := splitList " " $pkg.brew_cask }}{{ if ne $p "" }}
+  brew_cask_pkgs+=("{{ $p }}")
+  {{- end }}{{ end }}
   {{- end }}
   {{- if hasKey $pkg "brew" }}
 elif command -v brew >/dev/null 2>&1; then
-  brew_pkgs+=("{{ $pkg.brew }}")
+  {{- range $p := splitList " " $pkg.brew }}{{ if ne $p "" }}
+  brew_pkgs+=("{{ $p }}")
+  {{- end }}{{ end }}
   {{- end }}
 {{- else }}
   {{- /* Linux / Termux */ -}}
   {{- if hasKey $pkg "flatpak" }}
 elif [ "$flatpak_installed" -eq 1 ]; then
-  flatpak_pkgs+=("{{ $pkg.flatpak }}")
+  {{- range $p := splitList " " $pkg.flatpak }}{{ if ne $p "" }}
+  flatpak_pkgs+=("{{ $p }}")
+  {{- end }}{{ end }}
   {{- end }}
   {{- if hasKey $pkg "snap" }}
 elif [ "$snap_installed" -eq 1 ]; then
@@ -101,19 +123,27 @@ elif [ "$snap_installed" -eq 1 ]; then
   {{- end }}
   {{- if hasKey $pkg "npm" }}
 elif [ "$npm_installed" -eq 1 ]; then
-  npm_pkgs+=("{{ $pkg.npm }}")
+  {{- range $p := splitList " " $pkg.npm }}{{ if ne $p "" }}
+  npm_pkgs+=("{{ $p }}")
+  {{- end }}{{ end }}
   {{- end }}
   {{- if hasKey $pkg "uv" }}
 elif [ "$uv_installed" -eq 1 ]; then
-  uv_pkgs+=("{{ $pkg.uv }}")
+  {{- range $p := splitList " " $pkg.uv }}{{ if ne $p "" }}
+  uv_pkgs+=("{{ $p }}")
+  {{- end }}{{ end }}
   {{- end }}
   {{- if hasKey $pkg "mise" }}
-elif command -v mise >/dev/null 2>&1; then
-  mise_pkgs+=("{{ $pkg.mise }}")
+elif [ -n "$mise_bin" ]; then
+  {{- range $p := splitList " " $pkg.mise }}{{ if ne $p "" }}
+  mise_pkgs+=("{{ $p }}")
+  {{- end }}{{ end }}
   {{- end }}
   {{- if and (ne $sys_manager "") (hasKey $pkg $sys_manager) }}
 elif true; then
-  sys_pkgs+=("{{ index $pkg $sys_manager }}")
+  {{- range $p := splitList " " (index $pkg $sys_manager) }}{{ if ne $p "" }}
+  sys_pkgs+=("{{ $p }}")
+  {{- end }}{{ end }}
   {{- end }}
 {{- end }}
 fi
@@ -124,7 +154,7 @@ fi
 # Install accumulated packages sequentially
 # 1. System packages
 if [[ ${#sys_pkgs[@]} -gt 0 ]]; then
-  info "Installing system packages..."
+  info "Installing {{ join " + " $groups }} system packages..."
   {{ if eq $sys_manager "apt" -}}
   run_as_root apt-get install -y -qq "${sys_pkgs[@]}"
   {{- else if eq $sys_manager "dnf" -}}
@@ -152,32 +182,30 @@ fi
 
 # 2. Brew packages
 if [[ ${#brew_pkgs[@]} -gt 0 ]] && command -v brew >/dev/null 2>&1; then
-  info "Installing Homebrew packages..."
+  info "Installing {{ join " + " $groups }} Homebrew packages..."
   brew install "${brew_pkgs[@]}"
 fi
 
 # 3. Brew Cask packages
 if [[ ${#brew_cask_pkgs[@]} -gt 0 ]] && command -v brew >/dev/null 2>&1; then
-  info "Installing Homebrew casks..."
+  info "Installing {{ join " + " $groups }} Homebrew casks..."
   brew install --cask "${brew_cask_pkgs[@]}"
 fi
 
 # 4. Flatpak packages
-if command -v flatpak >/dev/null 2>&1; then
+if [[ ${#flatpak_pkgs[@]} -gt 0 ]] && command -v flatpak >/dev/null 2>&1; then
   info "Checking Flathub repository configuration..."
   if ! flatpak remote-list | grep -q flathub; then
     info "Configuring Flathub repository..."
     flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
   fi
-  if [[ ${#flatpak_pkgs[@]} -gt 0 ]]; then
-    info "Installing Flatpak packages..."
-    flatpak install -y flathub "${flatpak_pkgs[@]}"
-  fi
+  info "Installing {{ join " + " $groups }} Flatpak packages..."
+  flatpak install -y flathub "${flatpak_pkgs[@]}"
 fi
 
 # 5. Snap packages
 if [[ ${#snap_pkgs[@]} -gt 0 ]] && command -v snap >/dev/null 2>&1; then
-  info "Installing snaps..."
+  info "Installing {{ join " + " $groups }} snaps..."
   for pkg in "${snap_pkgs[@]}"; do
     if [[ "$pkg" == *"--classic"* ]]; then
       pkg_name=$(echo "$pkg" | awk '{print $1}')
@@ -189,24 +217,36 @@ if [[ ${#snap_pkgs[@]} -gt 0 ]] && command -v snap >/dev/null 2>&1; then
 fi
 
 # 6. Mise packages
-if [[ ${#mise_pkgs[@]} -gt 0 ]] && command -v mise >/dev/null 2>&1; then
-  info "Installing toolchains via Mise..."
+if [[ ${#mise_pkgs[@]} -gt 0 ]] && [ -n "$mise_bin" ]; then
+  info "Installing {{ join " + " $groups }} toolchains via Mise..."
   for pkg in "${mise_pkgs[@]}"; do
-    mise use -g "$pkg"
+    "$mise_bin" use -g "$pkg"
   done
-  mise install
+  "$mise_bin" install
 fi
 
 # 7. NPM packages
-if [[ ${#npm_pkgs[@]} -gt 0 ]] && command -v npm >/dev/null 2>&1; then
-  info "Installing npm packages..."
-  npm install -g "${npm_pkgs[@]}"
+if [[ ${#npm_pkgs[@]} -gt 0 ]]; then
+  # Ensure npm is in PATH by adding mise shims explicitly if needed
+  export PATH="${HOME}/.local/share/mise/shims:${PATH}"
+  if command -v npm >/dev/null 2>&1; then
+    info "Installing {{ join " + " $groups }} npm packages..."
+    npm install -g "${npm_pkgs[@]}"
+  else
+    warn "npm not found, skipping npm packages."
+  fi
 fi
 
 # 8. UV packages
-if [[ ${#uv_pkgs[@]} -gt 0 ]] && command -v uv >/dev/null 2>&1; then
-  info "Installing tools via uv..."
-  for pkg in "${uv_pkgs[@]}"; do
-    uv tool install "$pkg" || true
-  done
+if [[ ${#uv_pkgs[@]} -gt 0 ]]; then
+  # Ensure uv is in PATH
+  export PATH="${HOME}/.local/share/mise/shims:${PATH}"
+  if command -v uv >/dev/null 2>&1; then
+    info "Installing {{ join " + " $groups }} tools via uv..."
+    for pkg in "${uv_pkgs[@]}"; do
+      uv tool install "$pkg" || true
+    done
+  else
+     warn "uv not found, skipping uv tools."
+  fi
 fi
