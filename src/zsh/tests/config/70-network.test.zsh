@@ -6,13 +6,31 @@ source src/zsh/config/70-network.zsh
 test_dataurl_usage() {
     print "Testing dataurl usage..."
     output=$(dataurl)
+    exit_code=$?
     expected="Usage: dataurl <path/to/file>"
-    if [[ "$output" == "$expected" ]]; then
+    if [[ "$output" == "$expected" ]] && [[ $exit_code -ne 0 ]]; then
         print "✅ Usage test passed"
     else
         print "❌ Usage test failed"
-        print "Expected: $expected"
-        print "Got: $output"
+        print "Expected output: $expected"
+        print "Got output: $output"
+        print "Expected non-zero exit code, got: $exit_code"
+        return 1
+    fi
+}
+
+test_dataurl_missing_file() {
+    print "Testing dataurl with missing file..."
+    output=$(dataurl "/path/to/nonexistent/file" 2>&1)
+    exit_code=$?
+    expected="Error: file '/path/to/nonexistent/file' not found"
+    if [[ "$output" == "$expected" ]] && [[ $exit_code -ne 0 ]]; then
+        print "✅ Missing file test passed"
+    else
+        print "❌ Missing file test failed"
+        print "Expected output: $expected"
+        print "Got output: $output"
+        print "Expected non-zero exit code, got: $exit_code"
         return 1
     fi
 }
@@ -70,6 +88,7 @@ test_dataurl_binary() {
 # Run tests
 errors=0
 test_dataurl_usage || errors=$((errors+1))
+test_dataurl_missing_file || errors=$((errors+1))
 test_dataurl_text || errors=$((errors+1))
 test_dataurl_binary || errors=$((errors+1))
 

@@ -5,11 +5,15 @@ alias wanip="dig +short myip.opendns.com @resolver1.opendns.com"
 
 # Generate a data url
 dataurl() {
-    hash openssl 2>/dev/null || { echo 'Please install openssl'; exit;}
+    hash openssl 2>/dev/null || { echo 'Please install openssl'; return 1;}
 
     if [ -z "$1" ]; then
         # display usage if no parameters given
         echo "Usage: dataurl <path/to/file>"
+        return 1
+    elif [ ! -f "$1" ]; then
+        echo "Error: file '$1' not found" >&2
+        return 1
     else
         MIMETYPE=$(file -b --mime-type "$1");
         if [[ $MIMETYPE == text/* ]]; then
