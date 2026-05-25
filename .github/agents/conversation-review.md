@@ -129,7 +129,7 @@ Cross-reference the conversation against all located files. Identify:
 - **Recursive Skill Improvement** — ALWAYS evaluate if a correction or new preference should be codified in the global `prompt-skills-guidelines` or other specialized area-specific skills (e.g., `github-review-orchestrator`).
 - **Trigger & Loading Logic** — Review the `SKILL.md` files for trigger accuracy. Recommend updates to skill descriptions and activation triggers to ensure the correct skills are loaded autonomously by agents when needed.
 - **Enforcement**: If a conversation exposes a violation of a project-wide standard (e.g., token efficiency), the subagent MUST recommend updates to all files defining that standard to ensure consistency.
-- **Root Instruction Alignment**: When proposing updates to global behavioral rules, memories, or preferences, always recommend synchronized updates to `.antigravityrules`, `CLAUDE.md`, `AGENTS.md`, and `.github/instructions/memory.instructions.md` to ensure absolute consistency across all root entry points.
+- **Root Instruction Alignment**: Note that `.antigravityrules`, `CLAUDE.md`, and `AGENTS.md` are symbolic links pointing directly to `.github/instructions/memory.instructions.md`. To prevent symlink breakage and redundant duplication, always recommend edits and rule updates exclusively on the target file `.github/instructions/memory.instructions.md` rather than proposing separate edits to the symlink paths.
 
 #### 1. Customization & Extraction Decision Matrix
 
@@ -187,7 +187,7 @@ Each recommendation MUST include enough proposed content to be applied directly 
 *   **For `create_hook`**: Provide a valid, complete JSON event configuration mapping the trigger event (e.g., `PostToolUse`) to the script or command.
 *   **For `create_rule`**: Provide the exact, high-fidelity markdown rules block to be appended or created.
 *   **For `create_command` or `create_prompt`**: Provide a complete markdown prompt file skeleton containing any frontmatter variables and instructions.
-*   **For `create_skill`**: Provide a complete, valid `SKILL.md` file featuring a fully formed frontmatter block and skeleton capabilities.
+*   **For `create_skill`**: Provide a complete, valid `SKILL.md` file featuring a fully formed frontmatter block and skeleton capabilities. Ensure any command/script wrapper implements a `--raw` flag and defaults to token-efficient Markdown summaries.
 *   **For `update`**: Provide the exact target file path, target section, and precise replacement content.
 
 ---
