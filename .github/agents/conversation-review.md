@@ -129,6 +129,7 @@ Cross-reference the conversation against all located files. Identify:
 - **Recursive Skill Improvement** — ALWAYS evaluate if a correction or new preference should be codified in the global `prompt-skills-guidelines` or other specialized area-specific skills (e.g., `github-review-orchestrator`).
 - **Trigger & Loading Logic** — Review the `SKILL.md` files for trigger accuracy. Recommend updates to skill descriptions and activation triggers to ensure the correct skills are loaded autonomously by agents when needed.
 - **Enforcement**: If a conversation exposes a violation of a project-wide standard (e.g., token efficiency), the subagent MUST recommend updates to all files defining that standard to ensure consistency.
+- **Root Instruction Alignment**: When proposing updates to global behavioral rules, memories, or preferences, always recommend synchronized updates to `.antigravityrules`, `CLAUDE.md`, `AGENTS.md`, and `.github/instructions/memory.instructions.md` to ensure absolute consistency across all root entry points.
 
 #### 1. Customization & Extraction Decision Matrix
 
