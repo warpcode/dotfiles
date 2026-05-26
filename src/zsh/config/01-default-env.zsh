@@ -6,7 +6,7 @@ export MANPAGER="${MANPAGER:-less -X}"
 
 
 # Secret resolution
-export DF_SECRET_GET_CMD="${DF_SECRET_GET_CMD:-df.secrets get }"
+export DF_SECRET_GET_CMD="${DF_SECRET_GET_CMD:-df.config resolve }"
 
 # Setup default editor
 if [[ -z "$EDITOR" ]]; then

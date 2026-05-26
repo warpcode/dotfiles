@@ -1,8 +1,8 @@
 #!/usr/bin/env zsh
 #
-# df.secrets.kp - KeePassXC vault abstraction (standalone).
+# df.keepass - KeePassXC vault abstraction (standalone).
 # Central binary for all KeePass operations. Delegates keychain
-# storage to df.secrets.keychain.
+# storage to df.keychain.
 
 emulate -LR zsh
 setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL
@@ -25,7 +25,7 @@ typeset _MASTER_CACHE=""
 # ---------------------------------------------------------------------------
 
 err() {
-  print -r -- "df.secrets.kp: $*" >&2
+  print -r -- "df.keepass: $*" >&2
 }
 
 # ---------------------------------------------------------------------------
@@ -93,7 +93,7 @@ _get_master() {
     return 0
   fi
   local __kp_val
-  __kp_val=$("${SCRIPT_DIR}/df.secrets.keychain" get "${KC_SERVICE}" 2>/dev/null) || true
+  __kp_val=$("${SCRIPT_DIR}/df.keychain" get "${KC_SERVICE}" 2>/dev/null) || true
   if [[ -n "${__kp_val}" ]]; then
     _MASTER_CACHE="${__kp_val}"
     print -r -- "${__kp_val}"
@@ -107,7 +107,7 @@ _get_master() {
 #######################################
 _set_master() {
   _MASTER_CACHE="$1"
-  "${SCRIPT_DIR}/df.secrets.keychain" set "${KC_SERVICE}" "$1" >/dev/null 2>&1 || true
+  "${SCRIPT_DIR}/df.keychain" set "${KC_SERVICE}" "$1" >/dev/null 2>&1 || true
 }
 
 #######################################
@@ -115,7 +115,7 @@ _set_master() {
 #######################################
 _del_master() {
   _MASTER_CACHE=""
-  "${SCRIPT_DIR}/df.secrets.keychain" del "${KC_SERVICE}" >/dev/null 2>&1 || true
+  "${SCRIPT_DIR}/df.keychain" del "${KC_SERVICE}" >/dev/null 2>&1 || true
 }
 
 #######################################
@@ -171,7 +171,7 @@ cmd_login() {
   fi
 
   # db-info is a fast, non-destructive way to verify the credential
-  if printf '%s' "${master}" | ${(z)cli} db-info "${KEEPASS_DB_PATH}" >/dev/null 2>&1; then
+  if printf '%s' "${master}" | "${(@z)cli}" db-info "${KEEPASS_DB_PATH}" >/dev/null 2>&1; then
     _set_master "${master}"
     return 0
   fi
@@ -197,31 +197,255 @@ _exec() {
   local cli
   cli="$(_kp_cli)" || return 1
 
-  printf '%s' "${master}" | ${(z)cli} "$1" "${KEEPASS_DB_PATH}" "${@:2}" -q
+  printf '%s' "${master}" | "${(@z)cli}" "$1" "${KEEPASS_DB_PATH}" "${@:2}" -q
 }
 
 #######################################
-# Show an entry attribute.
+# Get a single attribute for the first matching entry (Raw Output).
 # Arguments:
-#   $1 - Entry path.
+#   $1 - Search query or path.
 #   $2 - Attribute name.
 # Outputs:
-#   Attribute value to stdout.
+#   Raw string value to stdout.
 #######################################
-cmd_show() {
-  local kp_path="${1:-}"
+cmd_get() {
+  local query="${1:-}"
   local attr="${2:-}"
 
-  if [[ -z "${kp_path}" || -z "${attr}" ]]; then
-    err "Usage: df.secrets.kp show <path> <attribute>"
+  if [[ -z "${query}" || -z "${attr}" ]]; then
+    err "Usage: df.keepass get <query> <attribute>"
     return 1
   fi
 
-  local __kp_out
-  __kp_out=$(_exec show "${kp_path}" -a "${attr}" 2>/dev/null) || true
+  local kp_path
+  kp_path=$(cmd_find_first "${query}" 2>/dev/null) || {
+    err "No entry found for query: ${query}"
+    return 1
+  }
 
-  [[ -n "${__kp_out}" ]] && print -r -- "${__kp_out}" && return 0
-  return 1
+  local val
+  val=$(_exec show "${kp_path}" -a "${attr}" 2>/dev/null) || return 1
+  print -nr -- "${val}"
+}
+
+#######################################
+# Get multiple attributes for the first matching entry (JSON Object).
+# Arguments:
+#   $1 - Search query or path.
+#   $@ - Attribute names.
+# Outputs:
+#   JSON object to stdout.
+#######################################
+cmd_show() {
+  local query="${1:-}"
+  shift
+  local -a attrs=("$@")
+
+  if [[ -z "${query}" || ${#attrs[@]} -eq 0 ]]; then
+    err "Usage: df.keepass show <query> <attr1> [attr2...]"
+    return 1
+  fi
+
+  local kp_path
+  kp_path=$(cmd_find_first "${query}" 2>/dev/null) || {
+    err "No entry found for query: ${query}"
+    return 1
+  }
+
+  local entry_details
+  entry_details=$(_exec show "${kp_path}" --show-attachments 2>/dev/null) || {
+    err "Failed to retrieve entry details for: ${kp_path}"
+    return 1
+  }
+
+  local -A result
+  local attr val
+  for attr in "${attrs[@]}"; do
+    val=$(print -r -- "${entry_details}" | awk -F': ' -v a="${attr}" 'tolower($1) == tolower(a) {print substr($0, length($1)+3); exit}')
+    [[ -z "${val}" ]] && val="__ABSENT__"
+    result[${attr}]="${val}"
+  done
+
+  # Fetch attachments from output
+  local attachments_raw
+  attachments_raw=$(print -r -- "${entry_details}" | awk '/^Attachments:/ {flag=1; next} /^[A-Za-z]/ {flag=0} flag {print}')
+  local -a attachments
+  attachments=( ${(f)"$(print -r -- "${attachments_raw}" | sed -E 's/^[[:space:]]*-?[[:space:]]*//; s/[[:space:]]*\([^)]*\)[[:space:]]*$//')"} )
+  attachments=( ${attachments:#} ) # remove empty elements
+
+  # Construct JSON object
+  local json="{"
+  local first=1
+  for attr in "${attrs[@]}"; do
+    [[ "${first}" -eq 0 ]] && json+=", "
+    val="${result[${attr}]}"
+    if [[ "${val}" == "__ABSENT__" ]]; then
+       json+="\"${attr}\": null"
+    else
+       json+="\"${attr}\": $(jq -n --arg v "${val}" '$v')"
+    fi
+    first=0
+  done
+
+  # Add attachments
+  json+=", \"attachments\": ["
+  first=1
+  local att
+  for att in "${attachments[@]}"; do
+    [[ "${first}" -eq 0 ]] && json+=", "
+    json+="$(jq -n --arg v "${att}" '$v')"
+    first=0
+  done
+  json+="]}"
+
+  print -r -- "${json}"
+}
+
+#######################################
+# Export all matching entries (JSON Array).
+# Arguments:
+#   $1 - Search query.
+#   $@ - Attribute names.
+# Outputs:
+#   JSON array to stdout.
+#######################################
+cmd_export() {
+  local query="${1:-}"
+  shift
+  local -a attrs=("$@")
+
+  if [[ -z "${query}" || ${#attrs[@]} -eq 0 ]]; then
+    err "Usage: df.keepass export <query> <attr1> [attr2...]"
+    return 1
+  fi
+
+  local -a entries=( ${(f)"$(cmd_find "${query}" 2>/dev/null)"} )
+  if [[ ${#entries[@]} -eq 0 ]]; then
+    print -r -- "[]"
+    return 0
+  fi
+
+  local master
+  master="$(_require_master)" || return 1
+  local cli
+  cli="$(_kp_cli)" || return 1
+  local db="${KEEPASS_DB_PATH}"
+
+  local tmpdir
+  tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/df.keepass.XXXXXX")
+  chmod 700 "${tmpdir}"
+
+  autoload -Uz zargs
+
+  # Internal worker for parallel retrieval
+  _export_worker() {
+    local entry_path="$1"
+    local entry_idx="$2"
+    local -A entry_data
+    local attr val
+
+    local entry_details
+    entry_details=$(printf '%s' "${master}" | "${(@z)cli}" show "${db}" "${entry_path}" --show-attachments -q 2>/dev/null) || return 1
+
+    for attr in "${attrs[@]}"; do
+      val=$(print -r -- "${entry_details}" | awk -F': ' -v a="${attr}" 'tolower($1) == tolower(a) {print substr($0, length($1)+3); exit}')
+      [[ -z "${val}" ]] && val="__ABSENT__"
+      entry_data[${attr}]="${val}"
+    done
+
+    # Fetch attachments metadata
+    local attachments_raw
+    attachments_raw=$(print -r -- "${entry_details}" | awk '/^Attachments:/ {flag=1; next} /^[A-Za-z]/ {flag=0} flag {print}')
+    local -a attachments
+    attachments=( ${(f)"$(print -r -- "${attachments_raw}" | sed -E 's/^[[:space:]]*-?[[:space:]]*//; s/[[:space:]]*\([^)]*\)[[:space:]]*$//')"} )
+    attachments=( ${attachments:#} )
+
+    # Output JSON fragment for this entry
+    local json="{"
+    json+="\"_path\": $(jq -n --arg v "${entry_path}" '$v'), "
+    local first=1
+    for attr in "${attrs[@]}"; do
+      [[ "${first}" -eq 0 ]] && json+=", "
+      val="${entry_data[${attr}]}"
+      if [[ "${val}" == "__ABSENT__" ]]; then
+         json+="\"${attr}\": null"
+      else
+         json+="\"${attr}\": $(jq -n --arg v "${val}" '$v')"
+      fi
+      first=0
+    done
+
+    # Add attachments
+    json+=", \"attachments\": ["
+    first=1
+    local att
+    for att in "${attachments[@]}"; do
+      [[ "${first}" -eq 0 ]] && json+=", "
+      json+="$(jq -n --arg v "${att}" '$v')"
+      first=0
+    done
+    json+="]}"
+
+    print -r -- "${json}" > "${tmpdir}/${entry_idx}.json"
+  }
+
+  {
+    # Prepare indexed entries for zargs
+    local -a indexed_entries=()
+    local i
+    for (( i=1; i<=${#entries[@]}; i++ )); do
+      indexed_entries+=("${entries[$i]}" "${i}")
+    done
+
+    # Run workers in parallel
+    zargs -n 2 -P 8 -- "${indexed_entries[@]}" -- _export_worker
+
+    # Assemble final JSON array
+    print -n -- "["
+    local first=1
+    for (( i=1; i<=${#entries[@]}; i++ )); do
+      [[ "${first}" -eq 0 ]] && print -n -- ", "
+      [[ -f "${tmpdir}/${i}.json" ]] && cat "${tmpdir}/${i}.json"
+      first=0
+    done
+    print -- "]"
+  } always {
+    rm -rf "${tmpdir}"
+  }
+}
+
+#######################################
+# Extract an attachment for the first matching entry (Raw Output).
+# Arguments:
+#   $1 - Search query or path.
+#   $2 - Attachment filename.
+# Outputs:
+#   Raw attachment content to stdout.
+#######################################
+cmd_attachment() {
+  local query="${1:-}"
+  local filename="${2:-}"
+
+  if [[ -z "${query}" || -z "${filename}" ]]; then
+    err "Usage: df.keepass attachment <query> <filename>"
+    return 1
+  fi
+
+  local kp_path
+  kp_path=$(cmd_find_first "${query}" 2>/dev/null) || {
+    err "No entry found for query: ${query}"
+    return 1
+  }
+
+  local master
+  master="$(_require_master)" || return 1
+  local cli
+  cli="$(_kp_cli)" || return 1
+  local db="${KEEPASS_DB_PATH}"
+
+  # keepassxc-cli attachment-export <db> <entry> <name> <path>
+  # We use /dev/stdout to stream directly
+  printf '%s' "${master}" | "${(@z)cli}" attachment-export "${db}" "${kp_path}" "${filename}" /dev/stdout -q
 }
 
 #######################################
@@ -241,7 +465,7 @@ cmd_ls() {
 #   Newline-separated matching entry paths.
 #######################################
 cmd_find() {
-  [[ -z "${1:-}" ]] && { err "Usage: df.secrets.kp find <query>"; return 1; }
+  [[ -z "${1:-}" ]] && { err "Usage: df.keepass find <query>"; return 1; }
   _exec search "$1"
 }
 
@@ -253,7 +477,7 @@ cmd_find() {
 #   First matching entry path to stdout.
 #######################################
 cmd_find_first() {
-  [[ -z "${1:-}" ]] && { err "Usage: df.secrets.kp find-first <query>"; return 1; }
+  [[ -z "${1:-}" ]] && { err "Usage: df.keepass find-first <query>"; return 1; }
   local -a results=( ${(f)"$(cmd_find "$1" 2>/dev/null)"} )
   (( ${#results[@]} > 0 )) && print -r -- "${results[1]}" && return 0
   return 1
@@ -269,7 +493,7 @@ cmd_find_first() {
 cmd_find_title() {
   setopt LOCAL_OPTIONS EXTENDED_GLOB
 
-  [[ -z "${1:-}" ]] && { err "Usage: df.secrets.kp find-title <title>"; return 1; }
+  [[ -z "${1:-}" ]] && { err "Usage: df.keepass find-title <title>"; return 1; }
   local title="$1"
 
   local -a results=( ${(f)"$(cmd_find "${title}" 2>/dev/null)"} )
@@ -345,7 +569,7 @@ cmd_audit_tag() {
   # Disable xtrace locally to prevent shell debugging from leaking secrets
   setopt LOCAL_OPTIONS NO_XTRACE
 
-  [[ -z "${1:-}" ]] && { err "Usage: df.secrets.kp audit-tag <tag> [field1] [field2...]"; return 1; }
+  [[ -z "${1:-}" ]] && { err "Usage: df.keepass audit-tag <tag> [field1] [field2...]"; return 1; }
   
   local tag="${1}"
   shift
@@ -393,7 +617,7 @@ cmd_audit_entry() {
   # Disable xtrace locally to prevent shell debugging from leaking secrets
   setopt LOCAL_OPTIONS NO_XTRACE EXTENDED_GLOB
 
-  [[ -z "${1:-}" ]] && { err "Usage: df.secrets.kp audit-entry <entry-path> [field1] [field2...]"; return 1; }
+  [[ -z "${1:-}" ]] && { err "Usage: df.keepass audit-entry <entry-path> [field1] [field2...]"; return 1; }
   
   local entry="${1}"
   shift
@@ -441,11 +665,14 @@ cmd_db_path() {
 # Print usage.
 #######################################
 _usage() {
-  print -r -- "Usage: df.secrets.kp <command> [args...]"
+  print -r -- "Usage: df.keepass <command> [args...]"
   print -r -- ""
   print -r -- "Commands:"
   print -r -- "  cli                       Print resolved keepassxc-cli command"
-  print -r -- "  show <path> <attribute>   Show entry attribute"
+  print -r -- "  get <query> <attr>        Get raw attribute value (first match)"
+  print -r -- "  show <query> <attrs...>   Show entry attributes as JSON (first match)"
+  print -r -- "  export <query> <attrs...> Export all matching entries as JSON array"
+  print -r -- "  attachment <q> <file>     Get raw attachment content (first match)"
   print -r -- "  ls [path]                 List entries"
   print -r -- "  find <query>              Find entry paths"
   print -r -- "  find-first <query>        First matching path"
@@ -468,7 +695,10 @@ main() {
   shift
   case "${subcommand}" in
     cli)           cmd_cli ;;
+    get)           cmd_get "$@" ;;
     show)          cmd_show "$@" ;;
+    export)        cmd_export "$@" ;;
+    attachment)    cmd_attachment "$@" ;;
     ls)            cmd_ls "$@" ;;
     find)          cmd_find "$@" ;;
     find-first)    cmd_find_first "$@" ;;
