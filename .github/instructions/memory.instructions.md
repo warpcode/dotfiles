@@ -73,6 +73,7 @@ These instructions capture persistent memories, behavioral guardrails, and techn
 - **PR Review & Function Hygiene**:
   - **Interactive Safety**: Always use `return` instead of `exit` within Zsh functions intended for interactive use to prevent accidental session termination.
   - **API Constraints**: GitHub PR Review API returns HTTP 422 if line-level comments are placed on lines outside the current diff hunks. Use the main review body for findings in unchanged code.
+  - **Line-Level Comments**: Prefer detailed, line-level inline comments attached to specific lines in the diff using the GitHub API `comments` schema or `gh pr review <number> -F <file> -r`, rather than grouping all specific line findings in the main summary body.
   - **Robustness**: Functions performing file operations (like `dataurl`) must verify file existence and readability using `[ -f "$file" ]` before processing to avoid malformed output and stderr noise.
 
 ## 🤖 Autonomous VM Agents (Jules)
@@ -110,6 +111,8 @@ When operating as an autonomous agent in a remote virtual machine (e.g., Jules):
    - **Secrets Architecture**: The `bin/df.secrets` utility is undergoing an architectural split. Its "unified resolver" role is being transitioned, which led to a regression in PR #51 where the file was emptied while dependencies (like `df.keepass` and existing projects) still relied on it.
    - **Config Hydration**: As of PR #51, `df.config hydrate` has lost its secret resolution logic and requires restoration to function correctly with the new secrets architecture.
    - **AI Backend Flexibility**: AI providers should not be hardcoded to specific backends (e.g., KeePassXC). Maintain modularity to allow switching or supporting multiple secret providers.
+   - **KeePassXC CLI Attachment Operations**: `keepassxc-cli` does not feature an `attachment-list` subcommand. To list attachments, run `keepassxc-cli show --show-attachments <db> <entry>` and parse the output block. To stream attachments to stdout, use `keepassxc-cli attachment-export <db> <entry> <name> --stdout`.
+   - **KeePassXC Decryption Performance**: Running `keepassxc-cli show` sequentially inside shell loops (even when parallelized via `zargs` across entries) introduces significant latency because every process invocation decrypts the database. Always fetch all attributes of an entry in a single process invocation and parse the results in-memory.
 
    ### `decision`
    - **Prevent Infinite Log Growth in Scheduled Services**: macOS launchd services MUST use shell redirection (`>`) in the `ProgramArguments` block to truncate logs on every run; Linux systemd services MUST delegate logging to `journald` via `StandardOutput=journal` instead of writing to static files.
