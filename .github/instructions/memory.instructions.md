@@ -99,6 +99,8 @@ When operating as an autonomous agent in a remote virtual machine (e.g., Jules):
    ## 🧠 Technical Memory (Durable Facts)
 
    ### `technical_context`
+   - **Bootstrap Package Prerequisites**: `jq` is now a bootstrap package alongside `git`, `zsh`, and `curl` in `install.sh` to ensure early parsing capabilities for JSON declarative configuration files (such as scheduled tasks).
+   - **Profile Configuration Loading Helper**: The general-purpose Zsh function `fs.profile.load` loaded in `src/zsh/functions/profile_loader.zsh` retrieves profile-specific configuration overrides in priority order (using `df.fs profile list`) and merges them recursively using `jq -s 'reduce .[] as $item ({}; . * $item)'`.
    - **Obsidian Migration**: The project has migrated Obsidian management from Zsh-based logic and Markdown rules to a standalone `bin/df.obsidian` utility with JSON validation rules. `src/zsh/apps/obsidian.zsh` now serves as a thin wrapper for this utility. Legacy Zsh functions and Markdown rule paths should be avoided.
    - **Obsidian Profile-Based Configuration Overrides**: Configuration overrides for Obsidian rules in `df.obsidian` must support the project's profile-based inheritance hierarchy (e.g., `work/default.json` and `work/${note_type}.json`). Use `df.fs profile list` to discover all profile-specific config files, and merge them in priority order using `jq -s 'reduce .[] as $item ({}; . * $item)'`.
    - **Redundant tostring in yq**: In `mikefarah/yq` (v4), variables retrieved via `strenv()` are already strings; applying `| tostring` to them is redundant. If type conversion is required, it should be applied to the field being compared rather than the strenv variable.
