@@ -1,0 +1,17 @@
+{
+  "type": "subtask",
+  "folder": "Tasks",
+  "validation": {
+    "require_all": ["title", "status"],
+    "require_any": [
+      ["task"]
+    ]
+  },
+  "fields": {
+    "task": { "type": "select", "values_from_note_type": ["task"], "is_link": true },
+    "status": { "from_type": "default", "from_field": "status" },
+    "notes": { "from_type": "default", "from_field": "notes" },
+    "assignee": { "from_type": "default", "from_field": "assignee" },
+    "tags": { "from_type": "default", "from_field": "tags" }
+  }
+}
