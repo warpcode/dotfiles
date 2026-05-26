@@ -252,32 +252,37 @@ cmd_show() {
     return 1
   }
 
+  local entry_details
+  entry_details=$(_exec show "${kp_path}" --show-attachments 2>/dev/null) || {
+    err "Failed to retrieve entry details for: ${kp_path}"
+    return 1
+  }
+
   local -A result
   local attr val
   for attr in "${attrs[@]}"; do
-    val=$(_exec show "${kp_path}" -a "${attr}" 2>/dev/null) || val="null"
+    val=$(print -r -- "${entry_details}" | awk -F': ' -v a="${attr}" 'tolower($1) == tolower(a) {print substr($0, length($1)+3); exit}')
+    [[ -z "${val}" ]] && val="__ABSENT__"
     result[${attr}]="${val}"
   done
 
-  # Fetch attachments metadata
+  # Fetch attachments from output
   local attachments_raw
-  attachments_raw=$(_exec attachment-list "${kp_path}" 2>/dev/null) || attachments_raw=""
-  local -a attachments=( ${(f)attachments_raw} )
+  attachments_raw=$(print -r -- "${entry_details}" | awk '/^Attachments:/ {flag=1; next} /^[A-Za-z]/ {flag=0} flag {print}')
+  local -a attachments
+  attachments=( ${(f)"$(print -r -- "${attachments_raw}" | sed -E 's/^[[:space:]]*-?[[:space:]]*//; s/[[:space:]]*\([^)]*\)[[:space:]]*$//')"} )
+  attachments=( ${attachments:#} ) # remove empty elements
 
-  # Construct JSON object manually to avoid heavy jq dependency in loop if possible,
-  # but jq is reliable for valid JSON.
+  # Construct JSON object
   local json="{"
   local first=1
   for attr in "${attrs[@]}"; do
     [[ "${first}" -eq 0 ]] && json+=", "
     val="${result[${attr}]}"
-    if [[ "${val}" == "null" ]]; then
+    if [[ "${val}" == "__ABSENT__" ]]; then
        json+="\"${attr}\": null"
     else
-       # Use jq to safely escape string
-       local escaped_val
-       escaped_val=$(jq -n --arg v "${val}" '$v')
-       json+="\"${attr}\": ${escaped_val}"
+       json+="\"${attr}\": $(jq -n --arg v "${val}" '$v')"
     fi
     first=0
   done
@@ -339,16 +344,21 @@ cmd_export() {
     local -A entry_data
     local attr val
 
+    local entry_details
+    entry_details=$(printf '%s' "${master}" | "${(@z)cli}" show "${db}" "${entry_path}" --show-attachments -q 2>/dev/null) || return 1
+
     for attr in "${attrs[@]}"; do
-      # Pass master password via stdin to worker
-      val=$(printf '%s' "${master}" | "${(@z)cli}" show "${db}" "${entry_path}" -a "${attr}" -q 2>/dev/null) || val="null"
+      val=$(print -r -- "${entry_details}" | awk -F': ' -v a="${attr}" 'tolower($1) == tolower(a) {print substr($0, length($1)+3); exit}')
+      [[ -z "${val}" ]] && val="__ABSENT__"
       entry_data[${attr}]="${val}"
     done
 
     # Fetch attachments metadata
     local attachments_raw
-    attachments_raw=$(printf '%s' "${master}" | "${(@z)cli}" attachment-list "${db}" "${entry_path}" -q 2>/dev/null) || attachments_raw=""
-    local -a attachments=( ${(f)attachments_raw} )
+    attachments_raw=$(print -r -- "${entry_details}" | awk '/^Attachments:/ {flag=1; next} /^[A-Za-z]/ {flag=0} flag {print}')
+    local -a attachments
+    attachments=( ${(f)"$(print -r -- "${attachments_raw}" | sed -E 's/^[[:space:]]*-?[[:space:]]*//; s/[[:space:]]*\([^)]*\)[[:space:]]*$//')"} )
+    attachments=( ${attachments:#} )
 
     # Output JSON fragment for this entry
     local json="{"
@@ -357,7 +367,7 @@ cmd_export() {
     for attr in "${attrs[@]}"; do
       [[ "${first}" -eq 0 ]] && json+=", "
       val="${entry_data[${attr}]}"
-      if [[ "${val}" == "null" ]]; then
+      if [[ "${val}" == "__ABSENT__" ]]; then
          json+="\"${attr}\": null"
       else
          json+="\"${attr}\": $(jq -n --arg v "${val}" '$v')"
@@ -379,27 +389,29 @@ cmd_export() {
     print -r -- "${json}" > "${tmpdir}/${entry_idx}.json"
   }
 
-  # Prepare indexed entries for zargs
-  local -a indexed_entries=()
-  local i
-  for (( i=1; i<=${#entries[@]}; i++ )); do
-    indexed_entries+=("${entries[$i]}" "${i}")
-  done
+  {
+    # Prepare indexed entries for zargs
+    local -a indexed_entries=()
+    local i
+    for (( i=1; i<=${#entries[@]}; i++ )); do
+      indexed_entries+=("${entries[$i]}" "${i}")
+    done
 
-  # Run workers in parallel
-  zargs -n 2 -P 8 -- "${indexed_entries[@]}" -- _export_worker
+    # Run workers in parallel
+    zargs -n 2 -P 8 -- "${indexed_entries[@]}" -- _export_worker
 
-  # Assemble final JSON array
-  print -n -- "["
-  local first=1
-  for (( i=1; i<=${#entries[@]}; i++ )); do
-    [[ "${first}" -eq 0 ]] && print -n -- ", "
-    [[ -f "${tmpdir}/${i}.json" ]] && cat "${tmpdir}/${i}.json"
-    first=0
-  done
-  print -- "]"
-
-  rm -rf "${tmpdir}"
+    # Assemble final JSON array
+    print -n -- "["
+    local first=1
+    for (( i=1; i<=${#entries[@]}; i++ )); do
+      [[ "${first}" -eq 0 ]] && print -n -- ", "
+      [[ -f "${tmpdir}/${i}.json" ]] && cat "${tmpdir}/${i}.json"
+      first=0
+    done
+    print -- "]"
+  } always {
+    rm -rf "${tmpdir}"
+  }
 }
 
 #######################################
