@@ -18,7 +18,7 @@ hd.env.gen() {
         {
             env.print.kv "DOCKER_CONTEXT" "remote-docker"
             env.print.kv "BASE_HOSTNAME" "warpcode.co.uk"
-            env.print.kv "LITELLM_MASTER_KEY" "$("${DOTFILES}/bin/df.secrets" get 'LITELLM_API_KEY')"
+            env.print.kv "LITELLM_MASTER_KEY" "$("${DOTFILES}/bin/df.config" resolve 'LITELLM_API_KEY')"
             env.print.var \
                 "GEMINI_API_KEY" \
                 "GITHUB_API_TOKEN" \

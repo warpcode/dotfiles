@@ -4,9 +4,9 @@
 
 plugins:
   secret:
-    cmd: "{{ $dotfiles }}/bin/df.secrets"
+    cmd: "{{ $dotfiles }}/bin/df.config"
     args:
-      - "get"
+      - "resolve"
 
 {{- range $bin := (file.ReadDir $binDir) }}
   {{- if (strings.HasPrefix "df." $bin) }}

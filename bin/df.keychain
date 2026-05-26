@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 #
-# df.secrets.keychain - OS keychain abstraction with TTL support.
+# df.keychain - OS keychain abstraction with TTL support.
 
 emulate -LR zsh
 setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL
@@ -21,7 +21,7 @@ readonly USER="${USER:-$(whoami)}"
 # ---------------------------------------------------------------------------
 
 err() {
-  print -r -- "df.secrets.keychain: $*" >&2
+  print -r -- "df.keychain: $*" >&2
 }
 
 #######################################
@@ -375,7 +375,7 @@ cmd_ttl() {
 # Print usage.
 #######################################
 _usage() {
-  print -r -- "Usage: df.secrets.keychain <command> [args...]"
+  print -r -- "Usage: df.keychain <command> [args...]"
   print -r -- ""
   print -r -- "Commands:"
   print -r -- "  get <service>              Get value (fails if expired)"

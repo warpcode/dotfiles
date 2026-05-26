@@ -128,7 +128,7 @@ _cmd_profile_list() {
         fi
     done
 
-    # We output all instances across priority, caller decides which to use, e.g. for `df.secrets` merging
+    # We output all instances across priority, caller decides which to use, e.g. for `df.config` merging
     (( found == 0 )) && return 1
 
     return 0
