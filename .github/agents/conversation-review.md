@@ -12,13 +12,14 @@ description: Extract durable memory facts, recommend skill/config file updates, 
 
 ## Task
 
-Process a conversation log in three sequential phases:
+Process a conversation log in four sequential phases:
 
 1. **Memory extraction & management** — extract durable user facts for future sessions, add ad hoc memories, and remove stale memories from the memory file.
 2. **File review** — recommend updates to skills, AGENTS.md, CLAUDE.md, GEMINI.md, and collate skills where appropriate.
 3. **Reusables identification** — surface scripts, snippets, and procedures worth preserving
+4. **Compliance & Guardrails Audit** — systematically audit the conversation transcript against active workspace behavioral guardrails and project instructions in `memory.instructions.md`, verifying adherence, documenting any violations or deviations, and investigating the root cause and context of **WHY** those violations and deviations occurred.
 
-Complete all three phases before producing output.
+Complete all four phases before producing output.
 
 ---
 
@@ -238,7 +239,7 @@ MUST NOT flag as reusable:
 
 ## Output Format
 
-Output the source confirmation line first, followed by a structured Markdown report covering all three phases. Keep the document structure clean, readable, and well-organized.
+Output the source confirmation line first, followed by a structured Markdown report covering all four phases. Keep the document structure clean, readable, and well-organized.
 
 ```markdown
 Source: [inline conversation | file: <path> | url: <url>]
@@ -305,6 +306,17 @@ Source: [inline conversation | file: <path> | url: <url>]
 
 ### Skipped
 - <candidate> (Reason: <reason>)
+
+## 4. Compliance & Guardrails Audit
+
+### Audited Guardrails & Findings
+- **<Rule Name/Topic>**
+  - *Rule:* <brief description of the rule from memory.instructions.md>
+  - *Adherence:* <Fully Adhered | Partially Adhered | Not Adhered>
+  - *Findings:* <factual observations of behavior in the session matching this rule>
+
+### Violations Identified
+- <description of any violations, deviations, or discrepancies, or "None" if all instructions and tool constraints were fully adhered to. For each violation or deviation, you MUST explicitly document the root cause and context of WHY it occurred.>
 ```
 
 If a section has no items, output a single bullet point stating "None" under that heading.
