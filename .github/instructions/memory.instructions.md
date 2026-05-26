@@ -65,6 +65,7 @@ These instructions capture persistent memories, behavioral guardrails, and techn
   - **yq**: The environment uses `mikefarah/yq` (v4). Avoid `jq`-specific functions like `any()` or `from_json` unless verified. Pass search values via individual environment variables or delimited strings with `split()`.
 - **Zsh Nuances**:
   - **Dynamic Substitution**: Zsh's `${var//pat/repl}` with `(#b)` allows dynamic expansion of backreferences within `${(P)...}` for each match. This is the preferred way to safely expand environment variables in lazy-loaded commands.
+  - **Robust Array Hydration from Stdout**: When capturing command output representing lists or files (e.g., from `df.fs profile list`), always use Zsh's native line-splitting flag `( ${(f)"$(...)"} )` to populate arrays. This prevents accidental word-splitting on spaces and ensures correct behavior.
 - **Architectural Decisions**:
   - **Log Rotation (macOS)**: Preferred log rotation for `launchd` agents is via shell redirection (`>`) in the `ProgramArguments` block to ensure truncation on every run, rather than using `StandardOutPath`.
   - **Service Logging (Linux)**: `systemd` services should delegate log management to `journald` via `StandardOutput=journal` instead of writing to static files.
