@@ -2,7 +2,7 @@
 #
 # df.keepass - KeePassXC vault abstraction (standalone).
 # Central binary for all KeePass operations. Delegates keychain
-# storage to df.secrets.
+# storage to df.keychain.
 
 emulate -LR zsh
 setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL
@@ -93,7 +93,7 @@ _get_master() {
     return 0
   fi
   local __kp_val
-  __kp_val=$("${SCRIPT_DIR}/df.secrets" get "${KC_SERVICE}" 2>/dev/null) || true
+  __kp_val=$("${SCRIPT_DIR}/df.keychain" get "${KC_SERVICE}" 2>/dev/null) || true
   if [[ -n "${__kp_val}" ]]; then
     _MASTER_CACHE="${__kp_val}"
     print -r -- "${__kp_val}"
@@ -107,7 +107,7 @@ _get_master() {
 #######################################
 _set_master() {
   _MASTER_CACHE="$1"
-  "${SCRIPT_DIR}/df.secrets.keychain" set "${KC_SERVICE}" "$1" >/dev/null 2>&1 || true
+  "${SCRIPT_DIR}/df.keychain" set "${KC_SERVICE}" "$1" >/dev/null 2>&1 || true
 }
 
 #######################################
@@ -115,7 +115,7 @@ _set_master() {
 #######################################
 _del_master() {
   _MASTER_CACHE=""
-  "${SCRIPT_DIR}/df.secrets.keychain" del "${KC_SERVICE}" >/dev/null 2>&1 || true
+  "${SCRIPT_DIR}/df.keychain" del "${KC_SERVICE}" >/dev/null 2>&1 || true
 }
 
 #######################################
