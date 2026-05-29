@@ -4,7 +4,7 @@ import argparse
 import json
 import yt_dlp
 
-def list_videos(url, count=None, raw=False):
+def _get_ydl_opts(count, raw):
     ydl_opts = {
         'quiet': True,
         'extract_flat': True,
@@ -18,45 +18,44 @@ def list_videos(url, count=None, raw=False):
     if count:
         ydl_opts['playlist_items'] = f'1-{count}'
 
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
+    return ydl_opts
 
-            output = {
-                'title': info.get('title'),
-                'uploader': info.get('uploader'),
-                'url': url,
-                'entries': []
-            }
 
-            if 'entries' in info:
-                for entry in info['entries']:
-                    output['entries'].append({
-                        'title': entry.get('title'),
-                        'url': entry.get('url') or f"https://www.youtube.com/watch?v={entry.get('id')}",
-                        'id': entry.get('id'),
-                        'duration': entry.get('duration')
-                    })
-            else:
-                # If it's a single video instead of a channel/playlist
-                output['entries'].append({
-                    'title': info.get('title'),
-                    'url': url,
-                    'id': info.get('id'),
-                    'duration': info.get('duration')
-                })
+def _format_video_data(info, url):
+    output = {
+        'title': info.get('title'),
+        'uploader': info.get('uploader'),
+        'url': url,
+        'entries': []
+    }
 
-            if raw:
-                # In raw mode, we might want to return the full yt-dlp info
-                # but for now, let's just return our structured output as it's cleaner
-                print(json.dumps(output, indent=2))
-            else:
-                # Print as a single JSON object for easier parsing by jq
-                print(json.dumps(output))
+    if 'entries' in info:
+        for entry in info['entries']:
+            output['entries'].append({
+                'title': entry.get('title'),
+                'url': entry.get('url') or f"https://www.youtube.com/watch?v={entry.get('id')}",
+                'id': entry.get('id'),
+                'duration': entry.get('duration')
+            })
+    else:
+        # If it's a single video instead of a channel/playlist
+        output['entries'].append({
+            'title': info.get('title'),
+            'url': url,
+            'id': info.get('id'),
+            'duration': info.get('duration')
+        })
 
-    except Exception as e:
-        print(f'Error fetching channel info: {e}', file=sys.stderr)
-        sys.exit(1)
+    return output
+
+
+def list_videos(url, count=None, raw=False):
+    ydl_opts = _get_ydl_opts(count, raw)
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+        return _format_video_data(info, url)
+
 
 def main():
     parser = argparse.ArgumentParser(description='List videos from a YouTube channel.')
@@ -65,7 +64,18 @@ def main():
     parser.add_argument('--raw', action='store_true', help='Output raw JSON data without truncation')
     args = parser.parse_args()
 
-    list_videos(args.url, args.count, args.raw)
+    try:
+        output = list_videos(args.url, args.count, args.raw)
+        if args.raw:
+            # In raw mode, we might want to return the full yt-dlp info
+            # but for now, let's just return our structured output as it's cleaner
+            print(json.dumps(output, indent=2))
+        else:
+            # Print as a single JSON object for easier parsing by jq
+            print(json.dumps(output))
+    except Exception as e:
+        print(f'Error fetching channel info: {e}', file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()
