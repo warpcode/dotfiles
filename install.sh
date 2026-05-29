@@ -169,6 +169,7 @@ main() {
   local dotfiles_profile=""
   local git_name=""
   local git_email=""
+  local keepass_db=""
   while [[ "$#" -gt 0 ]]; do
     case "$1" in
       --profile)
@@ -195,6 +196,15 @@ main() {
           shift 2
         else
           err "Error: --git-email requires an argument"
+          exit 1
+        fi
+        ;;
+      --keepass-db)
+        if [[ -n "${2:-}" ]]; then
+          keepass_db="$2"
+          shift 2
+        else
+          err "Error: --keepass-db requires an argument"
           exit 1
         fi
         ;;
@@ -251,14 +261,16 @@ main() {
   # Build --override-data JSON for template variables
   # chezmoi --override-data accepts a JSON string as a global flag (before subcommand)
   local override_data="{}"
-  if [[ -n "${dotfiles_profile}" || -n "${git_name}" || -n "${git_email}" ]]; then
+  if [[ -n "${dotfiles_profile}" || -n "${git_name}" || -n "${git_email}" || -n "${keepass_db}" ]]; then
     local profile_json="null"
     local git_name_json="null"
     local git_email_json="null"
+    local keepass_db_json="null"
     [[ -n "${dotfiles_profile}" ]] && profile_json="\"${dotfiles_profile}\""
     [[ -n "${git_name}" ]]        && git_name_json="\"${git_name}\""
     [[ -n "${git_email}" ]]       && git_email_json="\"${git_email}\""
-    override_data="{\"profile\":${profile_json},\"git_name\":${git_name_json},\"git_email\":${git_email_json}}"
+    [[ -n "${keepass_db}" ]]      && keepass_db_json="\"${keepass_db}\""
+    override_data="{\"profile\":${profile_json},\"git_name\":${git_name_json},\"git_email\":${git_email_json},\"keepass_db\":${keepass_db_json}}"
     chezmoi_global_args+=(--override-data "${override_data}")
   fi
   chezmoi "${chezmoi_global_args[@]}" init --apply --source "${DOTFILES}"

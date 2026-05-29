@@ -1,0 +1,14 @@
+#!/bin/bash
+# Regenerate chezmoi configuration if KeePass database is newly added
+# {{ template "script_utils.sh.tmpl" . }}
+
+KEEPASS_DB="{{ .keepass_db }}"
+CONFIG_FILE="{{ .chezmoi.configFile }}"
+
+if [ -f "${KEEPASS_DB}" ]; then
+  # Detect if the generated chezmoi.toml is missing the keepassxc block
+  if [ -f "${CONFIG_FILE}" ] && ! grep -q "\[keepassxc\]" "${CONFIG_FILE}"; then
+    info "KeePass database found but not integrated in chezmoi.toml. Regenerating..."
+    chezmoi init --source "{{ .chezmoi.sourceDir }}"
+  fi
+fi
