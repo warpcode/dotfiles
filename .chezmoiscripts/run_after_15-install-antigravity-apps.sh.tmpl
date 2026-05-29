@@ -97,6 +97,7 @@ _install_extracted() {
   # Clean target directory and move new files
   if [[ -L "${target_dir}" ]]; then
     rm -f "${target_dir}"
+    mkdir -p "${target_dir}"
   else
     rm -rf "${target_dir:?}"/*
   fi
