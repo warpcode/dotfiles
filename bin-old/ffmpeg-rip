@@ -102,7 +102,7 @@ def setup_crop():
         '-'
         ]
 
-        output = subprocess.check_output(exec_args, stderr=subprocess.STDOUT)
+        output = subprocess.check_output(exec_args, stderr=subprocess.STDOUT).decode('utf-8')
 
         pattern = re.compile(r'crop=([0-9]+\:[0-9]+\:[0-9]+\:[0-9]+)')
         crop_text = ''
