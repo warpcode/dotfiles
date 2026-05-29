@@ -54,15 +54,7 @@ def list_videos(url, count=None, raw=False):
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=False)
-        output = _format_video_data(info, url)
-
-        if raw:
-            # In raw mode, we might want to return the full yt-dlp info
-            # but for now, let's just return our structured output as it's cleaner
-            print(json.dumps(output, indent=2))
-        else:
-            # Print as a single JSON object for easier parsing by jq
-            print(json.dumps(output))
+        return _format_video_data(info, url)
 
 
 def main():
@@ -73,7 +65,14 @@ def main():
     args = parser.parse_args()
 
     try:
-        list_videos(args.url, args.count, args.raw)
+        output = list_videos(args.url, args.count, args.raw)
+        if args.raw:
+            # In raw mode, we might want to return the full yt-dlp info
+            # but for now, let's just return our structured output as it's cleaner
+            print(json.dumps(output, indent=2))
+        else:
+            # Print as a single JSON object for easier parsing by jq
+            print(json.dumps(output))
     except Exception as e:
         print(f'Error fetching channel info: {e}', file=sys.stderr)
         sys.exit(1)
