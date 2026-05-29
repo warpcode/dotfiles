@@ -21,17 +21,17 @@ fi
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 
-RESPONSE=$(gh api graphql -F query="@${SCRIPT_DIR}/../queries/resolve_review_thread.gql" -f threadId="$THREAD_ID" 2>&1)
+STDERR_FILE=$(mktemp)
+RESPONSE=$(gh api graphql -F query="@${SCRIPT_DIR}/../queries/resolve_review_thread.gql" -f threadId="$THREAD_ID" 2>"$STDERR_FILE")
 GH_STATUS=$?
 
 if [[ $GH_STATUS -ne 0 ]]; then
     echo "Error: Failed to resolve thread $THREAD_ID (exit code: $GH_STATUS)." >&2
-    echo "Details: $RESPONSE" >&2
-    if echo "$RESPONSE" | grep -iq -e "token" -e "auth" -e "connect"; then
-        echo "Tip: Run 'gh auth login' to re-authenticate or check your internet connection." >&2
-    fi
+    cat "$STDERR_FILE" >&2
+    rm -f "$STDERR_FILE"
     exit 1
 fi
+rm -f "$STDERR_FILE"
 
 if [[ "$RAW_OUTPUT" == "true" ]]; then
     echo "$RESPONSE"
