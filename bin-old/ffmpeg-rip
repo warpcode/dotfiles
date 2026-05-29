@@ -37,7 +37,7 @@ def get_executable():
     return executable;
 
 def get_aac_codec():
-    codec_check = subprocess.check_output([executable, '-codecs'], stderr=subprocess.STDOUT)
+    codec_check = subprocess.check_output([executable, '-codecs'], stderr=subprocess.STDOUT).decode('utf-8')
 
     if "libfdk_aac" in codec_check:
         return 'libfdk_aac'
@@ -48,7 +48,7 @@ def get_aac_codec():
 
 def setup_arguments():
     parser = argparse.ArgumentParser(description='Basic video encoding helper')
-    parser.add_argument("input", type=file,  help="Location of the video")
+    parser.add_argument("input", type=str,  help="Location of the video")
     parser.add_argument('-print-command', action='store_true', default=False, help="Prints the command instead of running it")
     parser.add_argument("-force-original-ar",type=float, default=0.0, help="Allows forcing the original aspect ratio of the video")
     parser.add_argument("-max-width", type=int, help="maximum width for the video", default=0)
@@ -93,7 +93,7 @@ def setup_crop():
     if args.crop:
         exec_args = [
         executable,
-        '-i', args.input.name,
+        '-i', args.input,
         "-t", "1",
         '-vframes', '1',
         '-ss', '50',
@@ -102,7 +102,7 @@ def setup_crop():
         '-'
         ]
 
-        output = subprocess.check_output(exec_args, stderr=subprocess.STDOUT)
+        output = subprocess.check_output(exec_args, stderr=subprocess.STDOUT).decode('utf-8')
 
         pattern = re.compile(r'crop=([0-9]+\:[0-9]+\:[0-9]+\:[0-9]+)')
         crop_text = ''
@@ -130,7 +130,7 @@ def setup_denoise():
             if dpattern.search(args.denoise):
                 denoise="hqdn3d="+args.denoise
             else:
-                print "Invalid denoise settings. Please choose from weakest, weak, medium, strong or a value in the format of 1:2:3:4"
+                print("Invalid denoise settings. Please choose from weakest, weak, medium, strong or a value in the format of 1:2:3:4")
                 sys.exit(1)
 
         FINAL_VF.append(denoise)
@@ -148,7 +148,7 @@ def setup_initial():
 
 
     FINAL_ENCODE_OPTS.extend([
-        '-i', args.input.name,
+        '-i', args.input,
         "-map_chapters", "-1",
         "-map_metadata", "-1",
         "-movflags", "faststart",
@@ -221,37 +221,50 @@ def setup_video():
 
 def validate_modulus():
     if not args.modulus in [2,4,8,16]:
-        print "Modulus must be either 2, 4, 8 or 16"
+        print("Modulus must be either 2, 4, 8 or 16")
         sys.exit(1)
 
 
-def run_encode():
+def _build_first_pass_cmd():
     first_pass_opt = []
-    if args.twopass and args.video_bitrate > 0:
-        first_pass_opt.extend(FINAL_ENCODE_OPTS)
-        first_pass_opt.extend(FINAL_ENCODE_VIDEO_OPTS)
-        first_pass_opt.extend(['-pass', '1'])
-        first_pass_opt.extend(FINAL_ENCODE_AUDIO_OPTS)
-        first_pass_opt.extend(['-f', 'mp4', '/dev/null'])
+    first_pass_opt.extend(FINAL_ENCODE_OPTS)
+    first_pass_opt.extend(FINAL_ENCODE_VIDEO_OPTS)
+    first_pass_opt.extend(['-pass', '1'])
+    first_pass_opt.extend(FINAL_ENCODE_AUDIO_OPTS)
+    first_pass_opt.extend(['-f', 'mp4', '/dev/null'])
+    return first_pass_opt
 
-        """Add second pass option to the next pass"""
-        FINAL_ENCODE_VIDEO_OPTS.extend(['-pass', '2'])
-
-        if not args.print_command:
-            subprocess.call(first_pass_opt)
-
-    """Final pass"""
+def _build_final_pass_cmd():
     FINAL_ENCODE_OPTS.extend(FINAL_ENCODE_VIDEO_OPTS)
     FINAL_ENCODE_OPTS.extend(FINAL_ENCODE_AUDIO_OPTS)
-    FINAL_ENCODE_OPTS.append(os.path.splitext(args.input.name)[0]+"-encoded.mp4")
+    FINAL_ENCODE_OPTS.append(os.path.splitext(args.input)[0]+"-encoded.mp4")
+    return FINAL_ENCODE_OPTS
+
+def _print_commands(first_pass_cmd, final_pass_cmd):
+    if first_pass_cmd:
+        print(''.join([subprocess.list2cmdline(first_pass_cmd), ' && ', subprocess.list2cmdline(final_pass_cmd)]))
+    else:
+        print(subprocess.list2cmdline(final_pass_cmd))
+
+def _execute_commands(first_pass_cmd, final_pass_cmd):
+    if first_pass_cmd:
+        subprocess.call(first_pass_cmd)
+    subprocess.call(final_pass_cmd)
+
+def run_encode():
+    first_pass_cmd = None
+
+    if args.twopass and args.video_bitrate > 0:
+        first_pass_cmd = _build_first_pass_cmd()
+        # Add second pass option to the next pass
+        FINAL_ENCODE_VIDEO_OPTS.extend(['-pass', '2'])
+
+    final_pass_cmd = _build_final_pass_cmd()
 
     if args.print_command:
-        if first_pass_opt:
-            print ''.join([subprocess.list2cmdline(first_pass_opt), ' && ', subprocess.list2cmdline(FINAL_ENCODE_OPTS)])
-        else:
-            print subprocess.list2cmdline(FINAL_ENCODE_OPTS)
+        _print_commands(first_pass_cmd, final_pass_cmd)
     else:
-        subprocess.call(FINAL_ENCODE_OPTS)
+        _execute_commands(first_pass_cmd, final_pass_cmd)
 
 
 if __name__ == "__main__":
