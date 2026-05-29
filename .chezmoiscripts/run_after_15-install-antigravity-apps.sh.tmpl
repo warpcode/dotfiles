@@ -17,7 +17,7 @@ _fetch_json() {
 
 _parse_version_and_id() {
   local json_data="$1"
-  echo "$json_data" | python3 -c 'import sys, json; r=json.load(sys.stdin)[0]; print(r["version"], r["execution_id"])' 2>/dev/null || true
+  printf '%s\n' "$json_data" | python3 -c 'import sys, json; r=json.load(sys.stdin)[0]; print(r["version"], r["execution_id"])' 2>/dev/null || true
 }
 
 # Fetch latest versions
@@ -38,16 +38,14 @@ fetch_latest_metadata() {
   hub_metadata=$(_parse_version_and_id "$hub_releases")
   local hub_version
   local hub_exec_id
-  hub_version=$(echo "$hub_metadata" | awk '{print $1}')
-  hub_exec_id=$(echo "$hub_metadata" | awk '{print $2}')
+  read -r hub_version hub_exec_id <<< "$hub_metadata"
 
   # Parse IDE version and execution ID
   local ide_metadata
   ide_metadata=$(_parse_version_and_id "$ide_releases")
   local ide_version
   local ide_exec_id
-  ide_version=$(echo "$ide_metadata" | awk '{print $1}')
-  ide_exec_id=$(echo "$ide_metadata" | awk '{print $2}')
+  read -r ide_version ide_exec_id <<< "$ide_metadata"
 
   if [[ -z "$hub_version" || -z "$hub_exec_id" || -z "$ide_version" || -z "$ide_exec_id" ]]; then
     err "Failed to parse latest version metadata."
@@ -97,7 +95,11 @@ _install_extracted() {
   local slug="$6"
 
   # Clean target directory and move new files
-  rm -rf "${target_dir:?}"/*
+  if [[ -L "${target_dir}" ]]; then
+    rm -f "${target_dir}"
+  else
+    rm -rf "${target_dir:?}"/*
+  fi
   cp -a "${tmp_extract}/${tarball_subdir}/." "${target_dir}/"
   
   # Write version file
