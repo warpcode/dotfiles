@@ -26,11 +26,16 @@ pkg.recipe.opencode.configure() {
             echo "${pid_priority:-999} $pid"
         done | sort -n | awk '{print $2}')
 
-        for pid in ${(f)sorted_pids}; do
-            local model
-            model="$(jq -r --arg p "$pid" '.[$p].models | keys_unsorted[0] // empty' <<<"$providers")"
-            [[ -n "$model" ]] && { selected_model="$pid/$model"; break; }
-        done
+        selected_model="$(jq -r --arg pids "$sorted_pids" '
+            ($pids | split("\n") | map(select(length > 0))) as $p_array |
+            . as $root |
+            first(
+                $p_array[] |
+                . as $p |
+                ($root[$p].models | keys_unsorted[0]? // empty) |
+                "\($p)/\(.)"
+            ) // empty
+        ' <<<"$providers")"
 
         config.hydrate "ai/opencode.json.tmpl" \
             --config-json "$(jq -n --argjson p "${providers:-"{}"}" --arg sm "$selected_model" '{providers: $p, selected_model: $sm}')" \
