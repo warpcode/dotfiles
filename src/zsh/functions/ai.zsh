@@ -106,17 +106,19 @@ ai.models() {
 
     local tmp_dir=$(mktemp -d)
     for pid in "${enabled_pids[@]}"; do
-        (
-            local func="ai.providers.$pid.models"
-            if (( $+functions[$func] )); then
+        local func="ai.providers.$pid.models"
+        if (( $+functions[$func] )); then
+            (
                 local raw_models=$("$func" 2>/dev/null)
-                local clean_models=$(echo "$raw_models" | jq -c -M . 2>/dev/null)
-                if [[ -z "$clean_models" || "$clean_models" == "null" ]]; then
-                    clean_models="[]"
+                if [[ -z "$raw_models" || "$raw_models" == "null" ]]; then
+                    print -r -- "[]" > "$tmp_dir/$pid.json"
+                elif jq -e . >/dev/null 2>&1 <<< "$raw_models"; then
+                    print -r -- "$raw_models" > "$tmp_dir/$pid.json"
+                else
+                    print -r -- "[]" > "$tmp_dir/$pid.json"
                 fi
-                print -r -- "$clean_models" > "$tmp_dir/$pid.json"
-            fi
-        ) &
+            ) &
+        fi
     done
     wait
 
@@ -146,15 +148,15 @@ ai.models.free() {
 
     local tmp_dir=$(mktemp -d)
     for pid in "${enabled_pids[@]}"; do
-        (
-            [[ "$(registry.get ai_provider "$pid" openai_compatible)" == "true" ]] || exit 0
-            local free_func="ai.providers.$pid.models.free"
-            (( $+functions[$free_func] )) || exit 0
+        [[ "$(registry.get ai_provider "$pid" openai_compatible)" == "true" ]] || continue
+        local free_func="ai.providers.$pid.models.free"
+        (( $+functions[$free_func] )) || continue
 
-            local raw raw_models name base_url api_key_env
+        (
+            local raw name base_url api_key_env
             raw=$("$free_func" 2>/dev/null)
-            raw_models=$(echo "$raw" | jq -c -M . 2>/dev/null)
-            [[ -z "$raw_models" || "$raw_models" == "null" || "$raw_models" == "[]" ]] && exit 0
+            [[ -z "$raw" || "$raw" == "null" || "$raw" == "[]" ]] && exit 0
+            jq -e . >/dev/null 2>&1 <<< "$raw" || exit 0
 
             name="$(registry.get ai_provider "$pid" name)"
             base_url="$(registry.get ai_provider "$pid" base_url)"
@@ -163,7 +165,7 @@ ai.models.free() {
             jq -n \
                 --arg pid "$pid" --arg name "$name" \
                 --arg base_url "$base_url" --arg key_env "$api_key_env" \
-                --argjson models "$raw_models" \
+                --argjson models "$raw" \
                 '{
                     ($pid): {
                         name: $name,
@@ -171,7 +173,7 @@ ai.models.free() {
                         options: ({baseURL: $base_url} + (if $key_env != "" then {apiKey: ("{env:" + $key_env + "}")} else {} end)),
                         models: (reduce $models[] as $m ({}; .[$m.id] = {name: ($m.name // $m.id)}))
                     }
-                }' > "$tmp_dir/$pid.json"
+                }' > "$tmp_dir/$pid.json" 2>/dev/null || exit 0
         ) &
     done
     wait
