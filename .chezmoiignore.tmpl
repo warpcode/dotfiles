@@ -16,3 +16,10 @@ vendor/
 .local/share/applications/antigravity-hub.desktop
 .local/share/applications/antigravity-ide.desktop
 {{- end -}}
+
+{{- if not (stat .ai_config_dir) -}}
+.gemini/mcp.json
+.gemini/providers.json
+.gemini/llama_models.ini
+.gemini/skills.json
+{{- end -}}

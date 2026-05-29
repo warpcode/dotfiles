@@ -45,6 +45,15 @@
   {{- $git_email = "ci@example.com" -}}
 {{- end -}}
 
+{{- $keepass_db := "" -}}
+{{- if hasKey . "keepass_db" -}}
+  {{- $keepass_db = .keepass_db -}}
+{{- else -}}
+  {{- $keepass_db = promptStringOnce . "keepass_db" "KeePass XC Database Path" (joinPath .chezmoi.homeDir ".keepass/Accounts.kdbx") -}}
+{{- end -}}
+
+sourceDir = "{{ .chezmoi.sourceDir }}"
+
 [data]
     profile = {{ $profile | quote }}
     is_termux = {{ $is_termux }}
@@ -52,3 +61,18 @@
     ai_config_dir = "{{ .chezmoi.homeDir }}/src/ai-config"
     git_name = {{ $git_name | quote }}
     git_email = {{ $git_email | quote }}
+    keepass_db = {{ $keepass_db | quote }}
+
+{{- if stat $keepass_db }}
+[keepassxc]
+    database = {{ $keepass_db | quote }}
+    {{- if lookPath "keepassxc-cli" }}
+    # Native keepassxc-cli detected
+    {{- else if lookPath "flatpak" }}
+    command = "flatpak"
+    args = ["run", "--command=keepassxc-cli", "org.keepassxc.KeePassXC"]
+    {{- else if lookPath "snap" }}
+    command = "snap"
+    args = ["run", "keepassxc.cli"]
+    {{- end }}
+{{- end }}
