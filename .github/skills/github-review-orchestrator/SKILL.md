@@ -26,7 +26,9 @@ Perform the review without checking out branches or modifying the workspace:
 - **Branch Truncation Warning**: Do not use the branch name directly from the `gh pr list` table columns, as it may be truncated. Fetch the actual untruncated `headRefName` via `gh pr view <number> --json headRefName` or use the `HEAD_OID` when querying files.
 - Use the bundled `scripts/get_pr_context.sh` script to retrieve the head OID and diff context (e.g., `./scripts/get_pr_context.sh <owner> <repo> <pr_number>`).
 - Use the bundled `scripts/fetch_file.sh` script to retrieve full file contents via API if needed for context (e.g., `./scripts/fetch_file.sh <owner> <repo> <path> <branch>`).
+- **Terminal Wrapping Awareness**: Long lines in tool outputs (e.g., from `fetch_file.sh` or `gh pr diff`) can wrap in the display and appear as multiple duplicate or malformed lines. Always verify using a structured, line-numbered `grep` or inspect the lines directly with their line-numbers before assuming a syntax error or duplicate line exists.
 - **Verification**: Cross-reference current diff against discovered review threads to identify candidates for resolution.
+
 - Verify findings locally if applicable, but never commit or change branch.
 
 ### 3. Professional Feedback & Review Submission Standards

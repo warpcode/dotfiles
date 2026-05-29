@@ -117,6 +117,7 @@ When operating as an autonomous agent in a remote virtual machine (e.g., Jules):
    - **AI Backend Flexibility**: AI providers should not be hardcoded to specific backends (e.g., KeePassXC). Maintain modularity to allow switching or supporting multiple secret providers.
    - **KeePassXC CLI Attachment Operations**: `keepassxc-cli` does not feature an `attachment-list` subcommand. To list attachments, run `keepassxc-cli show --show-attachments <db> <entry>` and parse the output block. To stream attachments to stdout, use `keepassxc-cli attachment-export <db> <entry> <name> --stdout`.
    - **KeePassXC Decryption Performance**: Running `keepassxc-cli show` sequentially inside shell loops (even when parallelized via `zargs` across entries) introduces significant latency because every process invocation decrypts the database. Always fetch all attributes of an entry in a single process invocation and parse the results in-memory.
+   - **Symlink Replacement in Install Scripts**: When replacing a symlinked directory, always recreate the directory (`mkdir -p`) immediately after deleting the symlink using `rm -f` to ensure subsequent copying operations (such as `cp -a`) do not fail.
 
    ### `decision`
    - **Prevent Infinite Log Growth in Scheduled Services**: macOS launchd services MUST use shell redirection (`>`) in the `ProgramArguments` block to truncate logs on every run; Linux systemd services MUST delegate logging to `journald` via `StandardOutput=journal` instead of writing to static files.
