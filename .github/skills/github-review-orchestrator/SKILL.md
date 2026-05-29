@@ -23,6 +23,7 @@ Unless a specific PR or branch is provided by the user, always perform a discove
 
 ### 2. Non-Invasive Inspection
 Perform the review without checking out branches or modifying the workspace:
+- **Branch Truncation Warning**: Do not use the branch name directly from the `gh pr list` table columns, as it may be truncated. Fetch the actual untruncated `headRefName` via `gh pr view <number> --json headRefName` or use the `HEAD_OID` when querying files.
 - Use the bundled `scripts/get_pr_context.sh` script to retrieve the head OID and diff context (e.g., `./scripts/get_pr_context.sh <owner> <repo> <pr_number>`).
 - Use the bundled `scripts/fetch_file.sh` script to retrieve full file contents via API if needed for context (e.g., `./scripts/fetch_file.sh <owner> <repo> <path> <branch>`).
 - **Verification**: Cross-reference current diff against discovered review threads to identify candidates for resolution.

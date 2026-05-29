@@ -74,6 +74,7 @@ These instructions capture persistent memories, behavioral guardrails, and techn
 - **PR Review & Function Hygiene**:
   - **Interactive Safety**: Always use `return` instead of `exit` within Zsh functions intended for interactive use to prevent accidental session termination.
   - **API Constraints**: GitHub PR Review API returns HTTP 422 if line-level comments are placed on lines outside the current diff hunks. Use the main review body for findings in unchanged code.
+  - **PR Branch Name Truncation**: Standard table output of `gh pr list` truncates long branch names in the `BRANCH` column, which will fail with a 404 if passed directly to remote file or diff API fetch scripts. Always fetch the full, untruncated branch ref or use `HEAD_OID` by querying `gh pr view <number> --json headRefName` beforehand.
   - **Line-Level Comments**: Prefer detailed, line-level inline comments attached to specific lines in the diff using the GitHub API `comments` schema or `gh pr review <number> -F <file> -r`, rather than grouping all specific line findings in the main summary body.
   - **Robustness**: Functions performing file operations (like `dataurl`) must verify file existence and readability using `[ -f "$file" ]` before processing to avoid malformed output and stderr noise.
 
