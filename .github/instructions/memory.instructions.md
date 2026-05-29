@@ -34,15 +34,8 @@ These instructions capture persistent memories, behavioral guardrails, and techn
   - All GitHub Actions MUST pass before any merge.
   - Prefer squash-and-merge for pull requests.
   - Remote branches MUST be deleted immediately after merging.
-- **Code Review Style**:
-  - **Tone & Content**: Strictly neutral and formal. Avoid conversational filler, encouraging remarks, or summarizing work the user is already aware of. Never use "LGTM" or unnecessary affirmations. Do not repeat yourself. For each technical issue, the comment MUST state: **Severity** (High, Medium, or Low), **Description** of the issue, **Impact** (why it is a problem), and a **Proposed Solution** (including code examples where applicable).
-  - **Commentary**: Do not provide summaries of work done if it was explicitly requested by the user or is already visible in the PR; provide only the technical review findings. Do not paraphrase the task or the developer's work.
-  - **Approval**: If approving a pull request, NEVER add NEW comments to files. Do not provide a summary if there is nothing new to add; just ask to approve.
-  - **Replies**: Only reply if needed (with user approval). Give a thumbs up (👍) ONLY if the developer replied saying they fixed a requested change.
-  - **Resolution**: Proactively resolve review threads once the corresponding changes have been verified in the diff. If the developer asks a question, alert the user for a response.
-  - **Format**: Use line-level comments for specific issues and file-level comments for file-wide concerns. If nothing is wrong, do not add any comments. Comments MUST NOT use 'caveman' style. Use plain English to describe the issue, explain why it is a problem, and suggest a potential solution using the mandatory structure defined in Tone & Content.
-  - **Execution Robustness**: Always write the review body to a temporary file (e.g. using `write_to_file`) and submit it using `gh pr review <number> -F <file>`. Never pass the body directly via inline CLI flags to prevent command-line parsing or quote-escaping failures. ALWAYS prepare a complete review payload staged for a GitHub review event (COMMENT, REQUEST_CHANGES, or APPROVE) rather than proposing or submitting standalone comments. Post-submission, clean up all temporary staging payloads, review drafts, and diff files to prevent stale state retention.
-  - **Review Event Selection**: Always correlate the GitHub review event to the severity of the findings. If the audit identifies any medium or high severity findings (e.g., symlink deletion risks or security concerns), submit the review using the `REQUEST_CHANGES` event. Use `COMMENT` only if findings are restricted to low-severity optimizations or minor style adjustments.
+  - Before approving or merging any pull request, the AI agent MUST run `./.agents/skills/github-review-orchestrator/scripts/pre_merge_checks.sh <pr_number>` to automate verification checks.
+- **Code Review Style**: Delegated entirely to `github-review-orchestrator` and `technical-review-guidelines` skills. Do not duplicate rules here.
 - **Skill Blueprint Design**: Resources should **not** be marked as required in simple skill blueprints.
 - **Skill Naming Convention**: All custom skills MUST be named using the format `prefix-{specific-area}-guidelines`.
   - For LLM instructions, agent orchestration, or prompt engineering: `prompt-*` MUST be the prefix (e.g., `prompt-guidelines`, `prompt-skills-guidelines`).
@@ -73,12 +66,7 @@ These instructions capture persistent memories, behavioral guardrails, and techn
   - **Log Rotation (macOS)**: Preferred log rotation for `launchd` agents is via shell redirection (`>`) in the `ProgramArguments` block to ensure truncation on every run, rather than using `StandardOutPath`.
   - **Service Logging (Linux)**: `systemd` services should delegate log management to `journald` via `StandardOutput=journal` instead of writing to static files.
 
-- **PR Review & Function Hygiene**:
-  - **Interactive Safety**: Always use `return` instead of `exit` within Zsh functions intended for interactive use to prevent accidental session termination.
-  - **API Constraints**: GitHub PR Review API returns HTTP 422 if line-level comments are placed on lines outside the current diff hunks. Use the main review body for findings in unchanged code.
-  - **PR Branch Name Truncation**: Standard table output of `gh pr list` truncates long branch names in the `BRANCH` column, which will fail with a 404 if passed directly to remote file or diff API fetch scripts. Always fetch the full, untruncated branch ref or use `HEAD_OID` by querying `gh pr view <number> --json headRefName` beforehand.
-  - **Line-Level Comments**: Prefer detailed, line-level inline comments attached to specific lines in the diff using the GitHub API `comments` schema or `gh pr review <number> -F <file> -r`, rather than grouping all specific line findings in the main summary body.
-  - **Robustness**: Functions performing file operations (like `dataurl`) must verify file existence and readability using `[ -f "$file" ]` before processing to avoid malformed output and stderr noise.
+- **PR Review Hygiene**: Delegated entirely to `github-review-orchestrator` skill.
 
 ## 🤖 Autonomous VM Agents (Jules)
 

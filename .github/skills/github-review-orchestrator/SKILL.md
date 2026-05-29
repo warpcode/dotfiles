@@ -69,6 +69,7 @@ Comments MUST NOT use 'caveman' style.
 | Context Script | `scripts/get_pr_context.sh` | Fetch PR head OID and diff for review context. | `./scripts/get_pr_context.sh <owner> <repo> <pr_number>` |
 | Submit Script | `scripts/submit_review.sh` | Submit atomic JSON reviews via API. | `./scripts/submit_review.sh <owner> <repo> <pr_number> <payload_file>` |
 | Resolve Review Thread Script | `scripts/resolve_review_thread.sh` | Resolve GitHub PR review threads via GraphQL. | `./scripts/resolve_review_thread.sh <thread_id>` |
+| Pre-merge Checks Script | `scripts/pre_merge_checks.sh` | Validate syntax, interactive safety, scope hygiene, and regression constraints. | `./scripts/pre_merge_checks.sh <pr_number>` |
 | Review Threads Query | `queries/review_threads.gql` | GraphQL query to list review threads and status. | `gh api graphql -F owner=<owner> -F repo=<repo> -F pr=<number> -f query=@queries/review_threads.gql` |
 | Resolve Review Thread Query | `queries/resolve_review_thread.gql` | GraphQL mutation to resolve review threads. | Used internally by `resolve_review_thread.sh` |
 
