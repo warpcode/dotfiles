@@ -17,8 +17,10 @@ package-lock.json
 # Macos
 .DS_Store
 
-# Override global ignore rule
-!generic/.config/opencode/AGENTS.md
+
+# Temporary ignore
+generic/
+
 
 # Python cache and compiled files
 __pycache__/
