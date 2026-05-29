@@ -32,22 +32,22 @@ if [[ ! -f "$QUERY_FILE" ]]; then
     exit 1
 fi
 
+STDERR_FILE=$(mktemp)
 JSON_RESPONSE=$(gh api graphql \
   -F owner="$OWNER" \
   -F repo="$REPO" \
   -F limit="$LIMIT" \
   -F direction="$DIRECTION" \
-  -f query="$(cat "$QUERY_FILE")" 2>&1)
+  -f query="$(cat "$QUERY_FILE")" 2>"$STDERR_FILE")
 GH_STATUS=$?
 
 if [[ $GH_STATUS -ne 0 ]]; then
     echo "Error: Failed to query GitHub API (exit code: $GH_STATUS)." >&2
-    echo "Details: $JSON_RESPONSE" >&2
-    if echo "$JSON_RESPONSE" | grep -iq -e "token" -e "auth" -e "connect"; then
-        echo "Tip: Run 'gh auth login' to re-authenticate or check your internet connection." >&2
-    fi
+    cat "$STDERR_FILE" >&2
+    rm -f "$STDERR_FILE"
     exit 1
 fi
+rm -f "$STDERR_FILE"
 
 if [[ "$RAW_OUTPUT" == "true" ]]; then
     echo "$JSON_RESPONSE"
