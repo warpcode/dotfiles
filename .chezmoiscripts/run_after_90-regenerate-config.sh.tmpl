@@ -1,6 +1,6 @@
 #!/bin/bash
 # Regenerate chezmoi configuration if KeePass database is newly added
-# {{ template "script_utils.sh.tmpl" . }}
+# {{ template "shell/script_utils.sh.tmpl" . }}
 
 KEEPASS_DB="{{ .keepass_db }}"
 CONFIG_FILE="{{ .chezmoi.configFile }}"

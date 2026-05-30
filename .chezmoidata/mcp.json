@@ -1,0 +1,30 @@
+{
+  "mcp_servers": {
+    "browsermcp": {
+      "type": "local",
+      "command": ["npx", "-y", "@browsermcp/mcp@latest"],
+      "description": "Browser control and automation via Playwright"
+    },
+    "chrome-devtools": {
+      "type": "local",
+      "command": ["npx", "-y", "chrome-devtools-mcp@latest", "--autoConnect"],
+      "description": "Chrome DevTools protocol integration for browser interaction"
+    },
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "{secret:CONTEXT7_API_KEY}"
+      },
+      "description": "Remote context enhancement and documentation search"
+    },
+    "github": {
+      "type": "local",
+      "command": ["npx", "-y", "@github/github-mcp-server"],
+      "env": {
+        "GITHUB_TOKEN": "{secret:GITHUB_TOKEN}"
+      },
+      "description": "GitHub API integration — repos, PRs, issues, search"
+    }
+  }
+}

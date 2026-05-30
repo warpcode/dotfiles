@@ -1,6 +1,6 @@
 #!/bin/bash
 # Deploy AI configurations and run installer script
-{{ template "script_utils.sh.tmpl" . }}
+{{ template "shell/script_utils.sh.tmpl" . }}
 
 export PATH="${HOME}/.local/share/mise/shims:${PATH}"
 export PATH="${HOME}/.local/bin:${PATH}"
