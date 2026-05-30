@@ -1,0 +1,55 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "external_directory": "allow",
+    "skill": "allow"
+  },
+  "instructions": [
+    "CRUSH.md",
+    "GEMINI.md",
+    "docs/guidelines.md",
+    ".cursor/rules/*.md",
+    "AI.md",
+    ".github/copilot-instructions.md"
+  ],
+  "mcp": {{ .mcp_servers | toPrettyJson }},
+  "model": "{env:OPENCODE_MODEL}",
+  "provider": {
+    "docker": {
+      "models": {
+        "ai/gemma3": {
+          "name": "ai/gemma3"
+        },
+        "ai/qwen3-embedding:latest": {
+          "name": "ai/qwen3-embedding:latest"
+        },
+        "ai/qwen3:latest": {
+          "name": "ai/qwen3:latest"
+        },
+        "ai/smollm3:latest": {
+          "name": "ai/smollm3:latest"
+        },
+        "huggingface.co/bartowski/mistralai_ministral-3-3b-reasoning-2512-gguf:q4_k_m": {
+          "name": "huggingface.co/bartowski/mistralai_ministral-3-3b-reasoning-2512-gguf:q4_k_m"
+        },
+        "huggingface.co/liquidai/lfm2.5-1.2b-thinking-gguf:q4_k_m": {
+          "name": "huggingface.co/liquidai/lfm2.5-1.2b-thinking-gguf:q4_k_m"
+        },
+        "huggingface.co/unsloth/gemma-4-e2b-it-gguf:Q4_K_M": {
+          "name": "huggingface.co/unsloth/gemma-4-e2b-it-gguf:Q4_K_M"
+        },
+        "huggingface.co/unsloth/gemma-4-e4b-it-gguf:Q4_K_M": {
+          "name": "huggingface.co/unsloth/gemma-4-e4b-it-gguf:Q4_K_M"
+        },
+        "huggingface.co/unsloth/qwen3.5-4b-gguf": {
+          "name": "huggingface.co/unsloth/qwen3.5-4b-gguf"
+        }
+      },
+      "name": "Docker (Local Inference)",
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "http://localhost:12434/engines/llama.cpp/v1"
+      }
+    }
+  }
+}

@@ -1,5 +1,6 @@
 ---
-applyTo: "**/*.zsh,**/.zshrc,**/.zshenv,**/.zprofile,**/.zlogin,**/.zlogout"
+trigger: glob
+globs: "**/*.zsh, **/.zshrc, **/.zshenv, **/.zprofile, **/.zlogin, **/.zlogout"
 ---
 
 # Zsh File Instructions

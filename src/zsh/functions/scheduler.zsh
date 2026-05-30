@@ -95,7 +95,7 @@ scheduler.apply() {
     case "$os_family" in
         macos)
             local plist="$HOME/Library/LaunchAgents/com.dotfiles.scheduler.$name.plist"
-            config.hydrate "scheduler/launchd.plist.tmpl" \
+            config.hydrate "$DOTFILES/.chezmoitemplates/scheduler/launchd.plist.tmpl" \
                 --config-file "$config_file" \
                 --output "$plist" || return 1
             launchctl bootout "gui/$(id -u)" "$plist" 2>/dev/null || true
@@ -113,10 +113,10 @@ scheduler.apply() {
             local service_file="$HOME/.config/systemd/user/dotfiles-scheduler-$name.service"
             local timer_file="$HOME/.config/systemd/user/dotfiles-scheduler-$name.timer"
 
-            config.hydrate "scheduler/systemd.service.tmpl" \
+            config.hydrate "$DOTFILES/.chezmoitemplates/scheduler/systemd.service.tmpl" \
                 --config-file "$config_file" \
                 --output "$service_file" || return 1
-            config.hydrate "scheduler/systemd.timer.tmpl" \
+            config.hydrate "$DOTFILES/.chezmoitemplates/scheduler/systemd.timer.tmpl" \
                 --config-file "$config_file" \
                 --output "$timer_file" || return 1
 
