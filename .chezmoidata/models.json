@@ -1,0 +1,240 @@
+{
+    "providers": {
+        "google_antigravity": {
+            "type": "native_antigravity",
+            "description": "Google platform subscription provider with zero marginal cost for premium models.",
+            "models": {
+                "gemini_pro_3.5_thinking_high": {
+                    "model_name": "gemini-3.5-pro-thinking-high",
+                    "trust_level": "trusted",
+                    "options": {
+                        "temperature": 0.2,
+                        "thinking_budget": 2048
+                    },
+                    "categories": [
+                        "orchestration",
+                        "planning",
+                        "logic",
+                        "deep_reasoning",
+                        "data_analysis"
+                    ]
+                },
+                "gemini_flash_3.5_default": {
+                    "model_name": "gemini-3.5-flash",
+                    "trust_level": "trusted",
+                    "options": {
+                        "temperature": 0.4
+                    },
+                    "categories": [
+                        "simple",
+                        "reviewing",
+                        "documenter",
+                        "classification"
+                    ]
+                }
+            }
+        },
+        "gemini_api": {
+            "type": "google_ai_studio",
+            "api_key": "{env:GEMINI_API_KEY}",
+            "base_url": "https://generativelanguage.googleapis.com/v1beta",
+            "models": {
+                "gemma_4_31b_thinking": {
+                    "model_name": "gemma-4-31b",
+                    "trust_level": "trusted",
+                    "options": {
+                        "temperature": 0.2,
+                        "thinking": true
+                    },
+                    "categories": [
+                        "code_explorer",
+                        "logic",
+                        "planning",
+                        "deep_reasoning"
+                    ]
+                }
+            }
+        },
+        "gemini_api_vertex": {
+            "type": "vertex_ai",
+            "project_id": "{env:VERTEX_PROJECT_ID}",
+            "location": "us-central1",
+            "models": {
+                "gemini_pro_3.0_vertex": {
+                    "model_name": "gemini-3.0-pro",
+                    "trust_level": "trusted",
+                    "options": {
+                        "temperature": 0.2
+                    },
+                    "categories": [
+                        "deep_reasoning",
+                        "logic",
+                        "planning"
+                    ]
+                }
+            }
+        },
+        "opencode": {
+            "type": "openai_compat",
+            "openai_credentials": {
+                "api_key": "{env:OPENCODE_API_KEY}",
+                "base_url": "https://api.opencode.dev/v1"
+            },
+            "models": {
+                "opencode_coder_latest": {
+                    "model_name": "opencode-coder-latest",
+                    "trust_level": "trusted",
+                    "options": {
+                        "temperature": 0.1
+                    },
+                    "categories": [
+                        "code_explorer",
+                        "planning",
+                        "logic"
+                    ]
+                }
+            }
+        },
+        "openrouter": {
+            "type": "openai_compat",
+            "description": "OpenRouter API provider offering free and paid models.",
+            "openai_credentials": {
+                "api_key": "{env:OPENROUTER_API_KEY}",
+                "base_url": "https://openrouter.ai/api/v1"
+            },
+            "models": {
+                "deepseek_r1_free": {
+                    "model_name": "deepseek/deepseek-r1:free",
+                    "trust_level": "untrusted",
+                    "options": {
+                        "temperature": 0.6
+                    },
+                    "categories": [
+                        "deep_reasoning",
+                        "logic",
+                        "researching"
+                    ]
+                },
+                "llama_3_1_8b_free": {
+                    "model_name": "meta-llama/llama-3.1-8b-instruct:free",
+                    "trust_level": "untrusted",
+                    "options": {
+                        "temperature": 0.7
+                    },
+                    "categories": [
+                        "simple",
+                        "creativity",
+                        "researching",
+                        "documenter"
+                    ]
+                },
+                "deepseek_v4_pro_paid": {
+                    "model_name": "deepseek/deepseek-v4-pro",
+                    "trust_level": "trusted",
+                    "options": {
+                        "temperature": 0.2
+                    },
+                    "categories": [
+                        "logic",
+                        "deep_reasoning",
+                        "planning",
+                        "orchestration",
+                        "data_analysis"
+                    ]
+                }
+            }
+        },
+        "llamacpp": {
+            "type": "openai_compat",
+            "openai_credentials": {
+                "api_key": null,
+                "base_url": "http://localhost:8080/v1"
+            },
+            "models": {
+                "gemma_4_e4b_local": {
+                    "model_name": "google_gemma-4-E4B-it",
+                    "trust_level": "secure",
+                    "options": {
+                        "temperature": 0.3
+                    },
+                    "configuration": {
+                        "hf-repo": "bartowski/google_gemma-4-E4B-it-GGUF",
+                        "hf-file": "google_gemma-4-E4B-it-Q4_K_M.gguf",
+                        "ctx-size": 16000,
+                        "ngl": 0
+                    },
+                    "categories": [
+                        "simple",
+                        "classification",
+                        "reviewing",
+                        "documenter"
+                    ]
+                },
+                "qwen_35b_local": {
+                    "model_name": "qwen3.6-35b-moe",
+                    "trust_level": "secure",
+                    "options": {
+                        "temperature": 0.2
+                    },
+                    "configuration": {
+                        "hf-repo": "bartowski/Qwen_Qwen3.6-35B-A3B-GGUF",
+                        "hf-file": "Qwen_Qwen3.6-35B-A3B-IQ3_XXS.gguf",
+                        "ctx-size": 16000,
+                        "ngl": 0
+                    },
+                    "categories": [
+                        "deep_reasoning",
+                        "logic",
+                        "planning",
+                        "orchestration",
+                        "code_explorer"
+                    ]
+                },
+                "qwopus_3.5_9b_local": {
+                    "model_name": "qwopus3.5-9b",
+                    "trust_level": "secure",
+                    "options": {
+                        "temperature": 0.4
+                    },
+                    "configuration": {
+                        "hf-repo": "Jackrong/Qwopus3.5-9B-v3-GGUF",
+                        "hf-file": "Qwopus3.5-9B-v3.Q4_K_M.gguf",
+                        "ctx-size": 32000,
+                        "ngl": 0
+                    },
+                    "categories": [
+                        "researching",
+                        "creativity",
+                        "documenter"
+                    ]
+                }
+            }
+        },
+        "docker": {
+            "type": "openai_compat",
+            "openai_credentials": {
+                "api_key": null,
+                "base_url": "http://localhost:12434/engines/llama.cpp/v1"
+            },
+            "models": {
+                "qwen2_5_vl_7b_ocr": {
+                    "model_name": "ai/qwen2.5-vl:7b",
+                    "trust_level": "secure",
+                    "options": {
+                        "temperature": 0.0
+                    },
+                    "configuration": {
+                        "context-size": 16000,
+                        "gpu": true,
+                        "engine": "llamacpp"
+                    },
+                    "categories": [
+                        "ocr",
+                        "data_analysis",
+                        "documenter"
+                    ]
+                }
+            }
+        }
+    }
+}
