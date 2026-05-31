@@ -2,6 +2,7 @@
     "providers": {
         "google_antigravity": {
             "type": "native_antigravity",
+            "name": "Google Antigravity",
             "description": "Google platform subscription provider with zero marginal cost for premium models.",
             "models": {
                 "gemini_pro_3.5_thinking_high": {
@@ -36,6 +37,7 @@
         },
         "gemini_api": {
             "type": "google_ai_studio",
+            "name": "Gemini API",
             "api_key": "{env:GEMINI_API_KEY}",
             "base_url": "https://generativelanguage.googleapis.com/v1beta",
             "models": {
@@ -57,6 +59,7 @@
         },
         "gemini_api_vertex": {
             "type": "vertex_ai",
+            "name": "Vertex AI",
             "project_id": "{env:VERTEX_PROJECT_ID}",
             "location": "us-central1",
             "models": {
@@ -76,6 +79,7 @@
         },
         "opencode": {
             "type": "openai_compat",
+            "name": "OpenCode",
             "openai_credentials": {
                 "api_key": "{env:OPENCODE_API_KEY}",
                 "base_url": "https://api.opencode.dev/v1"
@@ -97,6 +101,7 @@
         },
         "openrouter": {
             "type": "openai_compat",
+            "name": "OpenRouter",
             "description": "OpenRouter API provider offering free and paid models.",
             "openai_credentials": {
                 "api_key": "{env:OPENROUTER_API_KEY}",
@@ -146,6 +151,7 @@
         },
         "llamacpp": {
             "type": "openai_compat",
+            "name": "llama.cpp",
             "openai_credentials": {
                 "api_key": null,
                 "base_url": "http://localhost:8080/v1"
@@ -212,6 +218,7 @@
         },
         "docker": {
             "type": "openai_compat",
+            "name": "Docker (Local Inference)",
             "openai_credentials": {
                 "api_key": null,
                 "base_url": "http://localhost:12434/engines/llama.cpp/v1"
