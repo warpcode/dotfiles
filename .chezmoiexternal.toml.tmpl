@@ -17,3 +17,37 @@
   type = "git-repo"
   url = "https://github.com/zsh-users/zsh-autosuggestions.git"
   refreshPeriod = "168h"
+
+{{- if and (eq .chezmoi.os "linux") (not .is_termux) (eq .profile "default") }}
+
+# 1. Correctly fetch the metadata using chezmoi's 'output' function with curl
+{{- $hub_json := output "curl" "-fsSL" "https://antigravity-auto-updater-974169037036.us-central1.run.app/releases" }}
+{{- $ide_json := output "curl" "-fsSL" "https://antigravity-ide-auto-updater-974169037036.us-central1.run.app/releases" }}
+
+{{- $hub_payload := fromJson $hub_json }}
+{{- $ide_payload := fromJson $ide_json }}
+
+{{- $hub := index $hub_payload 0 }}
+{{- $ide := index $ide_payload 0 }}
+
+# ==============================================================================
+# ANTIGRAVITY HUB (AppImage)
+# ==============================================================================
+[".local/bin/antigravity"]
+    type = "file"
+    url = {{ printf "https://storage.googleapis.com/antigravity-public/antigravity-hub/%s-%s/linux-x64/Antigravity.AppImage" $hub.version $hub.execution_id | quote }}
+    executable = true
+    refreshPeriod = "168h"
+
+# ==============================================================================
+# ANTIGRAVITY IDE (Tarball Extraction)
+# ==============================================================================
+[".local/opt/antigravity-ide"]
+    type = "archive"
+    url = {{ printf "https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/%s-%s/linux-x64/Antigravity%%20IDE.tar.gz" $ide.version $ide.execution_id | quote }}
+    exact = true
+    stripComponents = 1
+    refreshPeriod = "168h"
+
+{{- end }}
+

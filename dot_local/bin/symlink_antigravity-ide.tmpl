@@ -1,0 +1,3 @@
+{{- if and (eq .chezmoi.os "linux") (not .is_termux) (eq .profile "default") -}}
+{{ .chezmoi.homeDir }}/.local/opt/antigravity-ide/antigravity-ide
+{{- end -}}
