@@ -15,41 +15,32 @@
   "mcp": {{ .mcp_servers | toPrettyJson }},
   "model": "{env:OPENCODE_MODEL}",
   "provider": {
-    "docker": {
-      "models": {
-        "ai/gemma3": {
-          "name": "ai/gemma3"
-        },
-        "ai/qwen3-embedding:latest": {
-          "name": "ai/qwen3-embedding:latest"
-        },
-        "ai/qwen3:latest": {
-          "name": "ai/qwen3:latest"
-        },
-        "ai/smollm3:latest": {
-          "name": "ai/smollm3:latest"
-        },
-        "huggingface.co/bartowski/mistralai_ministral-3-3b-reasoning-2512-gguf:q4_k_m": {
-          "name": "huggingface.co/bartowski/mistralai_ministral-3-3b-reasoning-2512-gguf:q4_k_m"
-        },
-        "huggingface.co/liquidai/lfm2.5-1.2b-thinking-gguf:q4_k_m": {
-          "name": "huggingface.co/liquidai/lfm2.5-1.2b-thinking-gguf:q4_k_m"
-        },
-        "huggingface.co/unsloth/gemma-4-e2b-it-gguf:Q4_K_M": {
-          "name": "huggingface.co/unsloth/gemma-4-e2b-it-gguf:Q4_K_M"
-        },
-        "huggingface.co/unsloth/gemma-4-e4b-it-gguf:Q4_K_M": {
-          "name": "huggingface.co/unsloth/gemma-4-e4b-it-gguf:Q4_K_M"
-        },
-        "huggingface.co/unsloth/qwen3.5-4b-gguf": {
-          "name": "huggingface.co/unsloth/qwen3.5-4b-gguf"
+    {{- $first := true }}
+    {{- range $providerName, $provider := .providers }}
+      {{- if eq $provider.type "openai_compat" }}
+        {{- if not $first }},{{- end }}
+        {{- $first = false }}
+        "{{ $providerName }}": {
+          "name": "{{ $provider.name }}",
+          "npm": "@ai-sdk/openai-compatible",
+          "options": {
+            "baseURL": "{{ $provider.openai_credentials.base_url }}"
+            {{- if $provider.openai_credentials.api_key }},
+            "apiKey": "{{ $provider.openai_credentials.api_key }}"
+            {{- end }}
+          },
+          "models": {
+            {{- $modelFirst := true }}
+            {{- range $modelKey, $model := $provider.models }}
+              {{- if not $modelFirst }},{{- end }}
+              {{- $modelFirst = false }}
+              "{{ $model.model_name }}": {
+                "name": "{{ $model.model_name }}"
+              }
+            {{- end }}
+          }
         }
-      },
-      "name": "Docker (Local Inference)",
-      "npm": "@ai-sdk/openai-compatible",
-      "options": {
-        "baseURL": "http://localhost:12434/engines/llama.cpp/v1"
-      }
-    }
+      {{- end }}
+    {{- end }}
   }
 }
