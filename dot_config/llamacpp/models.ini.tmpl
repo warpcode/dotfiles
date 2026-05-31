@@ -1,0 +1,18 @@
+version = 1
+
+# Global defaults
+[*]
+models-max = 1
+threads = 12
+cache-type-k = q4_0
+cache-type-v = q4_0
+flash-attn = true
+jinja = true
+no-context-shift = true
+{{- range $key, $model := .providers.llamacpp.models }}
+
+[{{ $model.alias }}]
+  {{- range $configKey, $configValue := $model.configuration }}
+{{ $configKey }} = {{ $configValue }}
+  {{- end }}
+{{- end }}
