@@ -7,6 +7,7 @@
             "models": {
                 "gemini_pro_3.5_thinking_high": {
                     "model_name": "gemini-3.5-pro-thinking-high",
+                    "alias": "Gemini 3.5 Pro (High)",
                     "trust_level": "trusted",
                     "options": {
                         "temperature": 0.2,
@@ -22,6 +23,7 @@
                 },
                 "gemini_flash_3.5_default": {
                     "model_name": "gemini-3.5-flash",
+                    "alias": "Gemini 3.5 Flash",
                     "trust_level": "trusted",
                     "options": {
                         "temperature": 0.4
@@ -43,6 +45,7 @@
             "models": {
                 "gemma_4_31b_thinking": {
                     "model_name": "gemma-4-31b",
+                    "alias": "Gemma 4 31B (Thinking)",
                     "trust_level": "trusted",
                     "options": {
                         "temperature": 0.2,
@@ -65,6 +68,7 @@
             "models": {
                 "gemini_pro_3.0_vertex": {
                     "model_name": "gemini-3.0-pro",
+                    "alias": "Gemini 3.0 Pro",
                     "trust_level": "trusted",
                     "options": {
                         "temperature": 0.2
@@ -87,6 +91,7 @@
             "models": {
                 "opencode_coder_latest": {
                     "model_name": "opencode-coder-latest",
+                    "alias": "OpenCode Coder",
                     "trust_level": "trusted",
                     "options": {
                         "temperature": 0.1
@@ -110,6 +115,7 @@
             "models": {
                 "deepseek_r1_free": {
                     "model_name": "deepseek/deepseek-r1:free",
+                    "alias": "DeepSeek R1 (Free)",
                     "trust_level": "untrusted",
                     "options": {
                         "temperature": 0.6
@@ -122,6 +128,7 @@
                 },
                 "llama_3_1_8b_free": {
                     "model_name": "meta-llama/llama-3.1-8b-instruct:free",
+                    "alias": "Llama 3.1 8B (Free)",
                     "trust_level": "untrusted",
                     "options": {
                         "temperature": 0.7
@@ -135,6 +142,7 @@
                 },
                 "deepseek_v4_pro_paid": {
                     "model_name": "deepseek/deepseek-v4-pro",
+                    "alias": "DeepSeek V4 Pro",
                     "trust_level": "trusted",
                     "options": {
                         "temperature": 0.2
@@ -159,6 +167,7 @@
             "models": {
                 "gemma_4_e4b_local": {
                     "model_name": "google_gemma-4-E4B-it",
+                    "alias": "Gemma 4 E4B",
                     "trust_level": "secure",
                     "options": {
                         "temperature": 0.3
@@ -178,6 +187,7 @@
                 },
                 "qwen_35b_local": {
                     "model_name": "qwen3.6-35b-moe",
+                    "alias": "Qwen 3.6 35B MoE",
                     "trust_level": "secure",
                     "options": {
                         "temperature": 0.2
@@ -198,6 +208,7 @@
                 },
                 "qwopus_3.5_9b_local": {
                     "model_name": "qwopus3.5-9b",
+                    "alias": "Qwopus 3.5 9B",
                     "trust_level": "secure",
                     "options": {
                         "temperature": 0.4
@@ -226,6 +237,7 @@
             "models": {
                 "qwen2_5_vl_7b_ocr": {
                     "model_name": "ai/qwen2.5-vl:7b",
+                    "alias": "Qwen 2.5 VL 7B (OCR)",
                     "trust_level": "secure",
                     "options": {
                         "temperature": 0.0
