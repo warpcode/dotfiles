@@ -18,7 +18,7 @@
   url = "https://github.com/zsh-users/zsh-autosuggestions.git"
   refreshPeriod = "168h"
 
-{{- if and (eq .chezmoi.os "linux") (not .is_termux) (eq .profile "default") }}
+{{- if .is_default_linux }}
 
 # 1. Correctly fetch the metadata using chezmoi's 'output' function with curl
 {{- $hub_json := output "curl" "-fsSL" "https://antigravity-auto-updater-974169037036.us-central1.run.app/releases" }}
