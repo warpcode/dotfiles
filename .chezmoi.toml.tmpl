@@ -57,6 +57,7 @@ sourceDir = "{{ .chezmoi.sourceDir }}"
 [data]
     profile = {{ $profile | quote }}
     is_termux = {{ $is_termux }}
+    is_default_linux = {{ and (eq .chezmoi.os "linux") (not $is_termux) (eq $profile "default") }}
     sys_manager = {{ $sys_manager | quote }}
     ai_config_dir = "{{ .chezmoi.homeDir }}/src/ai-config"
     git_name = {{ $git_name | quote }}

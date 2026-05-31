@@ -13,7 +13,7 @@ tmp/
 vendor/
 .pytest_cache/
 
-{{- if not (and (eq .chezmoi.os "linux") (not .is_termux) (eq .profile "default")) -}}
+{{- if not .is_default_linux -}}
 .local/share/applications/antigravity-hub.desktop
 .local/share/applications/antigravity-ide.desktop
 {{- end -}}
