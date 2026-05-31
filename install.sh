@@ -244,7 +244,16 @@ main() {
   if ! command -v chezmoi >/dev/null && [ ! -f "${HOME}/.local/bin/chezmoi" ]; then
     info "Installing chezmoi..."
     mkdir -p "${HOME}/.local/bin"
-    curl -fsLS https://chezmoi.io/get | sh -s -- -b "${HOME}/.local/bin"
+    local chezmoi_install_script
+    chezmoi_install_script="$(mktemp -t chezmoi-bootstrap-XXXXXX.sh)"
+    if curl -fsSL https://chezmoi.io/get > "${chezmoi_install_script}"; then
+      sh "${chezmoi_install_script}" -b "${HOME}/.local/bin"
+      rm -f "${chezmoi_install_script}"
+    else
+      err "Failed to download chezmoi installer"
+      rm -f "${chezmoi_install_script}"
+      exit 1
+    fi
   fi
 
   export PATH="${HOME}/.local/bin:${PATH}"
