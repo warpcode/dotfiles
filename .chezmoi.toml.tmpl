@@ -51,6 +51,30 @@
 {{- else -}}
   {{- $keepass_db = promptStringOnce . "keepass_db" "KeePass XC Database Path" (joinPath .chezmoi.homeDir ".keepass/Accounts.kdbx") -}}
 {{- end -}}
+{{- $llamacpp_arch := "" -}}
+{{- if eq .chezmoi.arch "arm64" -}}
+  {{- $llamacpp_arch = "arm64" -}}
+{{- else if eq .chezmoi.arch "amd64" -}}
+  {{- $llamacpp_arch = "x64" -}}
+{{- end -}}
+
+{{- $llamacpp_os := "" -}}
+{{- if eq .chezmoi.os "darwin" -}}
+  {{- $llamacpp_os = "macos" -}}
+{{- else if eq .chezmoi.os "linux" -}}
+  {{- if $is_termux -}}
+    {{- $llamacpp_os = "android" -}}
+  {{- else -}}
+    {{- $llamacpp_os = "ubuntu" -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $supported_llamacpp := false -}}
+{{- if and $llamacpp_os $llamacpp_arch -}}
+  {{- if or (ne $llamacpp_os "android") (eq $llamacpp_arch "arm64") -}}
+    {{- $supported_llamacpp = true -}}
+  {{- end -}}
+{{- end -}}
 
 sourceDir = "{{ .chezmoi.sourceDir }}"
 
@@ -63,6 +87,9 @@ sourceDir = "{{ .chezmoi.sourceDir }}"
     git_name = {{ $git_name | quote }}
     git_email = {{ $git_email | quote }}
     keepass_db = {{ $keepass_db | quote }}
+    llamacpp_supported = {{ $supported_llamacpp }}
+    llamacpp_os = {{ $llamacpp_os | quote }}
+    llamacpp_arch = {{ $llamacpp_arch | quote }}
 
 {{- if stat $keepass_db }}
 [keepassxc]
