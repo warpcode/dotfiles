@@ -18,6 +18,20 @@
   url = "https://github.com/zsh-users/zsh-autosuggestions.git"
   refreshPeriod = "168h"
 
+{{- if .llamacpp_supported }}
+
+# ==============================================================================
+# LLAMA.CPP (Pre-compiled Binaries)
+# ==============================================================================
+[".local/opt/llama.cpp"]
+    type = "archive"
+    url = {{ gitHubLatestReleaseAssetURL "ggml-org/llama.cpp" (printf "llama-*-bin-%s-%s.tar.gz" .llamacpp_os .llamacpp_arch) | quote }}
+    exact = true
+    stripComponents = 1
+    refreshPeriod = "168h"
+
+{{- end }}
+
 {{- if .is_default_linux }}
 
 # 1. Correctly fetch the metadata using chezmoi's 'output' function with curl
