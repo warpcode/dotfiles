@@ -178,7 +178,8 @@ packages:
       termux: ffmpeg
       profiles_deny: [work]
     - name: k8slens
-      snap: "kontena-lens --classic"
+      snap: kontena-lens
+      snap_classic: true
       brew_cask: lens
       profiles_deny: [work]
     - name: keepassxc
