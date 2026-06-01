@@ -65,3 +65,21 @@
 
 {{- end }}
 
+{{- if not .is_termux }}
+
+# ==============================================================================
+# NERD FONTS (DejaVuSansMono)
+# Required for Neovim and plugins that use additional glyphs.
+# https://www.nerdfonts.com/
+# ==============================================================================
+{{- if eq .chezmoi.os "darwin" }}
+["Library/Fonts/NerdFonts/DejaVuSansMono"]
+{{- else }}
+[".local/share/fonts/NerdFonts/DejaVuSansMono"]
+{{- end }}
+    type = "archive"
+    url = {{ gitHubLatestReleaseAssetURL "ryanoasis/nerd-fonts" "DejaVuSansMono.tar.xz" | quote }}
+    exact = true
+    refreshPeriod = "168h"
+
+{{- end }}
