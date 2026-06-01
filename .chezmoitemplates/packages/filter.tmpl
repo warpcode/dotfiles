@@ -1,0 +1,77 @@
+{{- /* Expects: dict "packages" dict "profile" string "os_detected" string "package_managers" list (optional "groups" list) (optional "result" dict) */ -}}
+
+{{- /* 1. Build hierarchy of active package managers */ -}}
+{{- $hierarchyRes := dict -}}
+{{- template "packages/hierarchy.tmpl" (dict 
+      "profile" .profile 
+      "os_detected" .os_detected 
+      "managers" .package_managers 
+      "result" $hierarchyRes) -}}
+{{- $hierarchy := $hierarchyRes.value -}}
+
+{{- /* 2. Initialize queues/lists for each manager */ -}}
+{{- $queues := dict -}}
+{{- range $mgr := $hierarchy -}}
+  {{- $_ := set $queues $mgr (list) -}}
+{{- end -}}
+
+{{- /* 3. Determine which groups to process */ -}}
+{{- $groups := list -}}
+{{- if hasKey . "groups" -}}
+  {{- $groups = .groups -}}
+{{- else -}}
+  {{- range $group_name, $pkgs := .packages -}}
+    {{- $groups = append $groups $group_name -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* 4. Filter and process each package in the groups */ -}}
+{{- range $g := $groups -}}
+  {{- if hasKey $.packages $g -}}
+    {{- $pkgs := index $.packages $g -}}
+    {{- $res := dict -}}
+    {{- template "profiles/filter.tmpl" (dict "data" $pkgs "profile" $.profile "result" $res) -}}
+    {{- range $pkg := $res.value -}}
+      {{- $resolved_mgr := "" -}}
+      {{- $resolved_val := "" -}}
+      
+      {{- /* Check flatpak high-priority first if active and present on package */ -}}
+      {{- if and (has "flatpak" $hierarchy) (hasKey $pkg "flatpak") -}}
+        {{- $resolved_mgr = "flatpak" -}}
+        {{- $resolved_val = index $pkg "flatpak" -}}
+      {{- else -}}
+        {{- /* Default hierarchy check */ -}}
+        {{- range $mgr := $hierarchy -}}
+          {{- if and (eq $resolved_mgr "") (hasKey $pkg $mgr) -}}
+            {{- $resolved_mgr = $mgr -}}
+            {{- $resolved_val = index $pkg $mgr -}}
+          {{- end -}}
+        {{- end -}}
+      {{- end -}}
+      
+      {{- /* Populate package manager list */ -}}
+      {{- if ne $resolved_mgr "" -}}
+        {{- $current_list := index $queues $resolved_mgr -}}
+        {{- if kindIs "slice" $resolved_val -}}
+          {{- range $p := $resolved_val -}}
+            {{- if ne $p "" -}}
+              {{- $current_list = append $current_list $p -}}
+            {{- end -}}
+          {{- end -}}
+        {{- else -}}
+          {{- if ne $resolved_val "" -}}
+            {{- $current_list = append $current_list $resolved_val -}}
+          {{- end -}}
+        {{- end -}}
+        {{- $_ := set $queues $resolved_mgr $current_list -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* 5. Return result in requested format */ -}}
+{{- if hasKey . "result" -}}
+  {{- $_ := set .result "value" $queues -}}
+{{- else -}}
+  {{- $queues | toPrettyJson -}}
+{{- end -}}
