@@ -1,0 +1,15 @@
+{{- /* Expects: dict "item" dict "key" string "val" string "result" dict */ -}}
+{{- $allow_key := printf "%s_allow" .key -}}
+{{- $deny_key := printf "%s_deny" .key -}}
+{{- $allowed := true -}}
+{{- if hasKey .item $deny_key -}}
+  {{- if has .val (index .item $deny_key) -}}
+    {{- $allowed = false -}}
+  {{- end -}}
+{{- end -}}
+{{- if and $allowed (hasKey .item $allow_key) -}}
+  {{- if not (has .val (index .item $allow_key)) -}}
+    {{- $allowed = false -}}
+  {{- end -}}
+{{- end -}}
+{{- $_ := set .result "allowed" $allowed -}}

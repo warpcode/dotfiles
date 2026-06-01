@@ -1,0 +1,16 @@
+{{- /* Expects: dict "profile" string "os_detected" string "managers" list "result" dict */ -}}
+
+{{- /* 1. Filter managers by OS */ -}}
+{{- $os_res := dict -}}
+{{- template "os/filter.tmpl" (dict "data" .managers "os" .os_detected "result" $os_res) -}}
+
+{{- /* 2. Filter result by Profile */ -}}
+{{- $profile_res := dict -}}
+{{- template "profiles/filter.tmpl" (dict "data" $os_res.value "profile" .profile "result" $profile_res) -}}
+
+{{- /* 3. Build active package managers hierarchy list */ -}}
+{{- $hierarchy := list -}}
+{{- range $mgr := $profile_res.value -}}
+  {{- $hierarchy = append $hierarchy $mgr.name -}}
+{{- end -}}
+{{- $_ := set .result "value" $hierarchy -}}

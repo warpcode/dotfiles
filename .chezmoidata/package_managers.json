@@ -1,0 +1,85 @@
+{
+  "package_managers": [
+    {
+      "name": "brew_cask",
+      "os_allow": [
+        "darwin"
+      ],
+      "profiles_deny": [
+        "phone"
+      ]
+    },
+    {
+      "name": "brew",
+      "os_allow": [
+        "darwin"
+      ],
+      "profiles_deny": [
+        "phone"
+      ]
+    },
+    {
+      "name": "termux",
+      "os_allow": [
+        "termux"
+      ]
+    },
+    {
+      "name": "flatpak",
+      "os_allow": [
+        "ubuntu",
+        "debian",
+        "archlinux",
+        "fedora"
+      ],
+      "profiles_deny": [
+        "work",
+        "phone"
+      ]
+    },
+    {
+      "name": "snap",
+      "os_allow": [
+        "ubuntu"
+      ],
+      "profiles_deny": [
+        "work",
+        "phone"
+      ]
+    },
+    {
+      "name": "mise",
+      "os_deny": [
+        "termux"
+      ],
+      "profiles_deny": [
+        "phone"
+      ]
+    },
+    {
+      "name": "npm"
+    },
+    {
+      "name": "uv"
+    },
+    {
+      "name": "apt",
+      "os_allow": [
+        "ubuntu",
+        "debian"
+      ]
+    },
+    {
+      "name": "dnf",
+      "os_allow": [
+        "fedora"
+      ]
+    },
+    {
+      "name": "pacman",
+      "os_allow": [
+        "archlinux"
+      ]
+    }
+  ]
+}

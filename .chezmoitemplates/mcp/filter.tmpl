@@ -1,8 +1,18 @@
 {{- $profile := .profile -}}
-{{- $mcp_data := .mcp -}}
+{{- $result := dict -}}
+
 {{- if and (hasKey . "group") (ne .group "all") -}}
-  {{- $mcp_data = index .mcp .group -}}
+  {{- $group_data := index .mcp .group -}}
+  {{- $res := dict -}}
+  {{- template "profiles/filter.tmpl" (dict "data" $group_data "profile" $profile "result" $res) -}}
+  {{- $result = $res.value -}}
+{{- else -}}
+  {{- range $group_name, $group_data := .mcp -}}
+    {{- $res := dict -}}
+    {{- template "profiles/filter.tmpl" (dict "data" $group_data "profile" $profile "result" $res) -}}
+    {{- if ne (len $res.value) 0 -}}
+      {{- $_ := set $result $group_name $res.value -}}
+    {{- end -}}
+  {{- end -}}
 {{- end -}}
-{{- $res := dict -}}
-{{- template "profiles/filter.tmpl" (dict "data" $mcp_data "profile" $profile "result" $res) -}}
-{{- $res.value | toPrettyJson -}}
+{{- $result | toPrettyJson -}}
