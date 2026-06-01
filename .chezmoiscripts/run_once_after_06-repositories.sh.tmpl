@@ -8,19 +8,19 @@ main() {
   # Ensure function is not empty on non-Linux systems
   :
 
-{{ if eq .chezmoi.os "linux" }}
-  {{ if or (eq .chezmoi.osRelease.id "ubuntu" "debian") (and (hasKey .chezmoi.osRelease "idLike") (regexMatch "(ubuntu|debian)" .chezmoi.osRelease.idLike)) }}
+{{ if ne .os_detected "darwin" }}
+  {{ if or (eq .os_detected "ubuntu") (eq .os_detected "debian") }}
     info "Configuring repositories for Debian/Ubuntu..."
 
     local arch
     arch="$(dpkg --print-architecture)"
 
-    local id={{ if or (eq .chezmoi.osRelease.id "ubuntu") (and (hasKey .chezmoi.osRelease "idLike") (regexMatch "ubuntu" .chezmoi.osRelease.idLike)) }}"ubuntu"{{ else }}"debian"{{ end }}
+    local id={{ .os_detected | quote }}
     local version_codename={{ .chezmoi.osRelease.versionCodename | quote }}
 
     run_as_root install -m 0755 -d /etc/apt/keyrings
 
-  {{- else if eq .chezmoi.osRelease.id "fedora" }}
+  {{- else if eq .os_detected "fedora" }}
     info "Configuring repositories for Fedora..."
   {{- end }}
 
