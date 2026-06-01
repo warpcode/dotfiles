@@ -2,30 +2,22 @@
 experimental = true
 
 [tools]
-{{- $is_termux := .is_termux -}}
-{{- $sys_manager := .sys_manager -}}
+{{- $hierarchyRes := dict -}}
+{{- template "packages/hierarchy.tmpl" (dict 
+      "profile" .profile 
+      "os_detected" .os_detected 
+      "managers" .package_managers 
+      "result" $hierarchyRes) -}}
+{{- $hierarchy := $hierarchyRes.value -}}
 
-{{- $has_snap := false -}}
-{{- if lookPath "snap" -}}
-  {{- $has_snap = true -}}
-{{- end -}}
+{{- $filtered_packages := dict -}}
+{{- range $group_name, $pkgs := .packages }}
+  {{- $res := dict -}}
+  {{- template "profiles/filter.tmpl" (dict "data" $pkgs "profile" $.profile "result" $res) -}}
+  {{- $_ := set $filtered_packages $group_name $res.value -}}
+{{- end }}
 
-{{- $hierarchy := list -}}
-{{- if eq .chezmoi.os "darwin" -}}
-  {{- $hierarchy = list "brew_cask" "brew" "mise" "npm" -}}
-{{- else if $is_termux -}}
-  {{- $hierarchy = list "termux" "npm" -}}
-{{- else if eq .chezmoi.os "linux" -}}
-  {{- if $has_snap -}}
-    {{- $hierarchy = list "flatpak" "snap" "mise" "npm" $sys_manager -}}
-  {{- else -}}
-    {{- $hierarchy = list "flatpak" "mise" "npm" $sys_manager -}}
-  {{- end -}}
-{{- end -}}
-
-{{- $res := dict -}}
-{{- template "profiles/filter.tmpl" (dict "data" .packages "profile" .profile "result" $res) -}}
-{{- range $group, $pkgs := $res.value }}
+{{- range $group, $pkgs := $filtered_packages }}
   {{- range $pkg := $pkgs }}
     {{- $resolved_mgr := "" -}}
     {{- $resolved_val := "" -}}

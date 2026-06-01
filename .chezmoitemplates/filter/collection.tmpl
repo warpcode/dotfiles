@@ -1,0 +1,26 @@
+{{- /* Expects: dict "data" .data "key" string "val" string "result" .result */ -}}
+{{- $allow_key := printf "%s_allow" .key -}}
+{{- $deny_key := printf "%s_deny" .key -}}
+{{- if kindIs "slice" .data -}}
+  {{- $filtered := list -}}
+  {{- range $item := .data -}}
+    {{- $check := dict -}}
+    {{- template "filter/check_leaf.tmpl" (dict "item" $item "key" $.key "val" $.val "result" $check) -}}
+    {{- if $check.allowed -}}
+      {{- $cleaned := omit $item $allow_key $deny_key -}}
+      {{- $filtered = append $filtered $cleaned -}}
+    {{- end -}}
+  {{- end -}}
+  {{- $_ := set .result "value" $filtered -}}
+{{- else if kindIs "map" .data -}}
+  {{- $filtered := dict -}}
+  {{- range $k, $item := .data -}}
+    {{- $check := dict -}}
+    {{- template "filter/check_leaf.tmpl" (dict "item" $item "key" $.key "val" $.val "result" $check) -}}
+    {{- if $check.allowed -}}
+      {{- $cleaned := omit $item $allow_key $deny_key -}}
+      {{- $_ := set $filtered $k $cleaned -}}
+    {{- end -}}
+  {{- end -}}
+  {{- $_ := set .result "value" $filtered -}}
+{{- end -}}

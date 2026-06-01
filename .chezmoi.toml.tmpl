@@ -69,6 +69,24 @@
   {{- end -}}
 {{- end -}}
 
+{{- $os := "linux" -}}
+{{- if eq .chezmoi.os "darwin" -}}
+  {{- $os = "darwin" -}}
+{{- else if $is_termux -}}
+  {{- $os = "termux" -}}
+{{- else if eq .chezmoi.os "linux" -}}
+  {{- $id := .chezmoi.osRelease.id -}}
+  {{- if eq $id "ubuntu" -}}
+    {{- $os = "ubuntu" -}}
+  {{- else if eq $id "debian" -}}
+    {{- $os = "debian" -}}
+  {{- else if or (eq $id "arch") (and (hasKey .chezmoi.osRelease "idLike") (regexMatch "arch" .chezmoi.osRelease.idLike)) -}}
+    {{- $os = "archlinux" -}}
+  {{- else if or (eq $id "fedora") (and (hasKey .chezmoi.osRelease "idLike") (regexMatch "fedora" .chezmoi.osRelease.idLike)) -}}
+    {{- $os = "fedora" -}}
+  {{- end -}}
+{{- end -}}
+
 {{- $supported_llamacpp := false -}}
 {{- if and $llamacpp_os $llamacpp_arch -}}
   {{- if or (ne $llamacpp_os "android") (eq $llamacpp_arch "arm64") -}}
@@ -83,6 +101,7 @@ sourceDir = "{{ .chezmoi.sourceDir }}"
     is_termux = {{ $is_termux }}
     is_default_linux = {{ and (eq .chezmoi.os "linux") (not $is_termux) (eq $profile "default") }}
     sys_manager = {{ $sys_manager | quote }}
+    os_detected = {{ $os | quote }}
     ai_config_dir = "{{ .chezmoi.homeDir }}/src/ai-config"
     git_name = {{ $git_name | quote }}
     git_email = {{ $git_email | quote }}
