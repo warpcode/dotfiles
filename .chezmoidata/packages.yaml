@@ -82,9 +82,21 @@ packages:
       dnf: flatpak
       pacman: flatpak
     - name: docker
-      apt: "docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"
-      dnf: "docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"
-      pacman: "docker docker-compose"
+      apt:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+        - docker-buildx-plugin
+        - docker-compose-plugin
+      dnf:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+        - docker-buildx-plugin
+        - docker-compose-plugin
+      pacman:
+        - docker
+        - docker-compose
       brew_cask: docker-desktop
 
   cli:

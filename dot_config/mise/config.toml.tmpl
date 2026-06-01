@@ -2,39 +2,19 @@
 experimental = true
 
 [tools]
-{{- $hierarchyRes := dict -}}
-{{- template "packages/hierarchy.tmpl" (dict 
+{{- $filterRes := dict -}}
+{{- template "packages/filter.tmpl" (dict 
+      "packages" .packages 
       "profile" .profile 
       "os_detected" .os_detected 
-      "managers" .package_managers 
-      "result" $hierarchyRes) -}}
-{{- $hierarchy := $hierarchyRes.value -}}
-
-{{- $filtered_packages := dict -}}
-{{- range $group_name, $pkgs := .packages }}
-  {{- $res := dict -}}
-  {{- template "profiles/filter.tmpl" (dict "data" $pkgs "profile" $.profile "result" $res) -}}
-  {{- $_ := set $filtered_packages $group_name $res.value -}}
-{{- end }}
-
-{{- range $group, $pkgs := $filtered_packages }}
-  {{- range $pkg := $pkgs }}
-    {{- $resolved_mgr := "" -}}
-    {{- $resolved_val := "" -}}
-    {{- range $mgr := $hierarchy -}}
-      {{- if and (eq $resolved_mgr "") (hasKey $pkg $mgr) -}}
-        {{- $resolved_mgr = $mgr -}}
-        {{- $resolved_val = index $pkg $mgr -}}
-      {{- end -}}
-    {{- end -}}
-    {{- if eq $resolved_mgr "mise" -}}
-      {{- $parts := splitList "@" $resolved_val -}}
-      {{- $tool := index $parts 0 -}}
-      {{- $version := "latest" -}}
-      {{- if gt (len $parts) 1 -}}
-        {{- $version = index $parts 1 -}}
-      {{- end }}
+      "package_managers" .package_managers 
+      "result" $filterRes) -}}
+{{- range $p := index $filterRes.value "mise" -}}
+  {{- $parts := splitList "@" $p -}}
+  {{- $tool := index $parts 0 -}}
+  {{- $version := "latest" -}}
+  {{- if gt (len $parts) 1 -}}
+    {{- $version = index $parts 1 -}}
+  {{- end }}
 {{ $tool }} = "{{ $version }}"
-    {{- end -}}
-  {{- end -}}
 {{- end }}
