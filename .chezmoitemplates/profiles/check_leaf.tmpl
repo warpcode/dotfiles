@@ -1,0 +1,13 @@
+{{- /* Expects: dict "item" dict "profile" string "result" dict */ -}}
+{{- $allowed := true -}}
+{{- if hasKey .item "profiles_deny" -}}
+  {{- if has .profile .item.profiles_deny -}}
+    {{- $allowed = false -}}
+  {{- end -}}
+{{- end -}}
+{{- if and $allowed (hasKey .item "profiles_allow") -}}
+  {{- if not (has .profile .item.profiles_allow) -}}
+    {{- $allowed = false -}}
+  {{- end -}}
+{{- end -}}
+{{- $_ := set .result "allowed" $allowed -}}
