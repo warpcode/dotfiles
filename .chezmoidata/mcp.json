@@ -3,26 +3,43 @@
     "global": {
       "github": {
         "type": "local",
-        "command": ["npx", "-y", "@github/github-mcp-server"],
+        "command": [
+          "npx",
+          "-y",
+          "@github/github-mcp-server"
+        ],
         "env": {
           "GITHUB_TOKEN": "{secret:GITHUB_TOKEN}"
         },
-        "description": "GitHub API integration — repos, PRs, issues, search",
-        "profiles_deny": ["phone"]
+        "description": "GitHub API integration — repos, PRs, issues, search"
       }
     },
     "websearch": {
       "browsermcp": {
         "type": "local",
-        "command": ["npx", "-y", "@browsermcp/mcp@latest"],
+        "command": [
+          "npx",
+          "-y",
+          "@browsermcp/mcp@latest"
+        ],
         "description": "Browser control and automation via Playwright",
-        "profiles_deny": ["work", "phone"]
+        "profiles_deny": [
+          "work"
+        ]
       },
       "chrome-devtools": {
         "type": "local",
-        "command": ["npx", "-y", "chrome-devtools-mcp@latest", "--autoConnect"],
+        "command": [
+          "npx",
+          "-y",
+          "chrome-devtools-mcp@latest",
+          "--autoConnect"
+        ],
         "description": "Chrome DevTools protocol integration for browser interaction",
-        "profiles_allow": ["default", "work"]
+        "profiles_allow": [
+          "default",
+          "work"
+        ]
       }
     },
     "documenter": {
@@ -33,7 +50,9 @@
           "CONTEXT7_API_KEY": "{secret:CONTEXT7_API_KEY}"
         },
         "description": "Remote context enhancement and documentation search",
-        "profiles_deny": ["phone"]
+        "profiles_deny": [
+          "phone"
+        ]
       }
     }
   }
