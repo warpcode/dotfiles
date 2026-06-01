@@ -69,6 +69,11 @@ snap_pkgs=(
   {{ $p | quote }}
 {{- end }}
 )
+snap_classic_pkgs=(
+{{- range $p := index $queues "snap_classic" }}
+  {{ $p | quote }}
+{{- end }}
+)
 mise_pkgs=(
 {{- range $p := index $queues "mise" }}
   {{ $p | quote }}
@@ -141,21 +146,16 @@ fi
 if [[ ${#snap_pkgs[@]} -gt 0 ]] && command -v snap >/dev/null 2>&1; then
   info "Installing {{ join " + " $groups }} snaps..."
   for pkg in "${snap_pkgs[@]}"; do
-    if [[ "$pkg" == *"--classic"* ]]; then
-      pkg_name=$(echo "$pkg" | awk '{print $1}')
-      run_as_root snap install --classic "$pkg_name"
-    else
-      run_as_root snap install "$pkg"
-    fi
+    run_as_root snap install "$pkg"
+  done
+  for pkg in "${snap_classic_pkgs[@]}"; do
+    run_as_root snap install --classic "$pkg"
   done
 fi
 
 # 6. Mise packages
 if [[ ${#mise_pkgs[@]} -gt 0 ]] && command -v mise >/dev/null 2>&1; then
   info "Installing {{ join " + " $groups }} toolchains via Mise..."
-  for pkg in "${mise_pkgs[@]}"; do
-    mise use -g "$pkg"
-  done
   mise install
 fi
 

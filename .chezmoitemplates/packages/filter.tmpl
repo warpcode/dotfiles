@@ -64,6 +64,12 @@
           {{- end -}}
         {{- end -}}
         {{- $_ := set $queues $resolved_mgr $current_list -}}
+        {{- /* For snap packages with classic confinement, also populate snap_classic queue */ -}}
+        {{- if and (eq $resolved_mgr "snap") (hasKey $pkg "snap_classic") (index $pkg "snap_classic") -}}
+          {{- $classic_list := index $queues "snap_classic" | default (list) -}}
+          {{- $classic_list = append $classic_list $resolved_val -}}
+          {{- $_ := set $queues "snap_classic" $classic_list -}}
+        {{- end -}}
       {{- end -}}
     {{- end -}}
   {{- end -}}
