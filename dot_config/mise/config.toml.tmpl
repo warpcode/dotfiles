@@ -26,11 +26,15 @@ experimental = true
 {{- range $group, $pkgs := .packages }}
   {{- range $pkg := $pkgs }}
     {{- $allowed := true -}}
-    {{- if hasKey $pkg "only" -}}
-      {{- if ne $pkg.only $.profile -}}{{- $allowed = false -}}{{- end -}}
+    {{- if hasKey $pkg "profiles_deny" -}}
+      {{- if has $.profile $pkg.profiles_deny -}}
+        {{- $allowed = false -}}
+      {{- end -}}
     {{- end -}}
-    {{- if hasKey $pkg "not" -}}
-      {{- if eq $pkg.not $.profile -}}{{- $allowed = false -}}{{- end -}}
+    {{- if and $allowed (hasKey $pkg "profiles_allow") -}}
+      {{- if not (has $.profile $pkg.profiles_allow) -}}
+        {{- $allowed = false -}}
+      {{- end -}}
     {{- end -}}
     {{- if $allowed -}}
       {{- $resolved_mgr := "" -}}
