@@ -157,61 +157,61 @@ packages:
     - name: discord
       flatpak: com.discordapp.Discord
       brew_cask: discord
-      not: work
+      profiles_deny: [work]
     - name: ffmpeg
       apt: ffmpeg
       dnf: ffmpeg
       pacman: ffmpeg
       brew: ffmpeg
       termux: ffmpeg
-      not: work
+      profiles_deny: [work]
     - name: k8slens
       snap: "kontena-lens --classic"
       brew_cask: lens
-      not: work
+      profiles_deny: [work]
     - name: keepassxc
       flatpak: org.keepassxc.KeePassXC
       brew_cask: keepassxc
-      not: work
+      profiles_deny: [work]
     - name: code
       apt: code
       dnf: code
       brew_cask: visual-studio-code
-      not: work
+      profiles_deny: [work]
     - name: cursor
       apt: cursor
       dnf: cursor
       brew_cask: cursor
-      not: work
+      profiles_deny: [work]
 
   ai:
     - name: ollama
       mise: ollama
-      not: work
+      profiles_deny: [work]
     - name: ai_skills
       npm: "skills@latest"
-      not: work
+      profiles_deny: [work]
     - name: copilot-cli
       npm: "@github/copilot"
-      not: work
+      profiles_deny: [work]
     - name: gemini-cli
       npm: "@google/gemini-cli"
-      not: work
+      profiles_deny: [work]
     - name: opencode
       npm: "opencode-ai@latest"
-      not: work
+      profiles_deny: [work]
     - name: kilo
       npm: "@kilocode/cli"
-      not: work
+      profiles_deny: [work]
     - name: pi
       npm: "@mariozechner/pi-coding-agent"
-      not: work
+      profiles_deny: [work]
     - name: qwen
       npm: "@qwen-code/qwen-code@latest"
-      not: work
+      profiles_deny: [work]
     - name: codex
       npm: "@openai/codex"
-      not: work
+      profiles_deny: [work]
     - name: claude
       npm: "@anthropic-ai/claude-code"
-      not: work
+      profiles_deny: [work]
