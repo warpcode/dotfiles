@@ -14,7 +14,8 @@ Host {{ .name }}
     {{- if .identity_file }}
     IdentityFile {{ .identity_file }}
     {{- end }}
-    {{- if .is_dss }}
-    PubkeyAcceptedKeyTypes +ssh-dss
-    {{- end }}
+    # Legacy Host Keys for older servers
+    HostKeyAlgorithms +ssh-rsa
+    # Enable legacy RSA signatures (OpenSSH >= 8.8)
+    PubkeyAcceptedAlgorithms +ssh-rsa
 {{ end -}}
