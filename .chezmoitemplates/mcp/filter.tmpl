@@ -1,0 +1,44 @@
+{{- $profile := .profile -}}
+{{- $result := dict -}}
+
+{{- if and (hasKey . "group") (ne .group "all") -}}
+  {{- $group := index .mcp .group -}}
+  {{- range $id, $server := $group -}}
+    {{- $allowed := true -}}
+    {{- if hasKey $server "profiles_deny" -}}
+      {{- if has $profile $server.profiles_deny -}}
+        {{- $allowed = false -}}
+      {{- end -}}
+    {{- end -}}
+    {{- if and $allowed (hasKey $server "profiles_allow") -}}
+      {{- if not (has $profile $server.profiles_allow) -}}
+        {{- $allowed = false -}}
+      {{- end -}}
+    {{- end -}}
+    {{- if $allowed -}}
+      {{- $cleaned := omit $server "profiles_allow" "profiles_deny" -}}
+      {{- $_ := set $result $id $cleaned -}}
+    {{- end -}}
+  {{- end -}}
+{{- else -}}
+  {{- range $group_name, $group := .mcp -}}
+    {{- range $id, $server := $group -}}
+      {{- $allowed := true -}}
+      {{- if hasKey $server "profiles_deny" -}}
+        {{- if has $profile $server.profiles_deny -}}
+          {{- $allowed = false -}}
+        {{- end -}}
+      {{- end -}}
+      {{- if and $allowed (hasKey $server "profiles_allow") -}}
+        {{- if not (has $profile $server.profiles_allow) -}}
+          {{- $allowed = false -}}
+        {{- end -}}
+      {{- end -}}
+      {{- if $allowed -}}
+        {{- $cleaned := omit $server "profiles_allow" "profiles_deny" -}}
+        {{- $_ := set $result $id $cleaned -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- $result | toPrettyJson -}}

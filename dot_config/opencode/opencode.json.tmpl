@@ -12,7 +12,7 @@
     "AI.md",
     ".github/copilot-instructions.md"
   ],
-  "mcp": {{ .mcp_servers | toPrettyJson }},
+  "mcp": {{ template "mcp/filter.tmpl" (dict "mcp" .mcp "profile" .profile "group" "global") }},
   "model": "{env:OPENCODE_MODEL}",
   "provider": {
     {{- $first := true }}

@@ -1,2 +1,1 @@
-{{ .mcp_servers | toPrettyJson }}
-
+{{- template "mcp/filter.tmpl" (dict "mcp" .mcp "profile" .profile "group" "all") -}}
