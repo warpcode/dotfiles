@@ -48,7 +48,7 @@
 {{- $keepass_db := "" -}}
 {{- if hasKey . "keepass_db" -}}
   {{- $keepass_db = .keepass_db -}}
-{{- else -}}
+{{- else if stdinIsATTY -}}
   {{- $keepass_db = promptStringOnce . "keepass_db" "KeePass XC Database Path" (joinPath .chezmoi.homeDir ".keepass/Accounts.kdbx") -}}
 {{- end -}}
 {{- $llamacpp_arch := "" -}}
