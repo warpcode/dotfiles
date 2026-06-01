@@ -58,30 +58,7 @@ mise_pkgs=()
 npm_pkgs=()
 uv_pkgs=()
 
-# Detect installed/available package managers
-flatpak_installed=0
-if command -v flatpak >/dev/null 2>&1; then
-  flatpak_installed=1
-fi
 
-snap_installed=0
-if command -v snap >/dev/null 2>&1; then
-  snap_installed=1
-fi
-
-# Detect Mise
-mise_bin=""
-if command -v mise >/dev/null 2>&1; then
-  mise_bin="$(command -v mise)"
-elif [ -f "${HOME}/.local/bin/mise" ]; then
-  mise_bin="${HOME}/.local/bin/mise"
-elif [ -f "/usr/bin/mise" ]; then
-  mise_bin="/usr/bin/mise"
-fi
-
-# npm and uv will be installed by mise, so we assume they are available if needed
-npm_installed=1
-uv_installed=1
 
 # Compile lists of packages for each package manager based on priority
 {{- range $g := $groups }}
@@ -199,12 +176,12 @@ if [[ ${#snap_pkgs[@]} -gt 0 ]] && command -v snap >/dev/null 2>&1; then
 fi
 
 # 6. Mise packages
-if [[ ${#mise_pkgs[@]} -gt 0 ]] && [ -n "$mise_bin" ]; then
+if [[ ${#mise_pkgs[@]} -gt 0 ]] && command -v mise >/dev/null 2>&1; then
   info "Installing {{ join " + " $groups }} toolchains via Mise..."
   for pkg in "${mise_pkgs[@]}"; do
-    "$mise_bin" use -g "$pkg"
+    mise use -g "$pkg"
   done
-  "$mise_bin" install
+  mise install
 fi
 
 # 7. NPM packages
