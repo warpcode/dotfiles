@@ -23,37 +23,26 @@ experimental = true
   {{- end -}}
 {{- end -}}
 
-{{- range $group, $pkgs := .packages }}
+{{- $res := dict -}}
+{{- template "profiles/filter.tmpl" (dict "data" .packages "profile" .profile "result" $res) -}}
+{{- range $group, $pkgs := $res.value }}
   {{- range $pkg := $pkgs }}
-    {{- $allowed := true -}}
-    {{- if hasKey $pkg "profiles_deny" -}}
-      {{- if has $.profile $pkg.profiles_deny -}}
-        {{- $allowed = false -}}
+    {{- $resolved_mgr := "" -}}
+    {{- $resolved_val := "" -}}
+    {{- range $mgr := $hierarchy -}}
+      {{- if and (eq $resolved_mgr "") (hasKey $pkg $mgr) -}}
+        {{- $resolved_mgr = $mgr -}}
+        {{- $resolved_val = index $pkg $mgr -}}
       {{- end -}}
     {{- end -}}
-    {{- if and $allowed (hasKey $pkg "profiles_allow") -}}
-      {{- if not (has $.profile $pkg.profiles_allow) -}}
-        {{- $allowed = false -}}
-      {{- end -}}
-    {{- end -}}
-    {{- if $allowed -}}
-      {{- $resolved_mgr := "" -}}
-      {{- $resolved_val := "" -}}
-      {{- range $mgr := $hierarchy -}}
-        {{- if and (eq $resolved_mgr "") (hasKey $pkg $mgr) -}}
-          {{- $resolved_mgr = $mgr -}}
-          {{- $resolved_val = index $pkg $mgr -}}
-        {{- end -}}
-      {{- end -}}
-      {{- if eq $resolved_mgr "mise" -}}
-        {{- $parts := splitList "@" $resolved_val -}}
-        {{- $tool := index $parts 0 -}}
-        {{- $version := "latest" -}}
-        {{- if gt (len $parts) 1 -}}
-          {{- $version = index $parts 1 -}}
-        {{- end }}
+    {{- if eq $resolved_mgr "mise" -}}
+      {{- $parts := splitList "@" $resolved_val -}}
+      {{- $tool := index $parts 0 -}}
+      {{- $version := "latest" -}}
+      {{- if gt (len $parts) 1 -}}
+        {{- $version = index $parts 1 -}}
+      {{- end }}
 {{ $tool }} = "{{ $version }}"
-      {{- end -}}
     {{- end -}}
   {{- end -}}
 {{- end }}

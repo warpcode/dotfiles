@@ -1,0 +1,38 @@
+{{- /* Expects: dict "data" .data "profile" .profile "result" .result */ -}}
+{{- if kindIs "map" .data -}}
+  {{- if or (hasKey .data "profiles_allow") (hasKey .data "profiles_deny") -}}
+    {{- /* Leaf node with profile rules */ -}}
+    {{- $check := dict -}}
+    {{- template "profiles/check_leaf.tmpl" (dict "item" .data "profile" .profile "result" $check) -}}
+    {{- if $check.allowed -}}
+      {{- $cleaned := omit .data "profiles_allow" "profiles_deny" -}}
+      {{- $_ := set .result "value" $cleaned -}}
+    {{- else -}}
+      {{- $_ := set .result "value" nil -}}
+    {{- end -}}
+  {{- else -}}
+    {{- /* Standard dictionary/collection without profile rules */ -}}
+    {{- $filtered := dict -}}
+    {{- range $key, $val := .data -}}
+      {{- $subcheck := dict -}}
+      {{- template "profiles/filter.tmpl" (dict "data" $val "profile" $.profile "result" $subcheck) -}}
+      {{- if ne $subcheck.value nil -}}
+        {{- $_ := set $filtered $key $subcheck.value -}}
+      {{- end -}}
+    {{- end -}}
+    {{- $_ := set .result "value" $filtered -}}
+  {{- end -}}
+{{- else if kindIs "slice" .data -}}
+  {{- $filtered := list -}}
+  {{- range $val := .data -}}
+    {{- $subcheck := dict -}}
+    {{- template "profiles/filter.tmpl" (dict "data" $val "profile" $.profile "result" $subcheck) -}}
+    {{- if ne $subcheck.value nil -}}
+      {{- $filtered = append $filtered $subcheck.value -}}
+    {{- end -}}
+  {{- end -}}
+  {{- $_ := set .result "value" $filtered -}}
+{{- else -}}
+  {{- /* Primitive value */ -}}
+  {{- $_ := set .result "value" .data -}}
+{{- end -}}
