@@ -17,7 +17,7 @@
   "provider": {
     {{- $first := true }}
     {{- range $providerName, $provider := .providers }}
-      {{- if eq $provider.type "openai_compat" }}
+      {{- if and (eq $provider.type "openai_compat") (ne $providerName "opencode") }}
         {{- if not $first }},{{- end }}
         {{- $first = false }}
         "{{ $providerName }}": {

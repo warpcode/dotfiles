@@ -85,8 +85,7 @@
             "type": "openai_compat",
             "name": "OpenCode",
             "openai_credentials": {
-                "api_key": "{env:OPENCODE_API_KEY}",
-                "base_url": "https://api.opencode.dev/v1"
+                "base_url": "https://opencode.ai/zen/v1"
             },
             "models": {
                 "opencode_coder_latest": {
@@ -222,6 +221,31 @@
                     "categories": [
                         "researching",
                         "creativity",
+                        "documenter"
+                    ]
+                },
+                "liquid_lfm_2.5_8b_local": {
+                    "model_name": "liquidai_lfm-2.5-8b",
+                    "alias": "Liquid LFM 2.5 8B",
+                    "trust_level": "secure",
+                    "options": {
+                        "temperature": 0.3
+                    },
+                    "configuration": {
+                        "hf-repo": "LiquidAI/LFM2.5-8B-A1B-GGUF:Q4_K_M",
+                        "mmap": true,
+                        "ctx-size": 16000,
+                        "threads": 12,
+                        "cache-type-k": "q4_0",
+                        "cache-type-v": "q4_0",
+                        "jinja": true,
+                        "no-context-shift": true,
+                        "ngl": 0
+                    },
+                    "categories": [
+                        "simple",
+                        "classification",
+                        "reviewing",
                         "documenter"
                     ]
                 }
