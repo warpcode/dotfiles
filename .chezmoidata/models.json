@@ -184,6 +184,25 @@
                         "documenter"
                     ]
                 },
+                "gemma_4_12b_local": {
+                    "model_name": "google_gemma-4-12b-it",
+                    "alias": "Gemma 4 12B",
+                    "trust_level": "secure",
+                    "options": {
+                        "temperature": 0.3
+                    },
+                    "configuration": {
+                        "hf-repo": "bartowski/gemma-4-12B-it-GGUF:Q4_K_M",
+                        "ctx-size": 16000,
+                        "ngl": 0
+                    },
+                    "categories": [
+                        "simple",
+                        "classification",
+                        "reviewing",
+                        "documenter"
+                    ]
+                },
                 "qwen_35b_local": {
                     "model_name": "qwen3.6-35b-moe",
                     "alias": "Qwen 3.6 35B MoE",
