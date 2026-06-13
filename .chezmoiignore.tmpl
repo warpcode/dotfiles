@@ -17,9 +17,29 @@ tmp/
 vendor/
 .pytest_cache/
 
-.local/share/fonts/NerdFonts/DejaVuSansMono/.uuid
+.local/share/fonts/**/*.uuid
+Library/Fonts/**/*.uuid
+.fonts/**/*.uuid
 
 {{- if not .is_default_linux -}}
 .local/share/applications/antigravity-hub.desktop
 .local/share/applications/antigravity-ide.desktop
 {{- end -}}
+
+# Hermes Agent state, caches, databases, and logs
+.hermes/hermes-agent/
+.hermes/logs/
+.hermes/memories/
+.hermes/cron/
+.hermes/bootstrap-cache/
+.hermes/image_cache/
+.hermes/plugins/
+.hermes/**/*.db
+.hermes/**/*.db-*
+.hermes/**/*.json
+.hermes/**/.update_check
+.hermes/**/auth.lock
+.hermes/**/.hermes_history
+.hermes/**/.clean_shutdown
+.hermes/**/.install_method
+.hermes/config.yaml.bak.*

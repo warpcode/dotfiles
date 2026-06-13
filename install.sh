@@ -51,6 +51,7 @@ run_as_root() {
   fi
 }
 
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -257,6 +258,7 @@ main() {
   fi
 
   export PATH="${HOME}/.local/bin:${PATH}"
+
 
   # Apply dotfiles via chezmoi
   info "Applying dotfiles via Chezmoi..."

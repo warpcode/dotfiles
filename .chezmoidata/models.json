@@ -193,7 +193,7 @@
                     },
                     "configuration": {
                         "hf-repo": "bartowski/gemma-4-12B-it-GGUF:Q4_K_M",
-                        "ctx-size": 16000,
+                        "ctx-size": 32000,
                         "ngl": 0
                     },
                     "categories": [
