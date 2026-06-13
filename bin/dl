@@ -5,8 +5,8 @@ SAVETO="$2"
 
 function urldecode() { : "${*//+/ }"; echo -e "${_//%/\\x}"; }
 
-if [ -z "$2"  ]; then
-    SAVETO=$(basename "$(urldecode "$1")")
+if [ -z "$SAVETO"  ]; then
+    SAVETO=$(basename "$(urldecode "$URL")")
 fi
 
-exec wget -O "$SAVETO" -q --show-progress --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 "$1"
+exec wget -O "$SAVETO" -q --show-progress --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -- "$URL"
