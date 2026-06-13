@@ -692,6 +692,13 @@ main() {
   local subcommand="${1:-}"
   [[ -z "${subcommand}" ]] && { _usage >&2; exit 1; }
 
+  # If the second argument ends with .kdbx, this is a proxy call to keepassxc-cli (e.g. from chezmoi)
+  if [[ "${2:-}" == *.kdbx ]]; then
+    local cli
+    cli="$(_kp_cli)" || { err "keepassxc-cli not found"; exit 1; }
+    exec ${=cli} "$@"
+  fi
+
   shift
   case "${subcommand}" in
     cli)           cmd_cli ;;
