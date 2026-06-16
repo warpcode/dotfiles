@@ -183,26 +183,42 @@ curl -s -A "Mozilla/5.0" \
 url="${1:?Usage: clip_page.sh <url>}"
 out_dir="${2:-~/notes/web-clips}"
 
-# Get JSON with all metadata
-json=$(npx defuddle parse "$url")
+# Get JSON with all metadata (-j flag outputs JSON)
+json=$(npx defuddle parse "$url" -j)
 
 title=$(echo "$json" | jq -r '.title // "Untitled"')
-author=$(echo "$json" | jq -r '.author // ""')
-published=$(echo "$json" | jq -r '.published // ""')
-markdown=$(echo "$json" | jq -r '.markdown')
+markdown=$(echo "$json" | jq -r '.markdown // .contentMarkdown // ""')
+created_date=$(date +%Y-%m-%d)
+
+# Build frontmatter using jq
+frontmatter=$(echo "$json" | jq -r --arg created "$created_date" --arg source "$url" '
+  .title as $title |
+  .description as $desc |
+  ((.published | if . then sub("T.*"; "") else null end) // $created) as $published |
+  (if .author == null then []
+   elif (.author | type) == "array" then .author
+   elif (.author | type) == "string" then (.author | split(", ") | map(split(" and ")[]))
+   else [] end) as $authors |
+  "---",
+  "title: \($title | @json)",
+  "source: \($source | @json)",
+  "author:",
+  ($authors | map("  - \"[[\(.)]]\"")[]),
+  "published: \($published)",
+  "created: \($created)",
+  "description: \($desc | @json)",
+  "tags:",
+  "  - \"clippings\"",
+  "---"
+')
 
 # Build safe filename from title
 safe_name=$(echo "$title" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/-\+/-/g' | cut -c1-60)
 out_file="$out_dir/${safe_name}.md"
 
-# Write with YAML frontmatter
+# Write frontmatter and markdown to file
 {
-  echo "---"
-  echo "title: \"${title}\""
-  echo "source: \"${url}\""
-  [[ -n "$author" ]]    && echo "author: \"${author}\""
-  [[ -n "$published" ]] && echo "date: \"${published}\""
-  echo "---"
+  echo "$frontmatter"
   echo ""
   echo "$markdown"
 } > "$out_file"
