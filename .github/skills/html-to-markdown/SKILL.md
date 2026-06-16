@@ -224,13 +224,28 @@ When the output targets an Obsidian vault, apply these additional rules:
 Highlights:    <mark>text</mark>           →  ==text==
 Callouts:      See references/element-mapping.md §Callouts
 Wikilinks:     Do NOT convert — leave [[...]] as-is if already present
-Frontmatter:   Prepend YAML block if metadata is available:
+Frontmatter:   Prepend YAML block if metadata is available. The YAML block must follow this exact format:
                ---
                title: "{{title}}"
                source: "{{url}}"
-               author: "{{author}}"
-               date: "{{published}}"
+               author:
+                 - "[[{{author_1}}]]"
+                 - "[[{{author_2}}]]"
+               published: {{published_date}}
+               created: {{created_date}}
+               description: "{{description}}"
+               tags:
+                 - "clippings"
                ---
+
+               Rules for metadata fields:
+               - **title**: The title of the article, double quoted.
+               - **source**: The URL of the article, double quoted.
+               - **author**: A list of authors formatted as double-quoted Obsidian wikilinks (e.g., `- "[[Rachel Flynn]]"`). Split comma-separated names, "and", or list items into separate list items. If no author is found, omit this field or use `[]`.
+               - **published**: The publication date of the article in `YYYY-MM-DD` format.
+               - **created**: The current date when the note is created in `YYYY-MM-DD` format.
+               - **description**: A concise summary/description of the article, double quoted.
+               - **tags**: A list of tags, containing `- "clippings"` by default.
 ```
 
 ---
