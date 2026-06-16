@@ -1,0 +1,32 @@
+{
+  "agents": [
+    {
+      "name": "sports-club-schedule",
+      "description": "Retrieve and summarise upcoming fixtures, match results, and club event schedules."
+    },
+    {
+      "name": "meal-planner",
+      "description": "Generate weekly meal plans with recipes and produce a consolidated grocery shopping basket for online ordering."
+    },
+    {
+      "name": "home-assistant-helper",
+      "description": "Query and control smart home devices, automations, and dashboards via a Home Assistant instance."
+    },
+    {
+      "name": "bin-roundup-lookup",
+      "description": "Look up upcoming bin collection dates and types for a given address from the local council schedule."
+    },
+    {
+      "name": "news-aggregator",
+      "description": "Aggregate and summarise the latest headlines from multiple news sources into a concise daily briefing."
+    },
+    {
+      "name": "software-alerts",
+      "description": "Monitor software release feeds and security advisories, surfacing critical updates and CVEs for tracked packages."
+    },
+    {
+      "name": "wishlist-tracker",
+      "description": "Track items across wishlists, monitor price changes, and notify when items drop below a target threshold."
+    }
+  ]
+}

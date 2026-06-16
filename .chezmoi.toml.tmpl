@@ -53,8 +53,9 @@
 {{- end -}}
 
 {{- $keepass_installed := false -}}
+{{- $keepass_cli := "" -}}
 {{- if and $keepass_db (stat $keepass_db) -}}
-  {{- $keepass_cli := output "sh" "-c" (printf "%s cli 2>/dev/null || true" (joinPath .chezmoi.sourceDir "bin/df.keepass")) | trim -}}
+  {{- $keepass_cli = output "sh" "-c" (printf "%s cli 2>/dev/null || true" (joinPath .chezmoi.sourceDir "bin/df.keepass")) | trim -}}
   {{- if ne $keepass_cli "" -}}
     {{- $keepass_installed = true -}}
   {{- end -}}
@@ -122,6 +123,7 @@ sourceDir = "{{ .chezmoi.sourceDir }}"
 {{- if $keepass_installed }}
 [keepassxc]
     database = {{ $keepass_db | quote }}
-    command = {{ joinPath .chezmoi.sourceDir "bin/df.keepass" | quote }}
-    args = []
+    {{- $keepass_cli_parts := splitList " " $keepass_cli }}
+    command = {{ first $keepass_cli_parts | quote }}
+    args = {{ rest $keepass_cli_parts | toJson }}
 {{- end }}
