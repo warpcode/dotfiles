@@ -111,6 +111,7 @@ When operating as an autonomous agent in a remote virtual machine (e.g., Jules):
    - **Prevent Infinite Log Growth in Scheduled Services**: macOS launchd services MUST use shell redirection (`>`) in the `ProgramArguments` block to truncate logs on every run; Linux systemd services MUST delegate logging to `journald` via `StandardOutput=journal` instead of writing to static files.
    - **Interactive Zsh Functions Safety**: Interactive Zsh functions (like `dataurl`) must always use `return <status>` instead of `exit` to prevent terminating the active shell session, and must verify file readability using `[ -f "$file" ]` beforehand.
    - **Argument-Based JSON in Zsh**: When passing resolved JSON objects between shell functions or into jq, pass them as parsed arguments (e.g., jq --argjson defaults "$default_json") rather than using process substitutions (<(echo ...)) or raw slurping, preventing zsh compatibility issues and descriptor leaks.
+   - **Subagent Model Routing**: Whenever a subagent is spawned to handle code grepping or file reading, do NOT use the master model. Set `inherit = false` for the subagent context and explicitly enforce the target model as `gemini-3.5-flash`.
 
    ### `correction`
    - **Obsidian Slugification**: Resolved. The regression in PR #40 where slugification was too aggressive was fixed by restoring the legacy ${note_title// /-} logic in `bin/df.obsidian`.

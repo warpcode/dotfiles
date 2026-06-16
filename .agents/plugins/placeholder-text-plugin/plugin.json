@@ -1,0 +1,5 @@
+{
+  "name": "placeholder-text-plugin",
+  "description": "Agent harness for generating and formatting various types of placeholder text (Lorem Ipsum, Cyberpunk, Corporate Jargon, Pirate, Developer, JSON mock data).",
+  "version": "1.0.0"
+}

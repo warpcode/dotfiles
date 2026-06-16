@@ -1,0 +1,5 @@
+{
+  "name": "news-finder-plugin",
+  "description": "Agent plugin specialized in finding the latest world news.",
+  "version": "1.0.0"
+}
