@@ -2,31 +2,6 @@
 
 Source: https://google.github.io/styleguide/shellguide.html
 
-## Table of Contents
-
-1. [Which Shell to Use](#1-which-shell-to-use)
-2. [When to Use Shell](#2-when-to-use-shell)
-3. [File Extensions](#3-file-extensions)
-4. [SUID/SGID](#4-suidsgid)
-5. [STDOUT vs STDERR](#5-stdout-vs-stderr)
-6. [Comments](#6-comments)
-7. [Formatting](#7-formatting)
-8. [ShellCheck](#8-shellcheck)
-9. [Command Substitution](#9-command-substitution)
-10. [Tests](#10-tests)
-11. [Testing Strings](#11-testing-strings)
-12. [Wildcard Expansion](#12-wildcard-expansion)
-13. [Eval](#13-eval)
-14. [Arrays](#14-arrays)
-15. [Pipes to While](#15-pipes-to-while)
-16. [Arithmetic](#16-arithmetic)
-17. [Aliases](#17-aliases)
-18. [Naming Conventions](#18-naming-conventions)
-19. [Local Variables](#19-local-variables)
-20. [Function Location and main](#20-function-location-and-main)
-21. [Checking Return Values](#21-checking-return-values)
-22. [Builtin vs External Commands](#22-builtin-vs-external-commands)
-
 ---
 
 ## 1. Which Shell to Use
