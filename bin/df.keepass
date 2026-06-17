@@ -435,7 +435,17 @@ cmd_search() {
   local cli
   cli="$(_kp_cli)" || return 1
 
-  # Pipe decrypted XML directly to python parser
+  # Call search first to get matching paths
+  local -a matched_paths
+  matched_paths=( ${(f)"$(_exec search "${query}" 2>/dev/null)"} )
+  matched_paths=( ${matched_paths:#} )
+
+  if (( ${#matched_paths[@]} == 0 )); then
+    print -r -- "[]"
+    return 0
+  fi
+
+  # Pipe decrypted XML directly to python parser, passing matched paths as arguments
   printf '%s' "${master}" | "${(@z)cli}" export "${KEEPASS_DB_PATH}" 2>/dev/null | python3 -c '
 import sys, xml.etree.ElementTree as ET, base64, json, uuid, re
 from datetime import datetime, timezone
@@ -444,7 +454,6 @@ from datetime import datetime, timezone
 _NET_EPOCH = 62135596800
 _REF_RE = re.compile(r"^\{REF:([UPTAN])@I:([0-9a-fA-F]{32})\}$")
 _REF_FIELDS = {"U": "UserName", "P": "Password", "T": "Title", "A": "URL", "N": "Notes"}
-_QUERY_RE = re.compile(r"""(-?[a-zA-Z0-9_-]+:(?:"[^"]*"|\S+)|"[^"]*"|\S+)""")
 _RESERVED = {"group", "title", "tags", "uuid", "created", "updated", "attributes", "path", "attachments"}
 
 def _text(el, child_tag):
@@ -482,12 +491,16 @@ def _walk(group, path=()):
                 if k:
                     strings[k] = _text(s, "Value")
             times = ch.find("Times")
+            group_path = "/" + "/".join(path)
+            title = strings.get("Title") or ""
             yield {
                 "uuid": _b64_uuid(_text(ch, "UUID")),
-                "title": strings.get("Title") or "",
-                "group": "/" + "/".join(path),
+                "title": title,
+                "group": group_path,
+                "path": (group_path + "/" + title).replace("//", "/"),
                 "tags": [t.strip() for t in (_text(ch, "Tags") or "").split(",") if t.strip()],
                 "username": strings.get("UserName"),
+                "password": strings.get("Password"),
                 "url": strings.get("URL"),
                 "notes": strings.get("Notes"),
                 "attributes": strings,
@@ -520,46 +533,11 @@ def _resolve(val, by_uuid, seen=None):
     seen.discard(ref_key)
     return result
 
-def _get_field(entry, name):
-    """Return lowercase field value for matching; handles tag/tags specially."""
-    if name in ("tag", "tags"):
-        return None  # handled separately
-    field_map = {"title": "title", "group": "group", "uuid": "uuid",
-                 "username": "username", "user": "username", "url": "url", "notes": "notes"}
-    key = field_map.get(name)
-    return (entry[key] or "").lower() if key else (entry["attributes"].get(name) or "").lower()
-
-def _match(entry, rules):
-    for field, val, negate in rules:
-        if field:
-            if field in ("tag", "tags"):
-                hit = any(val in t.lower() for t in entry["tags"])
-            else:
-                hit = val in _get_field(entry, field)
-        else:
-            hit = (val in entry["title"].lower()
-                   or val in entry["group"].lower()
-                   or val in (entry["username"] or "").lower()
-                   or val in (entry["url"] or "").lower()
-                   or val in (entry["notes"] or "").lower()
-                   or any(val in t.lower() for t in entry["tags"])
-                   or val in (entry["uuid"] or "").lower())
-        if negate == hit:
-            return False
-    return True
-
-def _parse_rules(query):
-    rules = []
-    for term in _QUERY_RE.findall(query):
-        negate = term.startswith("-")
-        if negate:
-            term = term[1:]
-        if ":" in term:
-            field, val = term.split(":", 1)
-            rules.append((field.lower(), val.strip(chr(34)).lower(), negate))
-        else:
-            rules.append((None, term.strip(chr(34)).lower(), negate))
-    return rules
+def normalize_path(p):
+    p = p.strip("/").lower()
+    if p.startswith("root/"):
+        p = p[5:]
+    return p
 
 # --- Main ---
 xml_data = sys.stdin.read()
@@ -581,13 +559,13 @@ for e in entries:
     e["attributes"] = {k: _resolve(v, by_uuid) for k, v in e["attributes"].items()}
 
 # Parse arguments
-query = sys.argv[1] if len(sys.argv) > 1 else "*"
-limit = sys.argv[2] if len(sys.argv) > 2 else ""
-req_attrs = sys.argv[3:]
-rules = _parse_rules(query)
-inc_attach = any(a.lower() == "attachments" for a in req_attrs)
+limit = sys.argv[1] if len(sys.argv) > 1 else ""
+req_attrs_arg = sys.argv[2] if len(sys.argv) > 2 else ""
+req_attrs = [a.lower() for a in req_attrs_arg.split(",")] if req_attrs_arg else []
+search_paths = set(normalize_path(p) for p in sys.argv[3:])
 
-results = [e for e in entries if _match(e, rules)]
+results = [e for e in entries if normalize_path(e["path"]) in search_paths]
+
 if limit:
     try:
         results = results[:int(limit)]
@@ -596,22 +574,25 @@ if limit:
 
 output = []
 for e in results:
-    out = {"uuid": e["uuid"], "title": e["title"],
-           "path": (e["group"] + "/" + e["title"]).replace("//", "/"),
-           "group": e["group"]}
+    out = {
+        "uuid": e["uuid"],
+        "title": e["title"],
+        "path": e["path"],
+        "group": e["group"],
+        "tags": e["tags"],
+        "attributes": list(e["attributes"].keys()),
+        "created": e["created"],
+        "updated": e["updated"]
+    }
     for a in req_attrs:
-        if a.lower() not in _RESERVED:
-            out[a] = next((v for k, v in e["attributes"].items() if k.lower() == a.lower()), None)
-    out["tags"] = e["tags"]
-    out["attributes"] = list(e["attributes"].keys())
-    if inc_attach:
+        if a not in _RESERVED:
+            out[a] = next((v for k, v in e["attributes"].items() if k.lower() == a), None)
+    if "attachments" in req_attrs:
         out["attachments"] = e["attachments"]
-    out["created"] = e["created"]
-    out["updated"] = e["updated"]
     output.append(out)
 
 print(json.dumps(output, indent=2))
-' "${query}" "${limit}" "${attrs[@]}"
+' "${limit}" "${(j:,:)attrs}" "${matched_paths[@]}"
 }
 
 #######################################
