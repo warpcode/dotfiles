@@ -14,18 +14,14 @@ export KEEPASS_DB_PATH="${KEEPASS_DB_PATH:-$HOME/.keepass/Accounts.kdbx}"
 # @return 0 on success, 1 on error
 ##
 kp() {
-    [[ "$1" == "forget" ]] && { df.keepass forget; return 0 }
+    [[ "$1" == "forget" ]] && { df.keepass login forget; return 0 }
     [[ -z "$1" || "$1" == "help" ]] && { df.keepass --help; return 0 }
 
     # Map interactive commands to binary subcommands.
     # We avoid a generic 'exec' for security reasons.
     case "$1" in
-        show|ls|find|find-first|find-title|audit|audit-tag|audit-entry|login|db-path|cli|get|export|attachment)
+        login|db-path|cli|entry|attribute|attachment|search)
             df.keepass "$@"
-            ;;
-        search)
-            # Compatibility alias for find
-            df.keepass find "${@:2}"
             ;;
         *)
             echo "kp: Command '$1' is not supported via this wrapper for security reasons." >&2
@@ -39,7 +35,7 @@ kp() {
 # Clear cached credentials from keychain
 ##
 kp.forget() {
-    df.keepass forget
+    df.keepass login forget
 }
 
 ##
@@ -48,7 +44,7 @@ kp.forget() {
 # @return 0 on success, 1 on failure
 ##
 kp.login() {
-    df.keepass login
+    df.keepass login auth
 }
 
 ##
@@ -64,7 +60,8 @@ kp.find() {
     fi
 
     local results
-    results=$(df.keepass find "$1" 2>/dev/null \
+    results=$(df.keepass search "$1" 2>/dev/null \
+        | jq -r '.[] | "\(.group)/\(.title)"' \
         | awk -F/ -v search="$1" 'tolower($NF) == tolower(search)')
 
     if [[ -z "$results" ]]; then
@@ -82,7 +79,14 @@ kp.find() {
 # @return 0 on success, 1 on error/no results
 ##
 kp.find.title() {
-    df.keepass find-title "$1"
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: kp.find.title <title>" >&2
+        return 1
+    fi
+
+    local results
+    results=$(kp.find "$1" 2>/dev/null) || return 1
+    echo "${results[(f)1]}"
 }
 
 ##
@@ -92,7 +96,11 @@ kp.find.title() {
 # @return 0 on success, 1 on error/no results
 ##
 kp.find.first() {
-    df.keepass find-first "$1"
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: kp.find.first <query>" >&2
+        return 1
+    fi
+    df.keepass search "$1" --limit 1 2>/dev/null | jq -r '.[] | "\(.group)/\(.title)"'
 }
 
 ##
@@ -101,16 +109,10 @@ kp.find.first() {
 if [[ -o interactive ]] && (( $+functions[compdef] )); then
     _kp_completion() {
         local -a commands=(
-            'show:Show an entry (JSON)'
-            'get:Get entry attribute (Raw)'
-            'export:Export entries (JSON)'
+            'attribute:Get entry attribute (Raw)'
             'attachment:Get entry attachment (Raw)'
-            'ls:List entries'
-            'find:Find entry paths'
-            'find-first:First matching path'
-            'find-title:First matching path (exact title)'
-            'login:Verify/prompt for master password'
-            'forget:Clear password from keychain'
+            'search:Search entries (JSON)'
+            'login:Manage database authentication'
             'db-path:Print database path'
         )
         _describe 'keepass command' commands
