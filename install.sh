@@ -126,7 +126,7 @@ ensure_bootstrap_packages() {
       run_as_root pacman -Sy --noconfirm git zsh curl jq
       ;;
     macos)
-      brew install git zsh curl jq || true
+      HOMEBREW_NO_INSTALL_UPGRADE=1 brew install git zsh curl jq || true
       ;;
     termux)
       pkg install -y git zsh curl jq
