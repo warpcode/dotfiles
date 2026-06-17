@@ -29,9 +29,9 @@ explicitly overrides a rule for a specific entry.
 | `proto:` | Connection protocol | `http` `ssh` `mysql` `gui` `console` |
 | `hw:` | Physical hardware target | `laptop` `server` `phone` `tablet` |
 | `org:` | Ownership context | `personal` `work` `family` |
-| `cat:` | Non-technical category | `finance` `media` `software` `ident` |
+| `cat:` | Non-technical category | `finance` `media` `ident` |
 | `loc:` | Physical storage location | `safe` `filing-cabinet` `wallet` |
-| `asset:` | Physical asset type | `card` `vehicle` `wallet` |
+| `asset:` | Physical asset type | `card` `vehicle` `wallet` `software` |
 
 ---
 
@@ -52,7 +52,7 @@ flowchart TD
     STR --> T2["API token / OAuth / Bearer"]
     T2 --> E["type:token + proto:http"]
     STR --> T3["Software licence / serial key"]
-    T3 --> F["type:token + cat:software"]
+    T3 --> F["type:token + asset:software"]
 
     B --> KP["Cryptographic key or certificate\n(SSH, GPG, TLS)"]
     KP --> G["type:keypair\n+ Algorithm custom attribute"]
@@ -102,11 +102,11 @@ Single-string secrets: API tokens, Bearer tokens, OAuth tokens, software licence
 - `env:` — MUST include
 - `org:` — MUST include
 - `proto:http` — MUST include IF the token authenticates to an HTTP/REST API
-- `cat:software` — MUST include IF the token is a static software serial or licence key; use INSTEAD OF `proto:`, not alongside it
-- `hw:`, `asset:` — MUST NOT include
+- `asset:software` — MUST include IF the token is a static software serial or licence key; use INSTEAD OF `proto:`, not alongside it
+- `hw:` — MUST NOT include
 
 **Example (API):** `type:token` `env:cloud` `proto:http` `org:work`  
-**Example (licence):** `type:token` `env:local` `cat:software` `org:personal`
+**Example (licence):** `type:token` `env:local` `asset:software` `org:personal`
 
 ---
 
@@ -202,11 +202,11 @@ Credential delivered as an attached binary or text file (`.lic`, `.pem`, `.pfx`)
 
 - `env:` — MUST include
 - `org:` — MUST include
-- `cat:software` — SHOULD include IF it is a licence file
+- `asset:software` — SHOULD include IF it is a licence file
 - `proto:` — MAY include IF the file is a certificate for a specific protocol
-- `hw:`, `asset:`, `loc:` — MUST NOT include
+- `hw:`, `loc:` — MUST NOT include
 
-**Example (VMware licence file):** `type:file` `env:homelab` `cat:software` `org:personal`
+**Example (VMware licence file):** `type:file` `env:homelab` `asset:software` `org:personal`
 
 ---
 
@@ -217,29 +217,29 @@ Credential delivered as an attached binary or text file (`.lic`, `.pem`, `.pfx`)
 | Type | `env:` | `proto:` | `hw:` | `org:` | `cat:` | `loc:` | `asset:` |
 |------|:------:|:--------:|:-----:|:------:|:------:|:------:|:--------:|
 | `userpass` | MUST | MUST | IF gui/console | MUST | MAY | ✗ | ✗ |
-| `token` | MUST | IF API | ✗ | MUST | IF licence | ✗ | ✗ |
+| `token` | MUST | IF API | ✗ | MUST | ✗ | ✗ | IF software |
 | `keypair` | MUST | MUST | IF server | MUST | ✗ | ✗ | ✗ |
 | `totp` | inherit | inherit | inherit | inherit | inherit | ✗ | ✗ |
 | `passkey` | MUST | MUST (http) | ✗ | MUST | ✗ | ✗ | ✗ |
 | `pin` | IF device | ✗ | IF device | MUST | ✗ | ✗ | IF asset |
 | `recovery` | IF digital | ✗ | MAY | MUST | ✗ | IF physical | IF wallet |
 | `document` | ✗ | ✗ | ✗ | MUST | MAY (ident) | MAY | IF vehicle |
-| `file` | MUST | MAY | ✗ | MUST | MAY (software) | ✗ | ✗ |
+| `file` | MUST | MAY | ✗ | MUST | ✗ | ✗ | MAY (software) |
 
 ---
 
 ## Ambiguity Resolution
 
-### `proto:` vs `cat:` on `type:token`
+### `proto:` vs `asset:` on `type:token`
 
 ```
 IF token is submitted in an HTTP Authorization: Bearer header
     THEN use proto:http
 
 IF token is a static string entered into a licence dialog or activation UI
-    THEN use cat:software
+    THEN use asset:software
 
-MUST NOT use both proto: and cat: simultaneously on type:token
+MUST NOT use both proto: and asset: simultaneously on type:token
 ```
 
 ### `loc:` vs `env:` on `type:recovery`
@@ -274,7 +274,7 @@ IF proto: is http, ssh, or mysql
 |-----------|------|
 | Homelab MySQL login | `type:userpass` `env:homelab` `proto:mysql` `org:personal` |
 | GitHub API token | `type:token` `env:cloud` `proto:http` `org:personal` |
-| VMware licence key (string) | `type:token` `env:local` `cat:software` `org:personal` |
+| VMware licence key (string) | `type:token` `env:local` `asset:software` `org:personal` |
 | SSH key (homelab server) | `type:keypair` `env:homelab` `proto:ssh` `org:personal` |
 | Google account + MFA seed | `type:userpass` `type:totp` `env:cloud` `proto:http` `org:personal` |
 | GitHub passkey | `type:passkey` `env:cloud` `proto:http` `org:personal` |
@@ -285,4 +285,4 @@ IF proto: is http, ssh, or mysql
 | BIP39 seed (physical copy) | `type:recovery` `loc:safe` `asset:wallet` `org:personal` |
 | Passport record | `type:document` `loc:safe` `cat:ident` `org:personal` |
 | National Insurance number | `type:document` `loc:filing-cabinet` `cat:ident` `org:personal` |
-| VMware licence file (.lic) | `type:file` `env:homelab` `cat:software` `org:personal` |
+| VMware licence file (.lic) | `type:file` `env:homelab` `asset:software` `org:personal` |
