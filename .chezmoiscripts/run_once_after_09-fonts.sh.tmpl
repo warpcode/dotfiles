@@ -1,6 +1,7 @@
 #!/bin/bash
 # Rebuild font cache after NerdFonts are deployed via chezmoi externals.
 # Runs only on Linux (non-Termux). macOS font registration is automatic.
+
 {{ template "shell/script_utils.sh.tmpl" . }}
 {{- if and (eq .chezmoi.os "linux") (not .is_termux) }}
 if command -v fc-cache &>/dev/null; then

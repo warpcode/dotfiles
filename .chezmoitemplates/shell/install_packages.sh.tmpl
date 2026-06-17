@@ -122,13 +122,13 @@ fi
 # 2. Brew packages
 if [[ ${#brew_pkgs[@]} -gt 0 ]] && command -v brew >/dev/null 2>&1; then
   info "Installing {{ join " + " $groups }} Homebrew packages..."
-  brew install "${brew_pkgs[@]}"
+  HOMEBREW_NO_INSTALL_UPGRADE=1 brew install -y "${brew_pkgs[@]}"
 fi
 
 # 3. Brew Cask packages
 if [[ ${#brew_cask_pkgs[@]} -gt 0 ]] && command -v brew >/dev/null 2>&1; then
   info "Installing {{ join " + " $groups }} Homebrew casks..."
-  brew install --cask "${brew_cask_pkgs[@]}"
+  HOMEBREW_NO_INSTALL_UPGRADE=1 brew install -y --cask "${brew_cask_pkgs[@]}"
 fi
 
 # 4. Flatpak packages
