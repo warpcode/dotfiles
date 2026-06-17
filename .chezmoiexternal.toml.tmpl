@@ -22,7 +22,7 @@
 
 {{- end }}
 
-{{- if .is_default_linux }}
+{{- if and .is_default_linux (ne .profile "work") }}
 
 # 1. Correctly fetch the metadata using chezmoi's 'output' function with curl
 {{- $hub_json := output "curl" "-fsSL" "https://antigravity-auto-updater-974169037036.us-central1.run.app/releases" }}

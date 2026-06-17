@@ -243,7 +243,7 @@ main() {
   if ! command -v chezmoi >/dev/null; then
     info "Installing chezmoi..."
     if [[ "${OS_NAME}" == "macos" ]]; then
-      brew install chezmoi || true
+      brew install -y chezmoi || true
     else
       mkdir -p "${HOME}/.local/bin"
       local chezmoi_install_script
@@ -260,6 +260,23 @@ main() {
   fi
 
   export PATH="${HOME}/.local/bin:${PATH}"
+
+  # install mise if not already installed
+  if command -v mise >/dev/null 2>&1 || [[ -f "${HOME}/.local/bin/mise" ]]; then
+    success "Mise is already installed, skipping installation."
+  else
+    info "Installing mise..."
+    if [[ "${OS_NAME}" == "macos" ]]; then
+      brew install -y mise || true
+    else
+      mkdir -p "${HOME}/.local/bin"
+      if ! curl -fsSL https://mise.run | sh; then
+        err "Failed to install mise"
+        exit 1
+      fi
+    fi
+    hash -r 2>/dev/null || true
+  fi
 
   # Apply dotfiles via chezmoi
   info "Applying dotfiles via Chezmoi..."
@@ -286,8 +303,7 @@ main() {
     chezmoi_global_args+=(--override-data "${override_data}")
   fi
 
-  chezmoi "${chezmoi_global_args[@]}" init --dry-run --source "${DOTFILES}"
-
+  PAGER=cat chezmoi "${chezmoi_global_args[@]}" init --apply "${DOTFILES}"
   success "Bootstrap complete! Please restart your terminal or run 'exec zsh'."
 }
 

@@ -1,5 +1,6 @@
 #!/bin/bash
 # Update desktop database
+
 {{ template "shell/script_utils.sh.tmpl" . }}
 
 {{ if and (eq .chezmoi.os "linux") (not .is_termux) -}}
