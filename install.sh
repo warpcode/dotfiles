@@ -126,7 +126,7 @@ ensure_bootstrap_packages() {
       run_as_root pacman -Sy --noconfirm git zsh curl jq
       ;;
     macos)
-      HOMEBREW_NO_INSTALL_UPGRADE=1 brew install git zsh curl jq || true
+      HOMEBREW_NO_INSTALL_UPGRADE=1 brew install git zsh curl jq chezmoi || true
       ;;
     termux)
       pkg install -y git zsh curl jq
@@ -240,9 +240,9 @@ main() {
       git config --global --add safe.directory "${DOTFILES}"
     fi
   fi
-
+  
   # Install/bootstrap chezmoi
-  if ! command -v chezmoi >/dev/null && [ ! -f "${HOME}/.local/bin/chezmoi" ]; then
+  if [[ "${OS_NAME}" != "macos" ]] && ! command -v chezmoi >/dev/null && [ ! -f "${HOME}/.local/bin/chezmoi" ]; then
     info "Installing chezmoi..."
     mkdir -p "${HOME}/.local/bin"
     local chezmoi_install_script
