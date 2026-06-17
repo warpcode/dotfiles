@@ -303,7 +303,7 @@ main() {
     chezmoi_global_args+=(--override-data "${override_data}")
   fi
 
-  PAGER=cat chezmoi "${chezmoi_global_args[@]}" init --apply "${DOTFILES}"
+  PAGER=cat chezmoi "${chezmoi_global_args[@]}" init --apply --source "${DOTFILES}"
   success "Bootstrap complete! Please restart your terminal or run 'exec zsh'."
 }
 
