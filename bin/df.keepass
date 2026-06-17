@@ -126,7 +126,7 @@ _del_master() {
 #   0 on success, 1 on failure.
 #######################################
 _require_master() {
-  cmd_login || return 1
+  _login_auth || return 1
   _get_master
 }
 
@@ -144,11 +144,11 @@ cmd_cli() {
 }
 
 #######################################
-# Verify or prompt for master password, then cache it.
+# Verify or prompt for master password, then cache it (Internal).
 # Returns:
 #   0 on success, 1 on failure.
 #######################################
-cmd_login() {
+_login_auth() {
   [[ -n "${_MASTER_CACHE}" ]] && return 0
 
   _verify_db || return 1
@@ -182,6 +182,48 @@ cmd_login() {
 }
 
 #######################################
+# Handle login subcommands (status, auth, forget).
+# Arguments:
+#   $1 - Subcommand name.
+# Returns:
+#   0 on success, 1 on failure.
+#######################################
+cmd_login() {
+  local sub="${1:-}"
+  case "${sub}" in
+    status)
+      local master
+      master="$(_get_master)"
+      if [[ -z "${master}" ]]; then
+        print -r -- "Logged out"
+        return 1
+      fi
+      local cli
+      cli="$(_kp_cli)" || return 1
+      if printf '%s' "${master}" | "${(@z)cli}" db-info "${KEEPASS_DB_PATH}" >/dev/null 2>&1; then
+        print -r -- "Logged in"
+        return 0
+      fi
+      print -r -- "Logged out"
+      return 1
+      ;;
+    auth)
+      _login_auth
+      ;;
+    forget)
+      cmd_forget
+      ;;
+    *)
+      if [[ -n "${sub}" ]]; then
+        err "Unknown login command: ${sub}"
+      fi
+      print -r -- "Usage: df.keepass login [status|auth|forget]" >&2
+      return 1
+      ;;
+  esac
+}
+
+#######################################
 # Execute an arbitrary keepassxc-cli command internally.
 # The master password is piped via stdin and the DB path is
 # inserted automatically.
@@ -205,20 +247,25 @@ _exec() {
 # Arguments:
 #   $1 - Search query or path.
 #   $2 - Attribute name.
+#######################################
+# Get a single attribute for the first matching entry (Raw Output).
+# Arguments:
+#   $1 - Search query or path.
+#   $2 - Attribute name.
 # Outputs:
 #   Raw string value to stdout.
 #######################################
-cmd_get() {
+cmd_attribute() {
   local query="${1:-}"
   local attr="${2:-}"
 
   if [[ -z "${query}" || -z "${attr}" ]]; then
-    err "Usage: df.keepass get <query> <attribute>"
+    err "Usage: df.keepass attribute <query> <attribute>"
     return 1
   fi
 
   local kp_path
-  kp_path=$(cmd_find_first "${query}" 2>/dev/null) || {
+  kp_path=$(_entries --limit 1 "${query}" 2>/dev/null) || {
     err "No entry found for query: ${query}"
     return 1
   }
@@ -228,191 +275,7 @@ cmd_get() {
   print -nr -- "${val}"
 }
 
-#######################################
-# Get multiple attributes for the first matching entry (JSON Object).
-# Arguments:
-#   $1 - Search query or path.
-#   $@ - Attribute names.
-# Outputs:
-#   JSON object to stdout.
-#######################################
-cmd_show() {
-  local query="${1:-}"
-  shift
-  local -a attrs=("$@")
 
-  if [[ -z "${query}" || ${#attrs[@]} -eq 0 ]]; then
-    err "Usage: df.keepass show <query> <attr1> [attr2...]"
-    return 1
-  fi
-
-  local kp_path
-  kp_path=$(cmd_find_first "${query}" 2>/dev/null) || {
-    err "No entry found for query: ${query}"
-    return 1
-  }
-
-  local entry_details
-  entry_details=$(_exec show "${kp_path}" --show-attachments 2>/dev/null) || {
-    err "Failed to retrieve entry details for: ${kp_path}"
-    return 1
-  }
-
-  local -A result
-  local attr val
-  for attr in "${attrs[@]}"; do
-    val=$(print -r -- "${entry_details}" | awk -F': ' -v a="${attr}" 'tolower($1) == tolower(a) {print substr($0, length($1)+3); exit}')
-    [[ -z "${val}" ]] && val="__ABSENT__"
-    result[${attr}]="${val}"
-  done
-
-  # Fetch attachments from output
-  local attachments_raw
-  attachments_raw=$(print -r -- "${entry_details}" | awk '/^Attachments:/ {flag=1; next} /^[A-Za-z]/ {flag=0} flag {print}')
-  local -a attachments
-  attachments=( ${(f)"$(print -r -- "${attachments_raw}" | sed -E 's/^[[:space:]]*-?[[:space:]]*//; s/[[:space:]]*\([^)]*\)[[:space:]]*$//')"} )
-  attachments=( ${attachments:#} ) # remove empty elements
-
-  # Construct JSON object
-  local json="{"
-  local first=1
-  for attr in "${attrs[@]}"; do
-    [[ "${first}" -eq 0 ]] && json+=", "
-    val="${result[${attr}]}"
-    if [[ "${val}" == "__ABSENT__" ]]; then
-       json+="\"${attr}\": null"
-    else
-       json+="\"${attr}\": $(jq -n --arg v "${val}" '$v')"
-    fi
-    first=0
-  done
-
-  # Add attachments
-  json+=", \"attachments\": ["
-  first=1
-  local att
-  for att in "${attachments[@]}"; do
-    [[ "${first}" -eq 0 ]] && json+=", "
-    json+="$(jq -n --arg v "${att}" '$v')"
-    first=0
-  done
-  json+="]}"
-
-  print -r -- "${json}"
-}
-
-#######################################
-# Export all matching entries (JSON Array).
-# Arguments:
-#   $1 - Search query.
-#   $@ - Attribute names.
-# Outputs:
-#   JSON array to stdout.
-#######################################
-cmd_export() {
-  local query="${1:-}"
-  shift
-  local -a attrs=("$@")
-
-  if [[ -z "${query}" || ${#attrs[@]} -eq 0 ]]; then
-    err "Usage: df.keepass export <query> <attr1> [attr2...]"
-    return 1
-  fi
-
-  local -a entries=( ${(f)"$(cmd_find "${query}" 2>/dev/null)"} )
-  if [[ ${#entries[@]} -eq 0 ]]; then
-    print -r -- "[]"
-    return 0
-  fi
-
-  local master
-  master="$(_require_master)" || return 1
-  local cli
-  cli="$(_kp_cli)" || return 1
-  local db="${KEEPASS_DB_PATH}"
-
-  local tmpdir
-  tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/df.keepass.XXXXXX")
-  chmod 700 "${tmpdir}"
-
-  autoload -Uz zargs
-
-  # Internal worker for parallel retrieval
-  _export_worker() {
-    local entry_path="$1"
-    local entry_idx="$2"
-    local -A entry_data
-    local attr val
-
-    local entry_details
-    entry_details=$(printf '%s' "${master}" | "${(@z)cli}" show "${db}" "${entry_path}" --show-attachments -q 2>/dev/null) || return 1
-
-    for attr in "${attrs[@]}"; do
-      val=$(print -r -- "${entry_details}" | awk -F': ' -v a="${attr}" 'tolower($1) == tolower(a) {print substr($0, length($1)+3); exit}')
-      [[ -z "${val}" ]] && val="__ABSENT__"
-      entry_data[${attr}]="${val}"
-    done
-
-    # Fetch attachments metadata
-    local attachments_raw
-    attachments_raw=$(print -r -- "${entry_details}" | awk '/^Attachments:/ {flag=1; next} /^[A-Za-z]/ {flag=0} flag {print}')
-    local -a attachments
-    attachments=( ${(f)"$(print -r -- "${attachments_raw}" | sed -E 's/^[[:space:]]*-?[[:space:]]*//; s/[[:space:]]*\([^)]*\)[[:space:]]*$//')"} )
-    attachments=( ${attachments:#} )
-
-    # Output JSON fragment for this entry
-    local json="{"
-    json+="\"_path\": $(jq -n --arg v "${entry_path}" '$v'), "
-    local first=1
-    for attr in "${attrs[@]}"; do
-      [[ "${first}" -eq 0 ]] && json+=", "
-      val="${entry_data[${attr}]}"
-      if [[ "${val}" == "__ABSENT__" ]]; then
-         json+="\"${attr}\": null"
-      else
-         json+="\"${attr}\": $(jq -n --arg v "${val}" '$v')"
-      fi
-      first=0
-    done
-
-    # Add attachments
-    json+=", \"attachments\": ["
-    first=1
-    local att
-    for att in "${attachments[@]}"; do
-      [[ "${first}" -eq 0 ]] && json+=", "
-      json+="$(jq -n --arg v "${att}" '$v')"
-      first=0
-    done
-    json+="]}"
-
-    print -r -- "${json}" > "${tmpdir}/${entry_idx}.json"
-  }
-
-  {
-    # Prepare indexed entries for zargs
-    local -a indexed_entries=()
-    local i
-    for (( i=1; i<=${#entries[@]}; i++ )); do
-      indexed_entries+=("${entries[$i]}" "${i}")
-    done
-
-    # Run workers in parallel
-    zargs -n 2 -P 8 -- "${indexed_entries[@]}" -- _export_worker
-
-    # Assemble final JSON array
-    print -n -- "["
-    local first=1
-    for (( i=1; i<=${#entries[@]}; i++ )); do
-      [[ "${first}" -eq 0 ]] && print -n -- ", "
-      [[ -f "${tmpdir}/${i}.json" ]] && cat "${tmpdir}/${i}.json"
-      first=0
-    done
-    print -- "]"
-  } always {
-    rm -rf "${tmpdir}"
-  }
-}
 
 #######################################
 # Extract an attachment for the first matching entry (Raw Output).
@@ -432,7 +295,7 @@ cmd_attachment() {
   fi
 
   local kp_path
-  kp_path=$(cmd_find_first "${query}" 2>/dev/null) || {
+  kp_path=$(_entries --limit 1 "${query}" 2>/dev/null) || {
     err "No entry found for query: ${query}"
     return 1
   }
@@ -449,202 +312,59 @@ cmd_attachment() {
 }
 
 #######################################
-# List entries.
+# List entries matching a query (Internal).
 # Arguments:
-#   $@ - Optional path and flags forwarded to keepassxc-cli ls.
-#######################################
-cmd_ls() {
-  _exec ls "$@"
-}
-
-#######################################
-# Find entries matching a query.
-# Arguments:
-#   $1 - Search query.
+#   --limit <num> - Optional limit of entries to return.
+#   $1 - Optional search query (default: *).
 # Outputs:
 #   Newline-separated matching entry paths.
 #######################################
-cmd_find() {
-  [[ -z "${1:-}" ]] && { err "Usage: df.keepass find <query>"; return 1; }
-  _exec search "$1"
-}
+_entries() {
+  local limit=""
+  local -a query_args=()
 
-#######################################
-# Find the first entry matching a query.
-# Arguments:
-#   $1 - Search query.
-# Outputs:
-#   First matching entry path to stdout.
-#######################################
-cmd_find_first() {
-  [[ -z "${1:-}" ]] && { err "Usage: df.keepass find-first <query>"; return 1; }
-  local -a results=( ${(f)"$(cmd_find "$1" 2>/dev/null)"} )
-  (( ${#results[@]} > 0 )) && print -r -- "${results[1]}" && return 0
-  return 1
-}
-
-#######################################
-# Find the first entry with an exact tail (title) match.
-# Arguments:
-#   $1 - Search title.
-# Outputs:
-#   First matching entry path to stdout.
-#######################################
-cmd_find_title() {
-  setopt LOCAL_OPTIONS EXTENDED_GLOB
-
-  [[ -z "${1:-}" ]] && { err "Usage: df.keepass find-title <title>"; return 1; }
-  local title="$1"
-
-  local -a results=( ${(f)"$(cmd_find "${title}" 2>/dev/null)"} )
-  results=( ${(M)results:#(#i)(*/"${title}"|"${title}")} )
-
-  (( ${#results[@]} == 0 )) && { err "No exact matches for title '${title}'"; return 1; }
-
-  print -r -- "${results[1]}"
-}
-
-#######################################
-# Extract required fields for a given tag from its template.
-# Arguments:
-#   $1 - Tag.
-# Outputs:
-#   Newline-separated list of required fields.
-#######################################
-_get_tag_fields() {
-  local tag="${1}"
-  local safe_tag="${tag//\"/\\\"}"
-  local tpl_q="\"${safe_tag}\" title:\"[Template] \""
-
-  local -a template_entries=( ${(f)"$(cmd_find "Tags:${tpl_q}" 2>/dev/null)"} )
-
-  (( ${#template_entries[@]} != 1 )) && return 0
-
-  local req_val
-  req_val="$(_exec show "${template_entries[1]}" -a "required_fields" 2>/dev/null)" || true
-  
-  local -a req_fields=( ${(M)${(f)req_val}:#*[^[:space:]]*} )
-  (( ${#req_fields[@]} == 0 )) && return 0
-
-  print -l -- "${req_fields[@]}"
-}
-
-#######################################
-# Check an entry for missing required fields.
-# Arguments:
-#   $1 - Entry path.
-#   $@ - Required fields.
-# Outputs:
-#   Comma-separated list of missing fields, or empty if none.
-# Returns:
-#   0 if all fields present, 1 if any missing.
-#######################################
-_check_entry_fields() {
-  local entry="${1}"
-  shift
-  local -a fields=( "$@" )
-  local -a missing=()
-  local f
-
-  # KeePassXC disables regex matching on protected fields to prevent leaks, so we fetch fields individually instead of bulk searching
-  for f in "${fields[@]}"; do
-    # Pipe directly into grep so the plaintext secret never enters a variable, eliminating any risk of shell leaks
-    _exec show "${entry}" -a "${f}" 2>/dev/null | grep -q '[^[:space:]]' || missing+=("${f}")
+  while (( $# > 0 )); do
+    case "$1" in
+      --limit)
+        if [[ -z "${2:-}" || "${2}" == -* ]]; then
+          err "Option --limit requires an argument"
+          return 1
+        fi
+        limit="$2"
+        shift 2
+        ;;
+      --limit=*)
+        limit="${1#*=}"
+        shift
+        ;;
+      *)
+        query_args+=("$1")
+        shift
+        ;;
+    esac
   done
 
-  if (( ${#missing[@]} > 0 )); then
-    print -r -- "${(j:, :)missing}"
+  local query="${query_args[1]:-*}"
+  local -a results
+  results=( ${(f)"$(_exec search "${query}")"} )
+  results=( ${results:#} )
+
+  if (( ${#results[@]} == 0 )); then
     return 1
   fi
-  return 0
-}
 
-#######################################
-# Audit entries by tag for required fields.
-# Arguments:
-#   $1 - Tag to filter by (e.g., type:credit-card).
-#   $@ - List of required fields.
-#######################################
-cmd_audit_tag() {
-  # Disable xtrace locally to prevent shell debugging from leaking secrets
-  setopt LOCAL_OPTIONS NO_XTRACE
-
-  [[ -z "${1:-}" ]] && { err "Usage: df.keepass audit-tag <tag> [field1] [field2...]"; return 1; }
-  
-  local tag="${1}"
-  shift
-  local -a fields=( "$@" ${(f)"$(_get_tag_fields "${tag}")"} )
-  fields=( ${(u)fields:#} )
-
-  (( ${#fields[@]} == 0 )) && { err "No fields provided via CLI and no 'required_fields' attribute found on the template."; return 1; }
-
-  local safe_tag="${tag//\"/\\\"}"
-  local all_q="\"${safe_tag}\" -t:\"[Template] \""
-  local -a all_entries=( ${(f)"$(cmd_find "Tags:${all_q}" 2>/dev/null)"} )
-
-  (( ${#all_entries[@]} == 0 )) && { print -r -- "Audit passed for tag '${tag}'. No entries found." >&2; return 0; }
-
-  # Automatically load zargs from Zsh core
-  autoload -Uz zargs
-
-  # Define a local worker function that inherits our scope natively
-  _audit_worker() {
-    local missing_str
-    missing_str="$(_check_entry_fields "$1" "${fields[@]}")" || {
-      err "  - ${1:t} ($1): missing [${missing_str}]"
+  if [[ -n "${limit}" ]]; then
+    if [[ ! "${limit}" =~ ^[0-9]+$ ]]; then
+      err "Invalid limit: ${limit}"
       return 1
-    }
-  }
+    fi
+    results=( "${results[@]:0:${limit}}" )
+  fi
 
-  # -P 8 runs 8 concurrently. -n 1 passes 1 entry per worker.
-  # Returns non-zero (usually 123) if ANY worker fails.
-  zargs -n 1 -P 8 -- "${all_entries[@]}" -- _audit_worker || {
-    err "Audit failed for tag '${tag}'."
-    return 1
-  }
-
-  print -r -- "Audit passed for tag '${tag}'. All entries have required fields: ${fields[*]}" >&2
-  return 0
+  print -l -- "${results[@]}"
 }
 
-#######################################
-# Audit a specific entry based on its tags.
-# Arguments:
-#   $1 - Entry path.
-#   $@ - Additional required fields.
-#######################################
-cmd_audit_entry() {
-  # Disable xtrace locally to prevent shell debugging from leaking secrets
-  setopt LOCAL_OPTIONS NO_XTRACE EXTENDED_GLOB
 
-  [[ -z "${1:-}" ]] && { err "Usage: df.keepass audit-entry <entry-path> [field1] [field2...]"; return 1; }
-  
-  local entry="${1}"
-  shift
-  local -a fields=( "$@" )
-
-  # Fetch, split by comma, and trim tags in-place
-  local -a tags=( ${(s:,:)"$(_exec show "${entry}" -a "Tags" 2>/dev/null)"} )
-  tags=( ${${tags##[[:space:]]#}%%[[:space:]]#} )
-
-  local t reqs
-  for t in ${tags:#}; do
-    reqs="$(_get_tag_fields "${t}")"
-    [[ -n "${reqs}" ]] && fields+=( ${(f)reqs} )
-  done
-  fields=( ${(u)fields} )
-
-  (( ${#fields[@]} == 0 )) && { err "No required fields found via CLI or associated tags for entry '${entry}'."; return 1; }
-
-  local missing_str
-  missing_str="$(_check_entry_fields "${entry}" "${fields[@]}")" || {
-    err "Audit failed for entry '${entry:t}' (${entry}): missing [${missing_str}]"
-    return 1
-  }
-
-  print -r -- "Audit passed for entry '${entry:t}'. Has required fields: ${fields[*]}" >&2
-  return 0
-}
 
 #######################################
 # Clear cached master password from keychain.
@@ -662,6 +382,308 @@ cmd_db_path() {
 }
 
 #######################################
+# Search database entries and output JSON.
+# Arguments:
+#   [query] - Optional query string.
+#   --limit <n> - Limit number of results.
+#   -a/--attr <attr> - Additional attributes to return.
+# Outputs:
+#   JSON array of matching entries.
+#######################################
+cmd_search() {
+  local limit=""
+  local -a attrs=()
+  local -a query_args=()
+
+  while (( $# > 0 )); do
+    case "$1" in
+      --limit)
+        if [[ -z "${2:-}" || "${2}" == -* ]]; then
+          err "Option --limit requires an argument"
+          return 1
+        fi
+        limit="$2"
+        shift 2
+        ;;
+      --limit=*)
+        limit="${1#*=}"
+        shift
+        ;;
+      -a|--attr)
+        if [[ -z "${2:-}" || "${2}" == -* ]]; then
+          err "Option $1 requires an argument"
+          return 1
+        fi
+        attrs+=("$2")
+        shift 2
+        ;;
+      --attr=*)
+        attrs+=("${1#*=}")
+        shift
+        ;;
+      *)
+        query_args+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  local query="${(j: :)query_args:-*}"
+  
+  local master
+  master="$(_require_master)" || return 1
+  local cli
+  cli="$(_kp_cli)" || return 1
+
+  # Pipe decrypted XML directly to python parser
+  printf '%s' "${master}" | "${(@z)cli}" export "${KEEPASS_DB_PATH}" 2>/dev/null | python3 -c '
+import sys
+import xml.etree.ElementTree as ET
+import base64
+import datetime
+import json
+import uuid
+import re
+
+def parse_keepass_time(b64_str):
+    if not b64_str:
+        return None
+    try:
+        val = int.from_bytes(base64.b64decode(b64_str), byteorder="little")
+        unix_ts = val - 62135596800
+        return datetime.datetime.fromtimestamp(unix_ts, datetime.timezone.utc).isoformat().replace("+00:00", "Z")
+    except Exception:
+        return None
+
+def parse_uuid(b64_str):
+    if not b64_str:
+        return None
+    try:
+        b = base64.b64decode(b64_str)
+        return f"{{{uuid.UUID(bytes=b)}}}"
+    except Exception:
+        return None
+
+def walk_entries(group, current_path):
+    name_el = group.find("Name")
+    group_name = name_el.text or "" if name_el is not None else ""
+    path_segments = list(current_path)
+    if group_name and group_name != "Root":
+        path_segments.append(group_name)
+    
+    for child in group:
+        if child.tag == "Group":
+            yield from walk_entries(child, path_segments)
+        elif child.tag == "Entry":
+            entry_data = {}
+            uuid_el = child.find("UUID")
+            tags_el = child.find("Tags")
+            times_el = child.find("Times")
+            
+            entry_data["uuid"] = parse_uuid(uuid_el.text) if uuid_el is not None else None
+            tags_str = tags_el.text if tags_el is not None and tags_el.text else ""
+            entry_data["tags"] = [t.strip() for t in tags_str.split(",") if t.strip()] if tags_str else []
+            
+            if times_el is not None:
+                cr = times_el.find("CreationTime")
+                lm = times_el.find("LastModificationTime")
+                entry_data["created"] = parse_keepass_time(cr.text) if cr is not None else None
+                entry_data["updated"] = parse_keepass_time(lm.text) if lm is not None else None
+            else:
+                entry_data["created"] = None
+                entry_data["updated"] = None
+                
+            entry_data["group"] = "/" + "/".join(path_segments)
+            
+            strings = {}
+            for s in child.findall("String"):
+                k_el = s.find("Key")
+                v_el = s.find("Value")
+                if k_el is not None and k_el.text:
+                    strings[k_el.text] = v_el.text if v_el is not None else None
+            
+            entry_data["title"] = strings.get("Title") or ""
+            entry_data["username"] = strings.get("UserName")
+            entry_data["url"] = strings.get("URL")
+            entry_data["notes"] = strings.get("Notes")
+            entry_data["attributes"] = strings
+            
+            attachments = []
+            for b in child.findall("Binary"):
+                key_el = b.find("Key")
+                if key_el is not None and key_el.text:
+                    attachments.append(key_el.text)
+            entry_data["attachments"] = attachments
+            
+            yield entry_data
+
+xml_data = sys.stdin.read()
+if not xml_data.strip():
+    sys.exit(0)
+try:
+    root = ET.fromstring(xml_data)
+except Exception as e:
+    sys.stderr.write(f"Error parsing XML: {e}\n")
+    sys.exit(1)
+
+root_group = root.find(".//Group")
+all_entries = list(walk_entries(root_group, []))
+
+# Build lookup table
+entries_by_uuid = {e["uuid"]: e for e in all_entries if e["uuid"]}
+
+# Ref resolver
+ref_pattern = re.compile(r"^\{REF:([UPTAN])@I:([0-9a-fA-F]{32})\}$")
+
+def resolve_value(val, resolving=None):
+    if not val or not isinstance(val, str):
+        return val
+    m = ref_pattern.match(val)
+    if not m:
+        return val
+    field_id, target_uuid_hex = m.groups()
+    try:
+        u_obj = uuid.UUID(hex=target_uuid_hex)
+        u_str = f"{{{u_obj}}}"
+    except Exception:
+        return val
+    if u_str not in entries_by_uuid:
+        return val
+    target_entry = entries_by_uuid[u_str]
+    if resolving is None:
+        resolving = set()
+    ref_key = (u_str, field_id)
+    if ref_key in resolving:
+        return ""
+    resolving.add(ref_key)
+    field_map = {
+        "U": "UserName",
+        "P": "Password",
+        "T": "Title",
+        "A": "URL",
+        "N": "Notes"
+    }
+    target_field = field_map.get(field_id)
+    if not target_field:
+        return val
+    raw_val = target_entry["attributes"].get(target_field)
+    resolved = resolve_value(raw_val, resolving)
+    resolving.remove(ref_key)
+    return resolved
+
+# Resolve references in-place
+for e in all_entries:
+    e["username"] = resolve_value(e["username"])
+    e["url"] = resolve_value(e["url"])
+    e["notes"] = resolve_value(e["notes"])
+    for k, v in list(e["attributes"].items()):
+        e["attributes"][k] = resolve_value(v)
+
+query_str = sys.argv[1] if len(sys.argv) > 1 else "*"
+limit_str = sys.argv[2] if len(sys.argv) > 2 else ""
+requested_attrs = sys.argv[3:] if len(sys.argv) > 3 else []
+
+pattern = re.compile(r"(-?[a-zA-Z0-9_-]+:(?:\"[^\"]*\"|\S+)|\"[^\"]*\"|\S+)")
+terms = pattern.findall(query_str)
+rules = []
+for term in terms:
+    negate = False
+    if term.startswith("-"):
+        negate = True
+        term = term[1:]
+    if ":" in term:
+        field, val = term.split(":", 1)
+        if val.startswith("\"") and val.endswith("\""):
+            val = val[1:-1]
+        rules.append({"field": field.lower(), "val": val.lower(), "negate": negate})
+    else:
+        val = term
+        if val.startswith("\"") and val.endswith("\""):
+            val = val[1:-1]
+        rules.append({"field": None, "val": val.lower(), "negate": negate})
+
+def match_entry(entry, rules):
+    if not rules:
+        return True
+    for rule in rules:
+        field = rule["field"]
+        val = rule["val"]
+        negate = rule["negate"]
+        matched = False
+        if field:
+            if field in ["tag", "tags"]:
+                matched = any(val in t.lower() for t in entry["tags"])
+            elif field == "title":
+                matched = val in entry["title"].lower()
+            elif field == "group":
+                matched = val in entry["group"].lower()
+            elif field in ["username", "user"]:
+                matched = val in (entry["username"] or "").lower()
+            elif field == "url":
+                matched = val in (entry["url"] or "").lower()
+            elif field == "notes":
+                matched = val in (entry["notes"] or "").lower()
+            elif field == "uuid":
+                matched = val in (entry["uuid"] or "").lower()
+            else:
+                matched = val in (entry["attributes"].get(rule["field"]) or "").lower()
+        else:
+            matched = (
+                val in entry["title"].lower() or
+                val in entry["group"].lower() or
+                val in (entry["username"] or "").lower() or
+                val in (entry["url"] or "").lower() or
+                val in (entry["notes"] or "").lower() or
+                any(val in t.lower() for t in entry["tags"]) or
+                val in (entry["uuid"] or "").lower()
+            )
+        if negate:
+            if matched: return False
+        else:
+            if not matched: return False
+    return True
+
+matched_entries = [e for e in all_entries if match_entry(e, rules)]
+if limit_str:
+    try:
+        matched_entries = matched_entries[:int(limit_str)]
+    except ValueError:
+        pass
+
+output_list = []
+for entry in matched_entries:
+    out = {}
+    out["uuid"] = entry["uuid"]
+    out["title"] = entry["title"]
+    out["path"] = (entry["group"] + "/" + entry["title"]).replace("//", "/")
+    out["group"] = entry["group"]
+
+    for req in requested_attrs:
+        req_lower = req.lower()
+        if req_lower in ["group", "title", "tags", "uuid", "created", "updated", "attributes", "path", "attachments"]:
+            continue
+        val = None
+        for k, v in entry["attributes"].items():
+            if k.lower() == req_lower:
+                val = v
+                break
+        out[req] = val
+
+    out["tags"] = entry["tags"]
+    out["attributes"] = list(entry["attributes"].keys())
+
+    if any(r.lower() == "attachments" for r in requested_attrs):
+        out["attachments"] = entry["attachments"]
+
+    out["created"] = entry["created"]
+    out["updated"] = entry["updated"]
+    output_list.append(out)
+
+print(json.dumps(output_list, indent=2))
+' "${query}" "${limit}" "${attrs[@]}"
+}
+
+#######################################
 # Print usage.
 #######################################
 _usage() {
@@ -669,18 +691,10 @@ _usage() {
   print -r -- ""
   print -r -- "Commands:"
   print -r -- "  cli                       Print resolved keepassxc-cli command"
-  print -r -- "  get <query> <attr>        Get raw attribute value (first match)"
-  print -r -- "  show <query> <attrs...>   Show entry attributes as JSON (first match)"
-  print -r -- "  export <query> <attrs...> Export all matching entries as JSON array"
+  print -r -- "  attribute <query> <attr>  Get raw attribute value (first match)"
   print -r -- "  attachment <q> <file>     Get raw attachment content (first match)"
-  print -r -- "  ls [path]                 List entries"
-  print -r -- "  find <query>              Find entry paths"
-  print -r -- "  find-first <query>        First matching path"
-  print -r -- "  find-title <title>        First matching path (exact title)"
-  print -r -- "  audit-tag <tag> <flds...> Audit entries by tag for req fields"
-  print -r -- "  audit-entry <path> <flds> Audit a specific entry based on tags"
-  print -r -- "  login                     Verify/prompt for master password"
-  print -r -- "  forget                    Clear cached master password"
+  print -r -- "  search [q] [--limit n] [-a attr]... Search entries and return JSON"
+  print -r -- "  login [status|auth|forget] Manage database authentication status"
   print -r -- "  db-path                   Print database path"
 }
 
@@ -701,20 +715,12 @@ main() {
 
   shift
   case "${subcommand}" in
-    cli)           cmd_cli ;;
-    get)           cmd_get "$@" ;;
-    show)          cmd_show "$@" ;;
-    export)        cmd_export "$@" ;;
-    attachment)    cmd_attachment "$@" ;;
-    ls)            cmd_ls "$@" ;;
-    find)          cmd_find "$@" ;;
-    find-first)    cmd_find_first "$@" ;;
-    find-title)    cmd_find_title "$@" ;;
-    audit|audit-tag) cmd_audit_tag "$@" ;;
-    audit-entry)   cmd_audit_entry "$@" ;;
-    login)         cmd_login ;;
-    forget)        cmd_forget ;;
     db-path)       cmd_db_path ;;
+    cli)           cmd_cli ;;
+    login)         cmd_login "$@" ;;
+    attachment)    cmd_attachment "$@" ;;
+    attribute|entry) cmd_attribute "$@" ;;
+    search)        cmd_search "$@" ;;
     -h|--help)     _usage ;;
     *)             err "Unknown command: ${subcommand}"; _usage >&2; exit 1 ;;
   esac
