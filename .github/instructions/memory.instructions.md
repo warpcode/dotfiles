@@ -28,7 +28,7 @@ These instructions capture persistent memories, behavioral guardrails, and techn
 ## 🛠️ Technical Context & Preferences
 
 - **Source of Truth Hierarchy**: `AGENTS.md` is the authoritative source for stable, graduated rules and conventions. `memory.instructions.md` acts as a volatile extension for recent, maturing facts. When a memory matures, it should be promoted to `AGENTS.md` or a dedicated skill.
-- **Memory Tiers**: Memory is strictly split between Workspace memory (`.github/instructions/memory.instructions.md` for repo-specific facts) and Global memory (`~/src/ai-config/instructions/memory.instructions.md` for user-wide facts). Do not mix scopes.
+- **Memory Tiers**: Memory is strictly split between Workspace memory (`.github/instructions/memory.instructions.md` for repo-specific facts) and Global memory (user-wide instructions managed outside this repository). Do not mix scopes.
 - **Git Workflow**:
   - Always use a rebase strategy when pulling or syncing remote changes (e.g., `git pull --rebase` or configure the repository using `git config pull.rebase true`).
   - All GitHub Actions MUST pass before any merge.

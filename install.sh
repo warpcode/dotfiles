@@ -114,6 +114,7 @@ ensure_bootstrap_packages() {
   # These overlap intentionally with chezmoi's 'system' group — we need
   # git, zsh, curl, and jq available before chezmoi can run.
   info "Ensuring bootstrap prerequisites (git, zsh, curl, jq) are installed..."
+
   case "${OS_NAME}" in
     debian)
       run_as_root apt update -qq
@@ -126,7 +127,8 @@ ensure_bootstrap_packages() {
       run_as_root pacman -Sy --noconfirm git zsh curl jq
       ;;
     macos)
-      HOMEBREW_NO_INSTALL_UPGRADE=1 brew install git zsh curl jq chezmoi || true
+      setup_macos
+      HOMEBREW_NO_INSTALL_UPGRADE=1 brew install git zsh curl jq || true
       ;;
     termux)
       pkg install -y git zsh curl jq
@@ -219,10 +221,6 @@ main() {
 
   info "Detected OS: ${OS_NAME}"
 
-  if [[ "${OS_NAME}" == "macos" ]]; then
-    setup_macos
-  fi
-
   # Ensure bootstrap packages (git, zsh, curl)
   ensure_bootstrap_packages
 
@@ -241,24 +239,27 @@ main() {
     fi
   fi
   
-  # Install/bootstrap chezmoi
-  if [[ "${OS_NAME}" != "macos" ]] && ! command -v chezmoi >/dev/null && [ ! -f "${HOME}/.local/bin/chezmoi" ]; then
+  # install chezmoi if not already installed
+  if ! command -v chezmoi >/dev/null; then
     info "Installing chezmoi..."
-    mkdir -p "${HOME}/.local/bin"
-    local chezmoi_install_script
-    chezmoi_install_script="$(mktemp -t chezmoi-bootstrap-XXXXXX.sh)"
-    if curl -fsSL https://chezmoi.io/get > "${chezmoi_install_script}"; then
-      sh "${chezmoi_install_script}" -b "${HOME}/.local/bin"
-      rm -f "${chezmoi_install_script}"
+    if [[ "${OS_NAME}" == "macos" ]]; then
+      brew install chezmoi || true
     else
-      err "Failed to download chezmoi installer"
-      rm -f "${chezmoi_install_script}"
-      exit 1
+      mkdir -p "${HOME}/.local/bin"
+      local chezmoi_install_script
+      chezmoi_install_script="$(mktemp -t chezmoi-bootstrap-XXXXXX.sh)"
+      if curl -fsSL https://chezmoi.io/get > "${chezmoi_install_script}"; then
+        sh "${chezmoi_install_script}" -b "${HOME}/.local/bin"
+        rm -f "${chezmoi_install_script}"
+      else
+        err "Failed to download chezmoi installer"
+        rm -f "${chezmoi_install_script}"
+        exit 1
+      fi
     fi
   fi
 
   export PATH="${HOME}/.local/bin:${PATH}"
-
 
   # Apply dotfiles via chezmoi
   info "Applying dotfiles via Chezmoi..."
@@ -284,7 +285,8 @@ main() {
     override_data="{\"profile\":${profile_json},\"git_name\":${git_name_json},\"git_email\":${git_email_json},\"keepass_db\":${keepass_db_json}}"
     chezmoi_global_args+=(--override-data "${override_data}")
   fi
-  chezmoi "${chezmoi_global_args[@]}" init --apply --source "${DOTFILES}"
+
+  chezmoi "${chezmoi_global_args[@]}" init --dry-run --source "${DOTFILES}"
 
   success "Bootstrap complete! Please restart your terminal or run 'exec zsh'."
 }

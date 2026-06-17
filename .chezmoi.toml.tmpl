@@ -111,7 +111,6 @@ sourceDir = "{{ .chezmoi.sourceDir }}"
     is_default_linux = {{ and (eq .chezmoi.os "linux") (not $is_termux) (eq $profile "default") }}
     sys_manager = {{ $sys_manager | quote }}
     os_detected = {{ $os | quote }}
-    ai_config_dir = "{{ .chezmoi.homeDir }}/src/ai-config"
     git_name = {{ $git_name | quote }}
     git_email = {{ $git_email | quote }}
     keepass_db = {{ $keepass_db | quote }}

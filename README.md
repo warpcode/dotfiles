@@ -120,11 +120,6 @@ make update-submodules
 - Check for conflicts in `~/.zshrc`, `~/.gitconfig`, etc.
 - User overrides can be added to `~/.zshrc.d/` or `~/.zshrc.{functions,config,apps,projects}/`
 
-### Multi-Repository AI Configuration
-- The AI configuration files are decoupled into their own repository (`warpcode/ai-config`) and loaded as a Chezmoi external repository.
-- You can configure the path to the AI configuration directory by customizing `ai_config_dir` in your Chezmoi config (defaults to `~/src/ai-config`).
-- At runtime, the shell will source active prompts and setup variables using the `AI_CONFIG_DIR` variable.
-
 ### Profiles
 - Different configurations and packages are conditionally loaded based on profiles (`default`, `work`, `phone`).
 - The active profile is stored in `~/.dotfiles_profile` and read automatically by Chezmoi to apply profile-specific constraints on packages and configurations.
