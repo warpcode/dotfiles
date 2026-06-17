@@ -437,249 +437,180 @@ cmd_search() {
 
   # Pipe decrypted XML directly to python parser
   printf '%s' "${master}" | "${(@z)cli}" export "${KEEPASS_DB_PATH}" 2>/dev/null | python3 -c '
-import sys
-import xml.etree.ElementTree as ET
-import base64
-import datetime
-import json
-import uuid
-import re
+import sys, xml.etree.ElementTree as ET, base64, json, uuid, re
+from datetime import datetime, timezone
 
-def parse_keepass_time(b64_str):
-    if not b64_str:
+# .NET epoch offset (seconds between 0001-01-01 and 1970-01-01)
+_NET_EPOCH = 62135596800
+_REF_RE = re.compile(r"^\{REF:([UPTAN])@I:([0-9a-fA-F]{32})\}$")
+_REF_FIELDS = {"U": "UserName", "P": "Password", "T": "Title", "A": "URL", "N": "Notes"}
+_QUERY_RE = re.compile(r"""(-?[a-zA-Z0-9_-]+:(?:"[^"]*"|\S+)|"[^"]*"|\S+)""")
+_RESERVED = {"group", "title", "tags", "uuid", "created", "updated", "attributes", "path", "attachments"}
+
+def _text(el, child_tag):
+    """Safe text accessor for an XML sub-element."""
+    ch = el.find(child_tag) if el is not None else None
+    return ch.text if ch is not None and ch.text else None
+
+def _b64_time(b64):
+    if not b64:
         return None
     try:
-        val = int.from_bytes(base64.b64decode(b64_str), byteorder="little")
-        unix_ts = val - 62135596800
-        return datetime.datetime.fromtimestamp(unix_ts, datetime.timezone.utc).isoformat().replace("+00:00", "Z")
+        ts = int.from_bytes(base64.b64decode(b64), "little") - _NET_EPOCH
+        return datetime.fromtimestamp(ts, timezone.utc).isoformat().replace("+00:00", "Z")
     except Exception:
         return None
 
-def parse_uuid(b64_str):
-    if not b64_str:
+def _b64_uuid(b64):
+    if not b64:
         return None
     try:
-        b = base64.b64decode(b64_str)
-        return f"{{{uuid.UUID(bytes=b)}}}"
+        return f"{{{uuid.UUID(bytes=base64.b64decode(b64))}}}"
     except Exception:
         return None
 
-def walk_entries(group, current_path):
-    name_el = group.find("Name")
-    group_name = name_el.text or "" if name_el is not None else ""
-    path_segments = list(current_path)
-    if group_name and group_name != "Root":
-        path_segments.append(group_name)
-    
-    for child in group:
-        if child.tag == "Group":
-            yield from walk_entries(child, path_segments)
-        elif child.tag == "Entry":
-            entry_data = {}
-            uuid_el = child.find("UUID")
-            tags_el = child.find("Tags")
-            times_el = child.find("Times")
-            
-            entry_data["uuid"] = parse_uuid(uuid_el.text) if uuid_el is not None else None
-            tags_str = tags_el.text if tags_el is not None and tags_el.text else ""
-            entry_data["tags"] = [t.strip() for t in tags_str.split(",") if t.strip()] if tags_str else []
-            
-            if times_el is not None:
-                cr = times_el.find("CreationTime")
-                lm = times_el.find("LastModificationTime")
-                entry_data["created"] = parse_keepass_time(cr.text) if cr is not None else None
-                entry_data["updated"] = parse_keepass_time(lm.text) if lm is not None else None
-            else:
-                entry_data["created"] = None
-                entry_data["updated"] = None
-                
-            entry_data["group"] = "/" + "/".join(path_segments)
-            
+def _walk(group, path=()):
+    name = _text(group, "Name") or ""
+    path = (*path, name) if name and name != "Root" else path
+    for ch in group:
+        if ch.tag == "Group":
+            yield from _walk(ch, path)
+        elif ch.tag == "Entry":
             strings = {}
-            for s in child.findall("String"):
-                k_el = s.find("Key")
-                v_el = s.find("Value")
-                if k_el is not None and k_el.text:
-                    strings[k_el.text] = v_el.text if v_el is not None else None
-            
-            entry_data["title"] = strings.get("Title") or ""
-            entry_data["username"] = strings.get("UserName")
-            entry_data["url"] = strings.get("URL")
-            entry_data["notes"] = strings.get("Notes")
-            entry_data["attributes"] = strings
-            
-            attachments = []
-            for b in child.findall("Binary"):
-                key_el = b.find("Key")
-                if key_el is not None and key_el.text:
-                    attachments.append(key_el.text)
-            entry_data["attachments"] = attachments
-            
-            yield entry_data
+            for s in ch.findall("String"):
+                k = _text(s, "Key")
+                if k:
+                    strings[k] = _text(s, "Value")
+            times = ch.find("Times")
+            yield {
+                "uuid": _b64_uuid(_text(ch, "UUID")),
+                "title": strings.get("Title") or "",
+                "group": "/" + "/".join(path),
+                "tags": [t.strip() for t in (_text(ch, "Tags") or "").split(",") if t.strip()],
+                "username": strings.get("UserName"),
+                "url": strings.get("URL"),
+                "notes": strings.get("Notes"),
+                "attributes": strings,
+                "attachments": [b.find("Key").text for b in ch.findall("Binary")
+                                if b.find("Key") is not None and b.find("Key").text],
+                "created": _b64_time(_text(times, "CreationTime")),
+                "updated": _b64_time(_text(times, "LastModificationTime")),
+            }
 
+def _resolve(val, by_uuid, seen=None):
+    if not isinstance(val, str):
+        return val
+    m = _REF_RE.match(val)
+    if not m:
+        return val
+    field_id, hex_id = m.groups()
+    try:
+        key = f"{{{uuid.UUID(hex=hex_id)}}}"
+    except Exception:
+        return val
+    target = by_uuid.get(key)
+    if not target or not _REF_FIELDS.get(field_id):
+        return val
+    ref_key = (key, field_id)
+    seen = seen or set()
+    if ref_key in seen:
+        return ""
+    seen.add(ref_key)
+    result = _resolve(target["attributes"].get(_REF_FIELDS[field_id]), by_uuid, seen)
+    seen.discard(ref_key)
+    return result
+
+def _get_field(entry, name):
+    """Return lowercase field value for matching; handles tag/tags specially."""
+    if name in ("tag", "tags"):
+        return None  # handled separately
+    field_map = {"title": "title", "group": "group", "uuid": "uuid",
+                 "username": "username", "user": "username", "url": "url", "notes": "notes"}
+    key = field_map.get(name)
+    return (entry[key] or "").lower() if key else (entry["attributes"].get(name) or "").lower()
+
+def _match(entry, rules):
+    for field, val, negate in rules:
+        if field:
+            if field in ("tag", "tags"):
+                hit = any(val in t.lower() for t in entry["tags"])
+            else:
+                hit = val in _get_field(entry, field)
+        else:
+            hit = (val in entry["title"].lower()
+                   or val in entry["group"].lower()
+                   or val in (entry["username"] or "").lower()
+                   or val in (entry["url"] or "").lower()
+                   or val in (entry["notes"] or "").lower()
+                   or any(val in t.lower() for t in entry["tags"])
+                   or val in (entry["uuid"] or "").lower())
+        if negate == hit:
+            return False
+    return True
+
+def _parse_rules(query):
+    rules = []
+    for term in _QUERY_RE.findall(query):
+        negate = term.startswith("-")
+        if negate:
+            term = term[1:]
+        if ":" in term:
+            field, val = term.split(":", 1)
+            rules.append((field.lower(), val.strip(chr(34)).lower(), negate))
+        else:
+            rules.append((None, term.strip(chr(34)).lower(), negate))
+    return rules
+
+# --- Main ---
 xml_data = sys.stdin.read()
 if not xml_data.strip():
     sys.exit(0)
 try:
     root = ET.fromstring(xml_data)
-except Exception as e:
+except ET.ParseError as e:
     sys.stderr.write(f"Error parsing XML: {e}\n")
     sys.exit(1)
 
-root_group = root.find(".//Group")
-all_entries = list(walk_entries(root_group, []))
+entries = list(_walk(root.find(".//Group"), ()))
+by_uuid = {e["uuid"]: e for e in entries if e["uuid"]}
 
-# Build lookup table
-entries_by_uuid = {e["uuid"]: e for e in all_entries if e["uuid"]}
+# Resolve {REF:...} references in-place
+for e in entries:
+    for k in ("username", "url", "notes"):
+        e[k] = _resolve(e[k], by_uuid)
+    e["attributes"] = {k: _resolve(v, by_uuid) for k, v in e["attributes"].items()}
 
-# Ref resolver
-ref_pattern = re.compile(r"^\{REF:([UPTAN])@I:([0-9a-fA-F]{32})\}$")
+# Parse arguments
+query = sys.argv[1] if len(sys.argv) > 1 else "*"
+limit = sys.argv[2] if len(sys.argv) > 2 else ""
+req_attrs = sys.argv[3:]
+rules = _parse_rules(query)
+inc_attach = any(a.lower() == "attachments" for a in req_attrs)
 
-def resolve_value(val, resolving=None):
-    if not val or not isinstance(val, str):
-        return val
-    m = ref_pattern.match(val)
-    if not m:
-        return val
-    field_id, target_uuid_hex = m.groups()
+results = [e for e in entries if _match(e, rules)]
+if limit:
     try:
-        u_obj = uuid.UUID(hex=target_uuid_hex)
-        u_str = f"{{{u_obj}}}"
-    except Exception:
-        return val
-    if u_str not in entries_by_uuid:
-        return val
-    target_entry = entries_by_uuid[u_str]
-    if resolving is None:
-        resolving = set()
-    ref_key = (u_str, field_id)
-    if ref_key in resolving:
-        return ""
-    resolving.add(ref_key)
-    field_map = {
-        "U": "UserName",
-        "P": "Password",
-        "T": "Title",
-        "A": "URL",
-        "N": "Notes"
-    }
-    target_field = field_map.get(field_id)
-    if not target_field:
-        return val
-    raw_val = target_entry["attributes"].get(target_field)
-    resolved = resolve_value(raw_val, resolving)
-    resolving.remove(ref_key)
-    return resolved
-
-# Resolve references in-place
-for e in all_entries:
-    e["username"] = resolve_value(e["username"])
-    e["url"] = resolve_value(e["url"])
-    e["notes"] = resolve_value(e["notes"])
-    for k, v in list(e["attributes"].items()):
-        e["attributes"][k] = resolve_value(v)
-
-query_str = sys.argv[1] if len(sys.argv) > 1 else "*"
-limit_str = sys.argv[2] if len(sys.argv) > 2 else ""
-requested_attrs = sys.argv[3:] if len(sys.argv) > 3 else []
-
-pattern = re.compile(r"(-?[a-zA-Z0-9_-]+:(?:\"[^\"]*\"|\S+)|\"[^\"]*\"|\S+)")
-terms = pattern.findall(query_str)
-rules = []
-for term in terms:
-    negate = False
-    if term.startswith("-"):
-        negate = True
-        term = term[1:]
-    if ":" in term:
-        field, val = term.split(":", 1)
-        if val.startswith("\"") and val.endswith("\""):
-            val = val[1:-1]
-        rules.append({"field": field.lower(), "val": val.lower(), "negate": negate})
-    else:
-        val = term
-        if val.startswith("\"") and val.endswith("\""):
-            val = val[1:-1]
-        rules.append({"field": None, "val": val.lower(), "negate": negate})
-
-def match_entry(entry, rules):
-    if not rules:
-        return True
-    for rule in rules:
-        field = rule["field"]
-        val = rule["val"]
-        negate = rule["negate"]
-        matched = False
-        if field:
-            if field in ["tag", "tags"]:
-                matched = any(val in t.lower() for t in entry["tags"])
-            elif field == "title":
-                matched = val in entry["title"].lower()
-            elif field == "group":
-                matched = val in entry["group"].lower()
-            elif field in ["username", "user"]:
-                matched = val in (entry["username"] or "").lower()
-            elif field == "url":
-                matched = val in (entry["url"] or "").lower()
-            elif field == "notes":
-                matched = val in (entry["notes"] or "").lower()
-            elif field == "uuid":
-                matched = val in (entry["uuid"] or "").lower()
-            else:
-                matched = val in (entry["attributes"].get(rule["field"]) or "").lower()
-        else:
-            matched = (
-                val in entry["title"].lower() or
-                val in entry["group"].lower() or
-                val in (entry["username"] or "").lower() or
-                val in (entry["url"] or "").lower() or
-                val in (entry["notes"] or "").lower() or
-                any(val in t.lower() for t in entry["tags"]) or
-                val in (entry["uuid"] or "").lower()
-            )
-        if negate:
-            if matched: return False
-        else:
-            if not matched: return False
-    return True
-
-matched_entries = [e for e in all_entries if match_entry(e, rules)]
-if limit_str:
-    try:
-        matched_entries = matched_entries[:int(limit_str)]
+        results = results[:int(limit)]
     except ValueError:
         pass
 
-output_list = []
-for entry in matched_entries:
-    out = {}
-    out["uuid"] = entry["uuid"]
-    out["title"] = entry["title"]
-    out["path"] = (entry["group"] + "/" + entry["title"]).replace("//", "/")
-    out["group"] = entry["group"]
+output = []
+for e in results:
+    out = {"uuid": e["uuid"], "title": e["title"],
+           "path": (e["group"] + "/" + e["title"]).replace("//", "/"),
+           "group": e["group"]}
+    for a in req_attrs:
+        if a.lower() not in _RESERVED:
+            out[a] = next((v for k, v in e["attributes"].items() if k.lower() == a.lower()), None)
+    out["tags"] = e["tags"]
+    out["attributes"] = list(e["attributes"].keys())
+    if inc_attach:
+        out["attachments"] = e["attachments"]
+    out["created"] = e["created"]
+    out["updated"] = e["updated"]
+    output.append(out)
 
-    for req in requested_attrs:
-        req_lower = req.lower()
-        if req_lower in ["group", "title", "tags", "uuid", "created", "updated", "attributes", "path", "attachments"]:
-            continue
-        val = None
-        for k, v in entry["attributes"].items():
-            if k.lower() == req_lower:
-                val = v
-                break
-        out[req] = val
-
-    out["tags"] = entry["tags"]
-    out["attributes"] = list(entry["attributes"].keys())
-
-    if any(r.lower() == "attachments" for r in requested_attrs):
-        out["attachments"] = entry["attachments"]
-
-    out["created"] = entry["created"]
-    out["updated"] = entry["updated"]
-    output_list.append(out)
-
-print(json.dumps(output_list, indent=2))
+print(json.dumps(output, indent=2))
 ' "${query}" "${limit}" "${attrs[@]}"
 }
 
