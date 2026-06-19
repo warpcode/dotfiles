@@ -3,7 +3,7 @@ version = 1
 # Global defaults
 [*]
 models-max = 1
-threads = 12
+threads = 6
 #cache-type-k = q8_0
 #cache-type-v = q8_0
 flash-attn = true
@@ -12,6 +12,7 @@ no-context-shift = true
 fit = true
 fit-ctx = 4096
 fit-target = 1024
+ngl = 0
 {{- range $key, $model := .providers.llamacpp.models }}
 
 [{{ $model.model_name }}]
