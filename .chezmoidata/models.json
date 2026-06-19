@@ -190,8 +190,6 @@
                     "configuration": {
                         "hf-repo": "unsloth/gemma-4-E4B-it-qat-GGUF:UD-Q4_K_XL",
                         "ctx-size": 64000,
-                        "spec-type": "draft-mtp",
-                        "spec-draft-n-max": 4,
                         "fit": "off"
                     },
                     "categories": [
