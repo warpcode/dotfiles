@@ -9,6 +9,9 @@ threads = 12
 flash-attn = true
 jinja = true
 no-context-shift = true
+fit = true
+fit-ctx = 4096
+fit-target = 1024
 {{- range $key, $model := .providers.llamacpp.models }}
 
 [{{ $model.model_name }}]
