@@ -173,8 +173,7 @@
                         "ctx-size": 64000,
                         "spec-type": "draft-mtp",
                         "spec-draft-n-max": 4,
-                        "fit": "off",
-                        "ngl": 0
+                        "fit": "off"
                     },
                     "categories": [
                         "simple",
@@ -208,8 +207,7 @@
                         "ctx-size": 64000,
                         "spec-type": "draft-mtp",
                         "spec-draft-n-max": 4,
-                        "fit": "off",
-                        "ngl": 0
+                        "fit": "off"
                     },
                     "categories": [
                         "simple",
@@ -228,8 +226,7 @@
                     "configuration": {
                         "hf-repo": "bartowski/Qwen_Qwen3.6-35B-A3B-GGUF",
                         "hf-file": "Qwen_Qwen3.6-35B-A3B-IQ3_XXS.gguf",
-                        "ctx-size": 64000,
-                        "ngl": 0
+                        "ctx-size": 64000
                     },
                     "categories": [
                         "deep_reasoning",
@@ -248,8 +245,7 @@
                     },
                     "configuration": {
                         "hf-repo": "Jackrong/Qwopus3.5-9B-v3-GGUF:Q4_K_M",
-                        "ctx-size": 64000,
-                        "ngl": 0
+                        "ctx-size": 64000
                     },
                     "categories": [
                         "researching",
@@ -268,10 +264,8 @@
                         "hf-repo": "LiquidAI/LFM2.5-8B-A1B-GGUF:Q4_K_M",
                         "mmap": true,
                         "ctx-size": 64000,
-                        "threads": 12,
                         "jinja": true,
-                        "no-context-shift": true,
-                        "ngl": 0
+                        "no-context-shift": true
                     },
                     "categories": [
                         "simple",
