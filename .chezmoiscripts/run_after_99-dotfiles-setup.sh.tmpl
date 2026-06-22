@@ -8,7 +8,7 @@ main() {
   local zsh_path
   zsh_path="$(command -v zsh 2>/dev/null)" || return 0
 
-  local dotfiles_init="{{ .chezmoi.sourceDir }}/src/zsh/init.zsh"
+  local dotfiles_init="$HOME/.zsh/init.zsh"
 
   if [[ -f "$dotfiles_init" ]]; then
     info "Running post-apply Zsh hooks..."

@@ -31,7 +31,7 @@ path.ls() {
 
 # Reload PATH configuration
 path.reload() {
-    local cfg="${DOTFILES:-$HOME/src/dotfiles}/src/zsh/config/01-paths.zsh"
+    local cfg="$HOME/.zsh/config/01-paths.zsh"
     [[ -f "$cfg" ]] && source "$cfg"
     rehash
 }

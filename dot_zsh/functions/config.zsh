@@ -2,17 +2,17 @@
 
 # Symlink a config file or directory from assets/configs/
 config.symlink() {
-    "$DOTFILES/bin/df.config" symlink "$@"
+    df.config symlink "$@"
 }
 
 # Template a file using gomplate and JSON configs
 config.hydrate() {
-    "$DOTFILES/bin/df.config" hydrate "$@"
+    df.config hydrate "$@"
 }
 
 # Replace content between markers
 config.block() {
-    "$DOTFILES/bin/df.config" block "$@"
+    df.config block "$@"
 }
 
 # High-level application configuration helper
