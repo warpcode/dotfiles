@@ -7,6 +7,9 @@ pkg.recipe.define ollama \
 pkg.recipe.ollama.enabled() { [[ $(df.os family) != "macos" ]] }
 
 pkg.recipe.ollama.configure() {
+    # Disabled for now
+    return 0
+
     registry.is_enabled pkg ollama pkg.recipe || return 0
 
     # Ensure background jobs don't print PIDs or 'done' messages
