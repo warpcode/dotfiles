@@ -5,11 +5,16 @@
     },
     {
       "repo": "anthropics/skills",
-      "skills": ["skill-creator"]
+      "skills": [
+        "skill-creator"
+      ]
     },
     {
       "repo": "JuliusBrussee/caveman",
-      "skills": ["caveman", "caveman-compress", "caveman-commit", "caveman-help", "caveman-review"]
+      "skills": [
+        "caveman",
+        "caveman-compress"
+      ]
     }
   ]
 }

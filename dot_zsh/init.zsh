@@ -27,7 +27,7 @@ _zsh.init() {
 
     for root in $roots; do
         for f in "${root}"functions/**/*.zsh(Nn-); do
-            source "$f"
+            [[ -f "$f" ]] && source "$f"
         done
     done
 
@@ -35,12 +35,12 @@ _zsh.init() {
 
     for root in $roots; do
         for f in "${root}"{config,apps,projects}/**/*.zsh(Nn-); do
-            source "$f"
+            [[ -f "$f" ]] && source "$f"
         done
     done
     for root in $roots; do
         for f in "${root}"{path,prompt,exports,aliases,extra}(Nn-); do
-            source "$f"
+            [[ -f "$f" ]] && source "$f"
         done
     done
 
