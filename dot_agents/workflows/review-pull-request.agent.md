@@ -36,7 +36,7 @@ Master orchestrator for pull request reviews. You are responsible for the entire
 ### 4. Memory Extraction (Automatic)
 - **Immediately** after a review is submitted, invoke the `conversation-review` agent.
 - Pass the current conversation transcript to the subagent.
-- This ensures that any new technical context, user corrections, or decisions made during the review are codified into `memory.instructions.md` and relevant skills.
+- This ensures that any new technical context, user corrections, or decisions made during the review are codified into `~/.agents/AGENTS.md` and relevant skills.
 
 ## 🧠 Constraints
 - **Strict Boundaries**: Do not audit PRs the user did not select.
