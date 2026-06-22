@@ -1,4 +1,3 @@
-[[ -z "$DOTFILES" ]] && export DOTFILES="${0:A:h:h:h}"
 
 _zsh.init() {
     setopt null_glob globstarshort
@@ -21,7 +20,7 @@ _zsh.init() {
     local root f
     local roots=(
         "$HOME/.zshrc.before.d/"
-        "$DOTFILES/src/zsh/"
+        "$HOME/.zsh/"
         "$HOME/.zshrc.d/"
         "$HOME/.zsh_"
     )

@@ -28,7 +28,7 @@ scheduler.remove() {
     local config_file="$DOTFILES/assets/configs/scheduler/$name.json"
     [[ ! -f "$config_file" ]] && { tui.error "Task not found: $name"; return 1; }
 
-    local os_family=$("$DOTFILES/bin/df.os" family)
+    local os_family=$(df.os family)
 
     case "$os_family" in
         macos)
@@ -58,7 +58,7 @@ scheduler.logs() {
     local name="$1"
     [[ -z "$name" ]] && { tui.error "Usage: scheduler.logs <name>"; return 1; }
 
-    local os_family=$("$DOTFILES/bin/df.os" family)
+    local os_family=$(df.os family)
 
     tui.banner "Logs: $name" "-" 40
     case "$os_family" in
@@ -87,7 +87,7 @@ scheduler.logs() {
 # Apply a scheduled task configuration (internal)
 scheduler.apply() {
     local name="$1"
-    local os_family=$("$DOTFILES/bin/df.os" family)
+    local os_family=$(df.os family)
     local config_file="scheduler/$name.json"
 
     mkdir -p "$HOME/.local/state/dotfiles/scheduler"

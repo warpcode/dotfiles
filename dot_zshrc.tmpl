@@ -5,8 +5,8 @@ export DOTFILES="{{ .chezmoi.sourceDir }}"
 export DOTFILES_PROFILE="{{ .profile }}"
 export KEEPASS_DB_PATH="{{ .keepass_db }}"
 
-if [[ -f "${DOTFILES}/src/zsh/init.zsh" ]]; then
-    source "${DOTFILES}/src/zsh/init.zsh"
+if [[ -f "${HOME}/.zsh/init.zsh" ]]; then
+    source "${HOME}/.zsh/init.zsh"
 fi
 
 # Load local overrides

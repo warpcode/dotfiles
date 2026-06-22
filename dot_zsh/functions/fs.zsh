@@ -69,9 +69,7 @@ fs.fzf() {
 
     local query="$1"
     local dir="${2:-.}"
-    local dotfiles="${DOTFILES:-$HOME/.config/dotfiles}"
-
-    local init_cmd="source $dotfiles/src/zsh/init.zsh >/dev/null 2>&1"
+    local init_cmd="source $HOME/.zsh/init.zsh >/dev/null 2>&1"
 
     # Use positional arguments to sub-zsh to avoid quoting issues with {q}, {1}, etc.
     # Add sleep  for debouncing. fzf kills the previous reload process if a new one is triggered.
