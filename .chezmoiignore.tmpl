@@ -18,23 +18,28 @@ vendor/
 Library/Fonts/**/*.uuid
 .fonts/**/*.uuid
 
-{{- if eq .profile "work" -}}
+{{ if eq .profile "work" }}
 .hermes/
 .ssh/
+{{ end }}
 
-{{- end -}}
-
-{{- if not .is_default_linux -}}
+{{ if not .is_default_linux }}
 # Antigravity files
 .local/share/applications/antigravity-hub.desktop
 .local/share/applications/antigravity-ide.desktop
 .local/share/icons/antigravity-hub.png
-{{- end -}}
+{{ end }}
+
+# Ignore antigravity binary if it exists in the destination to prevent chezmoi
+# from prompting about changes when the app auto-updates itself.
+{{ if stat (joinPath .chezmoi.homeDir ".local/bin/antigravity") }}
+.local/bin/antigravity
+{{ end }}
 
 # Hermes Agent state, caches, databases, and logs
-{{- if eq .profile "work" -}}
+{{ if eq .profile "work" }}
 .hermes/
-{{- end -}}
+{{ end }}
 
 .hermes/hermes-agent/
 .hermes/logs/
