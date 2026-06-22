@@ -17,7 +17,7 @@ Process a conversation log in four sequential phases:
 1. **Memory extraction & management** — extract durable user facts for future sessions, add ad hoc memories, and remove stale memories from the memory file.
 2. **File review** — recommend updates to skills, AGENTS.md, CLAUDE.md, GEMINI.md, and collate skills where appropriate.
 3. **Reusables identification** — surface scripts, snippets, and procedures worth preserving
-4. **Compliance & Guardrails Audit** — systematically audit the conversation transcript against active workspace behavioral guardrails and project instructions in `memory.instructions.md`, verifying adherence, documenting any violations or deviations, and investigating the root cause and context of **WHY** those violations and deviations occurred.
+4. **Compliance & Guardrails Audit** — systematically audit the conversation transcript against active workspace behavioral guardrails and project instructions in `~/.agents/AGENTS.md`, verifying adherence, documenting any violations or deviations, and investigating the root cause and context of **WHY** those violations and deviations occurred.
 
 Complete all four phases before producing output.
 
@@ -46,7 +46,7 @@ IF the source is a large JSON/JSONL log file (like `logs.json`) → DO NOT rely 
 
 ## Phase 1 — Memory Extraction & Management
 
-**Target File**: All memories MUST ALWAYS be written to `./.github/instructions/memory.instructions.md` in the workspace. Read this file at the start of Phase 1 to understand current memories.
+**Target File**: All durable memories MUST ALWAYS be written to `~/.agents/AGENTS.md`. Read this file at the start of Phase 1 to understand current memories.
 
 ### 1. Extracting New Memories
 Extract ONLY facts that are:
@@ -60,7 +60,7 @@ Extract ONLY facts that are:
 - If the user explicitly requests to add a memory (ad hoc), ALWAYS add it, bypassing standard extraction constraints.
 
 ### 3. Removing Stale Memories
-- Actively review the existing `./.github/instructions/memory.instructions.md` file.
+- Actively review the existing `~/.agents/AGENTS.md` file.
 - Identify and recommend removal for any memories that are stale, no longer relevant, or directly contradicted by the current conversation.
 
 ### Extraction Categories
@@ -86,7 +86,7 @@ MUST prioritise corrections and explicit decisions — these carry higher reliab
 ### Conflict Resolution & Deduplication
 
 ```
-IF a new fact contradicts something already in memory.instructions.md:
+IF a new fact contradicts something already in ~/.agents/AGENTS.md:
   THEN record as `update`, include the original text in `replaces_text`
 
 IF a new fact extends an existing item with more detail:
@@ -96,7 +96,7 @@ IF an existing memory is no longer relevant or applicable:
   THEN record as `removal`
 ```
 
-> **Note:** Because memories are stored in `./.github/instructions/memory.instructions.md`, base your `updates` and `removals` on the actual contents of this file.
+> **Note:** Because memories are stored in `~/.agents/AGENTS.md`, base your `updates` and `removals` on the actual contents of this file.
 
 ---
 
@@ -130,7 +130,7 @@ Cross-reference the conversation against all located files. Identify:
 - **Recursive Skill Improvement** — ALWAYS evaluate if a correction or new preference should be codified in the global `prompt-skills-guidelines` or other specialized area-specific skills (e.g., `github-review-orchestrator`).
 - **Trigger & Loading Logic** — Review the `SKILL.md` files for trigger accuracy. Recommend updates to skill descriptions and activation triggers to ensure the correct skills are loaded autonomously by agents when needed.
 - **Enforcement**: If a conversation exposes a violation of a project-wide standard (e.g., token efficiency), the subagent MUST recommend updates to all files defining that standard to ensure consistency.
-- **Root Instruction Alignment**: Note that `.antigravityrules`, `CLAUDE.md`, and `AGENTS.md` are symbolic links pointing directly to `.github/instructions/memory.instructions.md`. To prevent symlink breakage and redundant duplication, always recommend edits and rule updates exclusively on the target file `.github/instructions/memory.instructions.md` rather than proposing separate edits to the symlink paths.
+- **Root Instruction Alignment**: Treat `~/.agents/AGENTS.md` as the canonical memory source. To prevent duplication and drift, recommend durable-memory edits against this canonical file rather than scattering equivalent updates across multiple instruction entry points.
 
 #### 1. Customization & Extraction Decision Matrix
 
@@ -311,7 +311,7 @@ Source: [inline conversation | file: <path> | url: <url>]
 
 ### Audited Guardrails & Findings
 - **<Rule Name/Topic>**
-  - *Rule:* <brief description of the rule from memory.instructions.md>
+  - *Rule:* <brief description of the rule from ~/.agents/AGENTS.md>
   - *Adherence:* <Fully Adhered | Partially Adhered | Not Adhered>
   - *Findings:* <factual observations of behavior in the session matching this rule>
 

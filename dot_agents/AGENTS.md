@@ -25,10 +25,33 @@ These instructions capture persistent memories, behavioral guardrails, and techn
    - **Review Boundaries**: When discovering multiple PRs, strictly limit auditing and commentary to the specific PR(s) selected by the user. Do not proactively audit other candidates in the same turn or session unless explicitly requested.
    - **Review Orchestration**: Formal pull request reviews SHOULD be performed using the `review-pull-request` agent. This ensures a consistent lifecycle including discovery, specialized subagent audits (e.g., `file-cleaner`), and automatic memory extraction via `conversation-review`.
    - **Code Review Phase Separation**: During active PR review workflows (e.g. `/review-pull-request`), treat any user architectural ideas, cleanup requests, or file removal proposals as requested review comments to be submitted to GitHub. Do NOT checkout the branch or perform local workspace edits unless the user explicitly commands a local change or workspace modification.
+6. **Precedence & Integrity**:
+  - Skill instructions and engineering standards take precedence over context-efficiency heuristics.
+  - Do not skip mandated procedural steps (for example, explicit validation or required intermediate artifacts) only to reduce turns or tokens.
+  - Prefer technically stable workflows over fragile one-liners when correctness is at risk.
+
+7. **Resource Selection**:
+  - Before acting, check whether an existing skill applies and load it before execution.
+  - Choose the best execution surface per task (skill, MCP/tool, subagent, or inline execution) and drop stale approaches when context changes.
+
+8. **Delegation Heuristic**:
+  - Use subagents for high-noise exploration (broad searches, large logs, multi-file research) to keep coordinator context focused.
+  - Provide self-contained directives to subagents and consume only synthesised results.
+
+9. **Pre-Action Safety Gate**:
+  - Before destructive operations (`rm`, `reset`, `chmod`, or network-impacting operations), request explicit user confirmation.
+  - For non-trivial edits, explicitly validate affected paths and intent prior to mutation.
+
+10. **Conflict Resolution Order**:
+  - Resolve directive conflicts in this order: safety, user intent, simplicity, then local convention.
+
+11. **Ticket Context Completeness**:
+  - Any generated task/issue/ticket must be context-complete and executable without chat history.
+  - Include required skills/guidelines, decision logic, expected output schema, and explicit file paths/dependency chains.
 ## 🛠️ Technical Context & Preferences
 
-- **Source of Truth Hierarchy**: `AGENTS.md` is the authoritative source for stable, graduated rules and conventions. `memory.instructions.md` acts as a volatile extension for recent, maturing facts. When a memory matures, it should be promoted to `AGENTS.md` or a dedicated skill.
-- **Memory Tiers**: Memory is strictly split between Workspace memory (`.github/instructions/memory.instructions.md` for repo-specific facts) and Global memory (user-wide instructions managed outside this repository). Do not mix scopes.
+- **Source of Truth Hierarchy**: `~/.agents/AGENTS.md` is the authoritative source for durable, graduated rules and conventions. Project-local guidance should align to this core memory file, and mature patterns should be promoted into dedicated skills when appropriate.
+- **Memory Tiers**: Durable memory should be centralized in `~/.agents/AGENTS.md`. Keep workspace-only notes ephemeral and avoid maintaining parallel persistent memory files in this repository.
 - **Git Workflow**:
   - Always use a rebase strategy when pulling or syncing remote changes (e.g., `git pull --rebase` or configure the repository using `git config pull.rebase true`).
   - All GitHub Actions MUST pass before any merge.
@@ -50,6 +73,7 @@ These instructions capture persistent memories, behavioral guardrails, and techn
 - **Script & Tool Efficiency**:
   - All scripts interacting with APIs (GitHub, etc.) MUST implement batching by default when dealing with multiple entities.
   - Avoid iterative per-item network calls in shell loops or high-level orchestration logic.
+  - **Skill Script Path Resolution**: If a skill references a script using a relative path, agents MUST resolve and check that path from the skill's own directory first before attempting repository-root or other fallback paths.
   - **Stdout Preference**: Prefer scripts that output data directly to `stdout` rather than requiring a temporary file path, especially for data intended for immediate consumption.
   - When using `gh api graphql`, pass queries via variable injection to avoid shell quoting and path resolution issues.
 - **Package Management Architecture**: The legacy `zinstall` logic is deprecated. The project is migrating towards a unified `pkg.zsh` architecture using a `recipe` dictionary format that explicitly defines methods for checking, updating, installing, and enabling packages.
@@ -73,7 +97,7 @@ These instructions capture persistent memories, behavioral guardrails, and techn
 When operating as an autonomous agent in a remote virtual machine (e.g., Jules):
 
 1. **Active Memory and Context Retrieval**:
-   - Before drafting any implementation plan or modifying code, you MUST read `./.github/instructions/memory.instructions.md` to load active user preferences, past corrections, and decision records.
+  - Before drafting any implementation plan or modifying code, you MUST read `~/.agents/AGENTS.md` to load active user preferences, past corrections, and decision records.
    - If the task involves modifying Zsh configuration or Zsh scripts, you MUST read and follow `./.github/instructions/zsh.instructions.md`.
 
 2. **Leverage Local Skills & Workflows**:
