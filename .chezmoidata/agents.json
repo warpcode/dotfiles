@@ -1,32 +1,60 @@
 {
   "agents": [
     {
-      "name": "sports-club-schedule",
-      "description": "Retrieve and summarise upcoming fixtures, match results, and club event schedules."
+      "name": "chief-of-staff",
+      "description": "Review and optimize the day's schedule, summarize communications, and triage incoming alerts into prioritized action items."
     },
     {
-      "name": "meal-planner",
-      "description": "Generate weekly meal plans with recipes and produce a consolidated grocery shopping basket for online ordering."
+      "name": "personal-assistant",
+      "description": "Handle day-to-day house and utility coordination, query/control smart home devices, and track online order status or item wishlists."
     },
     {
-      "name": "home-assistant-helper",
-      "description": "Query and control smart home devices, automations, and dashboards via a Home Assistant instance."
+      "name": "devils-advocate",
+      "description": "Actively challenge architectural decisions, expose security risks, find edge cases, and probe for weaknesses in technical proposals."
     },
     {
-      "name": "bin-roundup-lookup",
-      "description": "Look up upcoming bin collection dates and types for a given address from the local council schedule."
+      "name": "financial-auditor",
+      "description": "Manage budgeting, track daily expenses, audit active subscriptions, and provide cost-benefit analysis for software or lifestyle changes."
     },
     {
-      "name": "news-aggregator",
-      "description": "Aggregate and summarise the latest headlines from multiple news sources into a concise daily briefing."
+      "name": "lifestyle-coach",
+      "description": "Design personalized physical fitness and skill-learning tracks, monitor goals, and suggest routine modifications to sustain progress."
     },
     {
-      "name": "software-alerts",
-      "description": "Monitor software release feeds and security advisories, surfacing critical updates and CVEs for tracked packages."
+      "name": "lifestyle-concierge",
+      "description": "Recommend restaurants, cafes, and takeaways, and suggest personalized entertainment like movies, books, or shows."
     },
     {
-      "name": "wishlist-tracker",
-      "description": "Track items across wishlists, monitor price changes, and notify when items drop below a target threshold."
+      "name": "nutrition-advisor",
+      "description": "Formulate healthy recipes, design weekly meal plans, track dietary/nutritional goals, and produce consolidated grocery lists for online ordering."
+    },
+    {
+      "name": "product-manager",
+      "description": "Analyze project requirements and documentation, write user stories, create feature maps, and orchestrate engineering resources."
+    },
+    {
+      "name": "backend-developer",
+      "description": "Write clean, secure, and conventional server-side code (PHP/Laravel/Go) and manage database migrations."
+    },
+    {
+      "name": "frontend-developer",
+      "description": "Implement modern responsive web interfaces using CSS and framework components (Vue/React)."
+    },
+    {
+      "name": "code-quality-reviewer",
+      "description": "Perform audits on pull request diffs, checking for style guidelines, linting issues, and potential code smells."
+    },
+    {
+      "name": "infrastructure-engineer",
+      "description": "Monitor server status, check backups, scan package repositories for breaking upgrades, and manage vulnerability alerts/CVEs."
+    },
+    {
+      "name": "prompt-architect",
+      "description": "Design, evaluate, and tune system instructions and prompts for model routing."
+    },
+    {
+      "name": "database-administrator",
+      "description": "Prune long-term logs, summarize conversation databases, and run memory maintenance scripts to maintain token efficiency."
     }
   ]
 }

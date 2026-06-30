@@ -1,0 +1,7 @@
+{
+  "display_name": "OpenAI Bridge",
+  "description": "Exposes Antigravity agentapi as an OpenAI-compatible API",
+  "command": "python3",
+  "args": ["server.py"],
+  "restart_policy": "always"
+}

@@ -75,6 +75,6 @@
   },
   "toolPermission": "proceed-in-sandbox",
   "trustedWorkspaces": [
-    "/home/jase/src/dotfiles"
+    "~/src/dotfiles"
   ]
 }

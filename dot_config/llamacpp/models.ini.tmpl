@@ -3,9 +3,11 @@ version = 1
 # Global defaults
 [*]
 models-max = 1
+parallel = 1
 threads = 6
-#cache-type-k = q8_0
-#cache-type-v = q8_0
+threads-batch = 12
+cache-type-k = q8_0
+cache-type-v = q8_0
 flash-attn = true
 jinja = true
 no-context-shift = true
@@ -13,6 +15,11 @@ fit = true
 fit-ctx = 4096
 fit-target = 1024
 ngl = 0
+mlock = true
+poll = 1
+ubatch-size = 256
+
+
 {{- range $key, $model := .providers.llamacpp.models }}
 
 [{{ $model.model_name }}]
