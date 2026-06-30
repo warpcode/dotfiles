@@ -1,22 +1,34 @@
 {
   "mcp": {
+    "documenter": {
+      "context7": {
+        "description": "Remote context enhancement and documentation search",
+        "headers": {
+          "CONTEXT7_API_KEY": "{secret:CONTEXT7_API_KEY}"
+        },
+        "profiles_deny": [
+          "phone"
+        ],
+        "type": "remote",
+        "url": "https://mcp.context7.com/mcp"
+      }
+    },
     "global": {
       "github": {
-        "type": "local",
         "command": [
           "npx",
           "-y",
           "@github/github-mcp-server"
         ],
+        "description": "GitHub API integration — repos, PRs, issues, search",
         "env": {
           "GITHUB_TOKEN": "{secret:GITHUB_TOKEN}"
         },
-        "description": "GitHub API integration — repos, PRs, issues, search"
+        "type": "local"
       }
     },
     "websearch": {
       "browsermcp": {
-        "type": "local",
         "command": [
           "npx",
           "-y",
@@ -25,10 +37,10 @@
         "description": "Browser control and automation via Playwright",
         "profiles_deny": [
           "work"
-        ]
+        ],
+        "type": "local"
       },
       "chrome-devtools": {
-        "type": "local",
         "command": [
           "npx",
           "-y",
@@ -39,20 +51,30 @@
         "profiles_allow": [
           "default",
           "work"
-        ]
-      }
-    },
-    "documenter": {
-      "context7": {
-        "type": "remote",
-        "url": "https://mcp.context7.com/mcp",
-        "headers": {
-          "CONTEXT7_API_KEY": "{secret:CONTEXT7_API_KEY}"
+        ],
+        "type": "local"
+      },
+      "firecrawl": {
+        "command": [
+          "npx",
+          "-y",
+          "firecrawl-mcp"
+        ],
+        "env": {
+          "FIRECRAWL_API_KEY": "{secret:FIRE_CRAWL_API_KEY}"
         },
-        "description": "Remote context enhancement and documentation search",
-        "profiles_deny": [
-          "phone"
-        ]
+        "type": "local"
+      },
+      "serena": {
+        "command": [
+          "npx",
+          "-y",
+          "serena-mcp"
+        ],
+        "profiles_allow": [
+          "default"
+        ],
+        "type": "local"
       }
     }
   }

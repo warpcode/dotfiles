@@ -1,0 +1,31 @@
+{
+  "name": "weather-agent",
+  "description": "Searches the web for the current weather forecast using Gemma 4 31B.",
+  "model": "Gemini 3.5 Flash (Low)",
+  "options": {
+    "thinking_budget": 1024
+  },
+  "config": {
+    "customAgent": {
+      "systemPromptSections": [
+        {
+          "title": "Agent System Instructions",
+          "content": "You are a Weather Agent. Your role is to provide the current weather forecast for the user's location. Search the web to find accurate and up-to-date weather information. Be concise and helpful. Do not attempt to run any bash commands."
+        }
+      ],
+      "toolNames": [
+        "search_web",
+        "read_url_content"
+      ],
+      "systemPromptConfig": {
+        "includeSections": [
+          "user_information",
+          "skills",
+          "messaging",
+          "artifacts",
+          "user_rules"
+        ]
+      }
+    }
+  }
+}

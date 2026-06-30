@@ -30,7 +30,7 @@ providers:
 fallback_providers: []
 credential_pool_strategies: {}
 toolsets:
-- hermes-cli
+  - hermes-cli
 
 agent:
   max_turns: 150
@@ -48,25 +48,25 @@ agent:
   gateway_auto_continue_freshness: 3600
   image_input_mode: auto
   disabled_toolsets:
-  - browser
-  - clarify
-  - code_execution
-  - computer_use
-  - cronjob
-  - delegation
-  - file
-  - homeassistant
-  - image_gen
-  - memory
-  - messaging
-  - moa
-  - session_search
-  - skills
-  - terminal
-  - todo
-  - tts
-  - vision
-  - spotify
+    - browser
+    - clarify
+    - code_execution
+    - computer_use
+    - cronjob
+    - delegation
+    - file
+    - homeassistant
+    - image_gen
+    - memory
+    - messaging
+    - moa
+    - session_search
+    - skills
+    - terminal
+    - todo
+    - tts
+    - vision
+    - spotify
   verbose: false
   reasoning_effort: low
 
@@ -79,7 +79,7 @@ terminal:
   lifetime_seconds: 300
 
 web:
-  backend: ddgs
+  backend: firecrawl
   search_backend: ''
   extract_backend: ''
   use_gateway: false
@@ -89,7 +89,7 @@ checkpoints:
 
 file_read_max_chars: 100000
 tool_output:
-  max_bytes: 50000
+  max_bytes: 15000
   max_lines: 2000
   max_line_length: 2000
 
@@ -141,6 +141,7 @@ auxiliary:
     base_url: ''
     api_key: ''
     timeout: 120
+    context_length: 64000
   skills_hub:
     provider: auto
     model: ''
