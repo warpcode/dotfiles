@@ -46,7 +46,7 @@ if [[ "$OSTYPE" =~ ^darwin ]]; then
     SED_MODIFIER="-E"
 fi
 
-FFMPEG_MAP=""
+FFMPEG_ARGS=()
 COUNTER=0
 
 while read STREAM_LINE;
@@ -111,22 +111,19 @@ do
       continue
     fi
 
-    if [[ ! "$FFMPEG_MAP" == '' ]];then
-      FFMPEG_MAP="$FFMPEG_MAP "
-    fi
-
     OUTPUT_FILE="${FILENAME}-s${COUNTER}.${STREAM_TYPE}"
     echo "Extracting stream $STREAM to \"$OUTPUT_FILE\""
 
-    FFMPEG_MAP="${FFMPEG_MAP}${COPY_TYPE} -map 0:$STREAM -y \"$OUTPUT_FILE\""
+    # shellcheck disable=SC2206
+    FFMPEG_ARGS+=( ${COPY_TYPE} "-map" "0:$STREAM" "-y" "$OUTPUT_FILE" )
     let COUNTER=COUNTER+1
 done < <(ffprobe "$1" 2>&1 | grep "Stream #")
 
-if [[ "$FFMPEG_MAP" == "" ]]
+if [[ ${#FFMPEG_ARGS[@]} -eq 0 ]]
 then
     echo "Nothing to extract"
     exit
 fi
 
-eval "ffmpeg -v error -stats -i \"$1\" $FFMPEG_MAP < /dev/null"
+ffmpeg -v error -stats -i "$1" "${FFMPEG_ARGS[@]}" < /dev/null
 echo ""
