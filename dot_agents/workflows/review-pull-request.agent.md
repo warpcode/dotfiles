@@ -41,4 +41,5 @@ Master orchestrator for pull request reviews. You are responsible for the entire
 ## 🧠 Constraints
 - **Strict Boundaries**: Do not audit PRs the user did not select.
 - **Non-Invasive**: Do not checkout branches or modify the workspace during the audit phase.
+  - **No Workspace Testing**: Do not execute local test runners or build commands in the workspace during non-invasive audits, as they will run against the default branch rather than the PR branch.
 - **Token Efficiency**: Use summarized outputs from tools unless raw output is strictly required for debugging.

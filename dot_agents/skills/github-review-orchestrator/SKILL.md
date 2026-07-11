@@ -28,7 +28,7 @@ Perform the review without checking out branches or modifying the workspace:
 - Use the bundled `scripts/fetch_file.sh` script to retrieve full file contents via API if needed for context (e.g., `./scripts/fetch_file.sh <owner> <repo> <path> <branch>`).
 - **Terminal Wrapping Awareness**: Long lines in tool outputs (e.g., from `fetch_file.sh` or `gh pr diff`) can wrap in the display and appear as multiple duplicate or malformed lines. Always verify using a structured, line-numbered `grep` or inspect the lines directly with their line-numbers before assuming a syntax error or duplicate line exists.
 - **Verification**: Cross-reference current diff against discovered review threads to identify candidates for resolution.
-
+- **CI / Checks Status Verification**: Verify the PR branch CI checks and linter status using `gh pr checks <pr_number>`. If checks fail, fetch the failed run logs using `gh run list --repo <owner>/<repo> --branch <branch_name>` and `gh run view <run_id> --log-failed` to identify issues like compilation, test failures, or linter errors before completing the audit.
 - Verify findings locally if applicable, but never commit or change branch.
 
 ### 3. Professional Feedback & Review Submission Standards
@@ -86,13 +86,14 @@ Use this procedure to audit pull requests without workspace mutation:
 1. **Discovery**: Batch fetch all open PRs and active review threads using `scripts/fetch_all_pr_threads.sh <owner> <repo> [limit] [direction] [--raw]`.
 2. **Selection**: Present candidates and get user approval (respecting the Batching Permission rule).
 3. **Inspection**: Use `get_pr_context.sh` and `fetch_file.sh` to retrieve diffs and full file context for the target PR(s).
-4. **Audit**: Perform read-only verification of fixes and identify regressions against local files fetched to temporary paths.
-5. **Architectural Audit**: If files are emptied or renamed:
+4. **Testing Constraint**: Do NOT run local compiler checks, test suites, or benchmarks (e.g., `go test`, `npm test`) directly in the workspace during non-invasive reviews. These commands will execute against the default workspace branch (e.g., `master`/`main`) rather than the remote PR branch, resulting in misleading test results.
+5. **Audit**: Perform read-only verification of fixes and identify regressions against local files fetched to temporary paths.
+6. **Architectural Audit**: If files are emptied or renamed:
     - Identify target files in the diff.
     - Perform a global `grep_search` for the file names and common command aliases.
     - Verify if call sites expect logic that has been removed.
     - Cross-reference with project-specific environment generation scripts.
-6. **Batching**: Construct atomic JSON review payloads using `templates/github/review_comment.md`.
-7. **Submission**: Submit as a single review event (COMMENT, APPROVE, or REQUEST_CHANGES) via `submit_review.sh`.
+7. **Batching**: Construct atomic JSON review payloads using `templates/github/review_comment.md`.
+8. **Submission**: Submit as a single review event (COMMENT, APPROVE, or REQUEST_CHANGES) via `submit_review.sh`.
 
 
