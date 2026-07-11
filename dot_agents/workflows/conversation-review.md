@@ -109,10 +109,10 @@ Attempt to read the following files. Report each as `found` or `not found`:
 | Category | File / Path Description | Common Paths to Check |
 |---|---|---|
 | **IDE & LLM Rules** | IDE instructions, protocol declarations, and assistant behavior rules | `./.antigravityrules`, `./.cursorrules`, `./.copilotzone`, `./.claudeprotocol` |
-| **Workspace Instructions** | Global workspace guides, project-specific overrides | `./CLAUDE.md`, `./AGENTS.md`, `./GEMINI.md` |
-| **Custom Agents & Subagents** | Custom system prompts, configuration schemas, and subagent prompt definitions | `./.github/agents/`, `./.agents/`, `./agents/` |
-| **Workflows** | Google Antigravity markdown-based agent workflows, orchestrator scripts | `./.agents/workflows/`, `./.github/workflows/`, `./workflows/` |
-| **Local Skills** | Modular skill directories and SKILL.md blueprints | `./skills/`, `./.claude/skills/`, `./.github/skills/` |
+| **Workspace Instructions** | Global workspace guides, project-specific overrides | `./CLAUDE.md`, `./dot_agents/AGENTS.md`, `./GEMINI.md` |
+| **Custom Agents & Subagents** | Custom system prompts, configuration schemas, and subagent prompt definitions | `./.github/agents/`, `./dot_agents/`, `./agents/` |
+| **Workflows** | Google Antigravity markdown-based agent workflows, orchestrator scripts | `./dot_agents/workflows/`, `./.github/workflows/`, `./workflows/` |
+| **Local Skills** | Modular skill directories and SKILL.md blueprints | `./skills/`, `./.claude/skills/`, `./.github/skills/`, `./dot_agents/skills/` |
 | **Global Skills** | User-wide or environment-wide shared skill registries | `/mnt/skills/user/`, `~/.config/antigravity/skills/` |
 | **Hooks & Automations** | Git hooks, pre-commit pipelines, pre-processing / post-processing lifecycle hooks | `./.git/hooks/`, `./hooks/`, `./scripts/hooks/` |
 | **IDE & MCP Settings** | Model configuration parameters, tool server settings, workspace preferences | `./mcp-servers.json`, `./.vscode/settings.json`, `./.antigravity/config.json` |
@@ -127,7 +127,7 @@ Cross-reference the conversation against all located files. Identify:
 - **Missing coverage** — a pattern, tool, or convention used in the conversation that no existing workspace instruction, skill, agent, or hook addresses.
 - **New architectural candidate** — a pattern or procedure that should be codified into a skill, custom agent/subagent, rule, hook, or command/prompt file.
 - **Self-Review Alignment** — cross-reference the conversation to identify gaps, inaccuracies, or opportunities to optimize the **conversation review subagent prompt itself** (`conversation-review.md`). 
-- **Recursive Skill Improvement** — ALWAYS evaluate if a correction or new preference should be codified in the global `prompt-skills-guidelines` or other specialized area-specific skills (e.g., `github-review-orchestrator`).
+- **Recursive Skill Improvement** — ALWAYS evaluate if a correction or new preference should be codified in the global `prompt-skills-guidelines` or other specialized area-specific skills (e.g., `github-cli`).
 - **Trigger & Loading Logic** — Review the `SKILL.md` files for trigger accuracy. Recommend updates to skill descriptions and activation triggers to ensure the correct skills are loaded autonomously by agents when needed.
 - **Enforcement**: If a conversation exposes a violation of a project-wide standard (e.g., token efficiency), the subagent MUST recommend updates to all files defining that standard to ensure consistency.
 - **Root Instruction Alignment**: Treat `~/.agents/AGENTS.md` as the canonical memory source. To prevent duplication and drift, recommend durable-memory edits against this canonical file rather than scattering equivalent updates across multiple instruction entry points.
@@ -149,11 +149,11 @@ To determine the correct level of extraction, apply these cognitive boundaries a
 Map the output type to the appropriate file structures and paths for the target environments:
 
 ##### Google Antigravity
-*   **Custom Agent / Subagent**: `./.github/agents/<agent-name>.md` or `./.agents/workflows/<agent-name>.agent.md`
+*   **Custom Agent / Subagent**: `./.github/agents/<agent-name>.md` or `./dot_agents/workflows/<agent-name>.agent.md`
 *   **Hook**: `./hooks.json` or `./.github/hooks.json`
-*   **Rule / Instruction**: `./.antigravityrules`, `./.agents/rules/<topic>.instructions.md`, `./CLAUDE.md`, `./AGENTS.md`, `./GEMINI.md`
-*   **Command / Prompt File / Workflow**: Workflows in `./.agents/workflows/<name>.md`
-*   **Skill**: `./.github/skills/<skill-name>/SKILL.md` (local modular skills)
+*   **Rule / Instruction**: `./.antigravityrules`, `./dot_agents/rules/<topic>.instructions.md`, `./CLAUDE.md`, `./dot_agents/AGENTS.md`, `./GEMINI.md`
+*   **Command / Prompt File / Workflow**: Workflows in `./dot_agents/workflows/<name>.md`
+*   **Skill**: `./dot_agents/skills/<skill-name>/SKILL.md` (local modular skills)
 
 ##### OpenCode.ai
 *   **Custom Agent / Subagent**: `./.github/agents/<agent-name>.json` or `./.agents/<agent-name>.md`

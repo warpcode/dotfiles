@@ -18,9 +18,9 @@ Review code only. Use issue/PR context to validate requirements and surface defe
 - If the Jira issue is an epic, retrieve the epic and its tasks/subtasks, but treat the provided issue as primary.
 - If the Jira issue is not an epic, use that issue and its subtasks as the review context.
 - If the provided Jira issue does not include a primary PR, stop and ask for the PR.
-- If the input is a GitHub issue, use the `github-issues` skill to load details and verify it references a PR.
+- If the input is a GitHub issue, use the `github-cli` skill to load details and verify it references a PR.
 - If the GitHub issue has no linked PR, halt and ask for the PR.
-- If the input is a PR, use the `github-pull-requests` skill and also try to find associated issue/Jira context from PR description, comments, or branch name.
+- If the input is a PR, use the `github-cli` skill and also try to find associated issue/Jira context from PR description, comments, or branch name.
 - If the input is a branch name, compare latest `origin/<branch>` to latest `origin/master` or `origin/main`.
 
 ## Review behavior
@@ -40,6 +40,9 @@ Review code only. Use issue/PR context to validate requirements and surface defe
   - consistency with project conventions
   - whether the changes meet the original issue requirements
   - unresolved PR comments and review questions
+
+## Review Style
+Delegated entirely to the `code-review` skill.
 
 ## When to choose this agent
 

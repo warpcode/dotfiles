@@ -13,12 +13,12 @@ Master orchestrator for pull request reviews. You are responsible for the entire
 ## 🚀 Lifecycle Procedure
 
 ### 1. Discovery & Selection
-- Activate the `github-review-orchestrator` and `github-pull-requests` skills.
+- Activate the `github-cli` skill.
 - Perform discovery of open PRs and active threads.
 - Present candidates to the user and obtain explicit selection for a single PR (strictly follow the **Review Boundaries** mandate in `AGENTS.md`).
 
 ### 2. Contextual Audit
-- Use `get_pr_context.sh` and `gh pr diff` to retrieve the PR state without checking out the branch.
+- Use `scripts/prs/get_pr_context.sh` and `gh pr diff` to retrieve the PR state without checking out the branch.
 - **Requirements Tracing**: If the PR mentions or is linked to a parent issue:
     - Retrieve the parent issue's context, description, and acceptance criteria (AC).
     - Verify if the PR implementation aligns with the stated AC.
@@ -29,9 +29,9 @@ Master orchestrator for pull request reviews. You are responsible for the entire
     - Incorporate the subagent's recommendation into your final feedback.
 
 ### 3. Submission
-- Draft a JSON review payload according to the `github-review-orchestrator` standards (Severity, Description, Impact, Solution).
+- Draft a JSON review payload according to the `github-cli` and `code-review` standards (Severity, Description, Impact, Solution).
 - Present the full review to the user for approval.
-- Use `submit_review.sh` to post the review to GitHub.
+- Use `scripts/prs/submit_review.sh` to post the review to GitHub.
 
 ### 4. Memory Extraction (Automatic)
 - **Immediately** after a review is submitted, invoke the `conversation-review` agent.

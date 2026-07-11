@@ -3,6 +3,9 @@
 # Usage: ./fetch_all_pr_threads.sh <owner> <repo> [limit] [direction] [--raw]
 #   direction: ASC (oldest updated first) or DESC (newest updated first, default)
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common/client.sh"
+
 RAW_OUTPUT=false
 ARGS=()
 for arg in "$@"; do
@@ -25,7 +28,7 @@ if [[ -z "$OWNER" || -z "$REPO" ]]; then
 fi
 
 # Path to the batch query file
-QUERY_FILE="$(dirname "$0")/../queries/batch_review_threads.gql"
+QUERY_FILE="$SCRIPT_DIR/../../queries/batch_review_threads.gql"
 
 if [[ ! -f "$QUERY_FILE" ]]; then
     echo "Error: Query file not found at $QUERY_FILE" >&2
@@ -33,12 +36,11 @@ if [[ ! -f "$QUERY_FILE" ]]; then
 fi
 
 STDERR_FILE=$(mktemp)
-JSON_RESPONSE=$(gh api graphql \
+JSON_RESPONSE=$(github_graphql_request "@$QUERY_FILE" \
   -F owner="$OWNER" \
   -F repo="$REPO" \
   -F limit="$LIMIT" \
-  -F direction="$DIRECTION" \
-  -f query="$(cat "$QUERY_FILE")" 2>"$STDERR_FILE")
+  -F direction="$DIRECTION" 2>"$STDERR_FILE")
 GH_STATUS=$?
 
 if [[ $GH_STATUS -ne 0 ]]; then
