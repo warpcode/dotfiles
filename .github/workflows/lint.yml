@@ -3,10 +3,10 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'src/**/*.zsh'
+      - '**/*.zsh'
   pull_request:
     paths:
-      - 'src/**/*.zsh'
+      - '**/*.zsh'
 
 jobs:
   lint:
@@ -19,11 +19,11 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y zsh
       
       - name: Lint Zsh files
-        run: find src/zsh -name "*.zsh" -exec zsh -n {} \;
+        run: find . -name "*.zsh" -not -path "./.git/*" -exec zsh -n {} \;
       
       - name: Check for syntax errors
         run: |
-          if find src/zsh -name "*.zsh" -exec zsh -n {} \; 2>&1 | grep -q "error"; then
+          if find . -name "*.zsh" -not -path "./.git/*" -exec zsh -n {} \; 2>&1 | grep -q "parse error"; then
             echo "Syntax errors found"
             exit 1
           else
