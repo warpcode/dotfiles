@@ -33,13 +33,13 @@ def fetch_transcript(vid):
                     'text': s['text']
                 })
         else:
-            raw_transcript = YouTubeTranscriptApi().list(vid).find_transcript(['en']).fetch()
-            for s in raw_transcript.snippets:
-                mins, secs = divmod(int(s.start), 60)
+            raw_transcript = YouTubeTranscriptApi.list_transcripts(vid).find_transcript(['en']).fetch()
+            for s in raw_transcript:
+                mins, secs = divmod(int(s['start']), 60)
                 transcript.append({
-                    'start': s.start,
+                    'start': s['start'],
                     'start_display': f'{mins:02d}:{secs:02d}',
-                    'text': s.text
+                    'text': s['text']
                 })
     except Exception as e:
         print(f'Error fetching transcript: {e}', file=sys.stderr)
