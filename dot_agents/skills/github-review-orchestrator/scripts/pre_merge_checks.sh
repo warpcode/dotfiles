@@ -87,9 +87,9 @@ fi
 echo "Checking GitHub Actions / status checks..."
 CHECK_COUNT=$(jq '.statusCheckRollup | length' <<< "$PR_INFO")
 if (( CHECK_COUNT > 0 )); then
-  # Group statuses using jq
-  PENDING_CHECKS=$(jq '[.statusCheckRollup[] | select(.state == "PENDING")] | length' <<< "$PR_INFO")
-  FAILING_CHECKS=$(jq '[.statusCheckRollup[] | select(.state == "FAILURE" or .state == "ERROR")] | length' <<< "$PR_INFO")
+  # Group statuses using jq (handles both StatusContext (.state) and CheckRun (.status, .conclusion))
+  PENDING_CHECKS=$(jq '[.statusCheckRollup[] | select(.state == "PENDING" or .status == "IN_PROGRESS" or .status == "QUEUED")] | length' <<< "$PR_INFO")
+  FAILING_CHECKS=$(jq '[.statusCheckRollup[] | select(.state == "FAILURE" or .state == "ERROR" or .conclusion == "FAILURE" or .conclusion == "ERROR" or .conclusion == "CANCELLED" or .conclusion == "TIMED_OUT")] | length' <<< "$PR_INFO")
   
   if (( FAILING_CHECKS > 0 )); then
     echo "⚠ Warning: $FAILING_CHECKS checks failed."
