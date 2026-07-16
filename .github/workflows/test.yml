@@ -6,7 +6,7 @@ on:
     branches:
       - master
     paths:
-      - 'src/**/*.zsh'
+      - '**/*.zsh'
       - 'install.sh'
       - '.gitmodules'
       - 'assets/configs/**/*'
@@ -15,7 +15,7 @@ on:
     branches:
       - master
     paths:
-      - 'src/**/*.zsh'
+      - '**/*.zsh'
       - 'install.sh'
       - '.gitmodules'
       - 'assets/configs/**/*'
