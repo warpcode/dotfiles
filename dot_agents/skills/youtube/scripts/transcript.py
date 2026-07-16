@@ -23,14 +23,24 @@ def fetch_video_info(url):
 def fetch_transcript(vid):
     transcript = []
     try:
-        raw_transcript = YouTubeTranscriptApi.get_transcript(vid)
-        for s in raw_transcript:
-            mins, secs = divmod(int(s['start']), 60)
-            transcript.append({
-                'start': s['start'],
-                'start_display': f'{mins:02d}:{secs:02d}',
-                'text': s['text']
-            })
+        if hasattr(YouTubeTranscriptApi, 'get_transcript'):
+            raw_transcript = YouTubeTranscriptApi.get_transcript(vid)
+            for s in raw_transcript:
+                mins, secs = divmod(int(s['start']), 60)
+                transcript.append({
+                    'start': s['start'],
+                    'start_display': f'{mins:02d}:{secs:02d}',
+                    'text': s['text']
+                })
+        else:
+            raw_transcript = YouTubeTranscriptApi().list(vid).find_transcript(['en']).fetch()
+            for s in raw_transcript.snippets:
+                mins, secs = divmod(int(s.start), 60)
+                transcript.append({
+                    'start': s.start,
+                    'start_display': f'{mins:02d}:{secs:02d}',
+                    'text': s.text
+                })
     except Exception as e:
         print(f'Error fetching transcript: {e}', file=sys.stderr)
         # We continue even if transcript fails, metadata might still be useful
