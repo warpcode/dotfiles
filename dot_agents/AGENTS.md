@@ -25,6 +25,8 @@ These instructions capture persistent memories, behavioral guardrails, and techn
    - **Review Boundaries**: When discovering multiple PRs, strictly limit auditing and commentary to the specific PR(s) selected by the user. Do not proactively audit other candidates in the same turn or session unless explicitly requested.
    - **Review Orchestration**: Formal pull request reviews SHOULD be performed using the `review-pull-request` agent. This ensures a consistent lifecycle including discovery, specialized subagent audits (e.g., `file-cleaner`), and automatic memory extraction via `conversation-review`.
    - **Code Review Phase Separation**: During active PR review workflows (e.g. `/review-pull-request`), treat any user architectural ideas, cleanup requests, or file removal proposals as requested review comments to be submitted to GitHub. Do NOT checkout the branch or perform local workspace edits unless the user explicitly commands a local change or workspace modification.
+   - **Strict Thread Resolution**: Only resolve a review thread if the corresponding change is verified as fully and correctly implemented. If a finding is not fully resolved, do not resolve the thread; post a reply comment on the existing thread explaining what is still outstanding.
+   - **Rebase Conflict Handling**: When requested to resolve merge conflicts on a PR branch, perform a proper git rebase of the target base branch onto the PR branch, resolve conflicts cleanly (e.g., using a worktree), and force-push the updated branch back to the remote.
 6. **Precedence & Integrity**:
   - Skill instructions and engineering standards take precedence over context-efficiency heuristics.
   - Do not skip mandated procedural steps (for example, explicit validation or required intermediate artifacts) only to reduce turns or tokens.
@@ -46,8 +48,16 @@ These instructions capture persistent memories, behavioral guardrails, and techn
   - Resolve directive conflicts in this order: safety, user intent, simplicity, then local convention.
 
 11. **Ticket Context Completeness**:
-  - Any generated task/issue/ticket must be context-complete and executable without chat history.
-  - Include required skills/guidelines, decision logic, expected output schema, and explicit file paths/dependency chains.
+   - Any generated task/issue/ticket must be context-complete and executable without chat history.
+   - Include required skills/guidelines, decision logic, expected output schema, and explicit file paths/dependency chains.
+
+12. **Tool Parameter Hygiene**:
+   - When invoking or defining subagents, configs, or resources via tools (e.g., `define_subagent`), ensure string arguments (such as the `name` parameter) do not contain unnecessary escaped literal quotes (e.g. use `"conversation-review"`, not `"\"conversation-review\""`), which will cause subsequent lookups or file writes to fail.
+
+13. **Script Execution Efficiency (Token Preservation)**:
+   - Do NOT open or read the full contents of utility, helper, or command scripts before executing them if their usage, parameters, and location are already documented in `SKILL.md` or other instructions.
+   - Directly execute them using the documented usage. Only read a script's source code if it is the target of a code review, modification, or debug task.
+
 ## 🛠️ Technical Context & Preferences
 
 - **Source of Truth Hierarchy**: `~/.agents/AGENTS.md` is the authoritative source for durable, graduated rules and conventions. Project-local guidance should align to this core memory file, and mature patterns should be promoted into dedicated skills when appropriate.
@@ -60,10 +70,7 @@ These instructions capture persistent memories, behavioral guardrails, and techn
   - Before approving or merging any pull request, the AI agent MUST run `./.agents/skills/github-review-orchestrator/scripts/pre_merge_checks.sh <pr_number>` to automate verification checks.
 - **Code Review Style**: Delegated entirely to `github-review-orchestrator` and `technical-review-guidelines` skills. Do not duplicate rules here.
 - **Skill Blueprint Design**: Resources should **not** be marked as required in simple skill blueprints.
-- **Skill Naming Convention**: All custom skills MUST be named using the format `prefix-{specific-area}-guidelines`.
-  - For LLM instructions, agent orchestration, or prompt engineering: `prompt-*` MUST be the prefix (e.g., `prompt-guidelines`, `prompt-skills-guidelines`).
-  - For memory management, extraction, and lifecycle operations: `memory-*` MUST be the prefix (e.g., `memory-analysis-guidelines`, `memory-operations-guidelines`). Note: Memory operations are distinct from prompt engineering.
-  - For GitHub-related skills/integrations: `github-*` MUST be the prefix (e.g., `github-review-guidelines`).
+- **Skill Naming Convention**: Custom skills should be named directly following the format `{primary-thing}-{domain-area}` (e.g., `github-cli`, `shell-styling`, `jira-actions`). Do not append `-guidelines` or prefix everything with `prompt-` or `github-` unless it is directly applicable to that prefix/suffix.
 - **Skill Lifecycle & Granularity**: When creating or reviewing skills, explicitly evaluate whether to:
   - **Merge**: Collate smaller, overlapping, or fragmented skills into a unified capability.
   - **Break Up**: Deconstruct large, multi-purpose skills into smaller, single-responsibility skills.
@@ -76,6 +83,7 @@ These instructions capture persistent memories, behavioral guardrails, and techn
   - **Skill Script Path Resolution**: If a skill references a script using a relative path, agents MUST resolve and check that path from the skill's own directory first before attempting repository-root or other fallback paths.
   - **Stdout Preference**: Prefer scripts that output data directly to `stdout` rather than requiring a temporary file path, especially for data intended for immediate consumption.
   - When using `gh api graphql`, pass queries via variable injection to avoid shell quoting and path resolution issues.
+  - **GH CLI Escaping Safety**: When updating, replying, or posting review comments via `gh api` containing backticks, brackets, or code tokens, write the payload to a JSON file and load it using `--input <file>` rather than inline shell flags (e.g. `--field` or `-f`) to prevent shell substitution and character stripping.
 - **Package Management Architecture**: The legacy `zinstall` logic is deprecated. The project is migrating towards a unified `pkg.zsh` architecture using a `recipe` dictionary format that explicitly defines methods for checking, updating, installing, and enabling packages.
 - **Skill Development Standards**:
   - **Token Efficiency**: Scripts intended for AI consumption MUST prioritize token-efficient summaries (e.g., Markdown) by default to minimize context usage.
@@ -89,8 +97,12 @@ These instructions capture persistent memories, behavioral guardrails, and techn
 - **Architectural Decisions**:
   - **Log Rotation (macOS)**: Preferred log rotation for `launchd` agents is via shell redirection (`>`) in the `ProgramArguments` block to ensure truncation on every run, rather than using `StandardOutPath`.
   - **Service Logging (Linux)**: `systemd` services should delegate log management to `journald` via `StandardOutput=journal` instead of writing to static files.
+  - **Secrets Blindness**: Custom scripts and skills interacting with remote APIs (e.g. GitHub) MUST remain completely blind to the secret provider (such as `cloakenv`). The scripts should only rely on standard environment variables (like `GITHUB_TOKEN` / `GH_TOKEN`) or native tool configurations. The wrapping of commands with `cloakenv` is strictly the responsibility of the high-level agent orchestration.
+  - **CLI & API Fallbacks**: Scripts interfacing with GitHub should check if the `gh` CLI is installed and authenticated. If authenticated, they should use the CLI. If not authenticated, but `GITHUB_TOKEN` or `GH_TOKEN` is set, they should fall back to accessing the GitHub API directly via `curl`.
+  - **Branch Dynamism**: Pull request review and validation scripts MUST NOT hardcode default branch names (such as `origin/master` or `master`). Instead, query the pull request metadata dynamically to determine the target base branch.
+  - **Git vs. GitHub Domain Separation**: Keep Git-specific commands and logic (e.g. local branching, commits, diffs) logically separate from GitHub API integrations (e.g. issues, pull requests, reviews). Git operations should reside in general git skills/scripts, not inside github-prefixed ones.
 
-- **PR Review Hygiene**: Delegated entirely to `github-review-orchestrator` skill.
+- **PR Review Hygiene**: Delegated entirely to `github-cli` skill.
 
 ## 🤖 Autonomous VM Agents (Jules)
 
@@ -130,12 +142,24 @@ When operating as an autonomous agent in a remote virtual machine (e.g., Jules):
    - **KeePassXC CLI Attachment Operations**: `keepassxc-cli` does not feature an `attachment-list` subcommand. To list attachments, run `keepassxc-cli show --show-attachments <db> <entry>` and parse the output block. To stream attachments to stdout, use `keepassxc-cli attachment-export <db> <entry> <name> --stdout`.
    - **KeePassXC Decryption Performance**: Running `keepassxc-cli show` sequentially inside shell loops (even when parallelized via `zargs` across entries) introduces significant latency because every process invocation decrypts the database. Always fetch all attributes of an entry in a single process invocation and parse the results in-memory.
    - **Symlink Replacement in Install Scripts**: When replacing a symlinked directory, always recreate the directory (`mkdir -p`) immediately after deleting the symlink using `rm -f` to ensure subsequent copying operations (such as `cp -a`) do not fail.
+   - **Keyring/Cache Testing Isolation**: In secret orchestrator tests (e.g. `cloakenv`), tests that interact with cache/keyring providers must call `keyring.MockInit()` and isolate `HOME`, `XDG_CACHE_HOME`, and `LocalAppData` to a temporary directory (`t.TempDir()`) to avoid local data loss.
+   - **Go Pipe-Based Redirection Safety in Tests**: In Go tests that redirect stdout/stderr using `os.Pipe()`, check the returned error immediately. Defer closing both writer ends (`wOut.Close()`, `wErr.Close()`) immediately after creation to prevent resource leaks (file descriptors and background goroutines waiting for EOF) if the test function panics.
+   - **Unique Temporary Files**: When creating temporary or staging files (e.g. for PR review payloads or command inputs), always generate unique filenames/paths and place them in a writeable directory (such as the conversation's scratch directory or local workspace) to prevent conflict and permission failures.
+   - **Merge Regression Auditing**: Merges and rebases done by automated tools can inadvertently introduce minor regressions like stripping trailing newlines in configuration files (e.g., `Makefile`) or leading whitespace in test fixtures (e.g., `template_test.go`), which weakens parser testing. Always perform a direct file comparison (`diff`) between the target PR branch files and `main` to identify and revert these regressions.
+   - **Script Execution Efficiency**: Do NOT open or read the full contents of utility, helper, or command scripts before executing them if their usage, parameters, and location are already documented. Directly execute them using the documented usage. Only read a script's source code if it is the target of a code review, modification, or debug task.
+   - **Cloakpkg Go Version**: The `cloakpkg` project uses Go 1.23 on the `main` branch.
+   - **gh API File GraphQL Parameters**: When calling `gh api graphql` with a query stored in a file, always pass the query using the uppercase `-F` parameter (e.g., `-F query=@/path/to/query.gql`) rather than the lowercase `-f`, which interprets the argument as a literal query string.
+   - **Cloakpkg Integration Test Package Assertion**: In `cloakpkg` integration tests, when verifying package commands for installers using the `--` argument separator (like `apt-get` and `dnf`), package names begin at argument index 4 (`cmd[4:]`), whereas for installers not using `--` (like `pacman`), they begin at index 3 (`cmd[3:]`).
 
    ### `decision`
    - **Prevent Infinite Log Growth in Scheduled Services**: macOS launchd services MUST use shell redirection (`>`) in the `ProgramArguments` block to truncate logs on every run; Linux systemd services MUST delegate logging to `journald` via `StandardOutput=journal` instead of writing to static files.
    - **Interactive Zsh Functions Safety**: Interactive Zsh functions (like `dataurl`) must always use `return <status>` instead of `exit` to prevent terminating the active shell session, and must verify file readability using `[ -f "$file" ]` beforehand.
    - **Argument-Based JSON in Zsh**: When passing resolved JSON objects between shell functions or into jq, pass them as parsed arguments (e.g., jq --argjson defaults "$default_json") rather than using process substitutions (<(echo ...)) or raw slurping, preventing zsh compatibility issues and descriptor leaks.
    - **Subagent Model Routing**: Whenever a subagent is spawned to handle code grepping or file reading, do NOT use the master model. Set `inherit = false` for the subagent context and explicitly enforce the target model as `gemini-3.5-flash`.
+   - **Git Merge Conflict Review Style**: In code reviews, if a branch has merge conflicts with the target branch, instruct the author to perform a proper git rebase/merge instead of file overwrites or manual copies.
+   - **PR Review Event Mapping**: If a PR review contains any findings (including those of **Low** severity), submit the review as `REQUEST_CHANGES` rather than `COMMENT`.
+   - **PR Review Conflict Commenting**: When requesting changes due to merge conflicts or general findings, always add corresponding inline comments directly to the affected files in the review payload to ensure external integrations and bots detect the changes required.
+   - **Atomically Submit Mixed-Type Reviews via GraphQL**: To submit a pull request review containing both line-level comments and file-level comments (e.g., comments on binary files or without specific line numbers), do not use the REST API reviews endpoint (which rejects `subject_type: file` with HTTP 422). Instead, use the GraphQL mutations workflow: create a pending review via `addPullRequestReview`, attach comments via `addPullRequestReviewThread` (using `subjectType: FILE` for file-level comments), and finalize via `submitPullRequestReview`.
 
    ### `correction`
    - **Obsidian Slugification**: Resolved. The regression in PR #40 where slugification was too aggressive was fixed by restoring the legacy ${note_title// /-} logic in `bin/df.obsidian`.
