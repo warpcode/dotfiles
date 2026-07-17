@@ -12,32 +12,48 @@ def extract_video_id(url):
     match = re.search(r'(?:v=|/)([a-zA-Z0-9_-]{11})', url)
     return match.group(1) if match else None
 
+def fetch_video_info(url):
+    try:
+        with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
+            return ydl.extract_info(url, download=False)
+    except Exception as e:
+        print(f'Error fetching video info: {e}', file=sys.stderr)
+        sys.exit(1)
+
+def fetch_transcript(vid):
+    transcript = []
+    try:
+        if hasattr(YouTubeTranscriptApi, 'get_transcript'):
+            raw_transcript = YouTubeTranscriptApi.get_transcript(vid)
+            for s in raw_transcript:
+                mins, secs = divmod(int(s['start']), 60)
+                transcript.append({
+                    'start': s['start'],
+                    'start_display': f'{mins:02d}:{secs:02d}',
+                    'text': s['text']
+                })
+        else:
+            raw_transcript = YouTubeTranscriptApi.list_transcripts(vid).find_transcript(['en']).fetch()
+            for s in raw_transcript:
+                mins, secs = divmod(int(s['start']), 60)
+                transcript.append({
+                    'start': s['start'],
+                    'start_display': f'{mins:02d}:{secs:02d}',
+                    'text': s['text']
+                })
+    except Exception as e:
+        print(f'Error fetching transcript: {e}', file=sys.stderr)
+        # We continue even if transcript fails, metadata might still be useful
+    return transcript
+
 def get_transcript_data(url):
     vid = extract_video_id(url)
     if not vid:
         print(f'Error: Could not extract video ID from {url}', file=sys.stderr)
         sys.exit(1)
 
-    try:
-        with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
-            info = ydl.extract_info(url, download=False)
-    except Exception as e:
-        print(f'Error fetching video info: {e}', file=sys.stderr)
-        sys.exit(1)
-
-    transcript = []
-    try:
-        raw_transcript = YouTubeTranscriptApi.get_transcript(vid)
-        for s in raw_transcript:
-            mins, secs = divmod(int(s['start']), 60)
-            transcript.append({
-                'start': s['start'],
-                'start_display': f'{mins:02d}:{secs:02d}',
-                'text': s['text']
-            })
-    except Exception as e:
-        print(f'Error fetching transcript: {e}', file=sys.stderr)
-        # We continue even if transcript fails, metadata might still be useful
+    info = fetch_video_info(url)
+    transcript = fetch_transcript(vid)
 
     return {
         'title': info.get('title', 'Unknown Title'),
