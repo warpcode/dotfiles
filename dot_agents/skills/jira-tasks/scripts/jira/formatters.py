@@ -1,29 +1,37 @@
 from .metrics import calculate_metrics
 
-def flatten_adf(node):
-    """Recursive function to handle nested ADF (Atlassian Document Format) content."""
+def _flatten_adf_list(node, parts):
+    """Helper function to append ADF content to a list of parts."""
     if node is None:
-        return ""
+        return
     if isinstance(node, list):
-        return "".join(flatten_adf(item) for item in node)
+        for item in node:
+            _flatten_adf_list(item, parts)
+        return
     if not isinstance(node, dict):
-        return ""
+        return
 
     node_type = node.get("type")
     if node_type == "text":
-        return node.get("text", "")
-    if node_type == "hardBreak":
-        return "\n"
-    if node_type == "inlineCard":
-        return node.get("attrs", {}).get("url", "")
-    if node_type == "mention":
-        return node.get("attrs", {}).get("text", "")
-    if node_type in ("paragraph", "heading", "listItem", "tableCell"):
+        parts.append(node.get("text", ""))
+    elif node_type == "hardBreak":
+        parts.append("\n")
+    elif node_type == "inlineCard":
+        parts.append(node.get("attrs", {}).get("url", ""))
+    elif node_type == "mention":
+        parts.append(node.get("attrs", {}).get("text", ""))
+    elif node_type in ("paragraph", "heading", "listItem", "tableCell"):
         content = node.get("content", [])
-        return flatten_adf(content) + "\n"
-    if "content" in node:
-        return flatten_adf(node["content"])
-    return ""
+        _flatten_adf_list(content, parts)
+        parts.append("\n")
+    elif "content" in node:
+        _flatten_adf_list(node["content"], parts)
+
+def flatten_adf(node):
+    """Recursive function to handle nested ADF (Atlassian Document Format) content."""
+    parts = []
+    _flatten_adf_list(node, parts)
+    return "".join(parts)
 
 def process_issue(issue, requested_expands, full_issue=False, status_map=None):
     """Replicates the ISSUE_PROCESSOR_JQ logic for a single issue and adds statistical metrics."""

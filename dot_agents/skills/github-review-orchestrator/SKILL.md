@@ -28,20 +28,24 @@ Perform the review without checking out branches or modifying the workspace:
 - Use the bundled `scripts/fetch_file.sh` script to retrieve full file contents via API if needed for context (e.g., `./scripts/fetch_file.sh <owner> <repo> <path> <branch>`).
 - **Terminal Wrapping Awareness**: Long lines in tool outputs (e.g., from `fetch_file.sh` or `gh pr diff`) can wrap in the display and appear as multiple duplicate or malformed lines. Always verify using a structured, line-numbered `grep` or inspect the lines directly with their line-numbers before assuming a syntax error or duplicate line exists.
 - **Verification**: Cross-reference current diff against discovered review threads to identify candidates for resolution.
-- **CI / Checks Status Verification**: Verify the PR branch CI checks and linter status using `gh pr checks <pr_number>`. If checks fail, fetch the failed run logs using `gh run list --repo <owner>/<repo> --branch <branch_name>` and `gh run view <run_id> --log-failed` to identify issues like compilation, test failures, or linter errors before completing the audit.
+- **CI / Checks Status Verification**: Verify the PR branch CI checks and linter status using `gh pr checks <pr_number>`. If checks fail, fetch the failed run logs using `gh run list --repo <owner>/<repo> --branch <branch_name>` and `gh run view <run_id> --log-failed` to identify issues like compilation, test failures, or linter errors before completing the audit. **Explicitly evaluate if the check failure is caused by the PR's code or is a pre-existing repository/infrastructure failure.**
 - Verify findings locally if applicable, but never commit or change branch.
+- **Merge Regression Check**: If the PR contains a merge or rebase commit at its tip, retrieve and diff the changed files against their versions on the base branch (e.g. `main`) to verify that formatting, whitespace in test fixtures, and trailing newlines have not been stripped or regressed.
+
 
 ### 3. Professional Feedback & Review Submission Standards
 Comments MUST NOT use 'caveman' style.
 - **Tone & Content**: Strictly neutral and formal. Avoid encouraging or conversational summaries; focus exclusively on specific technical findings or corrections. Never use "LGTM" or unnecessary affirmations. Do not repeat yourself.
-- **Mandatory Complete Review Payload**: Standalone comments or direct command-line body passing are strictly prohibited. A complete, valid JSON review payload containing the event type (`COMMENT`, `APPROVE`, or `REQUEST_CHANGES`), the main review body, and the array of inline comments (if any) MUST always be prepared, written to a staging file (e.g. `~/.gemini/antigravity-ide/scratch/review_payload.json`) using `write_to_file`, and submitted via `scripts/submit_review.sh`. **Post-submission, clean up all temporary staging payloads, review drafts, and diff files to prevent stale state retention.**
+- **Mandatory Complete Review Payload**: Standalone comments or direct command-line body passing are strictly prohibited. A complete, valid JSON review payload containing the event type (`COMMENT`, `APPROVE`, or `REQUEST_CHANGES`), the main review body, and the array of comments (if any) MUST always be prepared, written to a unique staging file in a writeable directory (such as a unique filename in the conversation artifacts scratch directory or the workspace) using `write_to_file`, and submitted via `scripts/submit_review.sh`. File-level comments (e.g., on binary files or without specific line numbers) are supported by omitting the `line` parameter or setting `subject_type: "file"`. **Post-submission, clean up all temporary staging payloads, review drafts, and diff files to prevent stale state retention.**
 - **Review Event Mapping**: Explicitly audit and map the review event depending on the severity of the findings:
-  - **REQUEST_CHANGES**: Use if one or more findings are marked as **Medium** or **High** severity.
-  - **COMMENT**: Use if findings are exclusively **Low** severity (style, non-blocking optimizations) or when replying to existing threads.
+  - **Verification Gate**: BEFORE approving or merging any pull request, the agent MUST run the pre-merge verification script: `scripts/pre_merge_checks.sh <pr_number>`.
+  - **REQUEST_CHANGES**: Use if one or more findings are marked as **Low**, **Medium**, or **High** severity.
+  - **COMMENT**: Use exclusively when replying to existing threads or when no changes are requested.
   - **APPROVE**: Use only when no findings exist or all previously raised issues have been fully resolved.
 - **Approval Constraints**: If approving a pull request, NEVER add NEW comments to files. Do not provide a summary if there is nothing new to add; just ask to approve.
 - **Replies**: Only reply if needed (with user approval). Give a thumbs up (👍) ONLY if the developer replied saying they fixed a requested change.
 - **Resolution**: Proactively resolve GitHub pull request review threads when the code changes addressing them have been verified. Use `scripts/resolve_review_thread.sh <thread_id>`. If the developer asks a question, alert the user for a response.
+- **Merge Conflict Resolution Reviews**: If a PR contains merge conflicts, submit a review requesting changes and instruct the developer to rebase the latest changes from the base branch using a proper git rebase/merge rather than copying changes across or overwriting files.
 - **Format**: For each technical finding, use line-level comments structured according to the `templates/github/review_comment.md` template, which includes:
   1. **Severity**: High, Medium, or Low (written in words).
   2. **Description**: Clear explanation of the issue.
@@ -79,13 +83,15 @@ Comments MUST NOT use 'caveman' style.
 Use this procedure to close addressed feedback loops:
 1. **Batch Discovery**: Use `scripts/fetch_all_pr_threads.sh <owner> <repo> [limit] [direction] [--raw]` to identify threads across all open PRs.
 2. **Verification**: Compare the current diff/files against the feedback in the thread.
-3. **Resolution**: Use `scripts/resolve_review_thread.sh <thread_id>` once the fix is verified in the remote branch.
+3. **Strict Thread Closing**: ONLY resolve a review thread if the corresponding change is verified as fully and correctly implemented.
+4. **Replying to Unfulfilled Threads**: If a finding is not fully resolved, DO NOT resolve the thread. Instead, post a reply comment on the existing thread describing what is still incorrect or outstanding.
 
 ### Non-Invasive Review Orchestration
 Use this procedure to audit pull requests without workspace mutation:
 1. **Discovery**: Batch fetch all open PRs and active review threads using `scripts/fetch_all_pr_threads.sh <owner> <repo> [limit] [direction] [--raw]`.
-2. **Selection**: Present candidates and get user approval (respecting the Batching Permission rule).
-3. **Inspection**: Use `get_pr_context.sh` and `fetch_file.sh` to retrieve diffs and full file context for the target PR(s).
+2. **Mergeability Check**: Check for merge conflicts using `gh pr view <pr_number> --json mergeable,mergeStateStatus` to determine if a rebase is required.
+3. **Selection**: Present candidates and get user approval (respecting the Batching Permission rule).
+4. **Inspection**: Use `get_pr_context.sh` and `fetch_file.sh` to retrieve diffs and full file context for the target PR(s).
 4. **Testing Constraint**: Do NOT run local compiler checks, test suites, or benchmarks (e.g., `go test`, `npm test`) directly in the workspace during non-invasive reviews. These commands will execute against the default workspace branch (e.g., `master`/`main`) rather than the remote PR branch, resulting in misleading test results.
 5. **Audit**: Perform read-only verification of fixes and identify regressions against local files fetched to temporary paths.
 6. **Architectural Audit**: If files are emptied or renamed:
@@ -94,6 +100,7 @@ Use this procedure to audit pull requests without workspace mutation:
     - Verify if call sites expect logic that has been removed.
     - Cross-reference with project-specific environment generation scripts.
 7. **Batching**: Construct atomic JSON review payloads using `templates/github/review_comment.md`.
+    - **Inline Comments**: When submitting a `REQUEST_CHANGES` review (especially for merge conflicts or file-specific findings), ALWAYS include corresponding inline comments on the affected files. This ensures that third-party bots and external tools detect the requested changes.
 8. **Submission**: Submit as a single review event (COMMENT, APPROVE, or REQUEST_CHANGES) via `submit_review.sh`.
 
 

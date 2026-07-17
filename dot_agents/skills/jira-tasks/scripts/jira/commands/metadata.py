@@ -21,15 +21,13 @@ def cmd_statuses(client, args):
         endpoint = f"rest/api/{JIRA_API_VERSION}/project/{args.project}/statuses"
         response = client.call("GET", endpoint)
         # Flatten statuses from all issue types
-        all_statuses = []
         seen_ids = set()
-        for itype in response:
-            for status in itype.get("statuses", []):
-                sid = status["id"]
-                if sid not in seen_ids:
-                    all_statuses.append(status)
-                    seen_ids.add(sid)
-        response = all_statuses
+        response = [
+            status
+            for itype in response
+            for status in itype.get("statuses", [])
+            if status["id"] not in seen_ids and not seen_ids.add(status["id"])
+        ]
     else:
         endpoint = f"rest/api/{JIRA_API_VERSION}/status"
         response = client.call("GET", endpoint)

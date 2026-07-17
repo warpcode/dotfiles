@@ -67,11 +67,11 @@ def get_status_map(client, project_key=None):
         try:
             response = client.call("GET", endpoint)
             # Flatten statuses from all issue types
-            mapping = {}
-            for itype in response:
-                for status in itype.get("statuses", []):
-                    mapping[status["name"]] = status.get("statusCategory", {}).get("name")
-            return mapping
+            return {
+                status["name"]: status.get("statusCategory", {}).get("name")
+                for itype in response
+                for status in itype.get("statuses", [])
+            }
         except:
             pass
 

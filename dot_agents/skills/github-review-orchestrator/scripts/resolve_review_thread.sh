@@ -1,47 +1,52 @@
 #!/bin/bash
-# Resolve a GitHub PR review thread using GraphQL
-# Usage: ./resolve_review_thread.sh <thread_id> [--raw]
+# Resolve GitHub PR review threads using GraphQL
+# Usage: ./resolve_review_thread.sh <thread_id1> [thread_id2 ...] [--raw]
 
 RAW_OUTPUT=false
-ARGS=()
+THREAD_IDS=()
 for arg in "$@"; do
     if [[ "$arg" == "--raw" ]]; then
         RAW_OUTPUT=true
     else
-        ARGS+=("$arg")
+        THREAD_IDS+=("$arg")
     fi
 done
 
-THREAD_ID=${ARGS[0]}
-
-if [[ -z "$THREAD_ID" ]]; then
-    echo "Usage: $0 <thread_id> [--raw]" >&2
+if [[ ${#THREAD_IDS[@]} -eq 0 ]]; then
+    echo "Usage: $0 <thread_id1> [thread_id2 ...] [--raw]" >&2
     exit 1
 fi
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+QUERY_FILE="${SCRIPT_DIR}/../queries/resolve_review_thread.gql"
 
-STDERR_FILE=$(mktemp)
-RESPONSE=$(gh api graphql -F query="@${SCRIPT_DIR}/../queries/resolve_review_thread.gql" -f threadId="$THREAD_ID" 2>"$STDERR_FILE")
-GH_STATUS=$?
+success=true
+for THREAD_ID in "${THREAD_IDS[@]}"; do
+    STDERR_FILE=$(mktemp)
+    RESPONSE=$(gh api graphql -F query="@$QUERY_FILE" -f threadId="$THREAD_ID" 2>"$STDERR_FILE")
+    GH_STATUS=$?
 
-if [[ $GH_STATUS -ne 0 ]]; then
-    echo "Error: Failed to resolve thread $THREAD_ID (exit code: $GH_STATUS)." >&2
-    cat "$STDERR_FILE" >&2
+    if [[ $GH_STATUS -ne 0 ]]; then
+        echo "Error: Failed to resolve thread $THREAD_ID (exit code: $GH_STATUS)." >&2
+        cat "$STDERR_FILE" >&2
+        rm -f "$STDERR_FILE"
+        success=false
+        continue
+    fi
     rm -f "$STDERR_FILE"
-    exit 1
-fi
-rm -f "$STDERR_FILE"
 
-if [[ "$RAW_OUTPUT" == "true" ]]; then
-    echo "$RESPONSE"
-else
-    # Token-efficient plain-text summary
-    echo "$RESPONSE" | jq -r '
-      .data.resolveReviewThread.thread |
-      "Thread ID: \(.id)",
-      "Resolved: \(.isResolved)"
-    '
+    if [[ "$RAW_OUTPUT" == "true" ]]; then
+        echo "$RESPONSE"
+    else
+        echo "$RESPONSE" | jq -r '
+          .data.resolveReviewThread.thread |
+          "Thread ID: \(.id) | Resolved: \(.isResolved)"
+        '
+    fi
+done
+
+if [[ "$success" == "false" ]]; then
+    exit 1
 fi
 
 
