@@ -1,0 +1,44 @@
+[bootstrap.packages]
+# --- System ---
+# git
+"brew:git" = "latest"
+
+# zsh
+"brew:zsh" = "latest"
+
+# curl
+"brew:curl" = "latest"
+
+# gcc
+"brew:gcc" = "latest"
+
+# make
+"brew:make" = "latest"
+
+# gnupg
+"brew:gnupg" = "latest"
+
+# openssl
+"brew:openssl" = "latest"
+
+# pkg-config
+"brew:pkgconf" = "latest"
+
+# unzip
+"brew:unzip" = "latest"
+
+# bc
+"brew:bc" = "latest"
+
+# dialog
+"brew:dialog" = "latest"
+
+# --- CLI ---
+# tmux
+"brew:tmux" = "latest"
+
+# screen
+"brew:screen" = "latest"
+
+# rsync
+"brew:rsync" = "latest"

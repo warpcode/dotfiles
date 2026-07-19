@@ -1,0 +1,175 @@
+[settings]
+experimental = true
+
+[bootstrap.hooks]
+pre-packages = "bash ~/.config/mise/scripts/setup_repos.sh"
+
+[bootstrap.packages]
+# --- System ---
+# git
+"apt:git"    = "latest"
+"dnf:git"    = "latest"
+"pacman:git" = "latest"
+
+# zsh
+"apt:zsh"    = "latest"
+"dnf:zsh"    = "latest"
+"pacman:zsh" = "latest"
+
+# curl
+"apt:curl"    = "latest"
+"dnf:curl"    = "latest"
+"pacman:curl" = "latest"
+
+# gcc
+"apt:gcc"    = "latest"
+"dnf:gcc"    = "latest"
+"pacman:gcc" = "latest"
+
+# make
+"apt:make"    = "latest"
+"dnf:make"    = "latest"
+"pacman:make" = "latest"
+
+# ca-certificates
+"apt:ca-certificates"    = "latest"
+"dnf:ca-certificates"    = "latest"
+"pacman:ca-certificates" = "latest"
+
+# gnupg
+"apt:gnupg2"  = "latest"
+"dnf:gnupg2"  = "latest"
+
+# libatomic
+"apt:libatomic1"  = "latest"
+"dnf:libatomic"   = "latest"
+"pacman:gcc-libs" = "latest"
+
+# openssl
+"apt:openssl"  = "latest"
+"dnf:openssl"  = "latest"
+
+# pkg-config
+"apt:pkg-config"         = "latest"
+"dnf:pkgconf-pkg-config" = "latest"
+
+# unzip
+"apt:unzip"  = "latest"
+"dnf:unzip"  = "latest"
+
+# libsecret
+"apt:libsecret-tools" = "latest"
+"dnf:libsecret"       = "latest"
+
+# bc
+"apt:bc"    = "latest"
+"dnf:bc"    = "latest"
+"pacman:bc" = "latest"
+
+# dialog
+"apt:dialog"    = "latest"
+"dnf:dialog"    = "latest"
+"pacman:dialog" = "latest"
+
+# dnf-plugins-core (Fedora only)
+"dnf:dnf-plugins-core" = "latest"
+
+# --- Docker ---
+"apt:docker-ce"              = "latest"
+"apt:docker-ce-cli"          = "latest"
+"apt:containerd.io"          = "latest"
+"apt:docker-buildx-plugin"   = "latest"
+"apt:docker-compose-plugin"  = "latest"
+"dnf:docker-ce"              = "latest"
+"dnf:docker-ce-cli"          = "latest"
+"dnf:containerd.io"          = "latest"
+"dnf:docker-buildx-plugin"   = "latest"
+"dnf:docker-compose-plugin"  = "latest"
+"pacman:docker"              = "latest"
+"pacman:docker-compose"      = "latest"
+"brew-cask:docker-desktop"   = "latest"
+
+# --- Development Tools ---
+"apt:code"                  = "latest"
+"dnf:code"                  = "latest"
+"brew-cask:visual-studio-code" = "latest"
+
+# --- CLI ---
+# openssh
+"apt:openssh-client"  = "latest"
+"dnf:openssh-clients" = "latest"
+"pacman:openssh"      = "latest"
+
+# tmux
+"apt:tmux"    = "latest"
+"dnf:tmux"    = "latest"
+"pacman:tmux" = "latest"
+
+# screen
+"apt:screen"    = "latest"
+"dnf:screen"    = "latest"
+"pacman:screen" = "latest"
+
+# rsync
+"apt:rsync"    = "latest"
+"dnf:rsync"    = "latest"
+"pacman:rsync" = "latest"
+
+[tools]
+# --- CLI & Shell Tools ---
+"jq"       = "latest"
+"yq"       = "latest"
+"fzf"      = "latest"
+"bat"      = "latest"
+"gomplate" = "latest"
+"gh"       = "latest"
+"lazygit"  = "latest"
+"neovim"   = "0.11.6"
+"uv"       = "latest"
+
+# --- Languages ---
+"python"   = "3.12"
+"node"     = "latest"
+"rust"     = "latest"
+"go"       = "latest"
+"deno"     = "latest"
+"php"      = "latest"
+
+# --- AI & Plugins ---
+"ollama"                   = "latest"
+"github:warpcode/cloakenv" = "dev"
+
+# --- Neovim LSP Tooling ---
+
+# Node/NPM-based LSPs
+"npm:bash-language-server"                  = "latest"
+"npm:dockerfile-language-server-nodejs"     = "latest"
+"npm:@olrtg/emmet-language-server"          = "latest"
+"npm:vscode-langservers-extracted"          = "latest"
+"npm:typescript-language-server"            = "latest"
+"npm:intelephense"                          = "latest"
+"npm:sql-language-server"                   = "latest"
+"npm:vim-language-server"                   = "latest"
+
+# Lua LSPs (Mise native registry)
+"lua-language-server"                       = "latest"
+
+# Python LSPs (using pipx)
+"pipx:python-lsp-server"                    = "latest"
+
+# --- Neovim Formatter & Linter Tooling ---
+
+# Node/NPM-based Formatters/Linters
+"npm:fixjson"          = "latest"
+"npm:jsonlint"         = "latest"
+"npm:markdownlint-cli" = "latest"
+"npm:prettier"         = "latest"
+"npm:eslint"           = "latest"
+
+# Lua Formatters
+"stylua"               = "latest"
+
+# Python Formatters & Linters (using pipx)
+"pipx:black"           = "latest"
+"pipx:isort"           = "latest"
+"pipx:flake8"          = "latest"
