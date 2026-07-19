@@ -41,7 +41,7 @@ These instructions capture persistent memories, behavioral guardrails, and techn
   - Provide self-contained directives to subagents and consume only synthesised results.
 
 9. **Pre-Action Safety Gate**:
-  - Before destructive operations (`rm`, `reset`, `chmod`, or network-impacting operations), request explicit user confirmation.
+  - Before destructive operations (`rm`, `reset`, `chmod`, or network-impacting operations), request explicit user confirmation. Temporary or staging files created during the session inside the conversation's scratch directory (e.g., review payloads) can be cleaned up or deleted without prompting.
   - For non-trivial edits, explicitly validate affected paths and intent prior to mutation.
 
 10. **Conflict Resolution Order**:
@@ -52,7 +52,7 @@ These instructions capture persistent memories, behavioral guardrails, and techn
    - Include required skills/guidelines, decision logic, expected output schema, and explicit file paths/dependency chains.
 
 12. **Tool Parameter Hygiene**:
-   - When invoking or defining subagents, configs, or resources via tools (e.g., `define_subagent`), ensure string arguments (such as the `name` parameter) do not contain unnecessary escaped literal quotes (e.g. use `"conversation-review"`, not `"\"conversation-review\""`), which will cause subsequent lookups or file writes to fail.
+   - When invoking tools or defining subagents, configs, or resources, ensure string arguments do not contain unnecessary escaped literal quotes (e.g. use "/path/to/dir", not "\"/path/to/dir\""). This applies to all parameters across all tools, including list_dir, view_file, and find_by_name, to prevent execution and parsing failures.
 
 13. **Script Execution Efficiency (Token Preservation)**:
    - Do NOT open or read the full contents of utility, helper, or command scripts before executing them if their usage, parameters, and location are already documented in `SKILL.md` or other instructions.
@@ -149,7 +149,11 @@ When operating as an autonomous agent in a remote virtual machine (e.g., Jules):
    - **Script Execution Efficiency**: Do NOT open or read the full contents of utility, helper, or command scripts before executing them if their usage, parameters, and location are already documented. Directly execute them using the documented usage. Only read a script's source code if it is the target of a code review, modification, or debug task.
    - **Cloakpkg Go Version**: The `cloakpkg` project uses Go 1.23 on the `main` branch.
    - **gh API File GraphQL Parameters**: When calling `gh api graphql` with a query stored in a file, always pass the query using the uppercase `-F` parameter (e.g., `-F query=@/path/to/query.gql`) rather than the lowercase `-f`, which interprets the argument as a literal query string.
-   - **Cloakpkg Integration Test Package Assertion**: In `cloakpkg` integration tests, when verifying package commands for installers using the `--` argument separator (like `apt-get` and `dnf`), package names begin at argument index 4 (`cmd[4:]`), whereas for installers not using `--` (like `pacman`), they begin at index 3 (`cmd[3:]`).
+   - **Cloakpkg Integration Test Package Assertion**: In `cloakpkg` integration tests, when verifying package commands for installers using the `--` argument separator (like `apt-get`, `dnf`, and `snap`), package names begin at argument index 4 (`cmd[4:]`), whereas for installers not using `--` (like `pacman`), they begin at index 3 (`cmd[3:]`).
+   - **Snap Installer Parameter Injection Protection**: The `snap` package installer in `cloakpkg` uses the `--` argument separator before the packages list for `install`, `remove`, and `refresh` actions to prevent parameter injection.
+   - **zsh -n Gotcha**: `zsh -n` only syntax-checks the first file argument when multiple arguments are provided. When linting multiple Zsh files, run `zsh -n` on each file individually (e.g., via `find ... -exec zsh -n {} \;` or a loop).
+   - **Piping Exit Status Masking**: Piping command outputs directly to other commands (like `grep`) masks the preceding command's exit code. For critical CI validations, check the elements of the `pipestatus` array (in Zsh) or `PIPESTATUS` (in Bash) or avoid inline pipelines if exit code propagation is required.
+   - **Go Test Code Quality Auditing**: Test code quality is audited against Google's Go Style Guide, verifying table-driven subtests, standard library assertions (no external assert packages), descriptive diagnostics, and deferred mock restorations to prevent test pollution.
 
    ### `decision`
    - **Prevent Infinite Log Growth in Scheduled Services**: macOS launchd services MUST use shell redirection (`>`) in the `ProgramArguments` block to truncate logs on every run; Linux systemd services MUST delegate logging to `journald` via `StandardOutput=journal` instead of writing to static files.
