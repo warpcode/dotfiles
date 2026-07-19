@@ -137,6 +137,7 @@ pre-packages = "bash ~/.config/mise/scripts/setup_repos.sh"
 
 # --- AI & Plugins ---
 "ollama"                   = "latest"
+"llama.cpp"                = "latest"
 "github:warpcode/cloakenv" = "dev"
 
 # --- Neovim LSP Tooling ---
