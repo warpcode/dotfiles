@@ -310,6 +310,10 @@ main() {
   fi
 
   PAGER=cat chezmoi "${chezmoi_global_args[@]}" init --apply --source "${DOTFILES}"
+
+  info "Installing mise tools (llama.cpp, ollama, etc)..."
+  "${mise_bin}" install || true
+
   success "Bootstrap complete! Please restart your terminal or run 'exec zsh'."
 }
 
