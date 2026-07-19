@@ -66,6 +66,11 @@ pre-packages = "bash ~/.config/mise/scripts/setup_repos.sh"
 "dnf:bc"    = "latest"
 "pacman:bc" = "latest"
 
+# php
+"apt:php"     = "latest"
+"dnf:php"     = "latest"
+"pacman:php"  = "latest"
+
 # dialog
 "apt:dialog"    = "latest"
 "dnf:dialog"    = "latest"
@@ -133,7 +138,7 @@ pre-packages = "bash ~/.config/mise/scripts/setup_repos.sh"
 "rust"     = "latest"
 "go"       = "latest"
 "deno"     = "latest"
-"php"      = "latest"
+
 
 # --- AI & Plugins ---
 "ollama"                   = "latest"
