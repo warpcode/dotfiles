@@ -262,7 +262,7 @@ main() {
   export PATH="${HOME}/.local/bin:${PATH}"
 
   # install mise if not already installed
-  if command -v mise >/dev/null 2>&1 || [[ -f "${HOME}/.local/bin/mise" ]]; then
+  if [[ -f "${HOME}/.local/bin/mise" ]] || [[ "${OS_NAME}" == "macos" && -x "$(command -v mise)" ]]; then
     success "Mise is already installed, skipping installation."
   else
     info "Installing mise..."
@@ -278,13 +278,19 @@ main() {
     hash -r 2>/dev/null || true
   fi
 
+  # Bootstrap system packages via mise before chezmoi applies dotfiles
+  local mise_bin="${HOME}/.local/bin/mise"
+  if [[ "${OS_NAME}" == "macos" ]] && command -v mise &>/dev/null; then
+    mise_bin="$(command -v mise)"
+  fi
+  info "Bootstrapping system packages via mise..."
+  "${mise_bin}" bootstrap --only packages || true
+
   # Apply dotfiles via chezmoi
   info "Applying dotfiles via Chezmoi..."
   # This will trigger:
   # - run_once_after_05-system.sh (install system pkgs)
   # - run_once_after_06-repositories.sh (setup 3rd party repos)
-  # - run_once_after_07-integration.sh (install integration pkgs)
-  # - run_once_after_08-install-packages.sh (install rest)
   # - run_once_after_10-set-zsh.sh (set default shell)
   local -a chezmoi_global_args=()
   # Build --override-data JSON for template variables

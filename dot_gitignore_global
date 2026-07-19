@@ -204,3 +204,7 @@ tags
 
 # WarpCode playground and settings
 .warpcode/
+
+# Mise local overrides (machine-specific, should never be committed)
+mise.local.toml
+mise.*.local.toml
