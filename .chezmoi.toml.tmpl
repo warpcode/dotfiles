@@ -60,24 +60,6 @@
     {{- $keepass_installed = true -}}
   {{- end -}}
 {{- end -}}
-{{- $llamacpp_arch := "" -}}
-{{- if eq .chezmoi.arch "arm64" -}}
-  {{- $llamacpp_arch = "arm64" -}}
-{{- else if eq .chezmoi.arch "amd64" -}}
-  {{- $llamacpp_arch = "x64" -}}
-{{- end -}}
-
-{{- $llamacpp_os := "" -}}
-{{- if eq .chezmoi.os "darwin" -}}
-  {{- $llamacpp_os = "macos" -}}
-{{- else if eq .chezmoi.os "linux" -}}
-  {{- if $is_termux -}}
-    {{- $llamacpp_os = "android" -}}
-  {{- else -}}
-    {{- $llamacpp_os = "ubuntu-vulkan" -}}
-  {{- end -}}
-{{- end -}}
-
 {{- $os := "linux" -}}
 {{- if eq .chezmoi.os "darwin" -}}
   {{- $os = "darwin" -}}
@@ -96,13 +78,6 @@
   {{- end -}}
 {{- end -}}
 
-{{- $supported_llamacpp := false -}}
-{{- if and $llamacpp_os $llamacpp_arch -}}
-  {{- if or (ne $llamacpp_os "android") (eq $llamacpp_arch "arm64") -}}
-    {{- $supported_llamacpp = true -}}
-  {{- end -}}
-{{- end -}}
-
 sourceDir = "{{ .chezmoi.sourceDir }}"
 mode = "symlink"
 
@@ -116,9 +91,6 @@ mode = "symlink"
     git_email = {{ $git_email | quote }}
     keepass_db = {{ $keepass_db | quote }}
     keepass_installed = {{ $keepass_installed }}
-    llamacpp_supported = {{ $supported_llamacpp }}
-    llamacpp_os = {{ $llamacpp_os | quote }}
-    llamacpp_arch = {{ $llamacpp_arch | quote }}
 
 {{- if $keepass_installed }}
 [keepassxc]
