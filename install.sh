@@ -219,6 +219,9 @@ main() {
     success "Profile set via argument to: ${dotfiles_profile}"
   fi
 
+  export MISE_ENV="${dotfiles_profile:-default}"
+  info "MISE_ENV set to: ${MISE_ENV}"
+
   info "Detected OS: ${OS_NAME}"
 
   # Ensure bootstrap packages (git, zsh, curl)

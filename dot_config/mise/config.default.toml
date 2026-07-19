@@ -1,10 +1,10 @@
 [bootstrap.packages]
 # --- Personal Apps ---
 # ffmpeg
-"apt:ffmpeg"    = "latest"
-"dnf:ffmpeg"    = "latest"
-"pacman:ffmpeg" = "latest"
-"brew:ffmpeg"   = "latest"
+#"apt:ffmpeg"    = "latest"
+#"dnf:ffmpeg"    = "latest"
+#"pacman:ffmpeg" = "latest"
+#"brew:ffmpeg"   = "latest"
 
 # k8slens
 "brew-cask:lens" = "latest"
@@ -33,3 +33,4 @@
 "npm:@qwen-code/qwen-code"        = "latest"
 "npm:@openai/codex"                      = "latest"
 "npm:@anthropic-ai/claude-code"          = "latest"
+"agy"                                   = "latest"
