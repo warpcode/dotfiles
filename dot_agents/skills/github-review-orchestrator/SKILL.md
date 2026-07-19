@@ -19,6 +19,7 @@ Unless a specific PR or branch is provided by the user, always perform a discove
   - Unanswered questions or pending review comments.
   - Stale status (no updates for > 1 hour after user response).
 - **Batching Permission**: ALWAYS obtain explicit user permission before processing multiple pull requests in a single review session. Users typically prefer reviewing one PR at a time for focus. Only batch if the user explicitly requests "all", a specific list, or confirms the batching proposal.
+  - **Similar PRs Exception**: PRs with identical scope (e.g., all adding tests to the same file from the same bot author) may be batched without per-PR permission if the user's intent is clear (e.g., "do PRs 19-26").
 - Present a curated list of candidates to the user and wait for explicit approval.
 
 ### 2. Non-Invasive Inspection
@@ -74,6 +75,7 @@ Comments MUST NOT use 'caveman' style.
 | Submit Script | `scripts/submit_review.sh` | Submit atomic JSON reviews via API. | `./scripts/submit_review.sh <owner> <repo> <pr_number> <payload_file>` |
 | Resolve Review Thread Script | `scripts/resolve_review_thread.sh` | Resolve GitHub PR review threads via GraphQL. | `./scripts/resolve_review_thread.sh <thread_id>` |
 | Pre-merge Checks Script | `scripts/pre_merge_checks.sh` | Validate syntax, interactive safety, scope hygiene, and regression constraints. | `./scripts/pre_merge_checks.sh <pr_number>` |
+| Conflict Resolution Script | `scripts/resolve_installer_test_conflict.sh` | Resolve `installer_test.go` merge conflicts by appending PR test functions after main's. | `./scripts/resolve_installer_test_conflict.sh <pr_number> <branch_name>` |
 | Review Threads Query | `queries/review_threads.gql` | GraphQL query to list review threads and status. | `gh api graphql -F owner=<owner> -F repo=<repo> -F pr=<number> -f query=@queries/review_threads.gql` |
 | Resolve Review Thread Query | `queries/resolve_review_thread.gql` | GraphQL mutation to resolve review threads. | Used internally by `resolve_review_thread.sh` |
 
@@ -85,6 +87,17 @@ Use this procedure to close addressed feedback loops:
 2. **Verification**: Compare the current diff/files against the feedback in the thread.
 3. **Strict Thread Closing**: ONLY resolve a review thread if the corresponding change is verified as fully and correctly implemented.
 4. **Replying to Unfulfilled Threads**: If a finding is not fully resolved, DO NOT resolve the thread. Instead, post a reply comment on the existing thread describing what is still incorrect or outstanding.
+
+### Merge Conflict Resolution
+Use this procedure to proactively fix merge conflicts on PR branches using isolated worktrees:
+1. **Fetch the PR branch**: `git fetch origin <branch_name>`
+2. **Create worktree**: `git worktree add <path> origin/<branch_name>` (use `/tmp/` path to avoid workspace pollution)
+3. **Merge main**: `cd <path> && git merge origin/main`
+4. **Resolve conflicts**: Resolve by keeping both PR additions and main's existing code. For test files, append PR's new test functions after all existing tests from main.
+5. **Commit and push**: `git push origin HEAD:<branch_name>`
+6. **Clean up**: `git worktree remove <path>`
+7. **Wait for CI**, then re-review.
+8. **Post-merge**: Remove the worktree directory if left behind: `rm -rf <path>`
 
 ### Non-Invasive Review Orchestration
 Use this procedure to audit pull requests without workspace mutation:
