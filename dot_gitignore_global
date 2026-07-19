@@ -194,7 +194,6 @@ tags
 /.windsurfrules
 
 # Generic agent files
-/AGENTS.md
 /.agent/
 
 

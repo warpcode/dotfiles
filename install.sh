@@ -284,7 +284,7 @@ main() {
     mise_bin="$(command -v mise)"
   fi
   info "Bootstrapping system packages via mise..."
-  "${mise_bin}" bootstrap --only packages || true
+  "${mise_bin}" bootstrap --only packages -y || true
 
   # Apply dotfiles via chezmoi
   info "Applying dotfiles via Chezmoi..."

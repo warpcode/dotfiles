@@ -30,6 +30,9 @@
 # bc
 "brew:bc" = "latest"
 
+# php
+"brew:php" = "latest"
+
 # dialog
 "brew:dialog" = "latest"
 
