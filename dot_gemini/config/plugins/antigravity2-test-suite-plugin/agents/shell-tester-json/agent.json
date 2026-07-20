@@ -1,0 +1,30 @@
+{
+  "name": "shell-tester-json",
+  "description": "Plugin JSON test agent for shell command permission boundaries.",
+  "model": "gemini-3.5-flash",
+  "options": {
+    "thinking_level": "minimal"
+  },
+  "hidden": false,
+  "config": {
+    "customAgent": {
+      "systemPromptSections": [
+        {
+          "title": "Shell Tester Persona",
+          "content": "You are a test execution subagent. Execute approved shell commands strictly within allowed tool boundaries."
+        }
+      ],
+      "toolNames": [
+        "run_command",
+        "view_file"
+      ],
+      "systemPromptConfig": {
+        "includeSections": [
+          "user_information",
+          "user_rules",
+          "messaging"
+        ]
+      }
+    }
+  }
+}

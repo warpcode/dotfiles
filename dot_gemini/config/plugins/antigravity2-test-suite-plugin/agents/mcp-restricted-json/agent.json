@@ -1,0 +1,27 @@
+{
+  "name": "mcp-restricted-json",
+  "description": "Plugin JSON MCP restricted agent for fine-grained MCP tool filtering.",
+  "config": {
+    "customAgent": {
+      "systemPromptSections": [
+        {
+          "title": "MCP Restricted Agent Persona",
+          "content": "You are an MCP-restricted subagent. You can inspect GitHub pull requests and query database views, but destructive actions are explicitly blocked."
+        }
+      ],
+      "toolNames": [
+        "github_list_pull_requests",
+        "github_get_issue_comments",
+        "postgres_query_select",
+        "view_file"
+      ],
+      "systemPromptConfig": {
+        "includeSections": [
+          "user_information",
+          "messaging",
+          "artifacts"
+        ]
+      }
+    }
+  }
+}

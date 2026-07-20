@@ -1,6 +1,7 @@
 {
   "name": "weather-agent",
   "description": "Searches the web for the current weather forecast using Gemma 4 31B.",
+  "hidden": false,
   "model": "Gemini 3.5 Flash (Low)",
   "options": {
     "thinking_budget": 1024
