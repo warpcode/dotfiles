@@ -140,14 +140,16 @@ pre-packages = "bash ~/.config/mise/scripts/setup_repos.sh"
 "deno"     = "latest"
 
 
-# --- AI & Plugins ---
+# --- AI ---
 "ollama"                   = "latest"
 "llama.cpp"                = "latest"
+
+# --- Tooling & Config ---
 "github:warpcode/cloakenv" = "dev"
 
-# --- Neovim LSP Tooling ---
+# --- LSP Servers ---
 
-# Node/NPM-based LSPs
+# Node/NPM-based
 "npm:bash-language-server"                  = "latest"
 "npm:dockerfile-language-server-nodejs"     = "latest"
 "npm:@olrtg/emmet-language-server"          = "latest"
@@ -157,25 +159,25 @@ pre-packages = "bash ~/.config/mise/scripts/setup_repos.sh"
 "npm:sql-language-server"                   = "latest"
 "npm:vim-language-server"                   = "latest"
 
-# Lua LSPs (Mise native registry)
+# Lua (Mise native)
 "lua-language-server"                       = "latest"
 
-# Python LSPs (using pipx)
+# Python (pipx)
 "pipx:python-lsp-server"                    = "latest"
 
-# --- Neovim Formatter & Linter Tooling ---
+# --- Formatters & Linters ---
 
-# Node/NPM-based Formatters/Linters
+# Node/NPM-based
 "npm:fixjson"          = "latest"
 "npm:jsonlint"         = "latest"
 "npm:markdownlint-cli" = "latest"
 "npm:prettier"         = "latest"
 "npm:eslint"           = "latest"
 
-# Lua Formatters
+# Lua
 "stylua"               = "latest"
 
-# Python Formatters & Linters (using pipx)
+# Python (pipx)
 "pipx:black"           = "latest"
 "pipx:isort"           = "latest"
 "pipx:flake8"          = "latest"
