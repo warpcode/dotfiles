@@ -1,6 +1,7 @@
 {
     "name": "news-finder",
     "description": "Autonomous agent to find the latest in world news",
+    "hidden": false,
     "config": {
         "customAgent": {
             "systemPromptSections": [

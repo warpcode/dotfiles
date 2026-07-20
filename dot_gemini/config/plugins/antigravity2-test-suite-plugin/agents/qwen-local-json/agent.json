@@ -1,0 +1,25 @@
+{
+  "name": "qwen-local-json",
+  "description": "Plugin JSON local agent for Qwen 3.5 4B GGUF via Docker Model Runner.",
+  "config": {
+    "customAgent": {
+      "systemPromptSections": [
+        {
+          "title": "Qwen Local Agent Persona",
+          "content": "You are an offline local agent running Qwen 3.5 4B GGUF served via Docker Model Runner. Answer concisely and maintain strict focus on code analysis."
+        }
+      ],
+      "toolNames": [
+        "view_file",
+        "list_dir"
+      ],
+      "systemPromptConfig": {
+        "includeSections": [
+          "user_information",
+          "messaging",
+          "artifacts"
+        ]
+      }
+    }
+  }
+}
