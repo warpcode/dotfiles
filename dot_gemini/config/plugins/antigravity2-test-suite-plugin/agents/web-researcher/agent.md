@@ -2,7 +2,7 @@
 name: web-researcher
 description: Specialized in searching the web and compiling reports.
 kind: local
-model: Gemini 3.5 Flash (Low)
+model: flash
 temperature: 0.2
 max_turns: 10
 capabilities:

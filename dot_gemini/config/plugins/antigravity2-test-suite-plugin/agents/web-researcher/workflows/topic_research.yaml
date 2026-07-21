@@ -1,0 +1,6 @@
+name: topic-research
+description: Run a topic search and compile a summary.
+steps:
+  - "Use search_web to search for the topic."
+  - "Extract text from the top 3 relevant results using read_url_content."
+  - "Compile the findings into a structured report with source references."
