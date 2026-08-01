@@ -1,7 +1,7 @@
-# Zsh Shell Style — Full Rule Reference
+# Zsh-Specific Rules
 
-Zsh-specific rules. For naming, comments, formatting, `[[ ]]`, `$(())`, and error
-handling conventions, see the `bash-style-guide` skill's `references/rules.md`.
+Rules unique to Zsh. Apply together with the shared rules in `${SKILL_DIR}/references/style-guide.md`.
+For Bash-specific rules, see `${SKILL_DIR}/references/style-guide-bash.md`.
 
 ## Table of Contents
 
@@ -20,7 +20,7 @@ handling conventions, see the `bash-style-guide` skill's `references/rules.md`.
 13. [Arithmetic](#13-arithmetic)
 14. [Process Substitution — =(cmd)](#14-process-substitution--cmd)
 15. [Splitting Command Output into Arrays](#15-splitting-command-output-into-arrays)
-16. [Testing Variable Existence](#16-testing-variable-existence)
+16. [Testing Variable Existence & pipestatus](#16-testing-variable-existence--pipestatus)
 17. [zparseopts — Option Parsing](#17-zparseopts--option-parsing)
 18. [autoload & fpath](#18-autoload--fpath)
 19. [Hook Functions](#19-hook-functions)
@@ -30,6 +30,7 @@ handling conventions, see the `bash-style-guide` skill's `references/rules.md`.
 23. [Plugin & Function File Conventions](#23-plugin--function-file-conventions)
 24. [Completion System Basics](#24-completion-system-basics)
 25. [Script Directory — $0 Idiom](#25-script-directory--0-idiom)
+26. [Skeletons](#26-skeletons)
 
 ---
 
@@ -44,10 +45,9 @@ handling conventions, see the `bash-style-guide` skill's `references/rules.md`.
 | Scripts called from cron, CI, containers | Bash (guaranteed present) |
 | Scripts sourced in zsh but needing zsh features | Zsh with `emulate -LR zsh` guard |
 
-**Rule:** Don't write POSIX-compatible code in your zsh dotfiles "just in case". Use the
-full zsh feature set. If you need portability, write a separate bash script.
-
----
+**Rule:** Don't write POSIX-compatible code in your zsh dotfiles "just in
+case". Use the full zsh feature set. If you need portability, write a separate
+bash script.
 
 ## 2. Shebang & emulate
 
@@ -57,8 +57,8 @@ Executable zsh scripts:
 #!/bin/zsh
 ```
 
-For **autoloaded functions** or anything sourced in an unknown emulation mode (loaded by
-a framework, plugin manager, or user config with non-default options):
+For **autoloaded functions** or anything sourced in an unknown emulation mode
+(loaded by a framework, plugin manager, or user config with non-default options):
 
 ```zsh
 emulate -LR zsh
@@ -76,8 +76,6 @@ my_function() {
   # options changed here are restored on return
 }
 ```
-
----
 
 ## 3. Important setopts
 
@@ -106,13 +104,12 @@ setopt SHARE_HISTORY     # share history across sessions
 setopt PUSHD_SILENT      # don't print dirstack on pushd/popd
 ```
 
----
-
 ## 4. Key Differences from Bash
 
 ### Word Splitting (most important difference)
 
-Zsh does **NOT** split unquoted variables on whitespace by default (`SH_WORD_SPLIT` is off).
+Zsh does **NOT** split unquoted variables on whitespace by default
+(`SH_WORD_SPLIT` is off).
 
 ```zsh
 files="foo bar baz"
@@ -126,9 +123,9 @@ files=(foo bar baz)
 ls "${files[@]}"  # three separate arguments, safe
 ```
 
-In bash, unquoted `$files` would split on spaces automatically. Zsh's behaviour is
-safer but means old bash habits of "just add quotes" don't always translate — your
-real fix is to use an array.
+In bash, unquoted `$files` would split on spaces automatically. Zsh's behaviour
+is safer but means old bash habits of "just add quotes" don't always translate —
+your real fix is to use an array.
 
 ### `BASH_SOURCE` doesn't exist
 
@@ -140,8 +137,8 @@ Use `${(f)"$(cmd)"}` — see §15.
 
 ### `local`, `typeset`, `declare` are synonymous
 
-All three work. `typeset` is traditional zsh idiom; `local` is clearer inside functions.
-Pick one per project and be consistent.
+All three work. `typeset` is traditional zsh idiom; `local` is clearer inside
+functions. Pick one per project and be consistent.
 
 ### Regex: no `${BASH_REMATCH}` — use `${match}`
 
@@ -151,7 +148,11 @@ if [[ "foo123" =~ ([0-9]+) ]]; then
 fi
 ```
 
----
+### Conciseness
+
+Always re-check zsh code to ensure it is as concise as possible using Zsh
+idioms (e.g., nested parameter expansions, `zargs`). It must preserve all
+functionality and remain human-readable.
 
 ## 5. Parameter Expansion Flags
 
@@ -230,7 +231,29 @@ print "${(r:10::-)word}"  # right-pad with dashes
 print "${(l:10:)word}"    # left-pad to 10 chars with spaces
 ```
 
----
+### Dynamic Backreference Evaluation
+
+`${var//(#b)pattern/repl}` re-evaluates the `repl` string for each match,
+enabling patterns like `${(P)match[2]}` to dynamically look up variable names
+captured in the `match` array:
+
+```zsh
+local input='$HOME/test'
+local expanded="${input//(#b)\$(([a-zA-Z_][a-zA-Z0-9_]#)|\{([a-zA-Z_][a-zA-Z0-9_]#)\})/${(P)match[2]:-${(P)match[3]}}}"
+# If $HOME is /home/user, expanded becomes /home/user/test
+```
+
+### Array Filtering (native, no grep)
+
+```zsh
+arr=(a1 b2 c3)
+print "${(M)arr:#*2}"    # b2 — keep matches
+print "${arr:#a*}"       # b2 c3 — remove matches
+```
+
+### Case-insensitive matching
+
+Use `(#i)pattern` (requires `EXTENDED_GLOB`) instead of `awk '{tolower}'` or `grep -i`.
 
 ## 6. String Modifiers
 
@@ -264,12 +287,10 @@ print "${paths:t}"    # git sh   — basename of each
 print "${paths:h}"    # /usr/local/bin /bin
 ```
 
----
-
 ## 7. Pattern Substitution Anchors — Critical Gotcha
 
-In `${var//pattern/replacement}`, two characters have **special meaning when they appear
-at the very start of the pattern**:
+In `${var//pattern/replacement}`, two characters have **special meaning when
+they appear at the very start of the pattern**:
 
 | Character at start | Meaning |
 |---|---|
@@ -300,8 +321,9 @@ hash='#'
 print "${str//${hash}/HASH}"   # → "HASHcomment"  (only first occurrence replaced)
 ```
 
-**Rule:** whenever your substitution pattern is stored in a variable or might contain
-`%` or `#` as the first character, always route through an intermediate variable.
+**Rule:** whenever your substitution pattern is stored in a variable or might
+contain `%` or `#` as the first character, always route through an intermediate
+variable.
 
 Extended glob workaround (requires `EXTENDED_GLOB`):
 
@@ -309,8 +331,6 @@ Extended glob workaround (requires `EXTENDED_GLOB`):
 # Use (l) flag to treat pattern as literal string
 print "${str//(l)%/percent}"
 ```
-
----
 
 ## 8. Arrays — 1-Indexed
 
@@ -348,7 +368,11 @@ print "${a:|b}"    # 1 2      — difference (a minus b)
 print "${a:^b}"    # 1 3 2 4 3 5 4 6  — zip (interleaved pairs)
 ```
 
----
+### Copying Arrays (Assignment)
+
+Use `arr=( "$@" )` or `arr=( "$other_arr[@]" )`. Avoid `arr=( "${@}" )` — it can
+result in an array with one empty string `("")` if the input is empty in
+certain contexts.
 
 ## 9. Associative Arrays
 
@@ -394,8 +418,6 @@ unset 'config[host]'
 # Check if the assoc array itself is defined
 (( ${+config} )) && print "config is defined"
 ```
-
----
 
 ## 10. Globbing & Glob Qualifiers
 
@@ -468,12 +490,10 @@ done
 find . -name "*.log" -mtime -1 -not -path '*/node_modules/*' -exec process_log {} \;
 ```
 
----
-
 ## 11. print vs echo
 
-Prefer `print` in zsh. It is more predictable, has more options, and handles edge cases
-correctly.
+Prefer `print` in zsh. It is more predictable, has more options, and handles
+edge cases correctly.
 
 ```zsh
 print "hello"              # basic output
@@ -488,13 +508,11 @@ print -s "cmd"             # add to history
 print -r -- "error message" >&2
 ```
 
-Use `print -r --` as the default in scripts — it won't misinterpret `--` or backslashes
-in values.
+Use `print -r --` as the default in scripts — it won't misinterpret `--` or
+backslashes in values.
 
-Use `echo` when generating output for POSIX consumers or when the conventional idiom
-for a tool strongly favours it.
-
----
+Use `echo` when generating output for POSIX consumers or when the conventional
+idiom for a tool strongly favours it.
 
 ## 12. Local Variables & Typed Declarations
 
@@ -533,8 +551,6 @@ my_func() {
 }
 ```
 
----
-
 ## 13. Arithmetic
 
 Same rules as bash (`(( ))` and `$(( ))`). Zsh adds typed integers:
@@ -548,8 +564,8 @@ local -F ratio
 ratio=22/7           # floating point via -F
 ```
 
-**`ERR_EXIT` / `set -e` caution:** `(( expr ))` evaluates to false (exit 1) when the
-result is 0. This triggers `ERR_EXIT`.
+**`ERR_EXIT` / `set -e` caution:** `(( expr ))` evaluates to false (exit 1)
+when the result is 0. This triggers `ERR_EXIT`.
 
 ```zsh
 local -i i=0
@@ -560,8 +576,6 @@ local -i i=0
 (( ++i ))            # pre-increment: result is 1 even when i was 0
 (( i += 1 ))         # also safe if i is positive after
 ```
-
----
 
 ## 14. Process Substitution — `=(cmd)`
 
@@ -578,8 +592,6 @@ vimdiff =(git show HEAD:file.txt) file.txt
 
 Use `=(cmd)` when the consuming command needs a seekable file (e.g., `vimdiff`,
 tools that `lseek` into the file, or tools that read it twice).
-
----
 
 ## 15. Splitting Command Output into Arrays
 
@@ -607,9 +619,19 @@ for line in "${(f)"$(cmd)"}"; do
 done
 ```
 
----
+Use the `( ${(f)"$(…)"} )` form when hydrating arrays from command output that
+represents lists of files — it prevents accidental word-splitting on spaces.
 
-## 16. Testing Variable Existence
+### Parallel execution
+
+Before using `xargs -P` or GNU `parallel` for slow/heavy processes, check if
+Zsh's native `zargs -P <concurrency>` will do what's required. Because `zargs`
+evaluates in the current shell, it securely inherits local variables and
+functions without needing `export`.
+
+## 16. Testing Variable Existence & pipestatus
+
+### Variable existence
 
 ```zsh
 # Is variable set (even if empty)?
@@ -633,7 +655,17 @@ print "${myvar:-fallback}" # use fallback inline without assigning
 (( ${#myarray} > 0 )) && print "array has elements"
 ```
 
----
+### pipestatus
+
+Like Bash's `PIPESTATUS` but **lowercase** and 1-indexed:
+
+```zsh
+your_command | grep foo
+statuses=( "${pipestatus[@]}" )
+if (( statuses[1] != 0 )); then
+  print -r -- "your_command failed" >&2
+fi
+```
 
 ## 17. zparseopts — Option Parsing
 
@@ -679,8 +711,6 @@ Key `zparseopts` flags:
 | `flag::` | Flag takes an optional argument |
 | `-longflag` | Long option (zsh style: prefix with `-`) |
 
----
-
 ## 18. autoload & fpath
 
 ### fpath Setup (in .zshrc, before compinit)
@@ -698,7 +728,8 @@ unset _f
 
 ### Function File Convention
 
-File is named exactly the same as the function. No shebang. Body is the function body:
+File is named exactly the same as the function. No shebang. Body is the
+function body:
 
 ```zsh
 # File: ~/.config/zsh/functions/greet
@@ -716,12 +747,10 @@ Then: `autoload -Uz greet` / `greet Alice` → "Hello, Alice!"
 
 Always use both flags together.
 
----
-
 ## 19. Hook Functions
 
-Always use `add-zsh-hook` — never redefine the hook function directly, which would
-break other plugins or config that registered hooks.
+Always use `add-zsh-hook` — never redefine the hook function directly, which
+would break other plugins or config that registered hooks.
 
 ```zsh
 autoload -Uz add-zsh-hook
@@ -768,12 +797,10 @@ _my_cleanup() {
 add-zsh-hook zshexit _my_cleanup
 ```
 
----
-
 ## 20. zmodload
 
-Load zsh modules to unlock built-in capabilities. Always prefer modules over spawning
-external processes.
+Load zsh modules to unlock built-in capabilities. Always prefer modules over
+spawning external processes.
 
 ```zsh
 zmodload zsh/datetime    # $EPOCHSECONDS, $EPOCHREALTIME, strftime builtin
@@ -813,8 +840,6 @@ print "$(( floor(3.7) ))"     # 3
 print "$(( ceil(3.2) ))"      # 4
 ```
 
----
-
 ## 21. is-at-least
 
 Guard features on minimum zsh version:
@@ -833,8 +858,6 @@ is-at-least 5.3 || {
 }
 ```
 
----
-
 ## 22. Dotfile Conventions
 
 ### File Roles
@@ -847,8 +870,9 @@ is-at-least 5.3 || {
 | `~/.zlogin` | Login shells, after `.zshrc` | Rarely used; post-init login tasks |
 | `~/.zlogout` | Login shell exit | Cleanup |
 
-**Rule:** `.zshenv` runs for every `zsh` invocation including scripts — keep it fast and
-minimal. Never put slow commands (e.g. `brew shellenv`, `rbenv init`, `nvm`) in `.zshenv`.
+**Rule:** `.zshenv` runs for every `zsh` invocation including scripts — keep it
+fast and minimal. Never put slow commands (e.g. `brew shellenv`, `rbenv init`,
+`nvm`) in `.zshenv`.
 
 ### ZDOTDIR / XDG Layout
 
@@ -899,10 +923,14 @@ dotfiles.pkg.install() { … }
 obsidian.note.create() { … }
 ```
 
-This avoids namespace collisions and makes it obvious at the call site that a function
-is part of your dotfiles, not a system command.
+This avoids namespace collisions and makes it obvious at the call site that a
+function is part of your dotfiles, not a system command.
 
----
+### Interactive Function Exit Hygiene
+
+Functions intended for interactive use or sourcing must use `return <status>`
+instead of `exit` — `exit` would terminate the user's shell session. Verify
+file readability with `[ -f "$file" ]` beforehand when needed.
 
 ## 23. Plugin & Function File Conventions
 
@@ -923,8 +951,6 @@ Rules:
 - Do not call `compinit` from inside a plugin — let the user's `.zshrc` call it.
 - Do not modify `fpath` globally from inside a plugin loaded after `compinit` — document that the plugin must be loaded before `compinit`.
 - Prefix any config variables with the plugin name: `MY_PLUGIN_TIMEOUT`, not just `TIMEOUT`.
-
----
 
 ## 24. Completion System Basics
 
@@ -982,12 +1008,10 @@ _my_tool() {
 _my_tool "$@"
 ```
 
----
-
 ## 25. Script Directory — $0 Idiom
 
-Zsh has no `BASH_SOURCE`. The canonical idiom to get the current script or function
-file's directory:
+Zsh has no `BASH_SOURCE`. The canonical idiom to get the current script or
+function file's directory:
 
 ```zsh
 # In a script
@@ -1006,4 +1030,123 @@ In an autoloaded function where `$0` is just the function name (not the file pat
 # Get the file path of the currently executing function
 local func_file="${${funcsourcetrace[1]%:*}:A}"
 local func_dir="${func_file:h}"
+```
+
+## 26. Skeletons
+
+### Executable Zsh Script
+
+```zsh
+#!/bin/zsh
+#
+# Brief description of what this script does.
+
+emulate -LR zsh
+setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL
+
+zmodload zsh/datetime
+
+0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
+typeset -r SCRIPT_DIR="${0:A:h}"
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+typeset -r CONFIG_FILE="${SCRIPT_DIR}/config.yaml"
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+err() {
+  print -r -- "[$(strftime '%Y-%m-%dT%H:%M:%S%z' ${EPOCHSECONDS})]: $*" >&2
+}
+
+#######################################
+# Example function.
+# Arguments:
+#   $1 - Input string.
+# Outputs:
+#   Writes lowercased string to stdout.
+#######################################
+process_input() {
+  local input="$1"
+  print -r -- "${input:l}"
+}
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+#######################################
+# Entry point.
+# Arguments:
+#   All script arguments passed through.
+#######################################
+main() {
+  if (( $# < 1 )); then
+    err "Usage: ${0:t} <input>"
+    return 1
+  fi
+
+  local result
+  result="$(process_input "$1")"
+  print -r -- "${result}"
+}
+
+main "$@"
+```
+
+### Autoloaded Function File (`functions/my_func`)
+
+```zsh
+# No shebang — sourced, not executed
+emulate -LR zsh
+setopt LOCAL_OPTIONS LOCAL_TRAPS
+
+#######################################
+# Brief description.
+# Arguments:
+#   $1 - Input string.
+# Outputs:
+#   Writes result to stdout.
+# Returns:
+#   0 on success, 1 on error.
+#######################################
+
+local -a help_flag
+zparseopts -D -E h=help_flag -help=help_flag || return 1
+
+if (( ${#help_flag} )); then
+  print "Usage: my_func [-h] <input>"
+  return 0
+fi
+
+local input="${1:?'input required'}"
+print -r -- "${input:u}"
+```
+
+### fpath + autoload Setup (in .zshrc)
+
+```zsh
+# Add before compinit
+fpath=( "${ZDOTDIR}/functions" "${ZDOTDIR}/completions" "$fpath[@]" )
+
+# Autoload everything in the functions directory
+for _f in "${ZDOTDIR}/functions"/*(N.x:t); do
+  autoload -Uz "${_f}"
+done
+unset _f
+
+autoload -Uz compinit
+compinit -d "${XDG_CACHE_HOME:-${HOME}/.cache}/zsh/zcompdump-${ZSH_VERSION}"
+```
+
+### conf.d Loader (in .zshrc)
+
+```zsh
+for _conf in "${ZDOTDIR}/conf.d"/*.zsh(N.); do
+  source "${_conf}"
+done
+unset _conf
 ```
