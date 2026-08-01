@@ -1,18 +1,38 @@
-# Shell Style Guide — Full Rule Reference
+# Shell Style Guide — Shared Rules
 
-Source: https://google.github.io/styleguide/shellguide.html
+Rules in this file apply to **both** Bash and Zsh. Shell-specific rules live in
+`${SKILL_DIR}/references/style-guide-bash.md` and `${SKILL_DIR}/references/style-guide-zsh.md`. Where a shared rule has a different concrete form per
+shell, the difference is noted inline and covered in the shell reference.
+
+Source for Bash rules: https://google.github.io/styleguide/shellguide.html
+
+## Table of Contents
+
+1. [When to Use Shell](#1-when-to-use-shell)
+2. [File Extensions](#2-file-extensions)
+3. [SUID/SGID](#3-suid-sgid)
+4. [STDOUT vs STDERR](#4-stdout-vs-stderr)
+5. [Comments](#5-comments)
+6. [Formatting](#6-formatting)
+7. [ShellCheck](#7-shellcheck)
+8. [Command Substitution](#8-command-substitution)
+9. [Tests](#9-tests)
+10. [Testing Strings](#10-testing-strings)
+11. [Arithmetic](#11-arithmetic)
+12. [Arrays](#12-arrays)
+13. [Pipes to While (Subshell Gotcha)](#13-pipes-to-while-subshell-gotcha)
+14. [Wildcard Expansion](#14-wildcard-expansion)
+15. [Eval](#15-eval)
+16. [Aliases](#16-aliases)
+17. [Naming Conventions](#17-naming-conventions)
+18. [Local Variables](#18-local-variables)
+19. [Function Location and main](#19-function-location-and-main)
+20. [Checking Return Values](#20-checking-return-values)
+21. [Builtin vs External Commands](#21-builtin-vs-external-commands)
 
 ---
 
-## 1. Which Shell to Use
-
-- **Bash only** for all executable shell scripts.
-- Shebang must be `#!/bin/bash` with minimal flags.
-- Use `set` to configure options so the script works when called as `bash script_name`.
-- No need to aim for POSIX-only / avoid "bashisms".
-- Exception: constrained environments (e.g., legacy OS) may require plain Bourne shell.
-
-## 2. When to Use Shell
+## 1. When to Use Shell
 
 Shell is appropriate only for **small utilities or simple wrapper scripts**.
 
@@ -22,26 +42,28 @@ Rules of thumb:
 - Script > ~100 lines, OR uses complex/non-straightforward control flow → **rewrite in a structured language now**. Scripts grow; rewrite early.
 - Ask: can someone other than the author maintain this code?
 
-## 3. File Extensions
+For guidance on *which* shell to choose, see `${SKILL_DIR}/references/style-guide-bash.md` §1 or `${SKILL_DIR}/references/style-guide-zsh.md` §1.
+
+## 2. File Extensions
 
 | Type | Extension | Executable bit |
 |---|---|---|
-| Executable (has build rule) | `.sh` | Yes |
-| Executable (goes on `PATH`) | none | Yes |
-| Library (sourced, not run) | `.sh` | No |
+| Executable (goes on `PATH` or has a build rule) | `.sh` / `.zsh` or none | Yes |
+| Library (sourced, not run) | `.sh` / `.zsh` | No |
 
-When in doubt: executables either have `.sh` or no extension; libraries always `.sh`.
+When in doubt: executables either have an extension or none; libraries always
+have an extension and are not executable.
 
-## 4. SUID/SGID
+## 3. SUID/SGID
 
 **Forbidden** on shell scripts. Use `sudo` instead.
 
-## 5. STDOUT vs STDERR
+## 4. STDOUT vs STDERR
 
 - Normal output → STDOUT.
 - **All error messages → STDERR** (`>&2`).
 
-Standard error helper:
+Standard error helper (shell-specific timestamps — see `${SKILL_DIR}/references/style-guide-bash.md` §4 / `${SKILL_DIR}/references/style-guide-zsh.md` §8):
 
 ```bash
 err() {
@@ -49,9 +71,9 @@ err() {
 }
 ```
 
-## 6. Comments
+## 5. Comments
 
-### 6.1 File Header
+### 5.1 File Header
 
 Every file must start with a brief description comment:
 
@@ -63,7 +85,7 @@ Every file must start with a brief description comment:
 
 Copyright and author information are optional.
 
-### 6.2 Function Comments
+### 5.2 Function Comments
 
 Required for: any function that is not both **obvious and short**, and **all library functions** regardless of length.
 
@@ -88,26 +110,26 @@ function_name() { … }
 
 Fields to omit if not applicable (e.g., no globals, no special return value).
 
-### 6.3 Implementation Comments
+### 5.3 Implementation Comments
 
 Comment **tricky, non-obvious, interesting, or important** parts. Don't comment everything.
 
-### 6.4 TODO Comments
+### 5.4 TODO Comments
 
 Format: `# TODO(identifier): description of the remaining work`
 
 - `identifier` = name, email, or bug reference with enough context.
 - A TODO is not a commitment by that person to fix it.
 
-## 7. Formatting
+## 6. Formatting
 
-### 7.1 Indentation
+### 6.1 Indentation
 
 - **2 spaces**. No tabs.
 - Blank lines between blocks to improve readability.
 - Exception: body of `<<-` heredocs may use tabs (that's their purpose).
 
-### 7.2 Line Length
+### 6.2 Line Length
 
 - **80 characters maximum**.
 - Long literal strings → heredoc or embedded newline:
@@ -124,7 +146,7 @@ long_string="I am an exceptionally
 long string."
 ```
 
-### 7.3 Pipelines
+### 6.3 Pipelines
 
 ```bash
 # Short pipeline — one line
@@ -139,7 +161,7 @@ command1 \
 
 Same rule applies to `||` and `&&` chains. Comments precede the whole pipeline.
 
-### 7.4 Control Flow
+### 6.4 Control Flow
 
 `; then` and `; do` on the **same line** as the opening keyword:
 
@@ -157,7 +179,7 @@ done
 - `fi` / `done` on their own line, aligned with the opening.
 - Always write `for arg in "$@"` explicitly (don't omit `in "$@"`).
 
-### 7.5 Case Statement
+### 6.5 Case Statement
 
 ```bash
 case "${expression}" in
@@ -178,7 +200,7 @@ Rules:
 - No open parenthesis before pattern.
 - Avoid `;&` and `;;&`.
 
-### 7.6 Variable Expansion
+### 6.6 Variable Expansion
 
 Preference order:
 1. Be consistent with the surrounding code.
@@ -196,22 +218,18 @@ echo "${10}"
 echo "${1}0${2}0"    # vs ambiguous $10$20
 ```
 
-### 7.7 Quoting
+### 6.7 Quoting
 
 - **Always quote** strings containing variables, command substitutions, spaces, or meta characters.
 - Use single quotes `'…'` when **no substitution** is desired.
 - Use double quotes `"…"` when substitution is needed.
 - Use arrays (not strings) to store lists of arguments.
 - `"$@"` to pass all arguments (preserves spacing/empty args). `"$*"` only when explicitly joining.
-- Optionally quote integer specials (`$?`, `$#`, `$$`, `$!`), but quote named integer vars like `PPID`.
+- Integer specials (`$?`, `$#`, `$$`, `$!`) may be quoted or not; quote named integer variables (e.g., `"${PPID}"`).
 
 ```bash
 # Command substitution — always quote
 flag="$(some_command "$@")"
-
-# Passing array flags
-declare -a FLAGS=(--foo --bar='baz')
-mybinary "${FLAGS[@]}"
 
 # Shell meta chars in single quotes
 echo 'Hello $$$'
@@ -220,11 +238,16 @@ echo 'Hello $$$'
 (set -- 1 "2 two"; echo "$#"; set -- "$@"; echo "$#")  # preserves count
 ```
 
-## 8. ShellCheck
+## 7. ShellCheck
 
-Run [ShellCheck](https://www.shellcheck.net/) on **all scripts**, large or small. It catches common bugs and style issues automatically.
+Run [ShellCheck](https://www.shellcheck.net/) on **all Bash scripts**, large or
+small. It catches common bugs and style issues automatically.
 
-## 9. Command Substitution
+For Zsh, ShellCheck's coverage is partial; also syntax-check with `zsh -n`.
+Note: `zsh -n` only syntax-checks the **first** file argument when given
+multiple — run it per file (e.g., a `for` loop or `find -exec zsh -n {} \;`).
+
+## 8. Command Substitution
 
 **Use `$(command)` — never backticks.**
 
@@ -236,7 +259,7 @@ var="$(command "$(command1)")"
 var="`command \`command1\``"
 ```
 
-## 10. Tests
+## 9. Tests
 
 **Use `[[ … ]]` — not `[ … ]`, `test`, or `/usr/bin/[`.**
 
@@ -248,12 +271,12 @@ if [[ "filename" =~ ^[[:alnum:]]+name ]]; then …; fi
 
 # Glob pattern (RHS unquoted)
 if [[ "filename" == f* ]]; then …; fi
-
-# WRONG — f* expands to files in cwd
-if [ "filename" == f* ]; then …; fi
 ```
 
-## 11. Testing Strings
+> Regex capture variable differs per shell: Bash uses `${BASH_REMATCH}` (see
+> `${SKILL_DIR}/references/style-guide-bash.md`), Zsh uses `${match}` (see `${SKILL_DIR}/references/style-guide-zsh.md` §4).
+
+## 10. Testing Strings
 
 Use `-z` / `-n` rather than filler characters. Use `==` not `=`.
 
@@ -272,75 +295,7 @@ if (( my_var > 3 )); then …; fi
 if [[ "${my_var}" -gt 3 ]]; then …; fi
 ```
 
-## 12. Wildcard Expansion
-
-Always prefix with `./` when expanding wildcards over filenames:
-
-```bash
-# Safe — won't treat -f or -r as flags
-rm -v ./*
-
-# Dangerous — rm -v * will try to rm '-f', '-r', etc.
-rm -v *
-```
-
-## 13. Eval
-
-**Avoid `eval`.**
-
-It makes it impossible to audit what variables are set and can silently ignore partial failures. If you think you need `eval`, you probably need an array or a function instead.
-
-## 14. Arrays
-
-Use arrays to store **lists of elements** — never pack multiple values into a single string.
-
-```bash
-# Good
-declare -a flags
-flags=(--foo --bar='baz')
-flags+=(--greeting="Hello ${name}")
-mybinary "${flags[@]}"
-
-# Bad — quoting breaks, eval required
-flags='--foo --bar=baz'
-mybinary ${flags}
-```
-
-Array rules:
-- Declare with `declare -a`.
-- Append with `+=( … )`.
-- Always expand with `"${array[@]}"` (quoted).
-- Avoid `declare -a files=($(ls /dir))` — command output is split/globbed unexpectedly. Use process substitution + `readarray`.
-
-## 15. Pipes to While
-
-**Piping to `while` creates a subshell** — variables modified inside do not propagate back.
-
-```bash
-# BROKEN — last_line is always 'NULL' after the loop
-last_line='NULL'
-your_command | while read -r line; do
-  last_line="${line}"
-done
-echo "${last_line}"  # NULL
-
-# CORRECT — process substitution
-last_line='NULL'
-while read -r line; do
-  last_line="${line}"
-done < <(your_command)
-echo "${last_line}"  # correct value
-
-# ALSO CORRECT — readarray (bash 4+)
-readarray -t lines < <(your_command)
-for line in "${lines[@]}"; do
-  last_line="${line}"
-done
-```
-
-> Note: `for var in $(...)` splits on whitespace, not newlines. Prefer `while read` or `readarray` when lines may contain spaces.
-
-## 16. Arithmetic
+## 11. Arithmetic
 
 **Use `(( … ))` or `$(( … ))`** — never `let`, `$[ … ]`, or `expr`.
 
@@ -349,7 +304,6 @@ done
 echo "$(( 2 + 2 ))"
 (( i += 3 ))
 if (( a < b )); then …; fi
-local -i hundred="$(( 10 * 10 ))"
 
 # Bad
 i=$[2 * 10]           # deprecated syntax
@@ -364,7 +318,8 @@ Inside `$(( … ))`, variable names do not need `${…}` — bare `var` is clean
 echo "$(( hr * 3600 + min * 60 + sec ))"
 ```
 
-**Caution with `set -e`:** a standalone `(( expr ))` that evaluates to 0 causes exit:
+**Caution with `set -e` / `ERR_EXIT`:** a standalone `(( expr ))` that evaluates
+to 0 causes exit:
 
 ```bash
 set -e
@@ -374,7 +329,68 @@ i=0
 
 Prefer `(( i++ )) || true` or avoid standalone `(( ))` with `set -e`.
 
-## 17. Aliases
+## 12. Arrays
+
+Use arrays to store **lists of elements** — never pack multiple values into a single string.
+
+```bash
+# Good
+flags=(--foo --bar='baz')
+flags+=(--greeting="Hello ${name}")
+mybinary "${flags[@]}"
+
+# Bad — quoting breaks, eval required
+flags='--foo --bar=baz'
+mybinary ${flags}
+```
+
+Array rules:
+- Always expand with `"${array[@]}"` (quoted).
+- Append with `+=( … )`.
+- Avoid assigning from command output that gets split/globbed unexpectedly — use the shell-native safe idiom (see `${SKILL_DIR}/references/style-guide-bash.md` §6 or `${SKILL_DIR}/references/style-guide-zsh.md` §14/§15).
+- Be aware of index base: Bash arrays are 0-indexed; **Zsh arrays are 1-indexed** (see `${SKILL_DIR}/references/style-guide-zsh.md` §8).
+
+## 13. Pipes to While (Subshell Gotcha)
+
+**Piping to `while` creates a subshell** — variables modified inside do not propagate back:
+
+```bash
+# BROKEN — last_line is always 'NULL' after the loop
+last_line='NULL'
+your_command | while read -r line; do
+  last_line="${line}"
+done
+echo "${last_line}"  # NULL
+```
+
+Fix with the shell-appropriate idiom:
+- **Bash:** process substitution `< <(your_command)` or `readarray` (`${SKILL_DIR}/references/style-guide-bash.md` §5).
+- **Zsh:** process substitution `< <(your_command)` or `${(f)"$(…)"}` (`${SKILL_DIR}/references/style-guide-zsh.md` §14/§15).
+
+> `for var in $(...)` splits on whitespace, not newlines. Prefer `while read`
+> or the array-splitting idiom when lines may contain spaces.
+
+## 14. Wildcard Expansion
+
+Always prefix with `./` when expanding wildcards over filenames:
+
+```bash
+# Safe — won't treat -f or -r as flags
+rm -v ./*
+
+# Dangerous — rm -v * will try to rm '-f', '-r', etc.
+rm -v *
+```
+
+## 15. Eval
+
+**Avoid `eval`.**
+
+It makes it impossible to audit what variables are set and can silently ignore
+partial failures. If you think you need `eval`, you probably need an array or a
+function instead.
+
+## 16. Aliases
 
 **Avoid aliases in scripts** — use functions instead. Aliases are cumbersome to quote/escape correctly.
 
@@ -393,7 +409,7 @@ fancy_ls() {
 }
 ```
 
-## 18. Naming Conventions
+## 17. Naming Conventions
 
 | Item | Convention | Example |
 |---|---|---|
@@ -411,20 +427,20 @@ Function rules:
 
 Constant rules:
 - Declare at the top of the file.
-- Use `readonly` (and optionally `export`/`declare -x`).
-- OK to compute at runtime then immediately `readonly`:
+- Use `readonly` (Bash) / `typeset -r` (Zsh).
+- OK to compute at runtime then immediately mark readonly:
 
 ```bash
 ZIP_VERSION="$(dpkg --status zip | sed -n 's/^Version: //p')"
 readonly ZIP_VERSION
 ```
 
-## 19. Local Variables
+## 18. Local Variables
 
-**All function-level variables must be declared `local`.**
+**All function-level variables must be declared `local` (or `typeset`).**
 
 - Prevents polluting the global namespace.
-- **IMPORTANT:** Separate `local` declaration from command-substitution assignment — `local` swallows the exit code:
+- **IMPORTANT:** Separate the declaration from command-substitution assignment — `local` swallows the exit code:
 
 ```bash
 # Good — exit code of my_func is preserved
@@ -441,13 +457,16 @@ my_func2() {
 }
 ```
 
-## 20. Function Location and main
+Zsh nuance: use `typeset -g` to create a global from inside a function (see
+`${SKILL_DIR}/references/style-guide-zsh.md` §12); a bare assignment inside a function is a local unless declared.
+
+## 19. Function Location and main
 
 ### Function Location
 
 - All functions grouped together in the file, **below constants**, before any executable logic.
 - Never interleave executable code between function definitions.
-- Only `set` statements, `source`/`.` calls, and constant declarations may precede functions.
+- Only `set`/`setopt` statements, `source`/`.` calls, and constant declarations may precede functions.
 
 ### main Function
 
@@ -467,7 +486,7 @@ Benefits:
 - Allows declaring variables as `local` inside main.
 - Consistent with the rest of the codebase.
 
-## 21. Checking Return Values
+## 20. Checking Return Values
 
 **Always check return values.** Never silently swallow failures.
 
@@ -486,39 +505,29 @@ if (( $? != 0 )); then
 fi
 ```
 
-### PIPESTATUS
+### Pipeline segment statuses
 
-Capture immediately after the pipeline — the next command overwrites it:
+Capture immediately after the pipeline — the next command overwrites it.
+- Bash: `PIPESTATUS` array (`${SKILL_DIR}/references/style-guide-bash.md` §7).
+- Zsh: lowercase `pipestatus` array (`${SKILL_DIR}/references/style-guide-zsh.md` §16).
 
-```bash
-tar -cf - ./* | ( cd "${dir}" && tar -xf - )
-return_codes=( "${PIPESTATUS[@]}" )
-if (( return_codes[0] != 0 )); then do_something; fi
-if (( return_codes[1] != 0 )); then do_something_else; fi
-```
+Note: `[` is a command and will wipe the pipeline status array.
 
-Note: `[` is a command and will wipe `PIPESTATUS`.
-
-## 22. Builtin vs External Commands
+## 21. Builtin vs External Commands
 
 **Prefer shell builtins over spawning external processes.**
 
 ```bash
-# Good — bash builtins (fast, no fork)
+# Good — shell builtins (fast, no fork)
 addition="$(( X + Y ))"
 substitution="${string/#foo/bar}"
-if [[ "${string}" =~ foo:([0-9]+) ]]; then
-  extraction="${BASH_REMATCH[1]}"
-fi
-
-# Bad — external processes (slow, quoting pitfalls)
-addition="$(expr "${X}" + "${Y}")"
-substitution="$(echo "${string}" | sed -e 's/^foo/bar/')"
-extraction="$(echo "${string}" | sed -e 's/foo:\([0-9]\)/\1/')"
 ```
 
 Builtins to prefer over common external tools:
-- Parameter expansion (`${var#prefix}`, `${var//old/new}`, `${var,,}`) over `sed`/`awk` for simple transforms.
-- `[[ =~ ]]` with `BASH_REMATCH` over `grep -oP` for regex extraction.
+- Parameter expansion (`${var#prefix}`, `${var//old/new}`, case transforms) over `sed`/`awk` for simple transforms.
+- `[[ =~ ]]` over `grep -oP` for regex extraction.
 - `(( ))` / `$(( ))` over `expr` for arithmetic.
-- `read` / `readarray` over `cut`/`awk` for splitting lines.
+- `read` / the native array-splitting idiom over `cut`/`awk` for splitting lines.
+
+Zsh extends this considerably with parameter expansion flags, string
+modifiers, and glob qualifiers — see `${SKILL_DIR}/references/style-guide-zsh.md` §5, §6, §10.
