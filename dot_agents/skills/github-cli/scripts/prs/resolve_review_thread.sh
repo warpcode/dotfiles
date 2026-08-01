@@ -2,6 +2,9 @@
 # Resolve a GitHub PR review thread using GraphQL
 # Usage: ./resolve_review_thread.sh <thread_id> [--raw]
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common/client.sh"
+
 RAW_OUTPUT=false
 ARGS=()
 for arg in "$@"; do
@@ -19,10 +22,10 @@ if [[ -z "$THREAD_ID" ]]; then
     exit 1
 fi
 
-SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+QUERY_FILE="$SCRIPT_DIR/../../queries/resolve_review_thread.gql"
 
 STDERR_FILE=$(mktemp)
-RESPONSE=$(gh api graphql -F query="@${SCRIPT_DIR}/../queries/resolve_review_thread.gql" -f threadId="$THREAD_ID" 2>"$STDERR_FILE")
+RESPONSE=$(github_graphql_request "@$QUERY_FILE" -f threadId="$THREAD_ID" 2>"$STDERR_FILE")
 GH_STATUS=$?
 
 if [[ $GH_STATUS -ne 0 ]]; then
@@ -43,6 +46,3 @@ else
       "Resolved: \(.isResolved)"
     '
 fi
-
-
-

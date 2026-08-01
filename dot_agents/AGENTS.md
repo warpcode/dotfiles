@@ -57,8 +57,8 @@ These instructions capture persistent memories, behavioral guardrails, and techn
   - All GitHub Actions MUST pass before any merge.
   - Prefer squash-and-merge for pull requests.
   - Remote branches MUST be deleted immediately after merging.
-  - Before approving or merging any pull request, the AI agent MUST run `./.agents/skills/github-review-orchestrator/scripts/pre_merge_checks.sh <pr_number>` to automate verification checks.
-- **Code Review Style**: Delegated entirely to `github-review-orchestrator` and `technical-review-guidelines` skills. Do not duplicate rules here.
+  - Before approving or merging any pull request, the AI agent MUST run `./.agents/skills/github-cli/scripts/prs/pre_merge_checks.sh <pr_number>` to automate verification checks.
+- **Code Review Style**: Delegated entirely to `github-cli` and `code-review` skills. Do not duplicate rules here.
 - **Skill Blueprint Design**: Resources should **not** be marked as required in simple skill blueprints.
 - **Skill Naming Convention**: All custom skills MUST be named using the format `prefix-{specific-area}-guidelines`.
   - For LLM instructions, agent orchestration, or prompt engineering: `prompt-*` MUST be the prefix (e.g., `prompt-guidelines`, `prompt-skills-guidelines`).
@@ -90,7 +90,7 @@ These instructions capture persistent memories, behavioral guardrails, and techn
   - **Log Rotation (macOS)**: Preferred log rotation for `launchd` agents is via shell redirection (`>`) in the `ProgramArguments` block to ensure truncation on every run, rather than using `StandardOutPath`.
   - **Service Logging (Linux)**: `systemd` services should delegate log management to `journald` via `StandardOutput=journal` instead of writing to static files.
 
-- **PR Review Hygiene**: Delegated entirely to `github-review-orchestrator` skill.
+- **PR Review Hygiene**: Delegated entirely to `github-cli` skill.
 
 ## 🤖 Autonomous VM Agents (Jules)
 
@@ -101,7 +101,7 @@ When operating as an autonomous agent in a remote virtual machine (e.g., Jules):
    - If the task involves modifying Zsh configuration or Zsh scripts, you MUST read and follow `./.github/instructions/zsh.instructions.md`.
 
 2. **Leverage Local Skills & Workflows**:
-    - Do not write redundant scripts or reinvent existing logic. Review the custom skills in `./.github/skills/` (such as `github-review-orchestrator`, `technical-review-guidelines`, and `github-pull-guidelines`) and agent workflows in `./.github/agents/` to leverage existing automation patterns and CLI utilities.
+    - Do not write redundant scripts or reinvent existing logic. Review the custom skills in `./.github/skills/` (such as `github-cli`, `code-review`, and `git-cli`) and agent workflows in `./.github/agents/` to leverage existing automation patterns and CLI utilities.
 
 3. **Conventions & Safe Operations**:
    - Adhere strictly to the package management guidelines. Do not install packages using raw `apt` or `brew` commands. Use the modular `pkg.zsh` recipe structure.

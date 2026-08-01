@@ -4,6 +4,9 @@
 # Outputs a structured markdown report with all context needed
 # to decide whether a PR can be created and what to ask the user.
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common/client.sh"
+
 set -euo pipefail
 
 # ---------------------------------------------------------------------------
@@ -19,22 +22,16 @@ err() {
 # ---------------------------------------------------------------------------
 
 #######################################
-# Verify gh CLI is installed and authenticated.
+# Verify GitHub auth status.
 # Outputs:
 #   "Yes" if ready, or a descriptive error string.
 #######################################
-check_gh_auth() {
-  if ! command -v gh &>/dev/null; then
-    echo "Not installed"
-    return 0
+check_auth() {
+  if [[ "$GITHUB_PROVIDER" == "none" ]]; then
+    echo "No GitHub authentication found. Run 'gh auth login' or set GITHUB_TOKEN."
+  else
+    echo "Yes"
   fi
-
-  if ! gh auth status &>/dev/null; then
-    echo "Not authenticated"
-    return 0
-  fi
-
-  echo "Yes"
 }
 
 #######################################
@@ -215,9 +212,8 @@ find_pr_template() {
 #   Structured markdown report to stdout.
 #######################################
 main() {
-  # Check gh CLI first — it's a hard prerequisite
-  local gh_auth
-  gh_auth="$(check_gh_auth)"
+  local auth_status
+  auth_status="$(check_auth)"
 
   local branch
   if ! branch="$(get_current_branch)"; then
@@ -247,7 +243,7 @@ main() {
   local default_branch="Unknown"
 
   # Only query gh API if authenticated
-  if [[ "${gh_auth}" == "Yes" ]]; then
+  if [[ "${auth_status}" == "Yes" ]]; then
     existing_prs="$(get_existing_prs "${branch}")"
     repo_name="$(get_repo_name)"
     default_branch="$(get_default_branch)"
@@ -270,7 +266,7 @@ main() {
 
 | Check               | Result |
 |---------------------|--------|
-| gh CLI              | ${gh_auth} |
+| Auth Status         | ${auth_status} |
 | Branch              | ${branch} |
 | Mainline branch     | ${is_mainline} |
 | Pushed to origin    | ${on_remote} |

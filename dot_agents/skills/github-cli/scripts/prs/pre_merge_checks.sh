@@ -2,6 +2,9 @@
 # General pre-merge and pre-approval validation checks for PR branches.
 # Usage: ./scripts/pre_merge_checks.sh <pr_number>
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common/client.sh"
+
 PR_NUMBER="${1:-}"
 if [[ -z "$PR_NUMBER" ]]; then
   echo "Usage: $0 <pr_number>" >&2
@@ -31,7 +34,7 @@ WARNINGS=0
 
 # 2. Check: Has all the requested changes been resolved?
 echo "Checking unresolved review threads..."
-UNRESOLVED_THREADS=$(gh api graphql -F owner="$OWNER" -F repo="$REPO" -F pr="$PR_NUMBER" -f query='
+UNRESOLVED_THREADS=$(github_graphql_request '
   query($owner: String!, $repo: String!, $pr: Int!) {
     repository(owner: $owner, name: $repo) {
       pullRequest(number: $pr) {
@@ -48,7 +51,7 @@ UNRESOLVED_THREADS=$(gh api graphql -F owner="$OWNER" -F repo="$REPO" -F pr="$PR
       }
     }
   }
-' 2>/dev/null)
+' -F owner="$OWNER" -F repo="$REPO" -F pr="$PR_NUMBER" 2>/dev/null)
 
 if [[ -n "$UNRESOLVED_THREADS" ]]; then
   UNRESOLVED_COUNT=$(jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length' <<< "$UNRESOLVED_THREADS")
@@ -115,7 +118,7 @@ MODIFIED_FILES=(${(f)"$(git diff --name-only origin/master...origin/$BRANCH_NAME
 for file in "${MODIFIED_FILES[@]}"; do
   if [[ "$file" == *.zsh || "$file" == bin/df.* || "$file" == *.sh ]]; then
     TEMP_FILE=$(mktemp)
-    gh api "repos/${OWNER}/${REPO}/contents/$file?ref=$BRANCH_NAME" -H "Accept: application/vnd.github.v3.raw" > "$TEMP_FILE" 2>/dev/null
+    github_api_request "GET" "repos/${OWNER}/${REPO}/contents/$file?ref=$BRANCH_NAME" -H "Accept: application/vnd.github.v3.raw" > "$TEMP_FILE" 2>/dev/null
     
     # Syntax check
     if [[ "$file" == *.sh ]]; then

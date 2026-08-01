@@ -2,6 +2,9 @@
 # Submit a PR review using a JSON payload
 # Usage: ./submit_review.sh <owner> <repo> <pr_number> <payload_file> [--raw]
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common/client.sh"
+
 RAW_OUTPUT=false
 ARGS=()
 for arg in "$@"; do
@@ -29,7 +32,7 @@ fi
 
 # Submit review
 STDERR_FILE=$(mktemp)
-RESPONSE=$(gh api "repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/reviews" --input "$PAYLOAD_FILE" 2>"$STDERR_FILE")
+RESPONSE=$(github_api_request "POST" "repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/reviews" --input "$PAYLOAD_FILE" 2>"$STDERR_FILE")
 GH_STATUS=$?
 
 if [[ $GH_STATUS -ne 0 ]]; then
@@ -50,4 +53,3 @@ else
       "URL: \(.html_url)"
     '
 fi
-
