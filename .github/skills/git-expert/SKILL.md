@@ -11,7 +11,7 @@ description: >
   broken rebase", "squash commits", "branch naming", "commit message", "merge
   conflict", "detached HEAD", "git reflog", "git worktree", "submodule", "git
   stash", "git read-tree". Do NOT use for GitHub platform operations (issues,
-  pull requests, reviews) — use the github-cli skill instead.
+  pull requests, reviews) — use the github skill instead.
 ---
 
 # Git Expert
