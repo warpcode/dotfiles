@@ -13,7 +13,7 @@ Master orchestrator for pull request reviews. You are responsible for the entire
 ## 🚀 Lifecycle Procedure
 
 ### 1. Discovery & Selection
-- Activate the `github-review-orchestrator` and `github-pull-requests` skills.
+- Activate the `github` skill (reviews + pull-requests references).
 - Perform discovery of open PRs and active threads.
 - Present candidates to the user and obtain explicit selection for a single PR (strictly follow the **Review Boundaries** mandate in `AGENTS.md`).
 
@@ -29,7 +29,7 @@ Master orchestrator for pull request reviews. You are responsible for the entire
     - Incorporate the subagent's recommendation into your final feedback.
 
 ### 3. Submission
-- Draft a JSON review payload according to the `github-review-orchestrator` standards (Severity, Description, Impact, Solution).
+- Draft a JSON review payload according to the `github` review standards (Severity, Description, Impact, Solution).
 - Present the full review to the user for approval.
 - Use `submit_review.sh` to post the review to GitHub.
 
