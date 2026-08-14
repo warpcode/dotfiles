@@ -13,19 +13,28 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@v4
       
       - name: Install Zsh
         run: sudo apt-get update && sudo apt-get install -y zsh
       
       - name: Lint Zsh files
-        run: find src/zsh -name "*.zsh" -exec zsh -n {} \;
+        run: |
+          if [ -d "src/zsh" ]; then
+            find src/zsh -name "*.zsh" -exec zsh -n {} \;
+          else
+            echo "Directory src/zsh does not exist, skipping lint."
+          fi
       
       - name: Check for syntax errors
         run: |
-          if find src/zsh -name "*.zsh" -exec zsh -n {} \; 2>&1 | grep -q "error"; then
-            echo "Syntax errors found"
-            exit 1
+          if [ -d "src/zsh" ]; then
+            if find src/zsh -name "*.zsh" -exec zsh -n {} \; 2>&1 | grep -q "error"; then
+              echo "Syntax errors found"
+              exit 1
+            else
+              echo "All Zsh files passed syntax check"
+            fi
           else
-            echo "All Zsh files passed syntax check"
+            echo "Directory src/zsh does not exist, skipping syntax check."
           fi

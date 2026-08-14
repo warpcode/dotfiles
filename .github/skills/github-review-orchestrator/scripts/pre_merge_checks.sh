@@ -110,12 +110,15 @@ fi
 
 # 6. Check: General code cleanliness (Syntax / Interactive Safety)
 echo "Checking general code cleanliness of modified files..."
+# Ensure local branches are up-to-date before running local checks
+git fetch origin "$BRANCH_NAME" >/dev/null 2>&1 || true
+
 MODIFIED_FILES=(${(f)"$(git diff --name-only origin/master...origin/$BRANCH_NAME 2>/dev/null)"})
 
 for file in "${MODIFIED_FILES[@]}"; do
   if [[ "$file" == *.zsh || "$file" == bin/df.* || "$file" == *.sh ]]; then
     TEMP_FILE=$(mktemp)
-    gh api "repos/${OWNER}/${REPO}/contents/$file?ref=$BRANCH_NAME" -H "Accept: application/vnd.github.v3.raw" > "$TEMP_FILE" 2>/dev/null
+    git show "origin/$BRANCH_NAME:$file" > "$TEMP_FILE" 2>/dev/null
     
     # Syntax check
     if [[ "$file" == *.sh ]]; then
