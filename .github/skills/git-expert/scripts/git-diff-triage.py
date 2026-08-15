@@ -36,7 +36,7 @@ Design notes:
   matching "^Binary files .* differ$"), not from a numstat marker.
 
 Usage:
-    ./git_diff_triage.py [--threshold N] [-- <git diff args...>]
+    ./git_diff_triage.py [--threshold N] [--raw] [-- <git diff args...>]
 
 Any args after `--` are appended to the default flag set below, so you
 can add a revision range / pathspec, or override a default (e.g. pass
@@ -44,6 +44,7 @@ can add a revision range / pathspec, or override a default (e.g. pass
 
 Examples:
     ./git_diff_triage.py
+    ./git_diff_triage.py --raw
     ./git_diff_triage.py --threshold 80
     ./git_diff_triage.py --threshold 60 -- --staged
     ./git_diff_triage.py -- HEAD~3 HEAD
@@ -100,6 +101,8 @@ def parse_args(argv):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--threshold", type=int, default=40,
                          help="max changed lines (added+removed) to show in full")
+    parser.add_argument("--raw", "--raw-output", action="store_true", dest="raw",
+                         help="output full git diff without hunk truncation or body omission")
     parser.add_argument("diff_args", nargs=argparse.REMAINDER,
                          help="args appended to the default git diff flags (put after --)")
     args = parser.parse_args(argv)
@@ -110,11 +113,18 @@ def parse_args(argv):
 
 
 def run_git_diff(extra_args):
-    result = subprocess.run(
-        ["git", "diff"] + DEFAULT_DIFF_FLAGS + extra_args,
-        capture_output=True, text=True, check=True,
-    )
-    return result.stdout
+    try:
+        result = subprocess.run(
+            ["git", "diff"] + DEFAULT_DIFF_FLAGS + extra_args,
+            capture_output=True, text=True, check=True,
+        )
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        if e.stderr:
+            sys.stderr.write(e.stderr)
+        else:
+            sys.stderr.write(f"git diff failed with exit code {e.returncode}\n")
+        sys.exit(1)
 
 
 def split_diff_into_chunks(raw: str):
@@ -160,6 +170,10 @@ def main():
     args = parse_args(sys.argv[1:])
 
     full_raw = run_git_diff(args.diff_args)
+    if args.raw:
+        sys.stdout.write(full_raw)
+        return
+
     chunks = split_diff_into_chunks(full_raw)
 
     out = []

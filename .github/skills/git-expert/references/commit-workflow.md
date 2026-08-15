@@ -6,10 +6,10 @@ Reference for the *process* of performing a commit — collecting context and pr
 
 ### 1. Collect Context
 
-**Execute** the preflight script first (do not read it — run it to get live repo context):
+**Execute** the status script first (do not read it — run it to get live repo context):
 
 ```bash
-bash ${SKILL_DIR}/scripts/preflight.sh
+bash ${SKILL_DIR}/scripts/status.sh
 ```
 
 Then check for staged files:

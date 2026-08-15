@@ -101,6 +101,18 @@ Worktree ready at <full-path>
 Ready to implement <feature-name>
 ```
 
+## Worktree Inspection & Cleanup
+
+To detect active/stale worktree references, prune dead worktree metadata, or safely remove linked worktrees:
+
+```bash
+# Detect active and stale worktrees, and prune metadata (dry-run by default)
+bash ${SKILL_DIR}/scripts/worktrees.sh
+
+# Remove a specific worktree (requires explicit confirmation and flag)
+bash ${SKILL_DIR}/scripts/worktrees.sh --remove <path>
+```
+
 ## Quick Reference
 
 | Situation | Action |

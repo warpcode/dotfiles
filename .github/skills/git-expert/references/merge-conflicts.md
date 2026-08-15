@@ -7,8 +7,14 @@ merge or rebase cannot proceed.
 
 ## Detecting Conflicts
 
+For a one-shot report detecting in-progress merges, rebases, cherry-picks, reverts, bisects, conflict files, and recovery commands:
+```bash
+bash ${SKILL_DIR}/scripts/merge_state.sh
+```
+
 | Signal | Command | Meaning |
 |--------|---------|---------|
+| In-progress state & conflict triage | `bash ${SKILL_DIR}/scripts/merge_state.sh` | Detects operation, conflicting files, abort/continue commands |
 | Merge conflict status | `git status` | Lists files with `both modified` / `unmerged` state |
 | Conflict markers | `git diff` / `git diff <file>` | Shows `<<<<<<<` `=======` `>>>>>>>` blocks |
 | List unmerged paths | `git diff --name-only --diff-filter=U` | Filenames only |
