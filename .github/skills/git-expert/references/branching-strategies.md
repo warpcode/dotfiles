@@ -83,6 +83,23 @@ into previous, `fixup` merge discarding message, `drop` remove.
 git rebase -i $(git merge-base HEAD main)
 ```
 
+### Compare branch to base (PR preparation)
+
+```bash
+# Token-efficient divergence, commit list, and file diffs
+bash ${SKILL_DIR}/scripts/branch_diff.sh [base_branch]
+```
+
+### Branch overview & cleanup
+
+```bash
+# List local/remote branches with upstream tracking and merged status
+bash ${SKILL_DIR}/scripts/branches.sh
+
+# Prune stale tracking refs and delete merged local branches (requires confirmation)
+bash ${SKILL_DIR}/scripts/branches.sh --prune --delete-merged
+```
+
 ### Push safely
 
 ```bash
@@ -94,4 +111,4 @@ git push --force-with-lease   # never plain --force on shared branches
 - NEVER rebase shared/public branches.
 - NEVER force-push without `--force-with-lease` and user confirmation.
 - Recover from botched rebases with `git rebase --abort` or the reflog (see
-  `cli-commands.md`).
+  `${SKILL_DIR}/references/cli-commands.md`).
