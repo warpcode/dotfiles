@@ -21,8 +21,8 @@ Treat matching files as Zsh, not Bash.
 
 Repository-specific guidance for Zsh work:
 
-- Keep Zsh configuration modular. Put logic in the appropriate file under `src/zsh/config/`, `src/zsh/functions/`, `src/zsh/apps/`, or `src/zsh/projects/` instead of adding large blocks directly to `src/zsh/init.zsh`.
-- Never edit stowed files in `$HOME`. Edit the source files under `generic/` or `work/`.
+- Keep Zsh configuration modular. Put logic in the appropriate file under `dot_zsh/config/`, `dot_zsh/functions/`, `dot_zsh/apps/`, or `dot_zsh/projects/` instead of adding large blocks directly to `dot_zsh/init.zsh`.
+- Never edit stowed files in `$HOME`. Edit the source files under the `dot_*` directories.
 - Use `$DOTFILES` for repository-root paths instead of hardcoded absolute paths.
 - For package installation logic, use the repo's `pkg.install` and recipe system instead of direct `apt`, `brew`, or similar package-manager commands in scripts.
 - **Function Exit Hygiene**: NEVER use `exit` inside Zsh functions intended for interactive use or sourcing. Always use `return <status>` (e.g., `return 1` for errors) to ensure the user's shell session is not terminated upon failure.
