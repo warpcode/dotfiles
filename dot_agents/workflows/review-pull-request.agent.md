@@ -18,7 +18,7 @@ Master orchestrator for pull request reviews. You are responsible for the entire
 - Present candidates to the user and obtain explicit selection for a single PR (strictly follow the **Review Boundaries** mandate in `AGENTS.md`).
 
 ### 2. Contextual Audit
-- Use `get_pr_context.sh` and `gh pr diff` to retrieve the PR state without checking out the branch.
+- Use `gh pr view <pr> --repo <owner>/<repo> --json <fields>` and `gh pr diff <pr> --repo <owner>/<repo>` to retrieve the PR state without checking out the branch.
 - **Requirements Tracing**: If the PR mentions or is linked to a parent issue:
     - Retrieve the parent issue's context, description, and acceptance criteria (AC).
     - Verify if the PR implementation aligns with the stated AC.
@@ -30,8 +30,13 @@ Master orchestrator for pull request reviews. You are responsible for the entire
 
 ### 3. Submission
 - Draft a JSON review payload according to the `github` review standards (Severity, Description, Impact, Solution).
+- **Bot-authored PRs** (e.g. Jules): All findings MUST go into inline file-level `comments`. The top-level `body` must be a neutral one-liner only. Bots only act on inline comments, not the main review body.
 - Present the full review to the user for approval.
-- Use `submit_review.sh` to post the review to GitHub.
+- Write the payload to a scratch JSON file and submit via:
+  ```
+  gh api "repos/{owner}/{repo}/pulls/{pr}/reviews" --method POST --input <payload-file>
+  ```
+  > ⚠️ Do NOT use `submit_review.sh` — it is a broken symlink.
 
 ### 4. Memory Extraction (Automatic)
 - **Immediately** after a review is submitted, invoke the `conversation-review` agent.
