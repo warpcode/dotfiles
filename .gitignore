@@ -64,3 +64,4 @@ venv.bak/
 *.tmp
 *.temp
 .DS_Store?
+.serena/
