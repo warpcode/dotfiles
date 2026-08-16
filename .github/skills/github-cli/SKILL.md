@@ -48,8 +48,6 @@ Read only the reference(s) needed for the query. Never load all references upfro
 
 | Resource | Path | Purpose |
 |----------|------|---------|
-| Pre-flight script | `${SKILL_DIR}/scripts/preflight.sh` | Safety checks (branch, remote, auth, existing PRs) — run before Create |
-| View script | `${SKILL_DIR}/scripts/view.sh [<pr_number>]` | Fetch PR metadata, comments, and diff — run during View |
 | List / Filter PRs script | `${SKILL_DIR}/scripts/list_pull_requests.sh [OPTIONS]` | List and filter PRs (approved, commits after review, waiting on author, unresponded) |
 | List PR review threads script | `${SKILL_DIR}/scripts/list_pull_request_review_threads.sh [OPTIONS]` | Retrieve review threads for a pull request via GraphQL |
 | Get PR script | `${SKILL_DIR}/scripts/get_pull_request.sh [OPTIONS]` | Fetch comprehensive PR state (summary table, merge readiness checks, comments, reviews, stats) |
