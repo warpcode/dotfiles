@@ -593,6 +593,8 @@ vimdiff =(git show HEAD:file.txt) file.txt
 Use `=(cmd)` when the consuming command needs a seekable file (e.g., `vimdiff`,
 tools that `lseek` into the file, or tools that read it twice).
 
+**JSON Argument Passing:** When passing resolved JSON objects between shell functions or into `jq`, pass them as parsed arguments (e.g., `jq --argjson defaults "$default_json"`) rather than using process substitutions (`<(echo ...)`) or raw slurping, preventing zsh compatibility issues and file descriptor leaks.
+
 ## 15. Splitting Command Output into Arrays
 
 Zsh has no `readarray`/`mapfile`. The native idiom uses parameter expansion flags:
@@ -1150,3 +1152,12 @@ for _conf in "${ZDOTDIR}/conf.d"/*.zsh(N.); do
 done
 unset _conf
 ```
+
+---
+
+## 27. Gotchas & Dotfile Safety Patterns
+
+- **Interactive Zsh Functions Safety**: Interactive Zsh functions (like `dataurl`) must always use `return <status>` instead of `exit` to prevent terminating the active shell session, and must verify file readability using `[ -f "$file" ]` beforehand.
+- **`zsh -n` Linting Gotcha**: `zsh -n` only syntax-checks the first file argument when multiple arguments are provided. When linting multiple Zsh files, run `zsh -n` on each file individually (e.g., via `find ... -exec zsh -n {} \;` or a loop).
+- **`yq` (v4) `strenv` Redundancy**: In `mikefarah/yq` (v4), variables retrieved via `strenv()` are already strings; applying `| tostring` to them is redundant. If type conversion is required, apply it to the field being compared rather than the strenv variable.
+- **Symlink Replacement in Install Scripts**: When replacing a symlinked directory, always recreate the directory (`mkdir -p`) immediately after deleting the symlink using `rm -f` to ensure subsequent copying operations (such as `cp -a`) do not fail.
