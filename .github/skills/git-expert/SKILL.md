@@ -11,7 +11,8 @@ description: >
   broken rebase", "squash commits", "branch naming", "commit message", "merge
   conflict", "detached HEAD", "git reflog", "git worktree", "submodule", "git
   stash", "git read-tree", "repo overview", "branch diff", "git triage",
-  "clean branches", "clean stash", "clean worktrees". Do NOT use for GitHub
+  "clean branches", "clean stash", "clean worktrees".
+user-invocable: false
 ---
 
 # Git Expert

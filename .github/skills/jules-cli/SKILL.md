@@ -5,7 +5,8 @@ description: >
   Use this skill whenever the user asks to delegate tasks to Jules, create or manage
   Jules remote sessions, check Jules session history or repository listings, pull results or patches from
   Jules sessions, teleport/checkout Jules sessions locally, or script batch automation with Jules. IMPORTANT:
-  This skill MUST enforce non-interactive CLI subcommands and NEVER invoke bare `jules` (which launches the TUI dashboard).
+  This skill MUST enforce non-interactive CLI subcommands and NEVER invoke bare `jules` (which launches the TUI dashboard)
+user-invocable: false
 ---
 
 # Jules CLI Automation & Abilities Reference

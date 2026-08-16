@@ -9,6 +9,7 @@ description: >
   that will shell out to an external CLI tool — even if the user does not use the
   word "skill". If you are figuring out how an LLM should invoke a command-line
   tool, this skill applies.
+user-invocable: false
 ---
 
 # CLI-to-Skill

@@ -33,7 +33,7 @@ This is a **chezmoi-managed dotfiles repository** (`warpcode/dotfiles`): shell c
 - **Never** use full home paths in commands — use `$HOME`/`~` (some services redact them).
 - **Symlink safety**: never `rm -rf` through a symlink — `readlink`/`ls -l` first.
 - **Secrets**: scripts stay blind to the secret provider; rely on env vars (`GITHUB_TOKEN`/`GH_TOKEN`) or `df.config resolve`/`df.keychain`.
-- `.github/instructions/` and `dot_agents/rules/` are duplicates — keep in sync when editing.
+- `dot_agents/rules/` is a symlink to `.github/instructions/`.
 - Mark deliberate simplifications with a `ponytail:` comment naming the ceiling + upgrade path.
 
 ## Skills
