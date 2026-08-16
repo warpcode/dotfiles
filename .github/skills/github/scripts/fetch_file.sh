@@ -25,4 +25,10 @@ if [[ $GH_STATUS -ne 0 ]]; then
     exit 1
 fi
 
-echo "$RESPONSE" | jq -r '.content' | base64 -d
+CONTENT=$(echo "$RESPONSE" | jq -r '.content // empty')
+if [[ -n "$CONTENT" ]]; then
+    printf '%s' "$CONTENT" | base64 -d
+else
+    # Fall back to raw media type for large files (> 1 MB)
+    gh api -H "Accept: application/vnd.github.raw+json" "repos/${OWNER}/${REPO}/contents/${FILE_PATH}?ref=${BRANCH}"
+fi

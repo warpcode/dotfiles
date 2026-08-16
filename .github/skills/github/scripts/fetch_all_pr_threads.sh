@@ -34,11 +34,11 @@ fi
 
 STDERR_FILE=$(mktemp)
 JSON_RESPONSE=$(gh api graphql \
+  -F query="@$QUERY_FILE" \
   -F owner="$OWNER" \
   -F repo="$REPO" \
   -F limit="$LIMIT" \
-  -F direction="$DIRECTION" \
-  -f query="$(cat "$QUERY_FILE")" 2>"$STDERR_FILE")
+  -F direction="$DIRECTION" 2>"$STDERR_FILE")
 GH_STATUS=$?
 
 if [[ $GH_STATUS -ne 0 ]]; then

@@ -1,0 +1,76 @@
+query($owner: String!, $repo: String!, $states: [PullRequestState!] = [OPEN], $limit: Int = 50, $direction: OrderDirection = DESC) {
+  repository(owner: $owner, name: $repo) {
+    owner {
+      login
+    }
+    pullRequests(states: $states, first: $limit, orderBy: {field: UPDATED_AT, direction: $direction}) {
+      nodes {
+        number
+        title
+        url
+        isDraft
+        reviewDecision
+        createdAt
+        updatedAt
+        author {
+          login
+        }
+        baseRefName
+        headRefName
+        commits(last: 10) {
+          nodes {
+            commit {
+              oid
+              committedDate
+              authoredDate
+              pushedDate
+              messageHeadline
+            }
+          }
+        }
+        latestReviews(last: 15) {
+          nodes {
+            author {
+              login
+            }
+            state
+            submittedAt
+          }
+        }
+        reviews(last: 20) {
+          nodes {
+            author {
+              login
+            }
+            state
+            submittedAt
+          }
+        }
+        comments(last: 25) {
+          nodes {
+            author {
+              login
+            }
+            createdAt
+            body
+          }
+        }
+        reviewThreads(last: 25) {
+          nodes {
+            id
+            isResolved
+            comments(last: 10) {
+              nodes {
+                author {
+                  login
+                }
+                createdAt
+                body
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
