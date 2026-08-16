@@ -6,27 +6,20 @@ Query authenticated user information, organization teams, and team membership.
 
 ## Operations Overview
 
-| Operation | Risk Level | Primary MCP Action | CLI Fallback (`gh` / `gh api`) |
+| Operation | Risk Level | Primary MCP Action | Script Fallback (`${SKILL_DIR}/scripts/`) |
 | :--- | :--- | :--- | :--- |
-| **Get current user** | Read-Only | `get_me` | `gh api user` / `gh auth status` |
-| **Get organization teams** | Read-Only | `get_teams` | `gh api orgs/{org}/teams` |
-| **Get team members** | Read-Only | `get_team_members` | `gh api orgs/{org}/teams/{team_slug}/members` |
+| **Get current user** | Read-Only | `get_me` | `get_me.sh` |
+| **Get organization teams** | Read-Only | `get_teams` | `get_teams.sh` |
+| **Get team members** | Read-Only | `get_team_members` | `get_team_members.sh` |
 
 ---
 
 ## 1. User Identity (`get_me`)
 
-Inspect the currently authenticated user account, permissions, and scopes:
+Inspect the currently authenticated user account:
 
 ```bash
-# Verify authentication status and active account
-gh auth status
-
-# Get authenticated user profile JSON
-gh api user --jq '{login: .login, name: .name, id: .id, email: .email}'
-
-# Check OAuth scopes
-gh api user -i | grep -i "x-oauth-scopes"
+bash ${SKILL_DIR}/scripts/get_me.sh
 ```
 
 ---
@@ -36,8 +29,7 @@ gh api user -i | grep -i "x-oauth-scopes"
 List all teams within an organization:
 
 ```bash
-# List teams with slug, name, and description
-gh api orgs/{org}/teams --paginate --jq '.[] | {name: .name, slug: .slug, description: .description}'
+bash ${SKILL_DIR}/scripts/get_teams.sh --org <org_name>
 ```
 
 ---
@@ -47,9 +39,5 @@ gh api orgs/{org}/teams --paginate --jq '.[] | {name: .name, slug: .slug, descri
 List members of a specific organization team:
 
 ```bash
-# List team members by role (member, maintainer, all)
-gh api orgs/{org}/teams/{team_slug}/members --jq '.[].login'
-
-# Filter maintainers only
-gh api "orgs/{org}/teams/{team_slug}/members?role=maintainer" --jq '.[].login'
+bash ${SKILL_DIR}/scripts/get_team_members.sh --org <org_name> --team-slug <team_slug>
 ```

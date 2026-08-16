@@ -6,13 +6,13 @@ Query, view, create, and manage GitHub releases and release assets.
 
 ## Operations Overview
 
-| Operation | Risk Level | Primary MCP Action | CLI Fallback (`gh` / `gh api`) |
-| :--- | :--- | :--- | :--- |
-| **List releases** | Read-Only | `list_releases` | `gh release list --limit 30` |
-| **Get latest release** | Read-Only | `get_latest_release` | `gh release view --json tagName,name,body,url,publishedAt` |
-| **Get release by tag** | Read-Only | `get_release_by_tag` | `gh release view <tag> --json ...` |
-| **Create release** | Mutating (Write) | N/A (`gh release`) | `gh release create <tag> --title "..." --notes-file ...` |
-| **Download assets** | Read-Only | N/A (`gh release`) | `gh release download <tag> -p "*.tar.gz"` |
+| Operation | Risk Level | Primary MCP Action | Script Fallback (`${SKILL_DIR}/scripts/`) | CLI Fallback (`gh`) |
+| :--- | :--- | :--- | :--- | :--- |
+| **List releases** | Read-Only | `list_releases` | `list_releases.sh` | `gh release list` |
+| **Get latest release** | Read-Only | `get_latest_release` | `get_latest_release.sh` | `gh release view` |
+| **Get release by tag** | Read-Only | `get_release_by_tag` | `get_release_by_tag.sh` | `gh release view <tag>` |
+| **Create release** | Mutating (Write) | N/A (`gh release`) | N/A | `gh release create <tag> --draft` |
+| **Download assets** | Read-Only | N/A (`gh release`) | N/A | `gh release download <tag>` |
 
 ---
 
@@ -20,26 +20,29 @@ Query, view, create, and manage GitHub releases and release assets.
 
 ### List Releases
 ```bash
-# List all releases in table format
-gh release list --limit 30
+# Auto-detected repository
+bash ${SKILL_DIR}/scripts/list_releases.sh
 
-# Output structured JSON
-gh release list --limit 30 --json tagName,name,isDraft,isPrerelease,publishedAt
+# Explicit repository override
+bash ${SKILL_DIR}/scripts/list_releases.sh --owner octocat --repo hello-world
 ```
 
 ### Get Latest Release
 ```bash
-# Formatted view in terminal
-gh release view
+# Auto-detected repository
+bash ${SKILL_DIR}/scripts/get_latest_release.sh
 
-# Retrieve full metadata and release notes
-gh release view --json tagName,name,body,assets,publishedAt,url
+# Explicit repository override
+bash ${SKILL_DIR}/scripts/get_latest_release.sh --owner octocat --repo hello-world
 ```
 
 ### Get Release by Tag
 ```bash
-# View release details for a specific tag
-gh release view "v1.2.0" --json tagName,name,body,assets,createdAt,url
+# Auto-detected repository
+bash ${SKILL_DIR}/scripts/get_release_by_tag.sh --tag "v1.2.0"
+
+# Explicit repository override
+bash ${SKILL_DIR}/scripts/get_release_by_tag.sh --owner octocat --repo hello-world --tag "v1.2.0"
 ```
 
 ---

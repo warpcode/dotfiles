@@ -8,6 +8,8 @@
 #   If pr_number is omitted, detects the PR for the current branch.
 
 set -euo pipefail
+export GH_PAGER=""
+export PAGER=cat
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -91,6 +93,21 @@ GOTEMPLATE
 # ---------------------------------------------------------------------------
 
 main() {
+  case "${1:-}" in
+    -h|--help)
+      echo "Usage: ./view.sh [<pr_number>]"
+      echo ""
+      echo "Fetch pull request metadata, comments, and diff into structured inspection files."
+      echo ""
+      echo "Arguments:"
+      echo "  pr_number         Pull request number (default: auto-detects from current branch)"
+      echo ""
+      echo "Options:"
+      echo "  -h, --help        Show this help message"
+      exit 0
+      ;;
+  esac
+
   local pr="${1:-}"
 
   # ── Identify the PR ──────────────────────────────────────────────────

@@ -46,6 +46,7 @@ collects a whole procedure in one token-efficient report:
 | Script | Purpose | Run when |
 |--------|---------|----------|
 | `${SKILL_DIR}/scripts/status.sh` | Working tree state, branch, staged/unstaged changes, push/pull counts | Before commit workflow or checking local status |
+| `${SKILL_DIR}/scripts/context.sh <base> <head>` | Collect commits, diffstat, and full diff into temp files | Comparing base and head branches, PR prep |
 | `${SKILL_DIR}/scripts/git-diff-triage.py` | Token-efficient diff (full for small files, headers only for large) | Reviewing staged/unstaged changes |
 | `${SKILL_DIR}/scripts/branches.sh` | Branch overview: last commit, upstream, ahead/behind, merged status (optional `--prune`, `--delete-merged`) | "What branches exist?", "Is X merged?", branch pruning/cleanup |
 | `${SKILL_DIR}/scripts/branch_diff.sh` | Branch comparison vs base: divergence, commits, and file diffs | Comparing feature branch to main/base, PR prep |

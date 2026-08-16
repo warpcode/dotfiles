@@ -5,6 +5,8 @@
 # to decide whether a PR can be created and what to ask the user.
 
 set -euo pipefail
+export GH_PAGER=""
+export PAGER=cat
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -215,6 +217,23 @@ find_pr_template() {
 #   Structured markdown report to stdout.
 #######################################
 main() {
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      -h|--help)
+        echo "Usage: ./preflight.sh [OPTIONS]"
+        echo ""
+        echo "Run pre-flight checks (auth, branch, remotes, mainline, existing PRs) before opening a pull request."
+        echo ""
+        echo "Options:"
+        echo "  -h, --help        Show this help message"
+        exit 0
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
   # Check gh CLI first — it's a hard prerequisite
   local gh_auth
   gh_auth="$(check_gh_auth)"
