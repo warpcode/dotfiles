@@ -1,7 +1,10 @@
 ---
+name: commit
 description: "Workflow for preparing a git commit message"
 argument-hint: "What to commit? (e.g exact files, all staged, or all unstaged)"
 agent: "git-specialist"
+model: OpenCode Zen / Big Pickle (opencodezen)
+tools: [execute, read, edit, search, agent]
 ---
 
 Workflow for the git-specialist to prepare and commit changes:
