@@ -45,7 +45,7 @@ To accomplish this, you must coordinate a team of specialized subagents, maintai
 ### Phase 5: Verification & Merge Orchestration
 1. **Task**: Verify the final codebase state and perform pre-merge checks.
 2. **Subagent**: Invoke the `merge-coordinator` subagent.
-3. **Execution**: Run test suites, verify CI configuration, run local pre-merge verification scripts (e.g., `fetch_pr_merge_checks.sh`), and generate the final merge request/pull request.
+3. **Execution**: Run test suites, verify CI configuration, check pull request merge status and readiness (e.g., `get_pull_request.sh`), and generate the final merge request/pull request.
 4. **Action**: Merge the code once all verification checks pass and user approval is received.
 
 ---

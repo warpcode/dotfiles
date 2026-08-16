@@ -1,5 +1,6 @@
 query($owner: String!, $repo: String!, $states: [PullRequestState!] = [OPEN], $limit: Int = 50, $direction: OrderDirection = DESC) {
   repository(owner: $owner, name: $repo) {
+    name
     owner {
       login
     }

@@ -7,11 +7,27 @@ query($owner: String!, $repo: String!, $pr: Int!) {
       number
       title
       state
+      body
       isDraft
+      mergeable
+      mergeStateStatus
       reviewDecision
       url
       author {
         login
+      }
+      assignees(first: 10) {
+        nodes {
+          login
+        }
+      }
+      labels(first: 10) {
+        nodes {
+          name
+        }
+      }
+      milestone {
+        title
       }
       baseRefName
       headRefName
@@ -28,6 +44,8 @@ query($owner: String!, $repo: String!, $pr: Int!) {
             login
           }
           createdAt
+          body
+          url
         }
       }
       reviews(first: 100) {
@@ -82,6 +100,9 @@ query($owner: String!, $repo: String!, $pr: Int!) {
             committedDate
             pushedDate
             messageHeadline
+            statusCheckRollup {
+              state
+            }
           }
         }
       }

@@ -9,19 +9,19 @@ Manage remote repository content, files, branches, tags, commits, collaborators,
 
 ## Operations Overview
 
-| Operation | Risk Level | Primary MCP Action | CLI Fallback (`gh` / `gh api`) |
+| Operation | Risk Level | Primary MCP Action | Script Fallback (`${SKILL_DIR}/scripts/`) |
 | :--- | :--- | :--- | :--- |
-| **Get file contents** | Read-Only | `get_file_contents` | `gh api repos/{owner}/{repo}/contents/{path}?ref={ref}` |
-| **Create/update file** | Mutating (Write) | `create_or_update_file` | `gh api -X PUT repos/{owner}/{repo}/contents/{path} --input payload.json` |
-| **Delete file** | Mutating (Destructive)| `delete_file` | `gh api -X DELETE repos/{owner}/{repo}/contents/{path} --input payload.json` |
-| **Push multiple files** | Mutating (Write) | `push_files` | GraphQL `createCommitOnBranch` |
-| **List branches** | Read-Only | `list_branches` | `gh api repos/{owner}/{repo}/branches` |
-| **Create branch** | Mutating (Write) | `create_branch` | `gh api -X POST repos/{owner}/{repo}/git/refs -f ref="refs/heads/{branch}" -f sha="{sha}"` |
-| **Get / List tags** | Read-Only | `get_tag`, `list_tags` | `gh api repos/{owner}/{repo}/tags` |
-| **Get / List commits** | Read-Only | `get_commit`, `list_commits` | `gh api repos/{owner}/{repo}/commits` / `gh api repos/{owner}/{repo}/commits/{ref}` |
-| **List collaborators** | Read-Only | `list_repository_collaborators`| `gh api repos/{owner}/{repo}/collaborators` |
-| **Create repository** | Mutating (Write) | `create_repository` | `gh repo create <name> [--public/--private]` |
-| **Fork repository** | Mutating (Write) | `fork_repository` | `gh repo fork <owner>/<repo> [--clone=false]` |
+| **Get file contents** | Read-Only | `get_file_contents` | `get_file_contents.sh` |
+| **Create/update file** | Mutating (Write) | `create_or_update_file` | `create_or_update_file.sh` |
+| **Delete file** | Mutating (Destructive)| `delete_file` | `delete_file.sh` |
+| **Push multiple files** | Mutating (Write) | `push_files` | `push_files.sh` |
+| **List branches** | Read-Only | `list_branches` | `list_branches.sh` |
+| **Create branch** | Mutating (Write) | `create_branch` | `create_branch.sh` |
+| **Get / List tags** | Read-Only | `get_tag`, `list_tags` | `get_tag.sh`, `list_tags.sh` |
+| **Get / List commits** | Read-Only | `get_commit`, `list_commits` | `get_commit.sh`, `list_commits.sh` |
+| **List collaborators** | Read-Only | `list_repository_collaborators`| `list_repository_collaborators.sh` |
+| **Create repository** | Mutating (Write) | `create_repository` | `create_repository.sh` |
+| **Fork repository** | Mutating (Write) | `fork_repository` | `fork_repository.sh` |
 
 ---
 
@@ -30,77 +30,37 @@ Manage remote repository content, files, branches, tags, commits, collaborators,
 ### Get File Contents
 Fetch remote file content without checking out the branch:
 ```bash
-# Get metadata + base64 content
-gh api repos/{owner}/{repo}/contents/{path}?ref={branch_or_sha}
-
-# Or use the helper script for decoded stdout:
-bash ${SKILL_DIR}/scripts/fetch_file.sh <owner> <repo> <path> <branch>
+bash ${SKILL_DIR}/scripts/get_file_contents.sh --path "path/to/file.txt" --branch "main" [--owner <owner>] [--repo <repo>]
 ```
 
 ### Create or Update a Single Remote File
-Creates or updates a file directly on a remote branch via the GitHub REST API:
-1. Fetch the existing file SHA (if updating):
-   ```bash
-   FILE_SHA=$(gh api repos/{owner}/{repo}/contents/{path}?ref={branch} --jq .sha 2>/dev/null || true)
-   ```
-2. Prepare the JSON payload:
-   ```json
-   {
-     "message": "docs: update README with API instructions",
-     "content": "<base64-encoded-content>",
-     "branch": "feature-branch",
-     "sha": "<existing-sha-if-updating>"
-   }
-   ```
-3. Execute:
-   ```bash
-   gh api -X PUT repos/{owner}/{repo}/contents/{path} --input payload.json
-   ```
+```bash
+# 1. Create a brand new file (no --sha required)
+bash ${SKILL_DIR}/scripts/create_or_update_file.sh \
+  --path "docs/guide.md" \
+  --message "docs: create user guide" \
+  --content "<base64_encoded_content>" \
+  --branch "feature-branch"
+
+# 2. Update an existing file (passing optional --sha)
+bash ${SKILL_DIR}/scripts/create_or_update_file.sh \
+  --path "docs/guide.md" \
+  --message "docs: update user guide" \
+  --content "<base64_encoded_content>" \
+  --branch "feature-branch" \
+  --sha "3a4b5c6d..." \
+  --owner "octocat" \
+  --repo "custom-repo"
+```
 
 ### Delete a Single Remote File
-```json
-{
-  "message": "chore: remove obsolete config",
-  "sha": "<file-sha>",
-  "branch": "feature-branch"
-}
-```
 ```bash
-gh api -X DELETE repos/{owner}/{repo}/contents/{path} --input payload.json
-```
-
-### Push Multiple Files (Atomic Commit via GraphQL)
-To commit multiple files atomically without local git checkout, use GitHub's GraphQL `createCommitOnBranch` mutation:
-```graphql
-mutation CreateCommit($input: CreateCommitOnBranchInput!) {
-  createCommitOnBranch(input: $input) {
-    commit {
-      oid
-      url
-    }
-  }
-}
-```
-Input structure:
-```json
-{
-  "input": {
-    "branch": {
-      "repositoryNameWithOwner": "owner/repo",
-      "branchName": "feature-branch"
-    },
-    "expectedHeadOid": "<current_head_oid>",
-    "message": { "headline": "feat: add multiple configuration files" },
-    "fileChanges": {
-      "additions": [
-        { "path": "config/app.json", "contents": "<base64_encoded_content>" }
-      ],
-      "deletions": [
-        { "path": "config/legacy.json" }
-      ]
-    }
-  }
-}
+bash ${SKILL_DIR}/scripts/delete_file.sh \
+  --path "path/to/file.txt" \
+  --message "chore: remove obsolete file" \
+  --branch "feature-branch" \
+  --sha "<file_sha>" \
+  [--owner <owner>] [--repo <repo>]
 ```
 
 ---
@@ -109,24 +69,22 @@ Input structure:
 
 ### List Branches
 ```bash
-gh api repos/{owner}/{repo}/branches --paginate --jq '.[].name'
+bash ${SKILL_DIR}/scripts/list_branches.sh [--owner <owner>] [--repo <repo>]
 ```
 
 ### Create a Remote Branch
 Create a branch pointing directly to a specific commit SHA:
 ```bash
-gh api -X POST repos/{owner}/{repo}/git/refs \
-  -f ref="refs/heads/new-feature" \
-  -f sha="6dcb09b5b57875f334f61aebed695e2e4193db5e"
+bash ${SKILL_DIR}/scripts/create_branch.sh --branch "new-feature" --sha "<commit_sha>" [--owner <owner>] [--repo <repo>]
 ```
 
 ### List and Inspect Tags
 ```bash
-# List tags
-gh api repos/{owner}/{repo}/tags --jq '.[].name'
+# List all tags
+bash ${SKILL_DIR}/scripts/list_tags.sh [--owner <owner>] [--repo <repo>]
 
 # Get specific tag ref
-gh api repos/{owner}/{repo}/git/ref/tags/{tag_name}
+bash ${SKILL_DIR}/scripts/get_tag.sh --tag "<tag_name>" [--owner <owner>] [--repo <repo>]
 ```
 
 ---
@@ -135,16 +93,12 @@ gh api repos/{owner}/{repo}/git/ref/tags/{tag_name}
 
 ### Get Commit Details
 ```bash
-gh api repos/{owner}/{repo}/commits/{commit_sha}
+bash ${SKILL_DIR}/scripts/get_commit.sh --sha "<commit_sha>" [--owner <owner>] [--repo <repo>]
 ```
 
 ### List Commits
 ```bash
-# List recent commits on a branch or PR
-gh api repos/{owner}/{repo}/commits?sha={branch}&per_page=30
-
-# Filter commits by author or path
-gh api "repos/{owner}/{repo}/commits?author={username}&path={file_path}"
+bash ${SKILL_DIR}/scripts/list_commits.sh [--owner <owner>] [--repo <repo>]
 ```
 
 ---
@@ -153,17 +107,23 @@ gh api "repos/{owner}/{repo}/commits?author={username}&path={file_path}"
 
 ### List Collaborators
 ```bash
-gh api repos/{owner}/{repo}/collaborators --jq '.[] | {login: .login, role: .role_name}'
+bash ${SKILL_DIR}/scripts/list_repository_collaborators.sh [--owner <owner>] [--repo <repo>]
 ```
 
 ### Create Repository
 ```bash
-# Interactive / scripted repository creation
-gh repo create {owner}/{repo_name} --private --description "Project description"
+# Minimal private repository (default)
+bash ${SKILL_DIR}/scripts/create_repository.sh --name "my-new-repo"
+
+# Public repository with optional description
+bash ${SKILL_DIR}/scripts/create_repository.sh --name "my-open-source-tool" --description "A CLI tool for developers" --public true
 ```
 
 ### Fork Repository
 ```bash
-# Fork to authenticated user's namespace without cloning locally
-gh repo fork {owner}/{repo} --clone=false
+# Fork the currently auto-detected repository
+bash ${SKILL_DIR}/scripts/fork_repository.sh
+
+# Fork a specific external repository
+bash ${SKILL_DIR}/scripts/fork_repository.sh --owner upstream-org --repo project-template
 ```

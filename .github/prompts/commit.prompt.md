@@ -1,38 +1,25 @@
 ---
-description: "Run the git-expert commit workflow: preflight, diff triage, and draft a Conventional Commit message"
-argument-hint: "Run the git-expert commit workflow"
-agent: "frugal"
-tools: [execute/getTerminalOutput, execute/killTerminal, execute/createAndRunTask, execute/runInTerminal, read/readFile, search]
+description: "Workflow for preparing a git commit message"
+argument-hint: "What to commit? (e.g exact files, all staged, or all unstaged)"
+agent: "git-specialist"
 ---
 
-Run the git-expert commit workflow to prepare a commit:
+Workflow for the git-specialist to prepare and commit changes:
 
-1. **Collect context** — Execute the preflight script:
-   ```bash
-   bash .github/skills/git-expert/scripts/preflight.sh
-   ```
+1. **Determine what to commit** — Inspect the repository state. If the user named specific files, use those. Otherwise use staged changes if any exist, else unstaged changes. If there is nothing to commit, halt and inform the user.
 
-2. **Check staged changes** — If `NO_STAGED_CHANGES`, check for unstaged changes. If no changes at all, halt and inform the user.
+2. **Review the changes** — Read the diffs of the files to be committed. Note any filename issues or concerns.
 
-3. **Filename checks** — Analyse filenames for issues or concerns.
+3. **Generate the commit message** — Write a Conventional Commit message (imperative mood, subject under 50 chars, body lines under 72 chars) that accurately summarises the changes. Never invent details not present in the diff.
 
-4. **File diffs** — Execute the git-diff-triage script:
-   ```bash
-   python3 .github/skills/git-expert/scripts/git-diff-triage.py --threshold=40 -- --staged
-   ```
+4. **Present for approval** — Show the user:
+   - the proposed commit message, and
+   - a summary of the files to be committed.
+   Wait for explicit approval before proceeding.
 
-5. **Assess complexity** — Determine single-line vs multiline based on the diff.
-
-6. **Draft message** — Apply Conventional Commit format rules from `.github/skills/git-expert/references/commit-message-format.md`.
-
-7. **Write to file** — Write the draft commit message to a temp file using `mktemp`.
-
-8. **Present to user** — Show the draft commit message and the full `git commit -F` command. Wait for explicit user approval before committing.
+5. **Commit on approval** — Once the user approves, commit the changes using the approved commit message. If the user requested changes, revise and re-present before committing.
 
 **Hard constraints:**
-- Never run `git commit` without user instruction
-- Generate from `git diff --staged`, never from working tree
-- Write message to a file via the file-writing tool (never shell redirection)
-- Pull subject/body content from the staged diff — never invent details
+- Never run `git commit` without explicit user approval
+- Generate the message from the actual diff, never from assumptions
 - No backticks in the commit message
-- Subject < 50 chars, body lines < 72 chars, imperative mood
