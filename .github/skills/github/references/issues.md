@@ -57,7 +57,7 @@ If templates exist: read the template, structure the body to match, and use
 
 ## Step 3: Structure Content
 
-If no repo templates exist, read `references/templates.md` conventions — pick the
+If no repo templates exist, read `${SKILL_DIR}/references/templates.md` conventions — pick the
 template matching intent (Bug Report, Feature Request, Task/Chore,
 Question/Discussion, Security Vulnerability), adapt it, and drop sections that
 don't apply. The user's input is the source of truth; templates provide
@@ -114,6 +114,39 @@ gh issue list --json number,title,state,labels,assignees,url --limit 50
 ```bash
 gh issue close 42 --reason "completed"   # or "not planned"
 gh issue reopen 42
+```
+
+### Sub-issues (Issue Hierarchy)
+
+Manage parent-child sub-issue relationships:
+
+```bash
+# Add a sub-issue to a parent issue (POST /repos/{owner}/{repo}/issues/{parent_num}/sub_issues)
+gh api -X POST repos/{owner}/{repo}/issues/42/sub_issues \
+  -F sub_issue_id=12345678
+
+# Remove a sub-issue from a parent issue
+gh api -X DELETE repos/{owner}/{repo}/issues/42/sub_issues \
+  -F sub_issue_id=12345678
+
+# Reprioritize a sub-issue order (before/after another sub-issue)
+gh api -X PATCH repos/{owner}/{repo}/issues/42/sub_issues/priority \
+  -F sub_issue_id=12345678 -F after_id=87654321
+```
+
+### Issue Types & Project Fields
+
+```bash
+# List organization issue types (e.g. Bug, Feature, Task, Epic)
+gh api orgs/{org}/issue-types --jq '.[].name'
+
+# List project custom fields
+gh project field-list <project_number> --owner <owner>
+```
+
+### Assign Copilot to Issue
+```bash
+gh issue edit 42 --add-assignee "github-copilot[bot]"
 ```
 
 ### No `gh` or MCP available

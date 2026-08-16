@@ -25,7 +25,7 @@ Identify the user's intent and jump to the matching section:
 Run the pre-flight script — it consolidates all safety checks:
 
 ```bash
-bash /path/to/this/skill/scripts/preflight.sh
+bash ${SKILL_DIR}/scripts/preflight.sh
 ```
 
 Interpret results in order — stop at the first blocker:
@@ -50,14 +50,14 @@ branch should this PR target? (e.g., `main`, `develop`, `staging`)"*.
 
 **2b. Collect context** — run the context script:
 ```bash
-bash /path/to/this/skill/scripts/context.sh <base_branch> <head_branch>
+bash ${SKILL_DIR}/scripts/context.sh <base_branch> <head_branch>
 ```
 Use line count/size to decide how to process output files: small (< ~500
 lines) read directly; large files spawn a subagent to summarise or read
 selectively. Clean up the temp directory when done.
 
 **2c. Load the PR template** — repo template from pre-flight, or the fallback
-`templates/pull_request.md`. Tell the user which template you're using.
+`${SKILL_DIR}/templates/pull_request.md`. Tell the user which template you're using.
 
 ### Step 3: Structure Content
 
@@ -113,7 +113,7 @@ To mark it ready for review: gh pr ready 47
 
 ## Update
 
-1. **Pre-checks** — run `scripts/view.sh <number>` (or auto-detect) to fetch
+1. **Pre-checks** — run `${SKILL_DIR}/scripts/view.sh <number>` (or auto-detect) to fetch
    current state and show the user.
 2. **Map intent to `gh pr edit` flags:**
 
@@ -138,11 +138,52 @@ To mark it ready for review: gh pr ready 47
 
 ## Publish
 
-1. **Pre-checks** — `scripts/view.sh <number>` (confirm `State` is `Draft`;
-   if not, tell the user no action needed) and `scripts/preflight.sh` (warn on
+1. **Pre-checks** — `${SKILL_DIR}/scripts/view.sh <number>` (confirm `State` is `Draft`;
+   if not, tell the user no action needed) and `${SKILL_DIR}/scripts/preflight.sh` (warn on
    unpushed commits/uncommitted changes).
 2. **Review** — present key details, then `gh pr ready <number>`.
 3. **Confirm** — `✅ PR #47 is now ready for review: <url>`.
+
+---
+
+## Update Branch
+
+Keep a PR branch synchronized with the base branch:
+
+```bash
+# Update with merge commit
+gh pr update-branch <number>
+
+# Update with rebase
+gh pr update-branch <number> --rebase
+```
+
+---
+
+## Request Copilot Review
+
+```bash
+gh api -X POST repos/{owner}/{repo}/pulls/{number}/requested_reviewers \
+  -f 'reviewers[]=github-copilot[bot]'
+```
+
+---
+
+## Merge
+
+> [!CAUTION]
+> **Approval Requirement**: ALWAYS obtain explicit user approval before merging any PR. Run `${SKILL_DIR}/scripts/pre_merge_checks.sh <pr_number>` first to verify tests, checks, and regression status.
+
+```bash
+# Squash and merge (recommended default) and delete branch
+gh pr merge <number> --squash --delete-branch
+
+# Rebase and merge
+gh pr merge <number> --rebase --delete-branch
+
+# Auto-merge when all checks pass
+gh pr merge <number> --auto --squash
+```
 
 ---
 
@@ -150,7 +191,7 @@ To mark it ready for review: gh pr ready 47
 
 1. **Identify the PR** — explicit number/URL, auto-detect from current branch,
    or ask.
-2. **Fetch details** — `scripts/view.sh [<number>]`. Outputs a formatted
+2. **Fetch details** — `${SKILL_DIR}/scripts/view.sh [<number>]`. Outputs a formatted
    summary (state, branch, author, assignees, labels, changes, mergeability,
    reviews, CI status) and saves full JSON, comments, and diff to temp files.
 3. **Handle output** — summary covers most queries. For deeper dives: comments
@@ -179,8 +220,8 @@ To mark it ready for review: gh pr ready 47
    ```
 5. **Confirm with user** — MUST obtain explicit permission before submission.
    Present summary, findings, and comment details.
-6. **Submit** — use `scripts/submit_review.sh <owner> <repo> <pr_number> <payload_file>`
-   (which uses `gh api graphql` internally). Do not use raw `curl` API calls.
+6. **Submit** — use `${SKILL_DIR}/scripts/submit_review.sh <owner> <repo> <pr_number> <payload_file>`
+   (which submits the payload atomically via `gh api`). Do not use raw `curl` API calls.
 7. **Cleanup** — delete the temp payload file.
 
 **Comment guidelines** — actionable, specific (reference exact symbols/standards),
@@ -188,7 +229,9 @@ consolidated (one review with multiple comments, not many individual ones).
 
 ---
 
-## List
+## List & Triage
+
+### Basic Listing (`gh pr list`)
 
 ```bash
 gh pr list --state open --limit 30              # Open PRs (default)
@@ -209,9 +252,33 @@ JSON output for processing:
 gh pr list --state open --limit 30 --json number,title,state,isDraft,author,labels,assignees,reviewRequests,url,createdAt,updatedAt
 ```
 
-Present results in a scannable table including draft/open state:
-```
-#47  [enhancement]  feat(ui): Add dark mode toggle    draft   @alice  2d ago
+### Advanced Discovery & Triage Script (`find_prs.sh`)
+
+Use `${SKILL_DIR}/scripts/find_prs.sh` to classify PRs by review status, commit timestamps, and author responsiveness in a single GraphQL batch query:
+
+```bash
+# 1. Full categorized overview across all open PRs
+bash ${SKILL_DIR}/scripts/find_prs.sh [owner] [repo] --all
+
+# 2. Find all approved pull requests (ready to merge)
+bash ${SKILL_DIR}/scripts/find_prs.sh [owner] [repo] --approved
+
+# 3. Find PRs where commits were made after a review (ready for re-review)
+bash ${SKILL_DIR}/scripts/find_prs.sh [owner] [repo] --commits-after-review
+
+# 4. Find PRs with no commits since review was submitted
+bash ${SKILL_DIR}/scripts/find_prs.sh [owner] [repo] --no-commits-since-review
+
+# 5. Find PRs where author has not responded to owner / reviewer activity
+bash ${SKILL_DIR}/scripts/find_prs.sh [owner] [repo] --author-not-responded
+
+# 6. Find PRs where author response occurred prior to latest commit
+bash ${SKILL_DIR}/scripts/find_prs.sh [owner] [repo] --author-response-prior-to-commit
+
+# 7. Find all PRs waiting on author action (unresponsive / no commits)
+bash ${SKILL_DIR}/scripts/find_prs.sh [owner] [repo] --waiting-on-author
 ```
 
-Cross-repo queries pass `-R owner/other-repo`.
+Optional flags: `--state <OPEN|CLOSED|MERGED|ALL>`, `--limit <number>`, `--raw` (JSON output).
+
+Cross-repo queries pass `-R owner/other-repo` to `gh` or provide `owner repo` to `find_prs.sh`.

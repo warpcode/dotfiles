@@ -30,26 +30,16 @@ echo "PR Branch: $BRANCH_NAME"
 FAILED=0
 WARNINGS=0
 
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+QUERY_FILE="${SCRIPT_DIR}/../queries/review_threads.gql"
+
 # 2. Check: Has all the requested changes been resolved?
 echo "Checking unresolved review threads..."
-UNRESOLVED_THREADS=$(gh api graphql -F owner="$OWNER" -F repo="$REPO" -F pr="$PR_NUMBER" -f query='
-  query($owner: String!, $repo: String!, $pr: Int!) {
-    repository(owner: $owner, name: $repo) {
-      pullRequest(number: $pr) {
-        reviewThreads(last: 50) {
-          nodes {
-            isResolved
-            comments(first: 1) {
-              nodes {
-                body
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-' 2>/dev/null)
+UNRESOLVED_THREADS=$(gh api graphql \
+  -F owner="$OWNER" \
+  -F repo="$REPO" \
+  -F pr="$PR_NUMBER" \
+  -F query="@$QUERY_FILE" 2>/dev/null)
 
 if [[ -n "$UNRESOLVED_THREADS" ]]; then
   UNRESOLVED_COUNT=$(jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length' <<< "$UNRESOLVED_THREADS")
@@ -112,7 +102,7 @@ fi
 # 6. Check: General code cleanliness (Syntax / Interactive Safety)
 echo "Checking general code cleanliness of modified files..."
 # Ensure local branches are up-to-date before running local checks
-git fetch origin "$BRANCH_NAME" >/dev/null 2>&1 || true
+git fetch origin "$BASE_BRANCH" "$BRANCH_NAME" >/dev/null 2>&1 || true
 
 MODIFIED_FILES=(${(f)"$(git diff --name-only origin/$BASE_BRANCH...origin/$BRANCH_NAME 2>/dev/null)"})
 
