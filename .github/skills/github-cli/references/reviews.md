@@ -77,7 +77,20 @@ Use the following script to resolve a PR review thread via GraphQL:
 bash ${SKILL_DIR}/scripts/update_pull_request_review_thread_resolution.sh --thread-id "<thread_id>"
 ```
 
-## 5. Mergeability
+## 5. Atomically Submit Mixed-Type Reviews (GraphQL)
+
+To submit a pull request review containing both line-level comments and file-level comments (e.g., comments on binary files or without specific line numbers), do NOT use the REST API reviews endpoint (which rejects `subject_type: file` with HTTP 422). Instead, use the GraphQL mutations workflow:
+1. Create a pending review via `addPullRequestReview`.
+2. Attach comments via `addPullRequestReviewThread` (using `subjectType: FILE` for file-level comments or `subjectType: LINE` for line comments).
+3. Finalize and publish via `submitPullRequestReview`.
+
+## 6. CLI Escaping & Query Safety
+
+- **GH CLI Escaping Safety**: When updating, replying, or posting review comments via `gh api` containing backticks, brackets, or code tokens, write the payload to a JSON file and load it using `--input <file>` rather than inline shell flags (e.g. `--field` or `-f`) to prevent shell substitution and character stripping.
+- **GraphQL File Query Parameters**: When calling `gh api graphql` with a query stored in a file, always pass the query using the uppercase `-F` parameter (e.g., `-F query=@/path/to/query.gql`) rather than the lowercase `-f`, which interprets the argument as a literal query string. Pass queries with variable injection.
+
+## 7. Mergeability
 
 Check if a PR is mergeable:
 `gh pr view <pr_number> --json mergeable,mergeStateStatus`
+

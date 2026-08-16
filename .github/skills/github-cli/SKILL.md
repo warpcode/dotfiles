@@ -10,6 +10,7 @@ description: >
   For procedure-based guidelines and preferences, refer to the `github` skill instead.
   Do NOT use for local git operations (local commit, rebase, branch naming) — use the
   git-expert skill instead.
+user-invocable: false
 ---
 
 # GitHub CLI & MCP Execution
