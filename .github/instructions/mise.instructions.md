@@ -1,6 +1,7 @@
 ---
-trigger: glob
-globs: "**/mise*.toml"
+name: mise
+description: Guidance for GitHub Copilot when editing Mise configuration files.
+applyTo: "**/mise*.toml"
 ---
 
 # Mise Configuration Rules

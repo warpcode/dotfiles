@@ -1,6 +1,9 @@
 ---
-trigger: glob
-globs: "**/*.zsh, **/.zshrc, **/.zshenv, **/.zprofile, **/.zlogin, **/.zlogout"
+name: zsh
+description: >
+  Guidance for GitHub Copilot when editing Zsh configuration and Zsh script files in this repository.
+  Treat matching files as Zsh, not Bash. Do not describe Zsh files as Bash files.
+applyTo: "**/*.zsh, **/.zshrc, **/.zshenv, **/.zprofile, **/.zlogin, **/.zlogout"
 ---
 
 # Zsh File Instructions
