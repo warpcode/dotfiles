@@ -172,7 +172,7 @@ gh api -X POST repos/{owner}/{repo}/pulls/{number}/requested_reviewers \
 ## Merge
 
 > [!CAUTION]
-> **Approval Requirement**: ALWAYS obtain explicit user approval before merging any PR. Run `${SKILL_DIR}/scripts/pre_merge_checks.sh <pr_number>` first to verify tests, checks, and regression status.
+> **Approval Requirement**: ALWAYS obtain explicit user approval before merging any PR. Run `${SKILL_DIR}/scripts/fetch_pr_merge_checks.sh <pr_number>` first to verify tests, checks, and regression status.
 
 ```bash
 # Squash and merge (recommended default) and delete branch

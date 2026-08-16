@@ -1,5 +1,5 @@
 ---
-name: github
+name: github-cli
 description: >
   Manage GitHub platform operations: issues & sub-issues (create, update, query,
   comment, hierarchy, triage), pull requests (create, update, publish, view,
@@ -62,10 +62,10 @@ upfront.
 | Find / Triage PRs script | `${SKILL_DIR}/scripts/find_prs.sh [owner] [repo] [flags]` | Filter PRs (approved, commits after review, waiting on author, unresponded) |
 | Fetch threads script | `${SKILL_DIR}/scripts/fetch_all_pr_threads.sh <owner> <repo> [limit] [direction] [--raw]` | Batch retrieve review threads for all open PRs |
 | Fetch file script | `${SKILL_DIR}/scripts/fetch_file.sh <owner> <repo> <path> <branch>` | Fetch remote PR file contents without checkout |
-| PR context script | `${SKILL_DIR}/scripts/get_pr_context.sh <owner> <repo> <pr_number>` | Fetch PR head OID and diff for review |
+| PR context script | `${SKILL_DIR}/scripts/fetch_pr_context.sh <owner> <repo> <pr_number>` | Fetch comprehensive PR state (comments, reviews, threads, readiness) for review |
 | Submit review script | `${SKILL_DIR}/scripts/submit_review.sh <owner> <repo> <pr_number> <payload_file>` | Submit atomic JSON reviews |
 | Resolve thread script | `${SKILL_DIR}/scripts/resolve_review_thread.sh <thread_id>` | Resolve PR review threads via GraphQL |
-| Pre-merge checks script | `${SKILL_DIR}/scripts/pre_merge_checks.sh <pr_number>` | Validate syntax, safety, scope, regressions before approve/merge |
+| Pre-merge checks script | `${SKILL_DIR}/scripts/fetch_pr_merge_checks.sh <pr_number>` | Validate syntax, safety, scope, regressions before approve/merge |
 | Fallback PR body template | `${SKILL_DIR}/templates/pull_request.md` | PR body template when the repo has none |
 | Review comment template | `${SKILL_DIR}/templates/github/review_comment.md` | Structure for line-level review comments |
 | PR status query | `${SKILL_DIR}/queries/find_prs.gql` | GraphQL query for PR status, review, and activity classification |
