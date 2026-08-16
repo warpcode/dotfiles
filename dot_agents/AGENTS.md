@@ -68,9 +68,9 @@ These instructions capture persistent memories, behavioral guardrails, and techn
   - Prefer squash-and-merge for pull requests.
   - Remote branches MUST be deleted immediately after merging.
   - Before approving or merging any pull request, the AI agent MUST run `~/.agents/skills/github-review-orchestrator/scripts/pre_merge_checks.sh <pr_number>` to automate verification checks.
-- **Code Review Style**: Delegated entirely to `github` and `technical-review-guidelines` skills. Do not duplicate rules here.
+- **Code Review Style**: Delegated entirely to `github-cli` and `technical-review-guidelines` skills. Do not duplicate rules here.
 - **Skill Blueprint Design**: Resources should **not** be marked as required in simple skill blueprints.
-- **Skill Naming Convention**: Custom skills should be named directly following the format `{primary-thing}-{domain-area}` (e.g., `github`, `shell-styling`, `jira-actions`). Do not append `-guidelines` or prefix everything with `prompt-` or `github-` unless it is directly applicable to that prefix/suffix.
+- **Skill Naming Convention**: Custom skills should be named directly following the format `{primary-thing}-{domain-area}` (e.g., `github-cli`, `shell-styling`, `jira-actions`). Do not append `-guidelines` or prefix everything with `prompt-` or `github-` unless it is directly applicable to that prefix/suffix.
 - **Skill Lifecycle & Granularity**: When creating or reviewing skills, explicitly evaluate whether to:
   - **Merge**: Collate smaller, overlapping, or fragmented skills into a unified capability.
   - **Break Up**: Deconstruct large, multi-purpose skills into smaller, single-responsibility skills.
@@ -102,7 +102,7 @@ These instructions capture persistent memories, behavioral guardrails, and techn
   - **Branch Dynamism**: Pull request review and validation scripts MUST NOT hardcode default branch names (such as `origin/master` or `master`). Instead, query the pull request metadata dynamically to determine the target base branch.
   - **Git vs. GitHub Domain Separation**: Keep Git-specific commands and logic (e.g. local branching, commits, diffs) logically separate from GitHub API integrations (e.g. issues, pull requests, reviews). Git operations should reside in general git skills/scripts, not inside github-prefixed ones.
 
-- **PR Review Hygiene**: Delegated entirely to `github` skill.
+- **PR Review Hygiene**: Delegated entirely to `github-cli` skill.
 
 ## 🤖 Autonomous VM Agents (Jules)
 
@@ -113,7 +113,7 @@ When operating as an autonomous agent in a remote virtual machine (e.g., Jules):
    - If the task involves modifying Zsh configuration or Zsh scripts, you MUST read and follow `./.github/instructions/zsh.instructions.md`.
 
 2. **Leverage Local Skills & Workflows**:
-    - Do not write redundant scripts or reinvent existing logic. Review the custom skills in `./.github/skills/` (such as `github`, `technical-review-guidelines`, and `git-expert`) and agent workflows in `./.github/agents/` to leverage existing automation patterns and CLI utilities.
+    - Do not write redundant scripts or reinvent existing logic. Review the custom skills in `./.github/skills/` (such as `github-cli`, `technical-review-guidelines`, and `git-expert`) and agent workflows in `./.github/agents/` to leverage existing automation patterns and CLI utilities.
 
 3. **Conventions & Safe Operations**:
    - Adhere strictly to the package management guidelines. Do not install packages using raw `apt` or `brew` commands. Use the modular `pkg.zsh` recipe structure.

@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 # General pre-merge and pre-approval validation checks for PR branches.
-# Usage: ./scripts/pre_merge_checks.sh <pr_number>
+# Usage: ./scripts/fetch_pr_merge_checks.sh <pr_number>
 
 PR_NUMBER="${1:-}"
 if [[ -z "$PR_NUMBER" ]]; then

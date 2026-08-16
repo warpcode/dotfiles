@@ -37,7 +37,7 @@ Perform the review without checking out branches or modifying the workspace:
   columns — they may be truncated. Fetch the actual untruncated `headRefName`
   via `gh pr view <number> --json headRefName` or use the `HEAD_OID` when
   querying files.
-- Retrieve head OID and diff: `${SKILL_DIR}/scripts/get_pr_context.sh <owner> <repo> <pr_number>`.
+- Retrieve PR state (comments, reviews, threads, readiness): `${SKILL_DIR}/scripts/fetch_pr_context.sh <owner> <repo> <pr_number>`.
 - Fetch full file contents if needed: `${SKILL_DIR}/scripts/fetch_file.sh <owner> <repo> <path> <branch>`.
 - **Terminal Wrapping Awareness**: long lines in tool outputs can wrap and
   appear as duplicate/malformed lines. Verify with structured, line-numbered
@@ -67,7 +67,7 @@ Perform the review without checking out branches or modifying the workspace:
   and diff files.**
 - **Review Event Mapping**:
   - **Verification Gate**: BEFORE approving or merging, run
-    `${SKILL_DIR}/scripts/pre_merge_checks.sh <pr_number>`.
+    `${SKILL_DIR}/scripts/fetch_pr_merge_checks.sh <pr_number>`.
   - **REQUEST_CHANGES**: one or more findings at Low/Medium/High severity.
   - **COMMENT**: replying to existing threads or no changes requested.
   - **APPROVE**: no findings, or all previously raised issues fully resolved.
@@ -110,7 +110,7 @@ Perform the review without checking out branches or modifying the workspace:
 1. **Discovery**: batch fetch open PRs + threads.
 2. **Mergeability**: `gh pr view <pr_number> --json mergeable,mergeStateStatus`.
 3. **Selection**: present candidates, get approval (respect batching rules).
-4. **Inspection**: `${SKILL_DIR}/scripts/get_pr_context.sh` + `${SKILL_DIR}/scripts/fetch_file.sh`.
+4. **Inspection**: `${SKILL_DIR}/scripts/fetch_pr_context.sh` + `${SKILL_DIR}/scripts/fetch_file.sh`.
 5. **Testing Constraint**: do NOT run local test suites during non-invasive
    reviews — they run against the default branch, not the remote PR branch,
    producing misleading results.

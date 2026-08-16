@@ -12,8 +12,6 @@ description: >
   conflict", "detached HEAD", "git reflog", "git worktree", "submodule", "git
   stash", "git read-tree", "repo overview", "branch diff", "git triage",
   "clean branches", "clean stash", "clean worktrees". Do NOT use for GitHub
-  platform operations (issues, pull requests, reviews) — use the github skill
-  instead.
 ---
 
 # Git Expert

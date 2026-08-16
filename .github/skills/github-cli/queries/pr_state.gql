@@ -1,0 +1,90 @@
+query($owner: String!, $repo: String!, $pr: Int!) {
+  repository(owner: $owner, name: $repo) {
+    owner {
+      login
+    }
+    pullRequest(number: $pr) {
+      number
+      title
+      state
+      isDraft
+      reviewDecision
+      url
+      author {
+        login
+      }
+      baseRefName
+      headRefName
+      headRefOid
+      additions
+      deletions
+      changedFiles
+      createdAt
+      updatedAt
+      comments(first: 100) {
+        totalCount
+        nodes {
+          author {
+            login
+          }
+          createdAt
+        }
+      }
+      reviews(first: 100) {
+        totalCount
+        nodes {
+          author {
+            login
+          }
+          state
+          submittedAt
+        }
+      }
+      reviewRequests(first: 50) {
+        totalCount
+        nodes {
+          requestedReviewer {
+            __typename
+            ... on User {
+              login
+            }
+            ... on Team {
+              name
+            }
+          }
+        }
+      }
+      reviewThreads(first: 100) {
+        totalCount
+        nodes {
+          id
+          isResolved
+          isOutdated
+          resolvedBy {
+            login
+          }
+          comments(first: 100) {
+            totalCount
+            nodes {
+              author {
+                login
+              }
+              createdAt
+            }
+          }
+        }
+      }
+      commits(first: 100) {
+        totalCount
+        nodes {
+          commit {
+            oid
+            committedDate
+            pushedDate
+            messageHeadline
+          }
+        }
+      }
+    }
+  }
+}
