@@ -9,7 +9,7 @@ tools: [execute, read, edit, search, agent]
 
 Workflow for the git-specialist to prepare and commit changes:
 
-1. **Determine what to commit** — Inspect the repository state. If the user named specific files, use those. Otherwise use staged changes if any exist, else unstaged changes. If there is nothing to commit, halt and inform the user.
+1. **Determine what to commit** — Inspect the repository state. If the user named specific files, use those. Otherwise, if the user gave no direction and there are staged changes, use staged changes only. Otherwise use unstaged changes. If there is nothing to commit, halt and inform the user.
 
 2. **Review the changes** — Read the diffs of the files to be committed. Note any filename issues or concerns.
 
