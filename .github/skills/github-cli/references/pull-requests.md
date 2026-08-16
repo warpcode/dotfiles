@@ -19,11 +19,6 @@ Execution commands for pull requests: create, update, publish, view, review, and
 ## 2. Execute via Scripts
 
 ### Create a Pull Request
-Before creating, run the pre-flight safety checks:
-```bash
-bash ${SKILL_DIR}/scripts/preflight.sh
-```
-
 Execute creation (always draft):
 ```bash
 # 1. Standard creation on auto-detected repository
@@ -102,9 +97,6 @@ bash ${SKILL_DIR}/scripts/get_pull_request.sh --pull-number 42
 
 # Explicit repository override
 bash ${SKILL_DIR}/scripts/get_pull_request.sh --owner "octocat" --repo "hello-world" --pull-number 42
-
-# Comprehensive interactive view
-bash ${SKILL_DIR}/scripts/view.sh 42
 ```
 
 ### List & Filter Pull Requests
