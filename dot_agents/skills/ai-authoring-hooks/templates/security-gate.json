@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|runTerminalCommand|execute_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./scripts/block-dangerous.sh",
+            "windows": "powershell -File scripts\\block-dangerous.ps1",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

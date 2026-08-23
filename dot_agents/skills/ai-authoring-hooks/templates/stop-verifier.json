@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": "./scripts/verify-task-complete.sh",
+        "timeout": 30
+      }
+    ]
+  }
+}

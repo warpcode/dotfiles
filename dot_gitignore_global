@@ -172,9 +172,8 @@ tags
 /GEMINI.md
 .antigravitycli/
 
-# GitHub Copilot
+# Copilot
 /.copilot/
-/.github/copilot*
 
 # OpenCode
 /.opencode/
@@ -192,10 +191,6 @@ tags
 /.codeium/
 /.windsurf/
 /.windsurfrules
-
-# Generic agent files
-/.agent/
-
 
 # ==============================================================================
 # PERSONAL / CUSTOM

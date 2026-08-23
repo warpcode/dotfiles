@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|createFile|editFiles",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./scripts/format-changed-files.sh",
+            "windows": "powershell -File scripts\\format-changed-files.ps1",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}
