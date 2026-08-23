@@ -1,0 +1,19 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./scripts/log-audit-event.sh",
+            "env": {
+              "AUDIT_LOG_FILE": ".logs/agent-audit.log"
+            },
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

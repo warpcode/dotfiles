@@ -127,7 +127,7 @@ Cross-reference the conversation against all located files. Identify:
 - **Missing coverage** — a pattern, tool, or convention used in the conversation that no existing workspace instruction, skill, agent, or hook addresses.
 - **New architectural candidate** — a pattern or procedure that should be codified into a skill, custom agent/subagent, rule, hook, or command/prompt file.
 - **Self-Review Alignment** — cross-reference the conversation to identify gaps, inaccuracies, or opportunities to optimize the **conversation review subagent prompt itself** (`conversation-review.md`). 
-- **Recursive Skill Improvement** — ALWAYS evaluate if a correction or new preference should be codified in the global `prompt-skills-guidelines` or other specialized area-specific skills (e.g., `github-cli`).
+- **Recursive Skill Improvement** — ALWAYS evaluate if a correction or new preference should be codified in the global `ai-authoring-skills` or other specialized area-specific skills (e.g., `github-cli`).
 - **Trigger & Loading Logic** — Review the `SKILL.md` files for trigger accuracy. Recommend updates to skill descriptions and activation triggers to ensure the correct skills are loaded autonomously by agents when needed.
 - **Enforcement**: If a conversation exposes a violation of a project-wide standard (e.g., token efficiency), the subagent MUST recommend updates to all files defining that standard to ensure consistency.
 - **Root Instruction Alignment**: Treat `~/.agents/AGENTS.md` as the canonical memory source. To prevent duplication and drift, recommend durable-memory edits against this canonical file rather than scattering equivalent updates across multiple instruction entry points.
@@ -169,7 +169,7 @@ Map the output type to the appropriate file structures and paths for the target 
 
 #### 3. Skill Lifecycle, Granularity & Naming Strategy
 *   **Naming Conventions**: All recommended custom skill names MUST follow the `prefix-{specific-area}-guidelines` structure:
-    - **Agentic Instructions / Skills / Prompts (Markdown, etc.)**: MUST use the `prompt-*` prefix (e.g., `prompt-guidelines` for general rules, `prompt-skills-guidelines` for creating/updating skills, `prompt-agents-guidelines` for agent system prompts).
+    - **Agentic Instructions / Skills / Prompts (Markdown, etc.)**: MUST use the `prompt-*` prefix (e.g., `prompt-guidelines` for general rules, `prompt-agents-guidelines` for agent system prompts); skill-authoring standards live in `ai-authoring-skills`.
     - **GitHub Actions / Integrations / APIs**: MUST use the `github-*` prefix (e.g., `github-review-guidelines`, `github-orchestrator-guidelines`).
 *   **Granularity Review**: For every skill recommendation, explicitly evaluate whether to:
     - **Merge / Collate**: Recommend merging if existing skills are highly fragmented, overlap in features, or share redundant shell scripts/configs. This reduces fragmentation.

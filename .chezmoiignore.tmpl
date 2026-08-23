@@ -1,5 +1,6 @@
 .agents/*.bk
 .antigravitycli/
+.gemini/config/plugins/
 .git
 .github
 AGENTS.md
@@ -14,6 +15,10 @@ generic/
 install.sh
 tmp/
 vendor/
+
+# Python bytecode artifacts - never deploy to $HOME
+**/__pycache__/**
+**/*.pyc
 .pytest_cache/
 
 .local/share/fonts/**/*.uuid
