@@ -9,7 +9,6 @@ It is a dependency-free replacement for the legacy jira.sh script.
 
 import argparse
 import os
-import sys
 
 from jira.utils import die
 from jira.auth import resolve_secret
