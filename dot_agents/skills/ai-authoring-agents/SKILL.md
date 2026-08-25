@@ -36,6 +36,7 @@ self-contained system prompt body.
 
 | Requirement | Artifact | Skill to load |
 |---|---|---|
+| Prompt bodies, personas, orchestration patterns & Mermaid.js | **Prompt Pattern** | `ai-authoring-prompts` |
 | Reusable SOP, guidelines, or tool integration loaded on demand | **Skill** (`SKILL.md`) | `ai-authoring-skills` |
 | Interactive user shortcut or parameterized slash command | **Command** (`/name`) | `ai-authoring-commands` |
 | Persistent instructions/memory always or conditionally injected | **Rule** (`rules/`, `AGENTS.md`) | `ai-authoring-rules` |
@@ -53,7 +54,7 @@ context remains clean and focused.
 | Claude Code | `.claude/agents/` | `~/.claude/agents/` | `<name>.md` | [Claude Code Subagents](https://code.claude.com/docs/en/sub-agents) |
 | GitHub Copilot / VS Code | `.github/agents/` | `~/.copilot/agents/` | `<name>.agent.md` | [VS Code Custom Agents](https://code.visualstudio.com/docs/agent-customization/custom-agents) |
 | OpenCode | `.opencode/agents/` | `~/.config/opencode/agents/` | `<name>.md` | [OpenCode Agents](https://opencode.ai/docs/agents/) |
-| Google Antigravity | `.agents/` or `.gemini/agents/` | `~/.gemini/config/agents/` | `<name>.md` | [Antigravity Subagents](https://antigravity.google/docs/subagents/) |
+| Google Antigravity | `.agents/agents/` | `~/.gemini/config/agents/` | `<name>.md` or `<name>/agent.md` | [Antigravity Subagents](https://antigravity.google/docs/subagents/) |
 | ChatGPT / Codex | `.codex/agents/` | `~/.codex/config.toml` | `<name>.md` | [ChatGPT Subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents) |
 | Cursor | `.cursor/agents/` | `~/.cursor/agents/` | `<name>.md` | [Cursor Custom Agents](https://cursor.com/docs/agent-customization) |
 | Hermes Agent | `.hermes/agents/` | `~/.hermes/agents/` | `<name>.yaml` | [Hermes Agent Blueprints](https://hermes-agent.nousresearch.com/docs/developer-guide/creating-agents) |
@@ -61,16 +62,27 @@ context remains clean and focused.
 ## Universal Superset Schema
 
 Write definitions against this unified schema concept, then map or trim fields
-per platform target:
+per platform target.
+
+**Portable core — compatible with every platform**, including strict parsers:
 
 ```yaml
 ---
 name: code-auditor
 description: Performs read-only analysis of pull requests, diffs, and security patterns.
-mode: subagent                  # OpenCode: primary | subagent | all
 model: anthropic/claude-3-5-sonnet # or fallback array on Copilot
+---
+```
+
+**Extended superset — every platform except Google Antigravity.** Claude Code,
+Copilot/VS Code, OpenCode, ChatGPT/Codex, Cursor, and Hermes tolerate these
+additional keys:
+
+```yaml
+---
+mode: subagent                  # OpenCode: primary | subagent | all
 temperature: 0.1
-maxTurns: 20                    # or steps: 20 in OpenCode
+maxTurns: 20                    # Antigravity equivalent: max_turns (snake_case); OpenCode: steps
 tools:                          # Claude Code / Copilot allowlist
   - FileRead
   - GlobTool
@@ -80,13 +92,17 @@ permissions:                    # OpenCode fine-grained permissions
   bash:
     "git diff*": allow
     "*": deny
-capabilities:                   # Antigravity capabilities sandbox
-  allowed_tools: [view_file, grep_search]
-  allowed_bash_commands: ["git diff*"]
 user-invocable: true            # Copilot / Claude UI autocomplete visibility
 isolation: worktree             # Claude Code worktree sandboxing
 ---
 ```
+
+> **Warning**: Google Antigravity rejects undocumented frontmatter keys, and a
+> misspelled `tools` entry can hang the subagent (known issue). Never ship either
+> block above to `.agents/agents/` — emit only the keys documented in the
+> [Antigravity Reference](references/platforms/antigravity.md): `name`,
+> `description`, `tools`, `mainAgent`, `subagent`, `model` (`inherit`/`flash`/`pro`),
+> `commandExecutionPolicy`, `mcpServers`, `skills`/`plugins`.
 
 ### Platform Reference Guides
 
@@ -95,7 +111,7 @@ For exhaustive options, see platform references in `references/platforms/`:
 - [Claude Code Reference](references/platforms/claude-code.md): `tools`, `disallowedTools`, `effort`, `maxTurns`, `isolation: worktree`, `background`. ([Source](https://code.claude.com/docs/en/sub-agents))
 - [Copilot / VS Code Reference](references/platforms/copilot-vscode.md): `name`, `description`, fallback `model` arrays, `tools` allowlists, `user-invocable`, `handoffs`. ([Source](https://code.visualstudio.com/docs/agent-customization/custom-agents))
 - [OpenCode Reference](references/platforms/opencode.md): `mode`, `model`, `temperature`, `permissions` object (`allow`/`ask`/`deny`), `steps`, `hidden`. ([Source](https://opencode.ai/docs/agents/))
-- [Antigravity Reference](references/platforms/antigravity.md): `name`, `kind`, `capabilities` block (`allowed_tools`, `allowed_skills`, `allowed_bash_commands`), `plugins/` JSON format. ([Source](https://antigravity.google/docs/subagents/))
+- [Antigravity Reference](references/platforms/antigravity.md): `name`, `description`, `tools`, `mainAgent`, `subagent`, `model` (`inherit`/`flash`/`pro`), `commandExecutionPolicy`, `mcpServers`, `skills`/`plugins`. Undocumented keys break config; misspelled tool names hang execution. ([Source](https://antigravity.google/docs/subagents/))
 - [ChatGPT / Codex Reference](references/platforms/codex.md): `.codex/config.toml` `[agents]` section, `AGENTS.md` subagent routing. ([Source](https://learn.chatgpt.com/docs/agent-configuration/subagents))
 - [Cursor Reference](references/platforms/cursor.md): `paths` scoping, custom agent models. ([Source](https://cursor.com/docs/agent-customization))
 - [Hermes Agent Reference](references/platforms/hermes.md): `.hermes/agents/*.yaml` blueprint schema. ([Source](https://hermes-agent.nousresearch.com/docs/developer-guide/creating-agents))
@@ -137,7 +153,7 @@ Structure it with these core sections:
 
 ## House Rules & Guardrails
 
-1. **Model Routing for Cheap Exploration**: Subagents performing high-noise grep/read tasks must NOT run on the master model. Pin an explicit cheap model (house default `gemini-3.5-flash`, non-inheriting).
+1. **Model Routing for Cheap Exploration**: Subagents performing high-noise grep/read tasks must NOT run on the master model. Pin an explicit cheap model (house default `gemini-3.5-flash`, non-inheriting; Antigravity tier: `model: flash`).
 2. **Least Privilege by Default**: Reviewers/analysts get `edit: deny`; read-only explorers deny bash writes. Only grant write access when the role explicitly mutates code.
 3. **Context Completeness**: Subagents cannot inspect conversational history. Prompts sent to subagents must contain all required paths, diffs, and parameter specs.
 4. **No Evals for Pure Agents**: Unlike skills (which require test benches and pass-rate evals), agents are role personas validated via schema correctness, least-privilege tool inspection, trigger clarity in descriptions, and manual invocation.
@@ -149,10 +165,13 @@ Structure it with these core sections:
 1. Identify the agent's specific role archetype (table above).
 2. Choose target platform directory (`.github/agents/`, `.claude/agents/`, `.opencode/agents/`, etc.).
 3. Copy the appropriate template from `templates/`.
-4. Fill in platform frontmatter with tight tool allowlists and appropriate model tier.
+4. Keep the frontmatter variant matching your target platform — each template's
+   frontmatter comments carry complete, copy-paste-ready blocks for OpenCode,
+   Copilot/VS Code, Claude Code, and Antigravity — then tighten tool allowlists
+   and model tier.
 5. Write a concise, third-person `description` stating exact delegation triggers.
 6. Customize the system prompt body with domain rules and structured output schemas.
-7. Validate using `python3 scripts/validate.py <path-to-agent>`.
+7. Validate using `python3 scripts/validate.py <path-to-agent>` (Antigravity targets: `python3 scripts/validate_antigravity.py <path>`).
 8. Test invocation with a targeted task.
 
 ### 2. Validation Workflow
@@ -165,6 +184,10 @@ python3 scripts/validate.py .github/agents/my-agent.agent.md
 
 # Validate all agents in a directory
 python3 scripts/validate.py .github/agents/
+
+# Strict validation for Google Antigravity agents (documented keys only,
+# model/exec-policy values, tool-name hang check)
+python3 scripts/validate_antigravity.py .agents/agents/
 ```
 
 Manual checks:

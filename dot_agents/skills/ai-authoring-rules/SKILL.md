@@ -40,6 +40,7 @@ Rules are persistent context injected into prompts — always-on, path-scoped, o
 | Project-wide coding conventions & bootstrap commands | **Root Memory** | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md` | `ai-authoring-rules` |
 | Guidelines active only when editing matching files | **Path-Scoped Rule** | `applyTo:`, `globs:`, `paths:` | `ai-authoring-rules` |
 | Infrequently needed domain guidance | **Model-Decision Rule** | `trigger: model_decision`, Cursor Intelligent | `ai-authoring-rules` |
+| Prompt bodies, personas, orchestration patterns & Mermaid.js | **Prompt Pattern** | Universal prompt design & decision matrices | `ai-authoring-prompts` |
 | Multi-step procedure or reusable tool integration | **Skill** | `SKILL.md` (Agentskills.io standard) | `ai-authoring-skills` |
 | Interactive user shortcut with parameters | **Command** | Slash command (`/name`, `.prompt.md`) | `ai-authoring-commands` |
 | Isolated, high-noise exploration or audited execution | **Subagent** | `<name>.agent.md` / `<name>.md` | `ai-authoring-agents` |
@@ -112,11 +113,12 @@ For exhaustive syntax, configuration options, and runtime execution rules:
 
 Follow this 5-step process when creating or updating rules:
 
-```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│ 1. Determine │ ──> │ 2. Select    │ ──> │ 3. Configure │ ──> │ 4. Write     │ ──> │ 5. Validate  │
-│    Scope     │     │    Platform  │     │    Frontmatter│     │    Directives│     │    & Test    │
-└──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
+```mermaid
+flowchart LR
+    Step1["1. Determine Scope"] --> Step2["2. Select Platform"]
+    Step2 --> Step3["3. Configure Frontmatter"]
+    Step3 --> Step4["4. Write Directives"]
+    Step4 --> Step5["5. Validate &amp; Test"]
 ```
 
 ### Step 1: Determine Scope & Mode

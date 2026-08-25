@@ -26,6 +26,7 @@ Commands and workflows are user- or agent-invocable prompt artifacts (`/name`) t
 |---|---|---|
 | Reusable prompt directive with parameters | **Command** | `ai-authoring-commands` (this skill) |
 | Multi-step procedure with checkpoints or JS orchestration | **Workflow** | `ai-authoring-commands` (this skill) |
+| Prompt bodies, personas, orchestration patterns & Mermaid.js | **Prompt Pattern** | `ai-authoring-prompts` |
 | Knowledge/runbook loaded dynamically on demand | **Skill** | `ai-authoring-skills` |
 | Persistent background context (always-on or path-scoped) | **Rule** | `ai-authoring-rules` |
 | Delegated execution in isolated context & permissions | **Subagent** | `ai-authoring-agents` |
@@ -141,11 +142,13 @@ Select the closest template from `templates/` when authoring a new command or wo
 
 ## 7. Authoring Workflow
 
-```
-1. Identify Need ──► 2. Select Platform & Scope ──► 3. Pick Template
-         │                        │                        │
-         ▼                        ▼                        ▼
-6. Test (/name)   ◄── 5. Run Validator    ◄── 4. Draft Prompt & Frontmatter
+```mermaid
+flowchart LR
+    Step1["1. Identify Need"] --> Step2["2. Select Platform &amp; Scope"]
+    Step2 --> Step3["3. Pick Template"]
+    Step3 --> Step4["4. Draft Directives &amp; Frontmatter"]
+    Step4 --> Step5["5. Run Validator"]
+    Step5 --> Step6["6. Test (/name)"]
 ```
 
 1. **Identify Need**: Confirm the task is an actionable directive (command) or multi-step procedure (workflow), rather than a skill or rule.

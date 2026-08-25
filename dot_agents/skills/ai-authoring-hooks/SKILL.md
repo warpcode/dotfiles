@@ -45,6 +45,7 @@ audit logging, and dynamic context injection.
 
 | Requirement | Artifact | Primary Skill |
 |---|---|---|
+| Prompt bodies, personas, orchestration patterns & Mermaid.js | **Prompt Pattern** | `ai-authoring-prompts` |
 | Reusable multi-step SOP, runbook, or CLI tool guide | **Skill** (`SKILL.md`) | `ai-authoring-skills` |
 | Interactive user shortcut or parameterized slash command | **Command** (`/name`) | `ai-authoring-commands` |
 | Persistent behavioral prompt instructions & style guidance | **Rule** (`rules/`, `AGENTS.md`) | `ai-authoring-rules` |

@@ -11,11 +11,43 @@ permissions:
   read: allow
   edit: allow
   bash: allow
-# Platform-specific configurations:
-# - OpenCode: mode: all, model: anthropic/claude-3-5-sonnet, permissions: { read: allow, edit: allow, bash: allow }
-# - VS Code / Copilot (.github/agents/specialist-implementer.agent.md): tools: [codebase, edit/editFiles, web/fetch], model: [Claude Sonnet 3.5 (copilot), GPT-4.1]
-# - Claude Code (.claude/agents/specialist-implementer.md): tools: [FileEdit, FileCreate, FileRead, GlobTool, Bash], model: sonnet, effort: high
-# - Antigravity (.agents/specialist-implementer.md): model: gemini-3.5-pro, capabilities: { allowed_tools: [view_file, replace_file_content, write_to_file, run_command] }
+# ── Same agent on other platforms — replace the active block above with ONE of: ──
+#
+# Copilot / VS Code → save as .github/agents/specialist-implementer.agent.md
+# name: specialist-implementer
+# description: Expert assistant for specialized domain implementation and component architecture.
+# tools:
+#   - codebase
+#   - edit/editFiles
+#   - web/fetch
+# model:
+#   - Claude Sonnet 3.5 (copilot)
+#   - GPT-4.1
+# user-invocable: true
+#
+# Claude Code → save as .claude/agents/specialist-implementer.md
+# name: specialist-implementer
+# description: Expert assistant for specialized domain implementation and component architecture.
+# tools:
+#   - FileEdit
+#   - FileCreate
+#   - FileRead
+#   - GlobTool
+#   - Bash
+# model: sonnet
+# effort: high
+#
+# Google Antigravity → save as .agents/agents/specialist-implementer.md (documented keys only)
+# name: specialist-implementer
+# description: Expert assistant for specialized domain implementation and component architecture.
+# tools:
+#   - view_file
+#   - replace_file_content
+#   - run_command
+# subagent: true
+# mainAgent: false
+# model: pro
+# commandExecutionPolicy: sandbox
 ---
 
 # Specialist Implementer Agent

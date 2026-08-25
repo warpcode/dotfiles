@@ -103,7 +103,7 @@ when it fits, invent one for a genuinely new domain:
 
 | Family | Domain |
 |---|---|
-| `ai-authoring-` | creating/modifying AI artifacts (skills, agents, rules, commands, hooks) |
+| `ai-authoring-` | creating/modifying AI artifacts (prompts, skills, agents, rules, commands, hooks) |
 | `git-` / `github-` | version control / GitHub platform |
 | `shell-` | shell scripting & style |
 | `email-`, `jira-` | product domains |
@@ -281,6 +281,8 @@ wastes context tokens and tempts unnecessary edits.
 small test file - trivial one-liners are exempt.
 
 ## Skill categories & template selection
+
+> **Note**: For universal prompt design, personas, orchestration topologies, decision matrices, and Mermaid.js flowcharts, consult `ai-authoring-prompts`.
 
 Before writing a body, pick the closest category and start from its template
 in `templates/`. When two categories fit, prefer the simpler one.

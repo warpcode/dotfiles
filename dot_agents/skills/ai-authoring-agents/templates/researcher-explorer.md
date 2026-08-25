@@ -14,11 +14,45 @@ permissions:
   edit: deny
   websearch: allow
   bash: deny
-# Platform-specific configurations:
-# - OpenCode: mode: subagent, model: google/gemini-2.5-flash, permissions: { read: allow, edit: deny, websearch: allow, bash: deny }
-# - VS Code / Copilot (.github/agents/researcher-explorer.agent.md): tools: [codebase, search, read/readFile, web/fetch], model: [GPT-4o-mini, Claude Haiku 3.5 (copilot)]
-# - Claude Code (.claude/agents/researcher-explorer.md): tools: [GlobTool, FileRead, WebSearch, WebFetch], disallowedTools: [FileEdit, FileCreate, Bash], model: haiku
-# - Antigravity (.agents/researcher-explorer.md): model: gemini-3.5-flash, capabilities: { allowed_tools: [grep_search, find_by_name, view_file, read_url_content, search_web] }
+# ── Same agent on other platforms — replace the active block above with ONE of: ──
+#
+# Copilot / VS Code → save as .github/agents/researcher-explorer.agent.md
+# name: researcher-explorer
+# description: High-noise exploration subagent for broad codebase grepping, symbol exploration, and external documentation research.
+# tools:
+#   - codebase
+#   - search
+#   - read/readFile
+#   - web/fetch
+# model:
+#   - GPT-4o-mini
+#   - Claude Haiku 3.5 (copilot)
+# user-invocable: false
+#
+# Claude Code → save as .claude/agents/researcher-explorer.md
+# name: researcher-explorer
+# description: High-noise exploration subagent for broad codebase grepping, symbol exploration, and external documentation research.
+# tools:
+#   - GlobTool
+#   - FileRead
+#   - WebSearch
+#   - WebFetch
+# disallowedTools:
+#   - FileEdit
+#   - FileCreate
+#   - Bash
+# model: haiku
+#
+# Google Antigravity → save as .agents/agents/researcher-explorer.md (documented keys only)
+# name: researcher-explorer
+# description: High-noise exploration subagent for broad codebase grepping, symbol exploration, and external documentation research.
+# tools:
+#   - grep_search
+#   - view_file
+# subagent: true
+# mainAgent: false
+# model: flash
+# commandExecutionPolicy: sandbox
 ---
 
 # Codebase Researcher & Explorer Agent

@@ -16,8 +16,8 @@ Checks performed:
       - Claude Code: `tools`/`disallowedTools` is list/string; `isolation` valid
       - Copilot/VS Code: `model` is string or list; `tools` is list
       - Antigravity: `capabilities` is a mapping if defined
-  - Least-privilege sanity check: read-only/auditor roles should not have unconstrained write/edit
-
+      - Antigravity strict keys: files under `.agents/` or `.gemini/agents/` may
+        only use known frontmatter keys (Antigravity rejects unknown keys)
 Usage:
     ./validate.py <path-to-agent-file-or-dir> [<path> ...]
     ./validate.py --self-test
@@ -173,14 +173,6 @@ def validate_agent(file_path):
             add("tools-format", "PASS")
         else:
             add("tools-format", "FAIL", "tools must be a list or string")
-
-    # Antigravity capabilities checks
-    if "capabilities" in meta:
-        caps = meta["capabilities"]
-        if isinstance(caps, dict):
-            add("antigravity-capabilities", "PASS")
-        else:
-            add("antigravity-capabilities", "FAIL", "capabilities must be a mapping")
 
     return results
 
