@@ -105,31 +105,13 @@ if [[ -n "$BASE_BRANCH" && -n "$BRANCH_NAME" ]] && git rev-parse --is-inside-wor
 
   mapfile -t MODIFIED_FILES < <(git diff --name-only "origin/${BASE_BRANCH}...origin/${BRANCH_NAME}" 2>/dev/null || true)
 
+  CANDIDATE_FILES=()
+
   for file in "${MODIFIED_FILES[@]}"; do
     [[ -z "$file" ]] && continue
 
     if [[ "$file" == *.zsh || "$file" == bin/df.* || "$file" == *.sh ]]; then
-      TEMP_FILE=$(mktemp)
-      if git show "origin/${BRANCH_NAME}:${file}" > "$TEMP_FILE" 2>/dev/null; then
-        # Syntax check
-        if [[ "$file" == *.sh ]]; then
-          if ! bash -n "$TEMP_FILE" 2>/dev/null; then
-            SYNTAX_ERRORS+=("$file")
-          fi
-        else
-          if ! zsh -n "$TEMP_FILE" 2>/dev/null; then
-            SYNTAX_ERRORS+=("$file")
-          fi
-        fi
-
-        # Interactive safety: Zsh functions must use return, not exit
-        if [[ "$file" == *.zsh || "$file" == bin/df.* ]]; then
-          if grep -E '^\s*exit\s+' "$TEMP_FILE" >/dev/null 2>&1; then
-            SAFETY_VIOLATIONS+=("$file")
-          fi
-        fi
-      fi
-      rm -f "$TEMP_FILE"
+      CANDIDATE_FILES+=("$file")
     fi
 
     # Scope Hygiene / Obsolete directory check
@@ -139,6 +121,40 @@ if [[ -n "$BASE_BRANCH" && -n "$BRANCH_NAME" ]] && git rev-parse --is-inside-wor
       fi
     done
   done
+
+  if [[ ${#CANDIDATE_FILES[@]} -gt 0 ]]; then
+    TARGET_REF="origin/${BRANCH_NAME}"
+    mapfile -t EXISTING_FILES < <(git ls-tree -r --name-only "$TARGET_REF" -- "${CANDIDATE_FILES[@]}" 2>/dev/null || true)
+
+    if [[ ${#EXISTING_FILES[@]} -gt 0 ]]; then
+      ARCHIVE_DIR=$(mktemp -d)
+      if git archive "$TARGET_REF" -- "${EXISTING_FILES[@]}" 2>/dev/null | tar -x -C "$ARCHIVE_DIR" 2>/dev/null; then
+        for file in "${CANDIDATE_FILES[@]}"; do
+          TEMP_FILE="$ARCHIVE_DIR/$file"
+          if [[ -f "$TEMP_FILE" ]]; then
+            # Syntax check
+            if [[ "$file" == *.sh ]]; then
+              if ! bash -n "$TEMP_FILE" 2>/dev/null; then
+                SYNTAX_ERRORS+=("$file")
+              fi
+            else
+              if ! zsh -n "$TEMP_FILE" 2>/dev/null; then
+                SYNTAX_ERRORS+=("$file")
+              fi
+            fi
+
+            # Interactive safety: Zsh functions must use return, not exit
+            if [[ "$file" == *.zsh || "$file" == bin/df.* ]]; then
+              if grep -E '^\s*exit\s+' "$TEMP_FILE" >/dev/null 2>&1; then
+                SAFETY_VIOLATIONS+=("$file")
+              fi
+            fi
+          fi
+        done
+      fi
+      rm -rf "$ARCHIVE_DIR"
+    fi
+  fi
 fi
 
 if [[ ${#SYNTAX_ERRORS[@]} -gt 0 ]]; then
