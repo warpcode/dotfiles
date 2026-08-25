@@ -11,74 +11,114 @@ description: >
 
 # Antigravity CLI (`agy`) Execution & Automation
 
-Use `agy` to execute prompts non-interactively, route tasks to specific AI models and subagents, enforce structured JSON schemas, and manage MCP servers and plugins.
+Direct CLI invocation reference to execute prompts non-interactively, route tasks to specific AI models and subagents, enforce structured JSON schemas, and manage MCP servers and plugins via `agy`.
 
 ---
 
 ## ⛔ CRITICAL RULE: NO INTERACTIVE TUI
 
 **NEVER run `agy` without `-p` / `--print` or a non-interactive subcommand.**
-Bare `agy` launches an interactive Terminal User Interface (TUI) that blocks automated execution waiting for user keystrokes.
+Bare `agy` launches an interactive Terminal User Interface (TUI) that hangs headless automation waiting for terminal input.
 
 - ❌ `agy` (PROHIBITED: Launches interactive TUI)
 - ✅ `agy -p "prompt"` (Headless single-shot execution)
-- ✅ `agy models` (Non-interactive subcommand)
-- ✅ `agy mcp list` (Non-interactive subcommand)
+- ✅ `agy models` (Non-interactive discovery)
+- ✅ `agy mcp list` (Non-interactive discovery)
 
 ---
 
-## Pre-Execution & Discovery
+## Execution Pipeline
 
-Run discovery commands before executing prompts to inspect configured models, active agents, and MCP servers:
+```mermaid
+flowchart TD
+    A["Discovery<br/>agy models / agy agents"] --> B["Select Parameters<br/>--model, --effort, --mode"]
+    B --> C{"Structured Output Needed?"}
+    C -->|Yes| D["Run with --json-schema<br/>--output-format json"]
+    C -->|No| E["Run with -p<br/>--output-format text"]
+    D --> F["Extract Payload<br/>jq '.structured_output'"]
+    E --> G["Inspect stdout"]
+```
+
+---
+
+## 1. Pre-Execution & Discovery
+
+Run discovery subcommands to inspect valid identifiers before executing prompts:
 
 ```bash
-# List available model aliases (e.g. gemini-3.7-flash-high, gemini-3.5-flash-low)
+# List available model aliases (e.g., gemini-3.7-flash-high, gemini-3.5-flash-low)
 agy models
 
-# List available custom agents
+# List available custom subagents
 agy agents
 
 # List configured MCP servers
-python3 scripts/list-mcp-servers.py
-# Or raw CLI: agy mcp list
+agy mcp list
+
+# List installed plugins
+agy plugin list
 ```
 
-For the complete list of flags and environment variables, read [references/flags.md](references/flags.md).
+For the complete catalog of flags and environment variables, read [references/flags.md](references/flags.md).
 
 ---
 
-## Core Execution Commands
+## 2. Headless Prompt Execution
 
-### 1. Headless Single-Shot Execution
-
-Execute a prompt non-interactively using the target model and reasoning effort:
+Execute prompts non-interactively using target models, reasoning effort levels, and permission bypasses:
 
 ```bash
+# Basic single-shot execution
 agy --model "<model-alias>" --effort <low|medium|high> -p "<prompt>"
-```
 
-**Common Flags for Automation:**
-- `--dangerously-skip-permissions`: Auto-approve tool execution for headless scripts and CI/CD pipelines.
-- `--mode accept-edits`: Allow the agent to make file changes directly without confirmation pauses.
-- `--add-dir <path>`: Mount additional directory context into the workspace.
-- `--disable-slash-commands`: Prevent accidental slash-command expansion in raw input text.
-
-### 2. Structured JSON Output Extraction
-
-To enforce structured output conforming to a JSON Schema, pass `--json-schema` and `--output-format json`:
-
-```bash
-agy --output-format json \
-    --json-schema '{"type":"object","properties":{"summary":{"type":"string"},"items":{"type":"array","items":{"type":"string"}}},"required":["summary","items"]}' \
+# Unattended automation (CI/CD, scripts, tool-enabled pipelines)
+agy --model "<model-alias>" \
+    --effort <low|medium|high> \
+    --dangerously-skip-permissions \
+    --mode accept-edits \
     -p "<prompt>"
 ```
 
-**Output Envelope Schema (`--output-format json`):**
+### Key Execution Flags
+
+| Flag | Purpose | Recommended Use |
+|---|---|---|
+| `-p`, `--print` | Run non-interactively and print response to stdout. | **Mandatory** for all automated executions. |
+| `--model <alias>` | Target model (e.g. `gemini-3.7-flash-high`, `gemini-3.5-flash-low`, `claude-sonnet-4-6`). | Always specify explicitly to avoid default drift. |
+| `--effort <level>` | Reasoning/thinking effort: `low`, `medium`, `high`. | Use `low` for grepping/parsing; `high` for complex architecture. |
+| `--dangerously-skip-permissions` | Auto-approves all tool permission prompts. | Required when tools/commands are executed unattended. |
+| `--mode accept-edits` | Automatically applies file modifications without approval pauses. | Required for unattended code refactors and edits. |
+| `--add-dir <path>` | Mounts an additional workspace directory into context. | Repeatable for multi-repo or multi-folder contexts. |
+| `--disable-slash-commands` | Disables slash command and skill expansion in prompt text. | Recommended when prompts contain raw code with slashes. |
+
+---
+
+## 3. Structured JSON Schema Output
+
+`agy` has native JSON schema enforcement. When passed `--json-schema` and `--output-format json`, `agy` returns a structured envelope where `.structured_output` strictly conforms to the requested schema.
+
+### Syntax
+```bash
+agy --output-format json \
+    --json-schema '<json-schema-or-file-path>' \
+    -p "<prompt>"
+```
+
+### Example: Extract Structured Error Report
+```bash
+agy --model "gemini-3.5-flash-low" --effort low \
+    --output-format json \
+    --json-schema '{"type":"object","properties":{"error_count":{"type":"integer"},"errors":{"type":"array","items":{"type":"string"}}},"required":["error_count","errors"]}' \
+    -p "Extract all critical errors from the following log: $(tail -n 100 /var/log/syslog)" \
+    | jq '.structured_output'
+```
+
+### JSON Output Envelope Schema
 ```json
 {
   "conversation_id": "UUID string",
   "status": "SUCCESS | ERROR",
-  "response": "Model response string",
+  "response": "Text response string",
   "structured_output": { /* conforms to requested schema */ },
   "duration_seconds": 2.45,
   "num_turns": 1,
@@ -86,28 +126,24 @@ agy --output-format json \
     "input_tokens": 12000,
     "output_tokens": 85,
     "thinking_tokens": 40,
+    "cache_read_tokens": 0,
     "total_tokens": 12085
   }
 }
 ```
 
-To extract `.structured_output` directly without manual `jq` parsing, use the bundled helper:
-```bash
-./scripts/get-structured-output.sh --schema '{"type":"object","properties":{"score":{"type":"number"}},"required":["score"]}' --prompt "Rate code quality 1-10"
-```
+---
 
-### 3. Routing to Custom Subagents
+## 4. Subagent Routing & Session Resumption
 
-Route prompt execution to a specific defined agent:
-
+### Routing to a Specific Custom Agent
 ```bash
 agy --agent <agent-name> --dangerously-skip-permissions -p "<prompt>"
 ```
 
-### 4. Resuming Existing Conversations
-
+### Resuming Previous Sessions
 ```bash
-# Continue the most recent session
+# Continue the most recent conversation
 agy -c -p "<follow-up prompt>"
 
 # Resume a specific conversation ID
@@ -116,19 +152,21 @@ agy --conversation "<UUID>" -p "<follow-up prompt>"
 
 ---
 
-## MCP Server Administration (`agy mcp`)
+## 5. Ecosystem Administration (MCP & Plugins)
 
-Manage Model Context Protocol servers in user configuration:
-
+### Model Context Protocol (`agy mcp`)
 ```bash
-# List servers as JSON
-./scripts/list-mcp-servers.py
+# List configured MCP servers
+agy mcp list
 
 # Add stdio server
 agy mcp add <name> <command> [args...]
 
-# Add HTTP server with authentication
-agy mcp add --header "Authorization: Bearer <token>" <name> <url>
+# Add stdio server with environment variables
+agy mcp add --env GITHUB_TOKEN=xxx gh npx -y @modelcontextprotocol/server-github
+
+# Add HTTP server with headers
+agy mcp add --header "Authorization: Bearer <token>" context7 https://mcp.context7.com/mcp
 
 # Enable / Disable server
 agy mcp enable <name>
@@ -138,12 +176,9 @@ agy mcp disable <name>
 agy mcp remove <name>
 ```
 
-For detailed argument syntax, environment variable passing (`--env`), and containerized server examples, read [references/mcp-and-plugins.md](references/mcp-and-plugins.md).
+For advanced containerized configurations and auth details, read [references/mcp-and-plugins.md](references/mcp-and-plugins.md).
 
----
-
-## Plugin Administration (`agy plugin`)
-
+### Plugin Management (`agy plugin`)
 ```bash
 # List installed plugins
 agy plugin list
@@ -164,54 +199,27 @@ agy plugin uninstall <name>
 
 ---
 
-## Common Patterns
+## 6. Multi-Turn Streaming Protocol
 
-### Pattern 1: Fast Extraction with Flash Model
-**Input:** Parse a log file and extract error counts using `gemini-3.5-flash-low`.
+For real-time event processing and multi-turn piping over standard I/O:
 ```bash
-agy --model "gemini-3.5-flash-low" --effort low \
-    --output-format json \
-    --json-schema '{"type":"object","properties":{"error_count":{"type":"integer"},"errors":{"type":"array","items":{"type":"string"}}},"required":["error_count","errors"]}' \
-    -p "Analyze syslog and count errors: $(head -n 50 /var/log/syslog)" \
-    | jq '.structured_output'
+agy --input-format stream-json --output-format stream-json --dangerously-skip-permissions
 ```
-
-### Pattern 2: Headless Code Modification with Tool Permissions
-**Input:** Run an agent to fix TypeScript lint errors automatically in the workspace.
-```bash
-agy --model "gemini-3.7-flash-high" \
-    --mode accept-edits \
-    --dangerously-skip-permissions \
-    -p "Run eslint and fix all auto-fixable lint errors in src/"
-```
-
-### Pattern 3: Multi-Turn NDJSON Streaming
-For streaming real-time event updates and multi-turn piping via standard I/O, read [references/stream-json.md](references/stream-json.md).
-
----
-
-## Bundled Scripts
-
-Scripts are executable black boxes. Run `--help` on any script to view options rather than reading source code.
-
-| Script | Purpose |
-|---|---|
-| `scripts/list-mcp-servers.py` | Query and parse `agy mcp list` into structured JSON (`--enabled-only`, `--disabled-only`). |
-| `scripts/get-structured-output.sh` | Execute prompt with schema enforcement and return extracted JSON (`--schema`, `--prompt`, `--model`, `--effort`, `--agent`, `--skip-permissions`). |
+Read [references/stream-json.md](references/stream-json.md) for NDJSON message schemas and Python/Node integration examples.
 
 ---
 
 ## What NOT to Do
 
-- **MUST NOT invoke bare `agy`**: It launches an interactive TUI which hangs automated scripts; use `agy -p` or subcommands instead.
-- **MUST NOT guess model aliases**: Run `agy models` first to verify valid model identifiers.
-- **MUST NOT remove MCP servers or uninstall plugins without user approval**: `mcp remove` and `plugin uninstall` are irreversible mutations marked `⚠ WRITE`.
-- **MUST NOT omit `--dangerously-skip-permissions` in non-interactive tool workflows**: Without this flag, tool use halts waiting for stdin confirmation in headless mode.
+- **MUST NOT invoke bare `agy`**; use `agy -p "<prompt>"` or dedicated subcommands instead to prevent terminal freezes.
+- **MUST NOT guess model aliases**; run `agy models` first to verify valid model identifiers.
+- **MUST NOT remove MCP servers or uninstall plugins without explicit user confirmation**; these are destructive mutations marked `⚠ WRITE`.
+- **MUST NOT omit `--dangerously-skip-permissions` in unattended tool workflows**; tool execution will halt waiting for interactive confirmation prompts.
 
 ---
 
 ## Exit Criteria & Verification
 
-- Non-interactive commands exit with status `0` on successful completion.
-- JSON output includes `"status": "SUCCESS"`.
-- On non-zero exit codes, inspect stderr or run `agy --output-format text -p "<prompt>"` to diagnose errors.
+- Direct commands exit with code `0` on success.
+- With `--output-format json`, verify `.status == "SUCCESS"`.
+- If a command fails, inspect stderr or run `agy --output-format text -p "<prompt>"` to diagnose the underlying provider or tool error.
