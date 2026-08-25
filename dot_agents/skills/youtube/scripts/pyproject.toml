@@ -6,4 +6,5 @@ dependencies = [
     "youtube-transcript-api",
     "yt-dlp",
     "jinja2",
+    "pytest>=9.1.1",
 ]
