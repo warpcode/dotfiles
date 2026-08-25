@@ -72,13 +72,16 @@ def get_status_map(client, project_key=None):
                 for itype in response
                 for status in itype.get("statuses", [])
             }
-        except:
-            pass
+        except Exception as e:
+            if getattr(client, "verbose", False):
+                err(f"Failed to fetch project statuses for {project_key}: {e}")
 
     # Fallback to global status list
     endpoint = f"rest/api/{JIRA_API_VERSION}/status"
     try:
         response = client.call("GET", endpoint)
         return {item["name"]: item.get("statusCategory", {}).get("name") for item in response}
-    except:
+    except Exception as e:
+        if getattr(client, "verbose", False):
+            err(f"Failed to fetch global statuses: {e}")
         return {}
