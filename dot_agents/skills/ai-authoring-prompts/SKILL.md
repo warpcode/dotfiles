@@ -4,10 +4,12 @@ description: >
   Author, structure, compose, and optimize prompt bodies, cognitive architectures,
   orchestration topologies, execution workflows, persona/role archetypes, decision
   matrices, and structured output contracts across AI agents, skills, commands,
-  rules, and hooks. Use this skill when the user says "author a prompt", "prompt
-  pattern", "orchestration pattern", "design a persona", "create a workflow prompt",
-  "decision matrix", "progressive disclosure", "Mermaid diagram for agent", or needs
-  guidance on structuring instructions for modern reasoning models.
+  rules, and hooks. Use this skill when the user says "author a prompt", "write a
+  system prompt", "improve this prompt", "optimize this prompt", "prompt pattern",
+  "orchestration pattern", "design a persona", "create a workflow prompt", "decision
+  matrix", "negative constraints", "output contract", "cognitive stack", "layered
+  prompt", "progressive disclosure", "Mermaid diagram for agent", or needs guidance
+  on structuring instructions for modern reasoning models.
 ---
 
 # Authoring Prompts, Personas & Workflows
