@@ -11,43 +11,30 @@ Design, configure, and test custom agents in Google Antigravity using declarativ
 
 ## 🛠️ Declarative Agent Format (YAML/Markdown)
 
-Declarative agents are configured using YAML frontmatter in Markdown (`.md`) or YAML (`.yaml`) files. They are automatically discovered by the Antigravity runtime.
+Declarative agents are configured using YAML frontmatter in Markdown (`.md`) files. They are automatically discovered by the Antigravity runtime.
 
 ### 1. File Locations
-* **Global Agents**: `~/.gemini/config/agents/<agent-name>.md`
-* **Workspace-Scoped Agents**: `<workspace-root>/.agents/<agent-name>.md`
+* **Global Agents**: `~/.gemini/config/agents/<agent-name>.md` (or `.../agents/<agent-name>/agent.md`)
+* **Workspace-Scoped Agents**: `<workspace-root>/.agents/agents/<agent-name>.md` (or `.agents/agents/<agent-name>/agent.md`)
 
 ### 2. Configuration Schema
-Use the following blueprint for frontmatter capabilities restrictions:
+Per the [official subagents docs](https://antigravity.google/docs/subagents/#frontmatter-configuration-yaml),
+restrictions are declared with flat top-level keys (there is no nested `capabilities` block):
 
 ```yaml
 ---
 name: security-auditor
 description: Specialized in finding security vulnerabilities in code.
-kind: local
-model: gemini-3.5-flash
-temperature: 0.2
-max_turns: 10
-
-# RESTRICT CAPABILITIES HERE
-capabilities:
-  # 1. Restrict Tools (only expose these tools to the model's context)
-  allowed_tools:
-    - view_file
-    - grep_search
-
-  # 2. Restrict Skills (prevent loading other system/custom skills)
-  allowed_skills:
-    - technical-review-guidelines
-
-  # 3. Restrict MCP Servers
-  allowed_mcp_servers:
-    - github
-
-  # 4. Restrict Bash Commands (enforce allowed command prefixes)
-  allowed_bash_commands:
-    - git status
-    - git diff
+tools:                            # allowlist; misspelled names hang the subagent (known issue)
+  - view_file
+  - grep_search
+  - run_command
+mainAgent: false                  # exclude from primary-agent selection in chat
+subagent: true                    # invocable via invoke_subagent
+model: flash                      # inherit | flash | pro
+commandExecutionPolicy: sandbox   # off | auto | eager | sandbox (bash restriction)
+skills:                           # restrict loaded skills
+  - skills/security-checklist
 ---
 
 [System prompt instructions go here]

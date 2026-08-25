@@ -15,11 +15,39 @@ permissions:
   read: allow
   edit: allow
   bash: allow
-# Platform-specific configurations:
-# - OpenCode: mode: primary, model: anthropic/claude-3-5-sonnet, permissions: { read: allow, edit: allow, bash: allow }
-# - VS Code / Copilot (.github/agents/coordinator-orchestrator.agent.md): tools: [codebase, edit/editFiles, execute/runInTerminal], agents: [researcher-explorer, specialist-implementer, auditor-reviewer], user-invocable: true
-# - Claude Code (.claude/agents/coordinator-orchestrator.md): tools: [Agent, FileRead, GlobTool, Bash], model: opus, effort: max
-# - Antigravity (.agents/coordinator-orchestrator.md): model: gemini-3.5-pro, capabilities: { allowed_tools: [invoke_subagent, send_message, view_file, write_to_file] }
+# ── Same agent on other platforms — replace the active block above with ONE of: ──
+#
+# Copilot / VS Code → save as .github/agents/coordinator-orchestrator.agent.md
+# name: coordinator-orchestrator
+# description: Coordinates complex multi-step engineering workflows by decomposing requirements, dispatching subagents, and synthesizing results.
+# tools:
+#   - codebase
+#   - edit/editFiles
+#   - execute/runInTerminal
+# model: Claude Sonnet 3.5 (copilot)
+# user-invocable: true
+#
+# Claude Code → save as .claude/agents/coordinator-orchestrator.md
+# name: coordinator-orchestrator
+# description: Coordinates complex multi-step engineering workflows by decomposing requirements, dispatching subagents, and synthesizing results.
+# tools:
+#   - Agent
+#   - FileRead
+#   - GlobTool
+#   - Bash
+# model: opus
+# effort: max
+#
+# Google Antigravity → save as .agents/agents/coordinator-orchestrator.md (documented keys only)
+# name: coordinator-orchestrator
+# description: Coordinates complex multi-step engineering workflows by decomposing requirements, dispatching subagents, and synthesizing results.
+# tools:
+#   - invoke_subagent
+#   - view_file
+# subagent: true
+# mainAgent: false
+# model: pro
+# commandExecutionPolicy: sandbox
 ---
 
 # Workflow Coordinator & Orchestrator Agent

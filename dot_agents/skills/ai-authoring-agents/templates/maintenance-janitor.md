@@ -17,11 +17,44 @@ permissions:
     "pytest*": allow
     "git diff*": allow
     "*": ask
-# Platform-specific configurations:
-# - OpenCode: mode: subagent, permissions: { read: allow, edit: allow, bash: { "npm test*": allow, "*": ask } }
-# - VS Code / Copilot (.github/agents/maintenance-janitor.agent.md): tools: [codebase, edit/editFiles, search, execute/runTests, read/problems], user-invocable: true
-# - Claude Code (.claude/agents/maintenance-janitor.md): tools: [FileEdit, FileCreate, GlobTool, FileRead, Bash], isolation: worktree, model: sonnet
-# - Antigravity (.agents/maintenance-janitor.md): model: gemini-3.5-pro, capabilities: { allowed_tools: [view_file, replace_file_content, grep_search, run_command] }
+# ── Same agent on other platforms — replace the active block above with ONE of: ──
+#
+# Copilot / VS Code → save as .github/agents/maintenance-janitor.agent.md
+# name: maintenance-janitor
+# description: Cleans codebases by safely eliminating dead code, unreferenced symbols, and technical debt.
+# tools:
+#   - codebase
+#   - edit/editFiles
+#   - search
+#   - execute/runTests
+#   - read/problems
+# model: Claude Sonnet 3.5 (copilot)
+# user-invocable: true
+#
+# Claude Code → save as .claude/agents/maintenance-janitor.md
+# name: maintenance-janitor
+# description: Cleans codebases by safely eliminating dead code, unreferenced symbols, and technical debt.
+# tools:
+#   - FileEdit
+#   - FileCreate
+#   - GlobTool
+#   - FileRead
+#   - Bash
+# isolation: worktree
+# model: sonnet
+#
+# Google Antigravity → save as .agents/agents/maintenance-janitor.md (documented keys only)
+# name: maintenance-janitor
+# description: Cleans codebases by safely eliminating dead code, unreferenced symbols, and technical debt.
+# tools:
+#   - view_file
+#   - replace_file_content
+#   - grep_search
+#   - run_command
+# subagent: true
+# mainAgent: false
+# model: pro
+# commandExecutionPolicy: sandbox
 ---
 
 # Codebase Janitor & Maintenance Agent

@@ -15,11 +15,42 @@ permissions:
     "git diff*": allow
     "git log*": allow
     "*": deny
-# Platform-specific configurations:
-# - OpenCode: mode: subagent, permissions: { read: allow, edit: deny, bash: { "git diff*": allow, "*": deny } }
-# - VS Code / Copilot (.github/agents/auditor-reviewer.agent.md): tools: [codebase, read/readFile, read/problems, search], user-invocable: true
-# - Claude Code (.claude/agents/auditor-reviewer.md): tools: [FileRead, GlobTool, "Bash(git diff *)"], disallowedTools: [FileEdit, FileCreate]
-# - Antigravity (.agents/auditor-reviewer.md): model: gemini-3.5-flash, capabilities: { allowed_tools: [view_file, grep_search, list_dir], allowed_bash_commands: [git diff, git log] }
+# ── Same agent on other platforms — replace the active block above with ONE of: ──
+#
+# Copilot / VS Code → save as .github/agents/auditor-reviewer.agent.md
+# name: auditor-reviewer
+# description: Read-only auditor for code reviews, security scans, and pull request diff analysis without file edits.
+# tools:
+#   - codebase
+#   - read/readFile
+#   - read/problems
+#   - search
+# model: Claude Sonnet 3.5 (copilot)
+# user-invocable: true
+#
+# Claude Code → save as .claude/agents/auditor-reviewer.md
+# name: auditor-reviewer
+# description: Read-only auditor for code reviews, security scans, and pull request diff analysis without file edits.
+# tools:
+#   - FileRead
+#   - GlobTool
+#   - Bash(git diff *)
+# disallowedTools:
+#   - FileEdit
+#   - FileCreate
+# model: sonnet
+#
+# Google Antigravity → save as .agents/agents/auditor-reviewer.md (documented keys only)
+# name: auditor-reviewer
+# description: Read-only auditor for code reviews, security scans, and pull request diff analysis without file edits.
+# tools:
+#   - view_file
+#   - grep_search
+#   - run_command
+# subagent: true
+# mainAgent: false
+# model: flash
+# commandExecutionPolicy: sandbox
 ---
 
 # Code Auditor & Reviewer Agent
