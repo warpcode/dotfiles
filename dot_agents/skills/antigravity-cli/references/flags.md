@@ -51,3 +51,4 @@ Complete catalog of command-line flags and parameters for `agy` (Antigravity CLI
 | `AGY_CLI_HIDE_LOGO` | Set to `1` or `true` to suppress ASCII banner logo in narrow terminals and logs. |
 | `AGY_CLI_DISABLE_ESCAPE_SEQUENCE_OPTIMIZATIONS` | Disables terminal dirty-rectangle and diffing optimizations. |
 | `GEMINI_API_KEY` | Direct API key authentication fallback for Google Gemini endpoints. |
+
