@@ -64,11 +64,13 @@ Subagents offer huge cost savings when routed to appropriate model tiers:
 ---
 
 ## 5. Output Contracts & Synthesis Readiness
-
+ 
 Coordinator agents synthesize subagent findings into final user responses. Make subagent outputs synthesis-friendly:
 - Prefer structured JSON or Markdown summaries over raw tool transcripts.
 - Include confidence ratings, file locations (`file:///path`), and line numbers (`#L10-L20`).
 - Put the verdict / summary first, followed by supporting evidence.
+- Use Layer 5 Output Contract specifications from `ai-authoring-prompts` (`[P5.1]` Diff Contract, `[P5.2]` Rubric-as-Judge, `[P5.4]` Rollup / Checklist Log).
+
 
 ---
 

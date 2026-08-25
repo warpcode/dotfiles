@@ -140,16 +140,20 @@ For structural patterns and real-world examples:
 
 See `references/best-practices.md` for architectural guidelines on cognitive boundaries and least privilege.
 
-## System Prompt Authoring Patterns
+## System Prompt Body & Cognitive Architecture
 
 The markdown body following the frontmatter is the subagent's system prompt.
-Structure it with these core sections:
 
-1. **Role & Identity**: State persona, domain mastery, and operational purpose.
-2. **Core Directives**: Fundamental rules and constraints (e.g. "Read-only: NEVER edit files").
-3. **Execution Workflow**: Ordered steps the agent must follow from input to output.
-4. **Domain Standards**: Project-specific conventions, typing requirements, and libraries.
-5. **Structured Output Contract**: Fixed Markdown or JSON schema for returned results so the coordinator can synthesize easily.
+> **Note**: For authoring prompt bodies, cognitive architectures, persona archetypes, negative constraints, and output contracts, load and apply `ai-authoring-prompts`.
+
+Subagent prompt bodies should assemble the **5-Layer Cognitive Stack** from `ai-authoring-prompts`:
+
+1. **Layer 1: Identity & Persona**: Define the operational archetype (`[P1.1]` Specialist, `[P1.2]` Auditor, `[P1.3]` Supervisor, `[P1.4]` Operator).
+2. **Layer 2: Structural Frame**: Structure sections clearly (`## Context`, `## Rules`, `## Task`, `## Output Contract`).
+3. **Layer 3: Operational Boundaries**: Impose strict MUST / MUST NOT negative constraints (`[P3.1]`) and ambiguity gates (`[P3.2]`).
+4. **Layer 4: Reasoning & State Scaffolding**: Enforce evidence grounding (`[P4.1]` Cite-or-Abstain) or execution state tracking (`[P4.3]`).
+5. **Layer 5: Output Contracts**: Return machine-verifiable formats (`[P5.1]` Diff Contract, `[P5.2]` Rubric, `[P5.4]` Rollup).
+
 
 ## House Rules & Guardrails
 

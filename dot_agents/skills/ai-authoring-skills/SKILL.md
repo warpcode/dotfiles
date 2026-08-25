@@ -11,7 +11,7 @@ description: >
   reports a skill not triggering, or wants proof a skill works ("test my
   skill", "run evals", "trigger benchmark"). Not for agents, rules, slash
   commands, or hooks - those have their own ai-authoring skills. Covers the
-  agentskills.io open standard, naming rules, writing patterns, script
+  agentskills.io open standard, naming rules, folder hierarchy, script
   standards, validation, and evals with subagents.
 ---
 
@@ -151,95 +151,20 @@ Up-to-date sources: [Claude Code](https://code.claude.com/docs/en/skills),
 [Antigravity](https://antigravity.google/docs/skills/),
 [Hermes Agent](https://hermes-agent.nousresearch.com/docs/developer-guide/creating-skills).
 
-## Skill content
+## Skill progressive disclosure
 
-### Progressive disclosure
+Skills use a three-level loading system to optimize agent context:
 
-Skills use a three-level loading system:
+1. **Metadata** (`name` + `description` frontmatter) - always in context (~100 words).
+2. **SKILL.md body** - loaded into context only when the skill triggers (<500 lines target).
+3. **Bundled resources** (`references/`, `scripts/`, `templates/`) - loaded on demand by the agent as needed; unlimited size, and scripts can execute without being read.
 
-1. **Metadata** (`name` + `description`) - always in context (~100 words)
-2. **SKILL.md body** - in context whenever the skill triggers (<500 lines ideal)
-3. **Bundled resources** (`templates/`, `references/`, `scripts/`) - loaded as
-   needed; unlimited size, and scripts can execute without being read
+### Progressive disclosure rules
 
-These word counts are approximate - going longer when needed is fine.
+- **Keep SKILL.md body under 500 lines**: When approaching this limit, move deep domain documentation into `references/` or templates into `templates/`.
+- **Targeted reference pointers**: Provide explicit, conditional pointers in `SKILL.md` indicating *when* an agent should read a reference file (e.g. `See references/platforms/claude-code.md when deploying to Claude Code`). Never instruct the agent to "load all references upfront".
+- **Prompt body composition**: For prompt body styling, imperative tone, RFC 2119 directives, calibrated specificity, negative constraints, and output contracts, consult and apply `ai-authoring-prompts`.
 
-**Key patterns:**
-
-- Keep SKILL.md under 500 lines; if approaching this limit, add an additional
-  layer of hierarchy along with clear pointers about where the model using the
-  skill should go next to follow up.
-- Reference files clearly from SKILL.md with guidance on when to read them -
-  never instruct "load all references".
-
-### Writing patterns
-
-Prefer the imperative form in body instructions - "run `--help` first", not
-"you should run `--help` first". The frontmatter `description` is the
-exception: it stays third-person declarative ("Use this skill when…"), per
-the Description rules above.
-
-**Calibrated specificity**: match precision to fragility. Steps that must not
-vary get exact commands; judgment calls get heuristics:
-
-```text
-Exact:     Validate frontmatter: awk '/^---$/{c++;next} c==1' SKILL.md | yq '.name'
-Heuristic: When two categories fit, prefer the simpler one.
-```
-
-**Consistent terminology**: one concept, one word. Calling bundled detail a
-"reference file" in one section and a "resource" in another makes agents
-treat them as different things. Define each term once, reuse it verbatim.
-
-**Atomic instructions**: one action per bullet or step. Compound instructions
-("validate, then commit and update the changelog") get half-executed -
-split them into separate items.
-
-**Checklists for ordered procedures**: use `- [ ]` items so the executing
-agent can track its position in multi-stage workflows (pairs naturally with
-the Workflow/SOP template).
-
-**Front-load constraints**: hard MUSTs go at the top of the body; rationale
-and detail follow. Instruction-following degrades over long contexts, so
-rules that must never be broken do not sit at line 400.
-
-**Explain why**: state the reason behind every non-obvious rule instead of
-relying on bare MUSTs - instructions with stated reasoning survive edge
-cases that rigid commands don't.
-
-**Explicit platform conditionals**: when behaviour differs per surface,
-write separate statements - "On Copilot do X; on Claude Code do Y" - never
-interleaved caveats mid-sentence. Per-platform details live in the reference
-files listed under Platform-specific extensions.
-
-**Write for the general case**: apply theory of mind - anticipate how the
-executing model will interpret each instruction in situations you did not
-foresee. Prefer rules that generalize over ones tuned to the specific
-example that prompted them.
-
-**Defining output formats**: when output must match a fixed structure, embed
-the exact template rather than describing it in prose. Large fixed structures
-belong in `templates/` instead:
-
-```markdown
-## Audit output
-ALWAYS use this exact template:
-# [Skill name] audit
-## Trigger check
-## Structure findings
-## Recommended actions
-```
-
-**Examples pattern**: concrete Input/Output pairs pin down expected behaviour
-better than prose rules alone. Adapt the labels to the domain (`Before:` /
-`After:`, `Bad:` / `Good:`):
-
-```markdown
-## Skill naming convention
-**Example 1:**
-Input: A skill wrapping the GitHub CLI for issues and pull requests
-Output: github-cli
-```
 
 ## Scripts
 
@@ -282,10 +207,9 @@ small test file - trivial one-liners are exempt.
 
 ## Skill categories & template selection
 
-> **Note**: For universal prompt design, personas, orchestration topologies, decision matrices, and Mermaid.js flowcharts, consult `ai-authoring-prompts`.
+> **Note**: For universal prompt body design, cognitive architectures, persona archetypes, negative constraints, and output contracts, load and apply `ai-authoring-prompts`.
 
-Before writing a body, pick the closest category and start from its template
-in `templates/`. When two categories fit, prefer the simpler one.
+Before creating a skill, select the structural category template that matches the capability:
 
 | Category | Use when | Template |
 |---|---|---|
@@ -295,14 +219,10 @@ in `templates/`. When two categories fit, prefer the simpler one.
 | Subagent orchestrator | Decomposes work across parallel subagents and synthesizes their output | `templates/orchestrator.md` |
 | Meta / self-improving | Authors, audits, or optimizes skills themselves | `templates/meta.md` |
 
-Every body keeps the same skeleton regardless of category: Objective →
-When to use → procedure/rules → What NOT to do → exit criteria, all in
-third-person imperative. The "What NOT to do" section pre-writes rebuttals to
-likely shortcuts so the agent cannot rationalize skipping steps.
+Every skill body follows a consistent structural hierarchy: **Objective → When to Use → Procedure / Directives → What NOT to Do → Verification / Exit Criteria**.
+- **Container structure**: Governed by this skill (`name`, `description`, `references/` and `scripts/` layout).
+- **Prompt body contents**: Composed using patterns and archetypes from `ai-authoring-prompts`.
 
-Frontmatter stays `name` + `description` - those are the only standard keys.
-Platform-specific extras are documented under Platform-specific extensions;
-treat them as optional non-portable additions, never prerequisites.
 
 ## Workflows
 

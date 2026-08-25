@@ -113,16 +113,23 @@ Up-to-date sources:
 
 ---
 
-## 5. Directive Writing Standards
+## 5. Command Prompt Body & Cognitive Architecture
 
-Commands are actionable instructions. Apply these core principles:
+The markdown body following the frontmatter defines the command or workflow instructions executed by the agent.
 
-1. **Imperative Tone**: Write commands as direct instructions ("Inspect the diff", "Verify unit tests", not "You should check").
-2. **Explicit Verification Checkpoints**: Mandate verification before completion ("Run `npm test` before presenting the final result").
-3. **Approval Gates for Destructive Actions**: For state modifications or git pushes, insert explicit checkpoints:
-   `**STOP & PROMPT**: Present plan and request explicit user approval before modifying files.`
-4. **Structured Output Contracts**: Specify the exact markdown shape expected (e.g., severity tables, checklists).
-5. **Token Economy**: Keep command prompt bodies lean; large structured documentation belongs in skill `references/`.
+> **Note**: For composing prompt bodies, directive phrasing, approval checkpoints, negative constraints, and output contracts, load and apply `ai-authoring-prompts`.
+
+When authoring command bodies, apply the cognitive patterns from `ai-authoring-prompts`:
+
+1. **Directive Phrasing & RFC 2119 Directives**: Use direct, imperative commands (`Run`, `Verify`, `Refactor`) and explicit `MUST` / `MUST NOT` constraints rather than conversational hedges (`modern-prompt-principles.md`).
+2. **Sequential Topologies & Phase Gates**: Multi-step workflows should follow the Sequential Pipeline topology and SOP Task Runner archetype from `ai-authoring-prompts` with explicit `- [ ]` checklists and phase transition criteria.
+3. **Human Approval Gates (`[P3.2]`)**: Insert explicit stopping checkpoints before destructive actions (file overwrites, git pushes, migrations):
+   ```markdown
+   ## ⚠️ CHECKPOINT: User Approval Gate
+   - **STOP & PROMPT**: Present plan and request explicit user confirmation before executing changes.
+   ```
+4. **Negative Constraints (`[P3.1]`)**: Pre-empt common shortcut rationalizations (e.g. *"Do NOT perform unrequested refactorings outside of `$1`"*).
+5. **Structured Output Contracts (`[P5.1]`–`[P5.4]`)**: Define machine-verifiable return formats (markdown tables, diff blocks, or checklist logs).
 
 ---
 
@@ -137,6 +144,7 @@ Select the closest template from `templates/` when authoring a new command or wo
 | **Isolated Subtask** | `templates/isolated-subtask.md` | Deep audits and research running in a child subagent context |
 | **Sequential Workflow** | `templates/sequential-workflow.md` | Multi-phase procedures with human approval checkpoints |
 | **Scripted Workflow** | `templates/scripted-workflow.js` | Claude Code JavaScript workflows with subagent fan-out & schemas |
+
 
 ---
 

@@ -69,9 +69,31 @@ Treat the model as a highly capable, senior colleague who has **zero prior conte
 
 ---
 
-## 5. Summary of Core Directives
+## 5. Universal Prompt Writing Patterns
+
+### Calibrated Specificity
+Match precision to fragility. Steps that must not vary get exact commands or rigid syntax; judgment calls get heuristics:
+- **Exact (High Fragility)**: `Validate frontmatter: awk '/^---$/{c++;next} c==1' SKILL.md | yq '.name'`
+- **Heuristic (Low Fragility)**: `When two categories fit, prefer the simpler one.`
+
+### Instruction Atomicity
+One action per bullet or step. Compound instructions (e.g. *"Validate the output, then commit the changes and update the changelog"*) get partially executed by LLMs. Split them into distinct, single-action items or sequential checklists.
+
+### Consistent Terminology
+One concept, one word. Calling bundled detail a "reference file" in one section and a "resource" in another makes agents treat them as different entities. Define each term once and reuse it verbatim throughout the prompt.
+
+### Resilient Directives (Explain "Why")
+State the rationale behind non-obvious rules rather than relying solely on bare `MUST` statements. Instructions with clear reasoning survive ambiguous edge cases where rigid commands break down.
+
+### Write for the General Case (Theory of Mind)
+Apply theory of mind to prompt authoring: anticipate how the model will interpret each instruction in situations beyond the immediate test case. Prefer rules that generalize over ones over-fitted to the specific example that prompted them.
+
+---
+
+## 6. Summary of Core Directives
 
 1. **Be Direct & Imperative**: Use active verbs ("Analyze", "Extract", "Refactor") rather than conversational hedges ("Please try to...").
 2. **Front-Load Absolute Constraints**: Critical MUST/MUST NOT rules sit near the top or inside dedicated constraint blocks.
 3. **Specify Negative Constraints**: Explicitly rule out tempting anti-patterns and shortcuts ("Do NOT use `any`", "NEVER run `rm -rf` on symlinks").
 4. **Use Concrete Verification Criteria**: Provide runnable validation checks or verifiable conditions that define task completion.
+
