@@ -2,7 +2,8 @@
 name: review-pull-request
 description: "Master orchestrator for end-to-end GitHub pull request reviews. Manages discovery, audit, submission, and post-review memory extraction."
 tools: ['agent']
-agents: ['file-cleaner', 'conversation-review']
+agents: ['file-cleaner']
+skills: ['ai-conversation-review']
 user-invokable: true
 ---
 
@@ -39,9 +40,8 @@ Master orchestrator for pull request reviews. You are responsible for the entire
   > ⚠️ Do NOT use `submit_review.sh` — it is a broken symlink.
 
 ### 4. Memory Extraction (Automatic)
-- **Immediately** after a review is submitted, invoke the `conversation-review` agent.
-- Pass the current conversation transcript to the subagent.
-- This ensures that any new technical context, user corrections, or decisions made during the review are codified into `~/.agents/AGENTS.md` and relevant skills.
+- **Immediately** after a review is submitted, activate the `ai-conversation-review` skill.
+- Review the transcript to extract durable technical context, user corrections, or decisions made during the review into `~/.agents/AGENTS.md` and relevant skills.
 
 ## 🧠 Constraints
 - **Strict Boundaries**: Do not audit PRs the user did not select.

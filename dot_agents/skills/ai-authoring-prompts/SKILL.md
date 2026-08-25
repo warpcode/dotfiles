@@ -33,7 +33,7 @@ This skill governs **prompt content, cognitive architecture, language standards,
 
 ## 2. Modern Prompt Principles (Goal Scoping vs Micromanagement)
 
-Modern reasoning models (e.g. Claude 3.7 Sonnet / Adaptive Thinking, OpenAI o1/o3-mini, Gemini 2.0 Flash / Pro Thinking) possess native internal search tokens. Traditional procedural micromanagement (like manual "think step by step") is obsolete.
+Modern reasoning models possess native internal search tokens. Traditional procedural micromanagement (like manual "think step by step") is obsolete.
 
 ```mermaid
 flowchart TD
