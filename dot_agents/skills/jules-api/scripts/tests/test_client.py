@@ -43,6 +43,58 @@ class TestJulesClient(unittest.TestCase):
         self.client = JulesClient(api_key="test_api_key_123")
 
     @patch("jules.client.urlopen")
+    def test_list_sessions(self, mock_urlopen):
+        mock_response = MagicMock()
+        mock_response.getcode.return_value = 200
+        mock_response.read.return_value = json.dumps({
+            "sessions": [
+                {
+                    "id": "1111222233334444",
+                    "title": "Test Session",
+                    "state": "COMPLETED",
+                }
+            ]
+        }).encode("utf-8")
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        data = self.client.list_sessions()
+        self.assertIn("sessions", data)
+        self.assertEqual(len(data["sessions"]), 1)
+        self.assertEqual(data["sessions"][0]["id"], "1111222233334444")
+
+        # Verify request URL
+        req = mock_urlopen.call_args[0][0]
+        self.assertEqual(req.full_url, "https://jules.googleapis.com/v1alpha/sessions")
+
+    @patch("jules.client.urlopen")
+    def test_list_sessions_with_query_params(self, mock_urlopen):
+        mock_response = MagicMock()
+        mock_response.getcode.return_value = 200
+        mock_response.read.return_value = json.dumps({
+            "sessions": [
+                {
+                    "id": "1111222233334444",
+                    "title": "Test Session",
+                    "state": "COMPLETED",
+                }
+            ],
+            "nextPageToken": "next_token_123",
+        }).encode("utf-8")
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        data = self.client.list_sessions(
+            page_size=10, page_token="token_abc", filter_expr="state=COMPLETED"
+        )
+        self.assertIn("sessions", data)
+        self.assertEqual(data["nextPageToken"], "next_token_123")
+
+        # Verify query params in URL
+        req = mock_urlopen.call_args[0][0]
+        self.assertIn("pageSize=10", req.full_url)
+        self.assertIn("pageToken=token_abc", req.full_url)
+        self.assertIn("filter=state%3DCOMPLETED", req.full_url)
+
+    @patch("jules.client.urlopen")
     def test_list_sources(self, mock_urlopen):
         mock_response = MagicMock()
         mock_response.getcode.return_value = 200
