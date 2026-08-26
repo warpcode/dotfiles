@@ -66,12 +66,18 @@ def get_status_map(client, project_key=None):
         endpoint = f"rest/api/{JIRA_API_VERSION}/project/{project_key}/statuses"
         try:
             response = client.call("GET", endpoint)
-            # Flatten statuses from all issue types
-            return {
-                status["name"]: status.get("statusCategory", {}).get("name")
-                for itype in response
-                for status in itype.get("statuses", [])
-            }
+            # Flatten statuses from all issue types efficiently
+            status_map = {}
+            for itype in response:
+                statuses = itype.get("statuses")
+                if not statuses:
+                    continue
+                for status in statuses:
+                    name = status.get("name")
+                    if name and name not in status_map:
+                        cat = status.get("statusCategory")
+                        status_map[name] = cat.get("name") if isinstance(cat, dict) else None
+            return status_map
         except:
             pass
 
@@ -79,6 +85,12 @@ def get_status_map(client, project_key=None):
     endpoint = f"rest/api/{JIRA_API_VERSION}/status"
     try:
         response = client.call("GET", endpoint)
-        return {item["name"]: item.get("statusCategory", {}).get("name") for item in response}
+        status_map = {}
+        for item in response:
+            name = item.get("name")
+            if name:
+                cat = item.get("statusCategory")
+                status_map[name] = cat.get("name") if isinstance(cat, dict) else None
+        return status_map
     except:
         return {}
