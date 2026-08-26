@@ -71,7 +71,7 @@ def _parse_flat_yaml(text):
                 data[key] = {}
             elif rest.startswith("[") and rest.endswith("]"):
                 # Inline JSON array
-                items = [x.strip(" \"'") for x in rest[1:-1].split(",") if x.strip()]
+                items = [s for x in rest[1:-1].split(",") if (s := x.strip(" \"'"))]
                 data[key] = items
             elif rest in (">", "|"):
                 chunk = []
