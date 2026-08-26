@@ -106,6 +106,30 @@ class TestJulesClient(unittest.TestCase):
         self.assertEqual(data["id"], "9999999999999999999")
         self.assertEqual(data["state"], "QUEUED")
 
+    @patch("jules.client.urlopen")
+    def test_approve_plan(self, mock_urlopen):
+        mock_response = MagicMock()
+        mock_response.getcode.return_value = 200
+        mock_response.read.return_value = json.dumps({
+            "name": "sessions/4475409647262242777",
+            "state": "IN_PROGRESS",
+        }).encode("utf-8")
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        # Test standard approve_plan call with session prefix and whitespace
+        result = self.client.approve_plan(" sessions/4475409647262242777 ", " plan-123 ")
+        self.assertEqual(result["state"], "IN_PROGRESS")
+
+        # Verify urllib request details
+        req = mock_urlopen.call_args[0][0]
+        self.assertEqual(req.get_method(), "POST")
+        self.assertEqual(
+            req.full_url,
+            "https://jules.googleapis.com/v1alpha/sessions/4475409647262242777:approvePlan",
+        )
+        payload = json.loads(req.data.decode("utf-8"))
+        self.assertEqual(payload, {"planId": "plan-123"})
+
 
 class TestJulesFormatters(unittest.TestCase):
     def test_format_sources(self):
