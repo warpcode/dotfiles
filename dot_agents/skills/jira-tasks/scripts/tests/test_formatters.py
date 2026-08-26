@@ -5,9 +5,53 @@ import os
 # Add parent directory to sys.path to find the jira package
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from jira.formatters import _flatten_adf_list
+from jira.formatters import _flatten_adf_list, flatten_adf
 
 class TestFormatters(unittest.TestCase):
+    def test_flatten_adf_none(self):
+        self.assertEqual(flatten_adf(None), "")
+
+    def test_flatten_adf_non_dict_non_list(self):
+        self.assertEqual(flatten_adf("invalid input"), "")
+        self.assertEqual(flatten_adf(123), "")
+
+    def test_flatten_adf_empty_dict(self):
+        self.assertEqual(flatten_adf({}), "")
+
+    def test_flatten_adf_simple_text(self):
+        node = {"type": "text", "text": "Hello World"}
+        self.assertEqual(flatten_adf(node), "Hello World")
+
+    def test_flatten_adf_paragraph(self):
+        node = {
+            "type": "paragraph",
+            "content": [{"type": "text", "text": "Paragraph text"}]
+        }
+        self.assertEqual(flatten_adf(node), "Paragraph text\n")
+
+    def test_flatten_adf_complex_doc(self):
+        node = {
+            "type": "doc",
+            "version": 1,
+            "content": [
+                {
+                    "type": "heading",
+                    "content": [{"type": "text", "text": "Header"}]
+                },
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {"type": "text", "text": "Hello "},
+                        {"type": "mention", "attrs": {"text": "@Alice"}},
+                        {"type": "hardBreak"},
+                        {"type": "inlineCard", "attrs": {"url": "https://example.com"}}
+                    ]
+                }
+            ]
+        }
+        expected = "Header\nHello @Alice\nhttps://example.com\n"
+        self.assertEqual(flatten_adf(node), expected)
+
     def test_flatten_adf_list_none_input(self):
         parts = []
         _flatten_adf_list(None, parts)
