@@ -270,7 +270,7 @@ def run(port=18081):
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        pass
+        logging.info("KeyboardInterrupt received.")
     logging.info("Stopping OpenAI Bridge server...")
     httpd.server_close()
 
