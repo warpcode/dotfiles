@@ -106,6 +106,43 @@ class TestJulesClient(unittest.TestCase):
         self.assertEqual(data["id"], "9999999999999999999")
         self.assertEqual(data["state"], "QUEUED")
 
+    @patch("jules.client.urlopen")
+    def test_get_activity(self, mock_urlopen):
+        mock_response = MagicMock()
+        mock_response.getcode.return_value = 200
+        mock_response.read.return_value = json.dumps({
+            "id": "act-12345678",
+            "originator": "agent",
+            "createTime": "2026-08-22T08:50:25Z",
+        }).encode("utf-8")
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        data = self.client.get_activity("4475409647262242777", "act-12345678")
+        self.assertEqual(data["id"], "act-12345678")
+        self.assertEqual(data["originator"], "agent")
+
+        # Verify request URL constructed correctly
+        req_args, _ = mock_urlopen.call_args
+        req = req_args[0]
+        self.assertTrue(req.full_url.endswith("/sessions/4475409647262242777/activities/act-12345678"))
+
+    @patch("jules.client.urlopen")
+    def test_get_activity_with_prefixed_and_padded_ids(self, mock_urlopen):
+        mock_response = MagicMock()
+        mock_response.getcode.return_value = 200
+        mock_response.read.return_value = json.dumps({
+            "id": "act-12345678",
+            "originator": "agent",
+        }).encode("utf-8")
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        data = self.client.get_activity(" sessions/4475409647262242777 ", " sessions/4475409647262242777/activities/act-12345678 ")
+        self.assertEqual(data["id"], "act-12345678")
+
+        req_args, _ = mock_urlopen.call_args
+        req = req_args[0]
+        self.assertTrue(req.full_url.endswith("/sessions/4475409647262242777/activities/act-12345678"))
+
 
 class TestJulesFormatters(unittest.TestCase):
     def test_format_sources(self):
