@@ -265,7 +265,7 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
 
 def run(port=18081):
     server_address = ("", port)
-    httpd = http.server.HTTPServer(server_address, OpenAIBridgeHandler)
+    httpd = http.server.ThreadingHTTPServer(server_address, OpenAIBridgeHandler)
     logging.info(f"Starting OpenAI Bridge server on port {port}...")
     try:
         httpd.serve_forever()
