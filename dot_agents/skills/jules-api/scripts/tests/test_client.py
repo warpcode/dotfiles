@@ -1,9 +1,11 @@
+import io
 import json
 import os
 import sys
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+from urllib.error import HTTPError
 
 # Add scripts directory to sys.path
 scripts_dir = Path(__file__).resolve().parent.parent
@@ -105,6 +107,72 @@ class TestJulesClient(unittest.TestCase):
         )
         self.assertEqual(data["id"], "9999999999999999999")
         self.assertEqual(data["state"], "QUEUED")
+
+    @patch("jules.client.urlopen")
+    def test_call_http_error_mapped_codes(self, mock_urlopen):
+        status_expectations = [
+            (400, "Bad Request (400): invalid parameter or payload."),
+            (401, "Authentication Failed (401): invalid or missing API key."),
+            (403, "Forbidden (403): access denied to this resource."),
+            (404, "Not Found (404): the requested resource was not found."),
+            (429, "Rate Limited (429): too many requests."),
+            (500, "Internal Server Error (500): Jules service encountered an error."),
+            (503, "Service Unavailable (503): Jules service temporarily unavailable."),
+        ]
+
+        for code, expected_text in status_expectations:
+            with self.subTest(code=code):
+                err = HTTPError("http://example.com", code, "Error", {}, io.BytesIO(b""))
+                mock_urlopen.side_effect = err
+                with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
+                    with self.assertRaises(SystemExit) as cm:
+                        self.client.call("GET", "sources")
+                    self.assertEqual(cm.exception.code, 1)
+                    self.assertIn(expected_text, mock_stderr.getvalue())
+
+    @patch("jules.client.urlopen")
+    def test_call_http_error_custom_json_message(self, mock_urlopen):
+        json_body = json.dumps({"error": {"message": "Custom quota exceeded"}}).encode("utf-8")
+        err = HTTPError("http://example.com", 429, "Too Many Requests", {}, io.BytesIO(json_body))
+        mock_urlopen.side_effect = err
+
+        with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
+            with self.assertRaises(SystemExit) as cm:
+                self.client.call("GET", "sources")
+            self.assertEqual(cm.exception.code, 1)
+            self.assertIn("Rate Limited (429): Custom quota exceeded", mock_stderr.getvalue())
+
+    @patch("jules.client.urlopen")
+    def test_call_http_error_non_json_body(self, mock_urlopen):
+        err = HTTPError("http://example.com", 502, "Bad Gateway", {}, io.BytesIO(b"<html>502 Bad Gateway</html>"))
+        mock_urlopen.side_effect = err
+
+        with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
+            with self.assertRaises(SystemExit) as cm:
+                self.client.call("GET", "sources")
+            self.assertEqual(cm.exception.code, 1)
+            self.assertIn("HTTP request failed with status 502: <html>502 Bad Gateway</html>", mock_stderr.getvalue())
+
+    @patch("jules.client.urlopen")
+    def test_call_http_error_no_fp(self, mock_urlopen):
+        err = HTTPError("http://example.com", 500, "Internal Error", {}, None)
+        mock_urlopen.side_effect = err
+
+        with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
+            with self.assertRaises(SystemExit) as cm:
+                self.client.call("GET", "sources")
+            self.assertEqual(cm.exception.code, 1)
+            self.assertIn("Internal Server Error (500): Jules service encountered an error.", mock_stderr.getvalue())
+
+    @patch("jules.client.urlopen")
+    def test_call_general_exception(self, mock_urlopen):
+        mock_urlopen.side_effect = Exception("Connection refused")
+
+        with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
+            with self.assertRaises(SystemExit) as cm:
+                self.client.call("GET", "sources")
+            self.assertEqual(cm.exception.code, 1)
+            self.assertIn("Network request failed: Connection refused", mock_stderr.getvalue())
 
 
 class TestJulesFormatters(unittest.TestCase):
