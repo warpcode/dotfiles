@@ -28,6 +28,24 @@ class TestUtils(unittest.TestCase):
         dt = parse_jira_time(ts)
         self.assertEqual(dt.hour, 9)
 
+        # Test with negative offset without colon
+        ts = "2023-05-14T09:16:37.070-0500"
+        dt = parse_jira_time(ts)
+        self.assertEqual(dt.hour, 14)  # 09:00 - (-05:00) = 14:00 UTC
+
+        # Test with negative offset with colon
+        ts = "2023-05-14T09:16:37.070-05:00"
+        dt = parse_jira_time(ts)
+        self.assertEqual(dt.hour, 14)
+
+        # Edge cases: None and empty input
+        self.assertIsNone(parse_jira_time(None))
+        self.assertIsNone(parse_jira_time(""))
+
+        # Edge cases: Invalid timestamp format
+        self.assertIsNone(parse_jira_time("invalid-date"))
+        self.assertIsNone(parse_jira_time("2023-99-99T99:99:99"))
+
     def test_get_work_seconds(self):
         # Mon 9:00 to Mon 10:00 (1 hour = 3600s)
         start = datetime(2023, 5, 15, 9, 0, tzinfo=timezone.utc)
