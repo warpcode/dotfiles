@@ -64,7 +64,6 @@ def setup_arguments():
     parser.add_argument("-profile", type=str, help="x264 profile to use", default='high')
     parser.add_argument("-tune", type=str, help="x264 tune option to use", default='')
     parser.add_argument("-level", type=str, help="x264 level to use", default='4.1')
-    #parser.add_argument("-x264opts", type=str, help="additional x264 options to use", default='')
     parser.add_argument("-audio-bitrate", type=int, help="Set audio bitrate in kb. 0 is copy", default=256)
     parser.add_argument('-twopass', action='store_true', default=False, help="Enables two pass encoding if a bitrate is set")
     return parser.parse_args()
