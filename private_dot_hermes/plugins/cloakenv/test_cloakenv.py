@@ -32,6 +32,11 @@ class TestCloakEnvSource(unittest.TestCase):
         self.assertFalse(self.source.is_enabled({"enabled": False}))
         self.assertTrue(self.source.is_enabled({"enabled": True}))
 
+    def test_teardown(self):
+        self.source._cache["test:key"] = (100.0, {"A": "B"})
+        self.source.teardown()
+        self.assertEqual(len(self.source._cache), 0)
+
     def test_fetch_missing_token(self):
         with patch.dict(os.environ, {}, clear=True):
             cfg = {"enabled": True, "path": "/services/my-service"}
