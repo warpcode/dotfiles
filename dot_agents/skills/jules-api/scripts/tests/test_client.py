@@ -68,6 +68,32 @@ class TestJulesClient(unittest.TestCase):
         self.assertEqual(data["sources"][0]["id"], "github/warpcode/cloakenv")
 
     @patch("jules.client.urlopen")
+    def test_get_source(self, mock_urlopen):
+        mock_response = MagicMock()
+        mock_response.getcode.return_value = 200
+        mock_response.read.return_value = json.dumps({
+            "name": "sources/github/warpcode/cloakenv",
+            "id": "github/warpcode/cloakenv",
+            "githubRepo": {
+                "owner": "warpcode",
+                "repo": "cloakenv",
+            },
+        }).encode("utf-8")
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        # Test without sources/ prefix
+        data1 = self.client.get_source("github/warpcode/cloakenv")
+        self.assertEqual(data1["name"], "sources/github/warpcode/cloakenv")
+        req1 = mock_urlopen.call_args[0][0]
+        self.assertEqual(req1.full_url, "https://jules.googleapis.com/v1alpha/sources/github/warpcode/cloakenv")
+
+        # Test with sources/ prefix and leading/trailing whitespace
+        data2 = self.client.get_source("  sources/github/warpcode/cloakenv  ")
+        self.assertEqual(data2["name"], "sources/github/warpcode/cloakenv")
+        req2 = mock_urlopen.call_args[0][0]
+        self.assertEqual(req2.full_url, "https://jules.googleapis.com/v1alpha/sources/github/warpcode/cloakenv")
+
+    @patch("jules.client.urlopen")
     def test_get_session(self, mock_urlopen):
         mock_response = MagicMock()
         mock_response.getcode.return_value = 200
