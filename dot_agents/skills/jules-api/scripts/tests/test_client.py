@@ -198,6 +198,76 @@ class TestJulesFormatters(unittest.TestCase):
         self.assertIn("act-1234", md)
         self.assertIn("Plan Generated", md)
 
+    def test_format_activity_basic(self):
+        data = {
+            "name": "sessions/s1/activities/act-987654",
+            "createTime": "2026-08-22T10:00:00Z",
+        }
+        md = format_activity(data)
+        self.assertIn("## Activity: `act-987654`", md)
+        self.assertIn("**Originator:** `unknown`", md)
+        self.assertIn("2026-08-22 10:00:00 UTC", md)
+
+    def test_format_activity_plan_generated(self):
+        data = {
+            "id": "act-plan-1",
+            "originator": "agent",
+            "createTime": "2026-08-22T10:00:00Z",
+            "planGenerated": {
+                "plan": {
+                    "id": "plan-12345",
+                    "steps": [
+                        {"index": 0, "title": "First Step", "description": "Do task 1"},
+                        {"index": 1},
+                    ],
+                }
+            },
+        }
+        md = format_activity(data)
+        self.assertIn("### Plan Details (`plan-12345`)", md)
+        self.assertIn("#### Step 1: First Step", md)
+        self.assertIn("Do task 1", md)
+        self.assertIn("#### Step 2: Untitled Step", md)
+        self.assertIn("_No description_", md)
+
+    def test_format_activity_plan_approved(self):
+        data = {
+            "id": "act-app-1",
+            "originator": "user",
+            "planApproved": {"planId": "plan-12345"},
+        }
+        md = format_activity(data)
+        self.assertIn("- **Approved Plan ID:** `plan-12345`", md)
+
+    def test_format_activity_messages(self):
+        data = {
+            "id": "act-msg-1",
+            "originator": "agent",
+            "agentMessaged": {"agentMessage": "Hello from agent"},
+            "userMessaged": {"userMessage": "Hello from user"},
+        }
+        md = format_activity(data)
+        self.assertIn("### Agent Message\nHello from agent", md)
+        self.assertIn("### User Message\nHello from user", md)
+
+    def test_format_activity_artifacts(self):
+        data = {
+            "id": "act-art-1",
+            "originator": "agent",
+            "artifacts": [
+                {
+                    "changeSet": {
+                        "gitPatch": {
+                            "unidiffPatch": "--- a/file.py\n+++ b/file.py\n@@ -1,1 +1,1 @@\n-old\n+new"
+                        }
+                    }
+                }
+            ],
+        }
+        md = format_activity(data)
+        self.assertIn("### Artifacts / Patches", md)
+        self.assertIn("```diff\n--- a/file.py\n+++ b/file.py\n@@ -1,1 +1,1 @@\n-old\n+new\n```", md)
+
 
 if __name__ == "__main__":
     unittest.main()
