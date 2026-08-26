@@ -106,6 +106,44 @@ class TestJulesClient(unittest.TestCase):
         self.assertEqual(data["id"], "9999999999999999999")
         self.assertEqual(data["state"], "QUEUED")
 
+    @patch("jules.client.urlopen")
+    def test_list_activities(self, mock_urlopen):
+        mock_response = MagicMock()
+        mock_response.getcode.return_value = 200
+        mock_response.read.return_value = json.dumps({
+            "activities": [
+                {
+                    "id": "act-123",
+                    "originator": "agent",
+                    "createTime": "2026-08-22T08:50:25Z",
+                }
+            ],
+            "nextPageToken": "token456",
+        }).encode("utf-8")
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        # Test basic list_activities call with sessions/ prefix stripping
+        data = self.client.list_activities(session_id="sessions/4475409647262242777")
+        self.assertIn("activities", data)
+        self.assertEqual(len(data["activities"]), 1)
+        self.assertEqual(data["activities"][0]["id"], "act-123")
+        req = mock_urlopen.call_args[0][0]
+        self.assertEqual(
+            req.full_url,
+            "https://jules.googleapis.com/v1alpha/sessions/4475409647262242777/activities",
+        )
+
+        # Test list_activities with pagination query parameters
+        data = self.client.list_activities(
+            session_id="4475409647262242777",
+            page_size=10,
+            page_token="token123",
+        )
+        self.assertEqual(data["nextPageToken"], "token456")
+        req = mock_urlopen.call_args[0][0]
+        self.assertIn("pageSize=10", req.full_url)
+        self.assertIn("pageToken=token123", req.full_url)
+
 
 class TestJulesFormatters(unittest.TestCase):
     def test_format_sources(self):
