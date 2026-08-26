@@ -11,29 +11,27 @@ def calculate_metrics(issue, status_map=None, now=None):
 
     fields = issue.get("fields", {})
     val = issue["changelog"]
-    histories = sorted(val.get("histories", []), key=lambda x: parse_jira_time(x.get("created")))
 
-    # Build timeline of status changes
-    initial_status = None
-    for h in histories:
-        for item in h.get("items", []):
-            if item.get("field") == "status":
-                initial_status = item.get("fromString")
-                break
-        if initial_status:
-            break
+    # Pre-parse history timestamps to avoid duplicate parsing during sorting and processing
+    parsed_histories = [
+        (parse_jira_time(h.get("created")), h) for h in val.get("histories", [])
+    ]
+    # Handle None dates safely during sorting without causing TypeError when comparing Nones
+    parsed_histories.sort(key=lambda x: (x[0] is None, x[0] or datetime.min.replace(tzinfo=timezone.utc)))
 
-    # If we can't find fromString in the first history, assume the first toString was the change from 'New'
-    if not initial_status:
-        initial_status = "New"
-
-    timeline = [{"status": initial_status, "time": parse_jira_time(fields.get("created"))}]
+    # Build timeline of status changes in a single pass over histories
+    timeline = [{"status": "New", "time": parse_jira_time(fields.get("created"))}]
     transition_count = 0
+    found_initial = False
 
-    for h in histories:
-        created_dt = parse_jira_time(h.get("created"))
+    for created_dt, h in parsed_histories:
         for item in h.get("items", []):
             if item.get("field") == "status":
+                if not found_initial:
+                    from_str = item.get("fromString")
+                    if from_str:
+                        timeline[0]["status"] = from_str
+                        found_initial = True
                 timeline.append({"status": item.get("toString"), "time": created_dt})
                 transition_count += 1
 
