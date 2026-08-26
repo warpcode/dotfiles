@@ -126,6 +126,58 @@ class TestJulesFormatters(unittest.TestCase):
         self.assertIn("main", md)
         self.assertIn("token123", md)
 
+    def test_format_source_complete(self):
+        data = {
+            "id": "github/warpcode/cloakenv",
+            "name": "sources/github/warpcode/cloakenv",
+            "githubRepo": {
+                "owner": "warpcode",
+                "repo": "cloakenv",
+                "defaultBranch": {"displayName": "main"},
+                "branches": [
+                    {"displayName": "main"},
+                    {"displayName": "dev"},
+                ],
+            },
+        }
+        md = format_source(data)
+        self.assertIn("## Source: `github/warpcode/cloakenv`", md)
+        self.assertIn("- **Repository:** `warpcode/cloakenv`", md)
+        self.assertIn("- **Default Branch:** `main`", md)
+        self.assertIn("- **Active Branches (2):**", md)
+        self.assertIn("  - `main`", md)
+        self.assertIn("  - `dev`", md)
+
+    def test_format_source_id_fallback_and_no_branches(self):
+        data = {
+            "name": "sources/github/warpcode/cloakenv",
+            "githubRepo": {},
+        }
+        md = format_source(data)
+        self.assertIn("## Source: `github/warpcode/cloakenv`", md)
+        self.assertIn("- **Repository:** `N/A/N/A`", md)
+        self.assertIn("- **Default Branch:** `N/A`", md)
+        self.assertIn("- **Active Branches (0):**", md)
+        self.assertIn("  - _No branches reported_", md)
+
+    def test_format_source_truncated_branches(self):
+        branches = [{"displayName": f"feature-{i}"} for i in range(20)]
+        data = {
+            "id": "github/warpcode/cloakenv",
+            "githubRepo": {
+                "owner": "warpcode",
+                "repo": "cloakenv",
+                "defaultBranch": {"displayName": "main"},
+                "branches": branches,
+            },
+        }
+        md = format_source(data)
+        self.assertIn("- **Active Branches (20):**", md)
+        self.assertIn("  - `feature-0`", md)
+        self.assertIn("  - `feature-14`", md)
+        self.assertNotIn("  - `feature-15`", md)
+        self.assertIn("  - _...and 5 more branches_", md)
+
     def test_format_sessions(self):
         data = {
             "sessions": [
