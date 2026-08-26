@@ -20,6 +20,7 @@ from jules.formatters import (
     format_source,
     format_sources,
 )
+from jules.utils import format_datetime
 
 
 class TestJulesAuth(unittest.TestCase):
@@ -197,6 +198,28 @@ class TestJulesFormatters(unittest.TestCase):
         md = format_activities(data)
         self.assertIn("act-1234", md)
         self.assertIn("Plan Generated", md)
+
+
+class TestJulesUtils(unittest.TestCase):
+    def test_format_datetime_none(self):
+        self.assertEqual(format_datetime(None), "N/A")
+
+    def test_format_datetime_empty(self):
+        self.assertEqual(format_datetime(""), "N/A")
+
+    def test_format_datetime_utc_z(self):
+        iso_str = "2026-08-22T08:50:25Z"
+        expected = "2026-08-22 08:50:25 UTC"
+        self.assertEqual(format_datetime(iso_str), expected)
+
+    def test_format_datetime_with_offset(self):
+        iso_str = "2026-08-22T08:50:25+00:00"
+        expected = "2026-08-22 08:50:25 UTC"
+        self.assertEqual(format_datetime(iso_str), expected)
+
+    def test_format_datetime_invalid(self):
+        invalid_str = "not-a-datetime-string"
+        self.assertEqual(format_datetime(invalid_str), invalid_str)
 
 
 if __name__ == "__main__":
