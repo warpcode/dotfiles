@@ -162,9 +162,9 @@ def parse_markdown_plain_text(text: str) -> List[Dict[str, Any]]:
         header_match = pattern.match(part_clean)
         if header_match:
             header_lower = part_clean.lower()
-            if any(k in header_lower for k in ("user", "human")):
+            if "user" in header_lower or "human" in header_lower:
                 current_role = "user"
-            elif any(k in header_lower for k in ("assistant", "ai")):
+            elif "assistant" in header_lower or "ai" in header_lower:
                 current_role = "assistant"
             elif "system" in header_lower:
                 current_role = "system"
