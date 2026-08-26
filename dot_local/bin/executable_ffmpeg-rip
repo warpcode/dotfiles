@@ -30,9 +30,6 @@ def which(program):
     return None
 
 def get_executable():
-    #executable = which('avconv')
-    #if not executable:
-    #    executable = which('ffmpeg')
     executable = which('ffmpeg')
     return executable;
 
