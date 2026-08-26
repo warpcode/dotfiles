@@ -30,6 +30,7 @@ import tempfile
 from pathlib import Path
 
 NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*(\.instructions)?$")
+ROOT_MEMORY_FILES = {"AGENTS.md", "CLAUDE.md", "GEMINI.md", ".cursorrules", "SOUL.md", ".hermes.md"}
 
 try:
     import yaml as _yaml
@@ -132,7 +133,7 @@ def validate_rule(file_path):
     name = file_path.name
 
     # Check for plain root files without frontmatter (AGENTS.md, CLAUDE.md, GEMINI.md, .cursorrules)
-    is_root_memory = name in ("AGENTS.md", "CLAUDE.md", "GEMINI.md", ".cursorrules", "SOUL.md", ".hermes.md")
+    is_root_memory = name in ROOT_MEMORY_FILES
 
     # Extension & Filename format check
     stem = file_path.stem
@@ -328,7 +329,7 @@ def main(argv=None):
                     if (
                         f.endswith((".instructions.md", ".mdc", ".md", ".rules"))
                         and not f.startswith(".")
-                        or f in ("AGENTS.md", "CLAUDE.md", "GEMINI.md", ".cursorrules", "SOUL.md", ".hermes.md")
+                        or f in ROOT_MEMORY_FILES
                     ):
                         all_files.append(Path(root) / f)
 
