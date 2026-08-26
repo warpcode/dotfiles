@@ -106,6 +106,42 @@ class TestJulesClient(unittest.TestCase):
         self.assertEqual(data["id"], "9999999999999999999")
         self.assertEqual(data["state"], "QUEUED")
 
+    @patch("jules.client.urlopen")
+    def test_send_message_success(self, mock_urlopen):
+        mock_response = MagicMock()
+        mock_response.getcode.return_value = 200
+        mock_response.read.return_value = json.dumps({
+            "name": "sessions/4475409647262242777/activities/act-123",
+            "originator": "user",
+            "userMessage": {"message": "Please add unit tests."},
+        }).encode("utf-8")
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        data = self.client.send_message("4475409647262242777", "Please add unit tests.")
+
+        self.assertIn("userMessage", data)
+        self.assertEqual(data["userMessage"]["message"], "Please add unit tests.")
+
+        mock_urlopen.assert_called_once()
+        req = mock_urlopen.call_args[0][0]
+        self.assertEqual(req.get_full_url(), "https://jules.googleapis.com/v1alpha/sessions/4475409647262242777:sendMessage")
+        self.assertEqual(req.get_method(), "POST")
+        self.assertEqual(json.loads(req.data.decode("utf-8")), {"message": "Please add unit tests."})
+
+    @patch("jules.client.urlopen")
+    def test_send_message_with_session_prefix_and_whitespace(self, mock_urlopen):
+        mock_response = MagicMock()
+        mock_response.getcode.return_value = 200
+        mock_response.read.return_value = json.dumps({}).encode("utf-8")
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        self.client.send_message("  sessions/4475409647262242777  ", "  Trimmed message  ")
+
+        mock_urlopen.assert_called_once()
+        req = mock_urlopen.call_args[0][0]
+        self.assertEqual(req.get_full_url(), "https://jules.googleapis.com/v1alpha/sessions/4475409647262242777:sendMessage")
+        self.assertEqual(json.loads(req.data.decode("utf-8")), {"message": "Trimmed message"})
+
 
 class TestJulesFormatters(unittest.TestCase):
     def test_format_sources(self):
