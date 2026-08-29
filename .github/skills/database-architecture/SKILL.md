@@ -30,7 +30,8 @@ Standard Operating Procedure for discovering data models, auditing ORM architect
 ### Phase 1: Model & ORM Discovery
 1. Identify the data access layer and ORM technology (Eloquent, Prisma, TypeORM, SQLAlchemy, GORM, raw SQL).
 2. Catalog all model entities, table mappings, and attributes.
-3. Read `@references/orm-patterns.md`.
+3. Map secondary datastores and search index integrations (Elasticsearch, Meilisearch, Scout drivers, lifecycle event synchronization).
+4. Read `@references/orm-patterns.md`.
 
 ### Phase 2: Relationship Extraction & ERD Modeling
 1. Inspect relationship definitions on model classes:

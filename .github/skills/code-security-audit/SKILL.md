@@ -33,7 +33,9 @@ Inspect environment files, middleware definitions, and server configuration:
 1. Check for committed secrets, credentials, or private keys in repository history and `.env` files.
 2. Verify HTTP security headers (`Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options`, `X-Content-Type-Options`).
 3. Inspect session cookie settings (`HttpOnly`, `Secure`, `SameSite=Lax/Strict`).
-4. Read `@references/configuration-hardening.md` for exhaustive checklists and regex patterns.
+4. Audit application encryption keys, cipher configurations (`AES-256-CBC`/`GCM`), and encrypted model attributes.
+5. Run dependency vulnerability and freshness audits (`composer audit`/`outdated`, `npm audit`/`outdated`).
+6. Read `@references/configuration-hardening.md` for exhaustive checklists and regex patterns.
 
 ### Phase 2: Vulnerability Code Scan
 Search codebase for common vulnerability anti-patterns:
@@ -42,7 +44,8 @@ Search codebase for common vulnerability anti-patterns:
 3. **Cross-Site Request Forgery (CSRF)**: Missing middleware or excluded state-modifying POST/PUT/DELETE routes.
 4. **Mass Assignment**: Unfiltered model updates binding directly to raw request payloads.
 5. **Authorization / IDOR**: Missing ownership checks on resource retrieval and mutation.
-6. Read `@references/vulnerability-patterns.md` for concrete detection rules.
+6. **File Upload Vulnerabilities**: Unvalidated file types, client MIME trust, path traversal in filenames, executable upload directories.
+7. Read `@references/vulnerability-patterns.md` for concrete detection rules.
 
 ### Phase 3: Calibrated Reporting
 Document all findings citing exact file paths, line ranges, and reproduction snippets.

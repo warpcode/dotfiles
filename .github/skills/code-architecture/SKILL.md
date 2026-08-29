@@ -15,7 +15,8 @@ Standard Operating Procedure for mapping application architecture, discovering r
 
 - Reverse-engineering an unfamiliar codebase's application architecture and entrypoints.
 - Auditing HTTP route definitions, URL patterns, controller dispatching, and middleware chains.
-- Evaluating architectural compliance (SOLID principles, Domain/Service/Repository separation).
+- Synchronizing route definitions with OpenAPI/Swagger contracts and detecting API contract drift.
+- Evaluating architectural compliance (SOLID principles, Domain/Service/Repository separation, frontend client layers).
 - Identifying and safely purging dead code, orphaned routes, and unused controllers.
 - Planning module reorganizations and code modernization.
 
@@ -28,20 +29,23 @@ Standard Operating Procedure for mapping application architecture, discovering r
 └─────────────────┘     └──────────────────────┘     └─────────────────────┘
 ```
 
-### Phase 1: Entrypoint & Route Mapping
-1. Identify framework entrypoints (`public/index.php`, `server.ts`, `main.go`, `app.py`).
-2. Catalog route definitions and API contracts across web, API, and console channels.
-3. Map middleware pipelines applied to route groups (Auth, RateLimiting, CORS, Logging).
-4. Read `@references/routing-and-controllers.md`.
+### Phase 1: Entrypoint, Route & Contract Mapping
+1. Identify backend entrypoints (`public/index.php`, `server.ts`, `main.go`, `app.py`) and frontend build configuration entrypoints (Vite, Webpack, Laravel Mix).
+2. Detect hybrid rendering strategies (SPA container routes vs SSR Blade/Twig templates) and multi-frontend / monorepo sub-applications (`package.json` trees).
+3. Catalog route definitions and middleware pipelines across web, API, and console channels.
+4. Audit OpenAPI / Swagger specifications against controller routes to detect contract drift, undocumented endpoints, and breaking changes.
+5. Read `@references/routing-and-controllers.md` and `@references/api-contracts-openapi.md`.
 
 ### Phase 2: Layer & Boundary Inspection
 1. Analyze separation of concerns:
-   - **Presentation Layer**: Controllers, API Handlers, CLI Commands.
+   - **Presentation Layer**: Controllers, API Handlers, CLI Commands, View Templates.
+   - **Frontend Client Layer**: Centralized HTTP clients, auth token injection, CSRF interceptors, error normalizers.
    - **Application Layer**: Use Cases, Action Classes, Event Handlers.
    - **Domain Layer**: Entities, Value Objects, Domain Services.
    - **Infrastructure Layer**: Repositories, Third-Party API Clients, DB Drivers.
-2. Check for leaky abstractions (e.g. database transactions or raw SQL inside presentation controllers).
-3. Read `@references/clean-layers-and-solid.md`.
+2. Audit frontend API client abstractions (centralized HTTP wrappers, auth token injection, CSRF handling, error normalization).
+3. Check for leaky abstractions (e.g. database transactions or raw SQL inside presentation controllers, direct HTTP calls inside UI components).
+4. Read `@references/clean-layers-and-solid.md`.
 
 ### Phase 3: Dead Code & Modernization
 1. Identify unreferenced functions, unreachable branches, and orphaned controller actions.
