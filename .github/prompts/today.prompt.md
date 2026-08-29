@@ -1,4 +1,5 @@
 ---
+name: today
 type: command
 description: >-
   Summarise Pull Requests merged today into main/master branch
