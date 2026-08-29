@@ -57,3 +57,47 @@ Verify application session settings (e.g., `config/session.php`, express-session
 - Restrict `allowed_origins` to explicitly verified domain names.
 - Avoid wildcard origins on authenticated API endpoints.
 
+---
+
+## 5. Application Encryption-at-Rest & Cipher Auditing
+
+### Auditing ORM Encrypted Attributes
+- Ensure Personally Identifiable Information (PII), secrets, financial details, or sensitive health data stored in the database utilize encrypted casting:
+  ```php
+  // Laravel Eloquent Model
+  protected $casts = [
+      'ssn' => 'encrypted',
+      'api_token' => 'encrypted',
+      'bank_account' => 'encrypted',
+  ];
+  ```
+- Verify queries do not attempt raw SQL filters (`WHERE ssn = ...`) on encrypted columns unless deterministic encryption / blind indexing (e.g. CipherSweet) is deliberately implemented.
+
+### Application Key Entropy & Cipher Strength
+- Ensure `APP_KEY` / encryption secrets are cryptographically random with sufficient entropy (e.g., 256 bits).
+- Verify secure cipher algorithm configuration (e.g. `AES-256-CBC` or `AES-256-GCM` in `config/app.php`). Never use deprecated or weak ciphers (e.g., DES, 3DES, RC4, or unauthenticated modes without MAC).
+- Ensure key rotation policies and mechanisms are in place where applicable.
+
+---
+
+## 6. Dependency Freshness & Upgrade Triage
+
+### Auditing Dependency Vulnerabilities & Freshness
+Run automated package audit commands to detect known CVEs and assess dependency drift:
+```bash
+# Security CVE audits
+composer audit
+npm audit
+
+# Outdated dependency inspection
+composer outdated --direct
+npm outdated
+```
+
+### Semver Risk Categorization & Upgrade Strategy
+When triaging outdated packages or security patches, categorize risk according to semantic versioning (SemVer):
+- **Patch Releases (`x.y.Z`)**: Bug fixes and backward-compatible security patches. Low risk; prioritize immediate deployment for CVE remediation.
+- **Minor Releases (`x.Y.z`)**: New functionality in a backward-compatible manner. Moderate risk; review release notes for deprecations or behavioral changes, test regression suites.
+- **Major Releases (`X.y.z`)**: Breaking API changes and architectural shifts. High risk; plan dedicated upgrade tasks with comprehensive integration and acceptance testing.
+
+

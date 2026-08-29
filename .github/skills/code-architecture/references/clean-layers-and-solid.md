@@ -37,3 +37,23 @@ Reference guide for evaluating architectural boundaries and object-oriented desi
 3. **Hidden Dependencies**:
    - Direct calls to global singletons or static state (`App::make()`, `new ConcreteService()`) inside business logic instead of constructor injection.
 
+---
+
+## 3. Frontend API Client Abstractions
+
+Audit centralized HTTP clients, API client wrappers, and network middleware to ensure proper architectural abstraction between UI components and backend communication:
+
+1. **Centralized HTTP Client Instances**:
+   - Ensure all frontend API requests route through a single, configured HTTP client instance (e.g., custom Axios instance `api.ts`, Fetch wrapper, or Ky instance) rather than scattered `fetch()` or `axios` calls across UI components.
+   - Verify Base URL resolution and environment-specific variable configuration (e.g., `VITE_API_URL`, `process.env.NEXT_PUBLIC_API_URL`).
+2. **CSRF & Security Token Interceptors**:
+   - Audit automatic CSRF token extraction and header injection for session-authenticated single-page apps (e.g., `X-XSRF-TOKEN` cookie extraction to `X-CSRF-TOKEN` header).
+   - Verify proper credentials handling (`withCredentials: true` or `credentials: 'include'`) across CORS and same-origin requests.
+3. **Authentication Token Injection**:
+   - Inspect request interceptors for dynamic Bearer token attachment (`Authorization: Bearer <token>`).
+   - Audit token refresh lifecycles (intercepting `401 Unauthorized` responses to refresh tokens and retry failed requests).
+4. **Error Handling & Response Normalization**:
+   - Audit response interceptors for standardized error transformation (normalizing backend validation errors, e.g. RFC 7807 Problem Details or Laravel 422 JSON, into predictable client structures).
+   - Check global exception hooks (displaying toast notifications on 500 errors, redirecting to login on 401).
+5. **API Service Layer Encapsulation**:
+   - Ensure UI components consume typed domain API services (e.g. `UserService.list()`, TanStack Query hooks, Pinia/Vuex actions) rather than calling HTTP clients directly.
