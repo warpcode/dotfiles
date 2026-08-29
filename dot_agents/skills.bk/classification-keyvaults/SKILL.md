@@ -286,3 +286,11 @@ IF proto: is http, ssh, or mysql
 | Passport record | `type:document` `loc:safe` `cat:ident` `org:personal` |
 | National Insurance number | `type:document` `loc:filing-cabinet` `cat:ident` `org:personal` |
 | VMware licence file (.lic) | `type:file` `env:homelab` `asset:software` `org:personal` |
+
+---
+
+## KeePassXC CLI & Secret Provider Mechanics
+
+- **CLI Attachment Operations**: `keepassxc-cli` does not feature an `attachment-list` subcommand. To list attachments, run `keepassxc-cli show --show-attachments <db> <entry>` and parse the output block. To stream attachments to stdout, use `keepassxc-cli attachment-export <db> <entry> <name> --stdout`.
+- **Decryption Performance**: Running `keepassxc-cli show` sequentially inside shell loops (even when parallelized via `zargs` across entries) introduces significant latency because every process invocation decrypts the database. Always fetch all attributes of an entry in a single process invocation and parse the results in-memory.
+- **Unified Secret Resolver (`df.config`)**: Secrets hydration is driven by `bin/df.config hydrate` and `resolve` to replace `{secret:...}` tokens against profile-based secret registries and `df.keychain`/`df.keepass`. Custom tools and scripts must remain provider-blind and rely on standard environment variables or `df.config`.

@@ -73,3 +73,14 @@ Provide a technical fix.
 5.  **Approval/Rejection**: 
     *   If approving, do not add NEW comments. Just state the approval.
     *   If rejecting, provide the structured list of findings that must be addressed.
+
+---
+
+## 🧪 Go Testing & Code Quality Review Standards
+
+When auditing Go code and unit tests (e.g. against Google's Go Style Guide):
+- **Table-Driven Tests**: Enforce table-driven subtests (`t.Run`), standard library assertions (no external assert/mock frameworks unless existing), descriptive diagnostics (`got != want`), and deferred mock restorations.
+- **Assertion Hygiene**: Test loops MUST NOT contain hardcoded conditional branches matching specific test case names (`if tt.name == "..."`). All expected outcomes, error substrings, or variations must be encoded directly into test table fields (e.g., `wantErr`).
+- **Temporary Directories**: Unit tests MUST prefer `t.TempDir()` over manual `os.MkdirTemp` and `defer os.RemoveAll` to ensure automatic isolation and cleanup.
+- **Pipe Redirection Safety**: In Go tests redirecting stdout/stderr using `os.Pipe()`, check returned errors immediately and defer closing both writer ends (`wOut.Close()`, `wErr.Close()`) immediately after creation to prevent resource leaks and hangs.
+- **Keyring/Cache Testing Isolation**: Tests interacting with cache or keyring providers must mock initialization (e.g., `keyring.MockInit()`) and isolate `HOME`, `XDG_CACHE_HOME`, and `LocalAppData` to a temporary directory (`t.TempDir()`).
