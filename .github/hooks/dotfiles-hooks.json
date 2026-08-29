@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "type": "command",
+        "command": "./.github/hooks/block-dangerous.py",
+        "timeout": 15
+      },
+      {
+        "type": "command",
+        "command": "./.github/hooks/inject-cloakenv.py",
+        "timeout": 15
+      }
+    ]
+  }
+}
