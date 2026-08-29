@@ -1,0 +1,70 @@
+# cloakenv example configuration
+# Place this file at: ~/.config/cloakenv/config.yaml
+
+# Cache configurations
+cache:
+  # Default expiration TTL for cache:// sets if --ttl CLI flag is omitted
+  default_ttl: "10m"
+
+# Keyring configurations
+keyring:
+  # The service prefix used in the OS keyring for master passwords & tokens
+  prefix: "cloakenv"
+
+# Custom vault definitions. Each mapping key becomes a custom URI scheme (ref).
+# Supported provider types: keepass, json, yaml, custom_vault
+vaults:
+  # Defines the keepass_dev:// URI scheme (KeePass provider example using the provided database.kdbx)
+  kp:
+    provider: "keepass"
+    vault_path: "~/.keepass/Accounts.kdbx"
+
+# Autoloading configuration: Automatically match commands, mask/transform command lines, and inject vault credentials
+autoload:
+  # Regex matching + command transformation (Alias masking):
+  # Running: `cloakenv run -- litellm --config ~/.config/litellm/config.yaml`
+  # Expands to: `uvx --with 'litellm[proxy]' --with 'fastapi<0.116' litellm --config ~/.config/litellm/config.yaml`
+  # while injecting credentials from litellm/keys vault.
+  - match: "^litellm(\\s*.*)$"
+    command: "uvx --with 'litellm[proxy]' --with 'fastapi<0.116' litellm --config ~/.config/litellm/config.yaml \\1"
+    env:
+      OPENROUTER_API_KEY: "...."
+      NVIDIA_NIM_API_KEY: "...."
+
+  - match: "^testest(.+)?$"
+    command: "echo \"${env://USER}\""
+
+  - match: "aws"
+    vaults:
+      - "keepass_dev://aws/credentials"
+    env:
+      AWS_DEFAULT_REGION: "env://DEFAULT_REGION"
+    whitelist:
+      - "AWS_ACCESS_KEY_ID"
+      - "AWS_SECRET_ACCESS_KEY"
+      - "AWS_DEFAULT_REGION"
+
+  - match: "kubectl*"
+    merge:
+      - "yaml_dev://clusters/staging"
+    env:
+      KUBECONFIG_TOKEN: "keyring://k8s/token"
+
+# Note on Built-in Vaults:
+# The following schemes are built-in and do not need to be registered in the 'vaults' block:
+# - env://      (Resolves secret values from local environment variables, e.g. env://USER)
+# - keyring://  (Resolves secret values from the OS keyring/keychain, e.g. keyring://ssh/prod_pass)
+# - cache://    (Resolves secret values from the secure in-memory cache daemon)
+#
+# Note on KeePass Authentication:
+# Master passwords are NOT stored in the configuration file.
+# You must authenticate and save them securely in the keyring before use:
+#   cloakenv auth login work
+#   cloakenv auth login home
+#
+# To check vault accessibility status:
+#   cloakenv auth status
+#
+# To forget/clear stored credentials:
+#   cloakenv auth forget work
+#   cloakenv auth forget home
