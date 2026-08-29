@@ -1,32 +1,31 @@
 {{- if and .is_default_linux (ne .profile "work") }}
 
-# Fetch latest Antigravity Hub release metadata
+# ==============================================================================
+# ANTIGRAVITY HUB (AppImage) - Install once if missing, then let app self-update
+# ==============================================================================
+{{- if not (stat (joinPath .chezmoi.homeDir ".local/bin/antigravity-hub")) }}
 {{- $hub_json := output "curl" "-fsSL" "https://antigravity-auto-updater-974169037036.us-central1.run.app/releases" }}
 {{- $hub_payload := fromJson $hub_json }}
 {{- $hub := index $hub_payload 0 }}
 
-# ==============================================================================
-# ANTIGRAVITY HUB (AppImage)
-# ==============================================================================
 [".local/bin/antigravity-hub"]
     type = "file"
     url = {{ printf "https://storage.googleapis.com/antigravity-public/antigravity-hub/%s-%s/linux-x64/Antigravity.AppImage" $hub.version $hub.execution_id | quote }}
     executable = true
-    refreshPeriod = "168h"
+{{- end }}
 
-# Fetch latest Antigravity IDE release metadata
+# ==============================================================================
+# ANTIGRAVITY IDE (Tarball) - Install once if missing, then let app self-update
+# ==============================================================================
+{{- if not (stat (joinPath .chezmoi.homeDir ".local/opt/antigravity-ide")) }}
 {{- $ide_json := output "curl" "-fsSL" "https://antigravity-ide-auto-updater-974169037036.us-central1.run.app/releases" }}
 {{- $ide_payload := fromJson $ide_json }}
 {{- $ide := index $ide_payload 0 }}
 
-# ==============================================================================
-# ANTIGRAVITY IDE (Tarball Extraction)
-# ==============================================================================
 [".local/opt/antigravity-ide"]
     type = "archive"
     url = {{ printf "https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/%s-%s/linux-x64/Antigravity%%20IDE.tar.gz" $ide.version $ide.execution_id | quote }}
-    exact = true
     stripComponents = 1
-    refreshPeriod = "168h"
+{{- end }}
 
 {{- end }}
