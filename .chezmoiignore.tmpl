@@ -37,10 +37,13 @@ Library/Fonts/**/*.uuid
 .local/share/icons/antigravity-hub.png
 {{ end }}
 
-# Ignore antigravity binary if it exists in the destination to prevent chezmoi
+# Ignore antigravity binaries if they exist in the destination to prevent chezmoi
 # from prompting about changes when the app auto-updates itself.
-{{ if stat (joinPath .chezmoi.homeDir ".local/bin/antigravity") }}
-.local/bin/antigravity
+{{ if stat (joinPath .chezmoi.homeDir ".local/bin/antigravity-de") }}
+.local/bin/antigravity-ide
+{{ end }}
+{{ if stat (joinPath .chezmoi.homeDir ".local/bin/antigravity-hub") }}
+.local/bin/antigravity-hub
 {{ end }}
 
 # Hermes Agent state, caches, databases, and logs
