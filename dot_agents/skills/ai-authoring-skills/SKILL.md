@@ -93,7 +93,7 @@ General pattern: `<optional-prefix>-<domain>-<task-or-skill-type>` -
 lowercase, hyphen-separated, every segment optional except one meaningful
 identifier. All of these are valid:
 
-- `jules-cli`, `jules-api`, `jules-agent-workflows`
+- `jules-cli`, `google-jules-api`, `jules-agent-workflows`
 - `git-helper`, `git-cli`
 - `github-cli`, `github-mcp`, `github-best-practices`,
   `github-pull-request-review-guidelines`
