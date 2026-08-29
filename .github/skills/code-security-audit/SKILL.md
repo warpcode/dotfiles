@@ -21,11 +21,9 @@ Standard Operating Procedure for performing static application security testing 
 
 ## Audit Workflow
 
-```
-┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────────┐
-│ 1. Configuration│ ──► │ 2. Vulnerability     │ ──► │ 3. Evidence & Risk  │
-│    Hardening    │     │    Code Scan         │     │    Report Output    │
-└─────────────────┘     └──────────────────────┘     └─────────────────────┘
+```mermaid
+flowchart LR
+    A["1. Configuration Hardening"] --> B["2. Vulnerability Code Scan"] --> C["3. Evidence & Risk Report Output"]
 ```
 
 ### Phase 1: Configuration & Environment Hardening
@@ -52,7 +50,7 @@ Document all findings citing exact file paths, line ranges, and reproduction sni
 
 ## Findings Output Format
 
-```markdown
+````markdown
 ### Security Review Summary
 - **Overall Posture**: `SECURE` | `ACTION_REQUIRED` | `CRITICAL_RISK`
 - **Critical Vulnerabilities**: [Count]
@@ -70,5 +68,5 @@ Document all findings citing exact file paths, line ranges, and reproduction sni
   // code excerpt
   ```
 - **Remediation**: Concrete refactored code demonstrating the secure pattern.
-```
+````
 

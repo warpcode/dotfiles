@@ -20,8 +20,9 @@ SOP for safely locating, confirming, and removing dead code and modernizing lega
 
 ## 2. Safe Deletion Protocol
 
-```
-[ 1. Grep / Symbol Sweep ] ──► [ 2. Dynamic Call Check ] ──► [ 3. Remove & Run Tests ] ──► [ 4. Commit ]
+```mermaid
+flowchart LR
+    A["1. Grep / Symbol Sweep"] --> B["2. Dynamic Call Check"] --> C["3. Remove & Run Tests"] --> D["4. Commit"]
 ```
 
 1. **Static Search**: Grep the entire repository for the symbol, method name, or class string.

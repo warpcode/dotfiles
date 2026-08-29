@@ -67,6 +67,8 @@ bash @scripts/update_pull_request_branch.sh --owner "octocat" --repo "hello-worl
 ### Request Copilot Review
 ```bash
 bash @scripts/request_copilot_review.sh --pull-number 42
+```
+
 ### Get Pull Request & Merge Readiness
 Fetch full pull request state, merge readiness checks, reviews, and comments:
 ```bash

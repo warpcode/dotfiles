@@ -27,26 +27,13 @@ When using platforms like Codex, OpenCode, or Hermes, projects often need:
 
 This pattern dynamically evaluates rule globs at prompt or turn initialization and injects matching rule markdown directly into the model's context window.
 
-```
-+---------------------+
-| User Prompt Submit  |
-|  or Session Start   |
-+----------+----------+
-           |
-           v
-+---------------------+      Reads Active Files / Git Status
-| Rule Injector Hook  | +-------------------------------------> [git status / git diff]
-+----------+----------+
-           |
-           v                 Scans and matches globs
-+---------------------+ <------------------------------------- [.github/instructions/*.md]
-| Glob Matching Engine|                                        [.agents/rules/*.md]
-+----------+----------+
-           |
-           v
-+---------------------+
-| Injected Output     | -> additionalContext / ephemeralMessage / stdout
-+---------------------+
+```mermaid
+flowchart TD
+    A["User Prompt Submit or Session Start"] --> B["Rule Injector Hook"]
+    B -->|"Reads Active Files / Git Status"| C[("git status / git diff")]
+    D[(".github/instructions/*.md<br/>.agents/rules/*.md")] -->|"Scans and matches globs"| E["Glob Matching Engine"]
+    B --> E
+    E --> F["Injected Output<br/>(additionalContext / ephemeralMessage / stdout)"]
 ```
 
 ### Implementation Recipe (Cross-Platform Bash Script)
@@ -125,25 +112,12 @@ Prompt rules can fail if the model overlooks instructions. A `PreToolUse` or `to
 
 ### Example: Protecting Secrets & Sensitive Files
 
-```
-Agent requests tool: Read / Write / Edit
-           |
-           v
-+---------------------+
-|   PreToolUse Hook   |
-+----------+----------+
-           |
-   Is target file a secret? (.env*, *.key, /etc/*)
-   or forbidden command? (rm -rf, git push --force)
-           |
-     +-----+-----+
-     |           |
-    YES          NO
-     |           |
-     v           v
-[DENY & BLOCK] [ALLOW]
-(Exit code 2 / (Exit code 0)
-JSON decision)
+```mermaid
+flowchart TD
+    A["Agent requests tool: Read / Write / Edit"] --> B["PreToolUse Hook"]
+    B --> C{"Is target file a secret?<br/>(.env*, *.key, /etc/*)<br/>or forbidden command?<br/>(rm -rf, git push --force)"}
+    C -->|YES| D["DENY & BLOCK<br/>(Exit code 2 / JSON decision)"]
+    C -->|NO| E["ALLOW<br/>(Exit code 0)"]
 ```
 
 ### Implementation in OpenCode (`.opencode/plugins/security-guard.ts`)

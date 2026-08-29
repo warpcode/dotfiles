@@ -20,11 +20,9 @@ Standard Operating Procedure for auditing, creating, and optimizing Dockerfiles,
 
 ## Container Inspection Workflow
 
-```
-┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────────┐
-│ 1. Dockerfile   │ ──► │ 2. Compose & Network │ ──► │ 3. Volume & State   │
-│    Hardening    │     │    Topology Audit    │     │    Persistence      │
-└─────────────────┘     └──────────────────────┘     └─────────────────────┘
+```mermaid
+flowchart LR
+    A["1. Dockerfile Hardening"] --> B["2. Compose & Network Topology Audit"] --> C["3. Volume & State Persistence"]
 ```
 
 ### Phase 1: Dockerfile Audit & Optimization
@@ -45,7 +43,7 @@ Standard Operating Procedure for auditing, creating, and optimizing Dockerfiles,
 
 ## Output Contract: Container Topology
 
-```markdown
+````markdown
 ### Container Infrastructure Overview
 - **Base Images**: [e.g., `php:8.3-fpm-alpine`, `node:20-alpine`]
 - **Multi-Stage Build**: [Yes / No]
@@ -64,4 +62,4 @@ graph LR
 ### Optimization & Hardening Findings
 - **Image Size Improvements**: [e.g. Multi-stage build can reduce final image by ~350MB]
 - **Security Recommendations**: [e.g. Add non-root user `appuser`]
-```
+````

@@ -6,8 +6,9 @@ Step-by-step SOP for resolving bugs using test-driven regression reproduction.
 
 ## 4-Step Resolution Protocol
 
-```
-[ Step 1: Isolate ] ──► [ Step 2: Failing Test ] ──► [ Step 3: Minimal Fix ] ──► [ Step 4: Verify ]
+```mermaid
+flowchart LR
+    A["Step 1: Isolate"] --> B["Step 2: Failing Test"] --> C["Step 3: Minimal Fix"] --> D["Step 4: Verify"]
 ```
 
 ### Step 1: Isolate the Defect

@@ -22,11 +22,9 @@ Standard Operating Procedure for mapping application architecture, discovering r
 
 ## Architecture Mapping Workflow
 
-```
-┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────────┐
-│ 1. Entrypoint & │ ──► │ 2. Layer & Boundary  │ ──► │ 3. Dead Code &      │
-│    Route Mapping│     │    Inspection        │     │    Refactor Plan    │
-└─────────────────┘     └──────────────────────┘     └─────────────────────┘
+```mermaid
+flowchart LR
+    A["1. Entrypoint & Route Mapping"] --> B["2. Layer & Boundary Inspection"] --> C["3. Dead Code & Refactor Plan"]
 ```
 
 ### Phase 1: Entrypoint, Route & Contract Mapping
@@ -53,7 +51,7 @@ Standard Operating Procedure for mapping application architecture, discovering r
 
 ## Output Contract: Application Topology
 
-```markdown
+````markdown
 ### Application Architecture Overview
 - **Framework & Runtime**: [e.g. Laravel 11 / PHP 8.3 / Vue 3]
 - **Architecture Pattern**: [e.g. Layered MVC / Hexagonal / Action-Domain-Responder]
@@ -74,4 +72,4 @@ graph TD
 - **Strengths**: [e.g. Strict validation through Form Requests, clear service layer separation]
 - **Boundary Violations**: [e.g. Controller `BillingController` executes raw payment logic directly]
 - **Dead Code Candidates**: [e.g. Unreferenced route group `/legacy/v1`]
-```
+````
