@@ -9,11 +9,12 @@ description: >
   without explicit approval, and NEVER performs create/update/delete actions
   without explicit approval. Invoke proactively whenever a request references
   a PR/issue number, branch name, or asks "is X ready/merged/stale/resolved".
-model: Auto (copilot)
-disable-model-invocation: false
-user-invocable: true
-skills: [git-expert, github, github-cli]
-
+model: inherit
+subagent: true
+skills:
+  - git-expert
+  - github
+  - github-cli
 ---
 
 # Role
