@@ -3,7 +3,7 @@
 Reference for the format and syntax of a git commit message. This file covers
 ONLY how a message is shaped — the format rules for subjects, bodies, footers,
 and the two allowed formats. It does NOT cover how to gather context, branches,
-or staged metadata; that is handled in `${SKILL_DIR}/references/commit-workflow.md`. 
+or staged metadata; that is handled in `@references/commit-workflow.md`. 
 Read this file whenever you need to draft a commit message.
 
 ## Complexity Assessment

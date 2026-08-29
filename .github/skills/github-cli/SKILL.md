@@ -15,7 +15,7 @@ Manage GitHub platform operations end-to-end through CLI and MCP tools. This ski
 1. **GitHub MCP server** — If the GitHub MCP server is available and
    authenticated, use its tools (e.g. `create_pull_request`, `list_issues`,
    `add_issue_comment`, `pull_request_review_write`) as the primary execution surface.
-2. **MCP Parity Scripts** — If MCP is unavailable, you MUST use the corresponding wrapper script in `${SKILL_DIR}/scripts/` (e.g., `${SKILL_DIR}/scripts/create_pull_request.sh`, `${SKILL_DIR}/scripts/list_issues.sh`). There is a 1-to-1 parity script for every MCP tool. Do NOT manually construct complex `gh` or `gh api` CLI commands yourself; pass the required MCP arguments as flags to the wrapper script (e.g. `--owner`, `--repo`, `--title`).
+2. **MCP Parity Scripts** — If MCP is unavailable, you MUST use the corresponding wrapper script in `@scripts/` (e.g., `@scripts/create_pull_request.sh`, `@scripts/list_issues.sh`). There is a 1-to-1 parity script for every MCP tool. Do NOT manually construct complex `gh` or `gh api` CLI commands yourself; pass the required MCP arguments as flags to the wrapper script (e.g. `--owner`, `--repo`, `--title`).
 3. **No raw API access** — Do NOT fall back to raw `curl` calls against the
    GitHub REST or GraphQL APIs. If neither MCP nor `gh` is available, guide the
    user to install/authenticate `gh` (`gh auth login`) or enable the GitHub
@@ -28,13 +28,13 @@ reference file before executing:
 
 | Sub-domain | Reference file | Capabilities & Covered MCP Tools | Access Level |
 |-----------|----------------|----------------------------------|--------------|
-| **Issues** | `${SKILL_DIR}/references/issues.md` | Create, update, query, comment, close, sub-issues, issue types, Copilot assignment (`get_issue`, `issue_write`, `add_issue_comment`, `list_issues`, `search_issues`, `list_issue_fields`, `list_issue_types`, `sub_issue_write`, `assign_copilot_to_issue`) | Read + Mutating |
-| **Pull Requests** | `${SKILL_DIR}/references/pull-requests.md` | Create, update, publish, view, merge, list, triage/filter, branch update, merge status, Copilot review request (`create_pull_request`, `update_pull_request`, `update_pull_request_branch`, `get_pull_request`, `list_pull_requests`, `search_pull_requests`, `merge_pull_request`, `request_copilot_review`) | Read + Mutating |
-| **Reviews** | `${SKILL_DIR}/references/reviews.md` | Thread discovery, batch payloads, thread resolution (`pull_request_review_write`, `add_comment_to_pending_review`, `add_reply_to_pull_request_comment`) | Read + Mutating |
-| **Repository** | `${SKILL_DIR}/references/repository.md` | Remote file CRUD, atomic commits, remote branches, tags, collaborators, repo create/fork (`get_file_contents`, `create_or_update_file`, `delete_file`, `push_files`, `list_branches`, `create_branch`, `get_tag`, `list_tags`, `get_commit`, `list_commits`, `create_repository`, `fork_repository`, `list_repository_collaborators`) | Read + Mutating |
-| **Releases** | `${SKILL_DIR}/references/releases.md` | Releases and release assets (`get_latest_release`, `get_release_by_tag`, `list_releases`) | Read + Mutating |
-| **Search** | `${SKILL_DIR}/references/search.md` | Cross-GitHub discovery (`search_code`, `search_commits`, `search_issues`, `search_pull_requests`, `search_repositories`, `search_users`) | Read-Only |
-| **Orgs & Teams** | `${SKILL_DIR}/references/orgs-teams.md` | Identity, organization teams, membership (`get_me`, `get_teams`, `get_team_members`) | Read-Only |
+| **Issues** | `@references/issues.md` | Create, update, query, comment, close, sub-issues, issue types, Copilot assignment (`get_issue`, `issue_write`, `add_issue_comment`, `list_issues`, `search_issues`, `list_issue_fields`, `list_issue_types`, `sub_issue_write`, `assign_copilot_to_issue`) | Read + Mutating |
+| **Pull Requests** | `@references/pull-requests.md` | Create, update, publish, view, merge, list, triage/filter, branch update, merge status, Copilot review request (`create_pull_request`, `update_pull_request`, `update_pull_request_branch`, `get_pull_request`, `list_pull_requests`, `search_pull_requests`, `merge_pull_request`, `request_copilot_review`) | Read + Mutating |
+| **Reviews** | `@references/reviews.md` | Thread discovery, batch payloads, thread resolution (`pull_request_review_write`, `add_comment_to_pending_review`, `add_reply_to_pull_request_comment`) | Read + Mutating |
+| **Repository** | `@references/repository.md` | Remote file CRUD, atomic commits, remote branches, tags, collaborators, repo create/fork (`get_file_contents`, `create_or_update_file`, `delete_file`, `push_files`, `list_branches`, `create_branch`, `get_tag`, `list_tags`, `get_commit`, `list_commits`, `create_repository`, `fork_repository`, `list_repository_collaborators`) | Read + Mutating |
+| **Releases** | `@references/releases.md` | Releases and release assets (`get_latest_release`, `get_release_by_tag`, `list_releases`) | Read + Mutating |
+| **Search** | `@references/search.md` | Cross-GitHub discovery (`search_code`, `search_commits`, `search_issues`, `search_pull_requests`, `search_repositories`, `search_users`) | Read-Only |
+| **Orgs & Teams** | `@references/orgs-teams.md` | Identity, organization teams, membership (`get_me`, `get_teams`, `get_team_members`) | Read-Only |
 
 Read only the reference(s) needed for the query. Never load all references upfront.
 
@@ -42,13 +42,13 @@ Read only the reference(s) needed for the query. Never load all references upfro
 
 | Resource | Path | Purpose |
 |----------|------|---------|
-| List / Filter PRs script | `${SKILL_DIR}/scripts/list_pull_requests.sh [OPTIONS]` | List and filter PRs (approved, commits after review, waiting on author, unresponded) |
-| List PR review threads script | `${SKILL_DIR}/scripts/list_pull_request_review_threads.sh [OPTIONS]` | Retrieve review threads for a pull request via GraphQL |
-| Get PR script | `${SKILL_DIR}/scripts/get_pull_request.sh [OPTIONS]` | Fetch comprehensive PR state (summary table, merge readiness checks, comments, reviews, stats) |
-| Resolve thread script | `${SKILL_DIR}/scripts/update_pull_request_review_thread_resolution.sh [OPTIONS]` | Resolve PR review threads via GraphQL |
-| PR status query | `${SKILL_DIR}/queries/find_prs.gql` | GraphQL query for PR status, review, and activity classification |
-| Review threads query | `${SKILL_DIR}/queries/review_threads.gql` | GraphQL query to list review threads |
-| Resolve thread query | `${SKILL_DIR}/queries/resolve_review_thread.gql` | GraphQL mutation to resolve review threads |
+| List / Filter PRs script | `@scripts/list_pull_requests.sh [OPTIONS]` | List and filter PRs (approved, commits after review, waiting on author, unresponded) |
+| List PR review threads script | `@scripts/list_pull_request_review_threads.sh [OPTIONS]` | Retrieve review threads for a pull request via GraphQL |
+| Get PR script | `@scripts/get_pull_request.sh [OPTIONS]` | Fetch comprehensive PR state (summary table, merge readiness checks, comments, reviews, stats) |
+| Resolve thread script | `@scripts/update_pull_request_review_thread_resolution.sh [OPTIONS]` | Resolve PR review threads via GraphQL |
+| PR status query | `@queries/find_prs.gql` | GraphQL query for PR status, review, and activity classification |
+| Review threads query | `@queries/review_threads.gql` | GraphQL query to list review threads |
+| Resolve thread query | `@queries/resolve_review_thread.gql` | GraphQL mutation to resolve review threads |
 
 ## Hard Rules
 

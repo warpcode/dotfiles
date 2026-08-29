@@ -6,7 +6,7 @@ Query, view, create, and manage GitHub releases and release assets.
 
 ## Operations Overview
 
-| Operation | Risk Level | Primary MCP Action | Script Fallback (`${SKILL_DIR}/scripts/`) | CLI Fallback (`gh`) |
+| Operation | Risk Level | Primary MCP Action | Script Fallback (`@scripts/`) | CLI Fallback (`gh`) |
 | :--- | :--- | :--- | :--- | :--- |
 | **List releases** | Read-Only | `list_releases` | `list_releases.sh` | `gh release list` |
 | **Get latest release** | Read-Only | `get_latest_release` | `get_latest_release.sh` | `gh release view` |
@@ -21,28 +21,28 @@ Query, view, create, and manage GitHub releases and release assets.
 ### List Releases
 ```bash
 # Auto-detected repository
-bash ${SKILL_DIR}/scripts/list_releases.sh
+bash @scripts/list_releases.sh
 
 # Explicit repository override
-bash ${SKILL_DIR}/scripts/list_releases.sh --owner octocat --repo hello-world
+bash @scripts/list_releases.sh --owner octocat --repo hello-world
 ```
 
 ### Get Latest Release
 ```bash
 # Auto-detected repository
-bash ${SKILL_DIR}/scripts/get_latest_release.sh
+bash @scripts/get_latest_release.sh
 
 # Explicit repository override
-bash ${SKILL_DIR}/scripts/get_latest_release.sh --owner octocat --repo hello-world
+bash @scripts/get_latest_release.sh --owner octocat --repo hello-world
 ```
 
 ### Get Release by Tag
 ```bash
 # Auto-detected repository
-bash ${SKILL_DIR}/scripts/get_release_by_tag.sh --tag "v1.2.0"
+bash @scripts/get_release_by_tag.sh --tag "v1.2.0"
 
 # Explicit repository override
-bash ${SKILL_DIR}/scripts/get_release_by_tag.sh --owner octocat --repo hello-world --tag "v1.2.0"
+bash @scripts/get_release_by_tag.sh --owner octocat --repo hello-world --tag "v1.2.0"
 ```
 
 ---

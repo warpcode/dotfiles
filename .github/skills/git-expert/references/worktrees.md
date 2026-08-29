@@ -107,10 +107,10 @@ To detect active/stale worktree references, prune dead worktree metadata, or saf
 
 ```bash
 # Detect active and stale worktrees, and prune metadata (dry-run by default)
-bash ${SKILL_DIR}/scripts/worktrees.sh
+bash @scripts/worktrees.sh
 
 # Remove a specific worktree (requires explicit confirmation and flag)
-bash ${SKILL_DIR}/scripts/worktrees.sh --remove <path>
+bash @scripts/worktrees.sh --remove <path>
 ```
 
 ## Quick Reference

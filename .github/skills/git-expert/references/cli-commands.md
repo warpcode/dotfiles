@@ -29,10 +29,10 @@ diffs in MD code blocks, logs as bullet lists, metadata as key-value pairs.
 | Who changed a line | `git blame <file>` | Per-line attribution |
 
 > **Tip:** For one-shot token-efficient summaries, use bundled scripts:
-> - `${SKILL_DIR}/scripts/repo_overview.sh` — remotes, recent commits, tags, worktrees, stashes, config
-> - `${SKILL_DIR}/scripts/branches.sh` — branch tracking, ahead/behind counts, and merged status
-> - `${SKILL_DIR}/scripts/branch_diff.sh` — branch divergence, commit list, and file diffs vs base
-> - `${SKILL_DIR}/scripts/status.sh` — working tree state, branch, staged/unstaged summary, and push/pull counts
+> - `@scripts/repo_overview.sh` — remotes, recent commits, tags, worktrees, stashes, config
+> - `@scripts/branches.sh` — branch tracking, ahead/behind counts, and merged status
+> - `@scripts/branch_diff.sh` — branch divergence, commit list, and file diffs vs base
+> - `@scripts/status.sh` — working tree state, branch, staged/unstaged summary, and push/pull counts
 
 ### Stage & Unstage
 
@@ -51,7 +51,7 @@ diffs in MD code blocks, logs as bullet lists, metadata as key-value pairs.
 | Operation | Command | Notes |
 |-----------|---------|-------|
 | Commit staged changes | `git commit -m "<msg>"` | Only staged changes |
-| Commit from file | `git commit -F <file>` | Message from file — see `${SKILL_DIR}/references/commit-workflow.md` |
+| Commit from file | `git commit -F <file>` | Message from file — see `@references/commit-workflow.md` |
 | Amend last commit | `git commit --amend` | ⚠️ Only if not yet pushed |
 | Show last commit | `git show HEAD` | |
 
@@ -74,7 +74,7 @@ diffs in MD code blocks, logs as bullet lists, metadata as key-value pairs.
 |-----------|---------|-------|
 | List remotes | `git remote -v` | |
 | Fetch remote refs | `git fetch` | Updates remote-tracking refs only |
-| Fetch + merge | `git pull` | Defaults to merge — see `${SKILL_DIR}/references/merge-strategies.md` |
+| Fetch + merge | `git pull` | Defaults to merge — see `@references/merge-strategies.md` |
 | Fetch + rebase | `git pull --rebase` | Linear history |
 | Push branch | `git push` | ⚠️ Requires user permission |
 | Push + set upstream | `git push -u origin <branch>` | First push of a new branch |
@@ -85,7 +85,7 @@ diffs in MD code blocks, logs as bullet lists, metadata as key-value pairs.
 
 | Operation | Command | Notes |
 |-----------|---------|-------|
-| Merge a branch | `git merge <branch>` | See `${SKILL_DIR}/references/merge-strategies.md` |
+| Merge a branch | `git merge <branch>` | See `@references/merge-strategies.md` |
 | Abort a merge | `git merge --abort` | |
 | Rebase onto branch | `git rebase <branch>` | ⚠️ Never on shared branches |
 | Abort a rebase | `git rebase --abort` | |
@@ -103,7 +103,7 @@ diffs in MD code blocks, logs as bullet lists, metadata as key-value pairs.
 | Apply without drop | `git stash apply` | |
 | Drop a stash | `git stash drop stash@{0}` | |
 
-> **Tip:** Use `${SKILL_DIR}/scripts/stash.sh` to view stashes with age and file lists, or filter/drop aged stashes via `${SKILL_DIR}/scripts/stash.sh --older-than N [--drop]`.
+> **Tip:** Use `@scripts/stash.sh` to view stashes with age and file lists, or filter/drop aged stashes via `@scripts/stash.sh --older-than N [--drop]`.
 
 ### Search
 
@@ -136,7 +136,7 @@ diffs in MD code blocks, logs as bullet lists, metadata as key-value pairs.
 | Operation | Command | Notes |
 |-----------|---------|-------|
 | List worktrees | `git worktree list` | |
-| Add a worktree | `git worktree add <path> <branch>` | See `${SKILL_DIR}/references/worktrees.md` |
+| Add a worktree | `git worktree add <path> <branch>` | See `@references/worktrees.md` |
 | Remove a worktree | `git worktree remove <path>` | |
 | List submodules | `git submodule status` | |
 | Init submodules | `git submodule update --init --recursive` | After a fresh clone |
@@ -169,8 +169,8 @@ reset is irreversible — the reflog outlives it.
 ### Merge Conflicts
 
 Detailed conflict resolution (markers, strategies, abort options) lives in
-`${SKILL_DIR}/references/merge-conflicts.md`. For one-shot detection of in-progress state and conflict triage,
-use `${SKILL_DIR}/scripts/merge_state.sh`. Brief: `git status` shows unmerged paths; accept
+`@references/merge-conflicts.md`. For one-shot detection of in-progress state and conflict triage,
+use `@scripts/merge_state.sh`. Brief: `git status` shows unmerged paths; accept
 ours/theirs via `git checkout --ours/--theirs <file> && git add <file>`; abort
 with `git merge --abort` (merge) or `git rebase --abort` (rebase).
 

@@ -6,7 +6,7 @@ Execute targeted search queries across code, commits, issues, pull requests, rep
 
 ## Operations Overview
 
-| Operation | Risk Level | Primary MCP Action | Script Fallback (`${SKILL_DIR}/scripts/`) |
+| Operation | Risk Level | Primary MCP Action | Script Fallback (`@scripts/`) |
 | :--- | :--- | :--- | :--- |
 | **Search code** | Read-Only | `search_code` | `search_code.sh` |
 | **Search commits** | Read-Only | `search_commits` | `search_commits.sh` |
@@ -19,14 +19,14 @@ Execute targeted search queries across code, commits, issues, pull requests, rep
 
 ## 1. Code Search
 ```bash
-bash ${SKILL_DIR}/scripts/search_code.sh --query "function processData repo:owner/repo"
+bash @scripts/search_code.sh --query "function processData repo:owner/repo"
 ```
 
 ---
 
 ## 2. Commit Search
 ```bash
-bash ${SKILL_DIR}/scripts/search_commits.sh --query "fix(auth) repo:owner/repo"
+bash @scripts/search_commits.sh --query "fix(auth) repo:owner/repo"
 ```
 
 ---
@@ -34,10 +34,10 @@ bash ${SKILL_DIR}/scripts/search_commits.sh --query "fix(auth) repo:owner/repo"
 ## 3. Issues & Pull Requests Search
 ```bash
 # Search issues across a repo or org
-bash ${SKILL_DIR}/scripts/search_issues.sh --query "database connection timeout repo:owner/repo state:open"
+bash @scripts/search_issues.sh --query "database connection timeout repo:owner/repo state:open"
 
 # Search PRs
-bash ${SKILL_DIR}/scripts/search_pull_requests.sh --query "review-requested:@me state:open"
+bash @scripts/search_pull_requests.sh --query "review-requested:@me state:open"
 ```
 
 ---
@@ -45,8 +45,8 @@ bash ${SKILL_DIR}/scripts/search_pull_requests.sh --query "review-requested:@me 
 ## 4. Repository & User Search
 ```bash
 # Search repositories
-bash ${SKILL_DIR}/scripts/search_repositories.sh --query "dotfiles topic:zsh stars:>100"
+bash @scripts/search_repositories.sh --query "dotfiles topic:zsh stars:>100"
 
 # Search users / organizations
-bash ${SKILL_DIR}/scripts/search_users.sh --query "location:London followers:>50"
+bash @scripts/search_users.sh --query "location:London followers:>50"
 ```

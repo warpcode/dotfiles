@@ -1,7 +1,7 @@
 # Shell Style Guide — Shared Rules
 
 Rules in this file apply to **both** Bash and Zsh. Shell-specific rules live in
-`${SKILL_DIR}/references/style-guide-bash.md` and `${SKILL_DIR}/references/style-guide-zsh.md`. Where a shared rule has a different concrete form per
+`@references/style-guide-bash.md` and `@references/style-guide-zsh.md`. Where a shared rule has a different concrete form per
 shell, the difference is noted inline and covered in the shell reference.
 
 Source for Bash rules: https://google.github.io/styleguide/shellguide.html
@@ -42,7 +42,7 @@ Rules of thumb:
 - Script > ~100 lines, OR uses complex/non-straightforward control flow → **rewrite in a structured language now**. Scripts grow; rewrite early.
 - Ask: can someone other than the author maintain this code?
 
-For guidance on *which* shell to choose, see `${SKILL_DIR}/references/style-guide-bash.md` §1 or `${SKILL_DIR}/references/style-guide-zsh.md` §1.
+For guidance on *which* shell to choose, see `@references/style-guide-bash.md` §1 or `@references/style-guide-zsh.md` §1.
 
 ## 2. File Extensions
 
@@ -63,7 +63,7 @@ have an extension and are not executable.
 - Normal output → STDOUT.
 - **All error messages → STDERR** (`>&2`).
 
-Standard error helper (shell-specific timestamps — see `${SKILL_DIR}/references/style-guide-bash.md` §4 / `${SKILL_DIR}/references/style-guide-zsh.md` §8):
+Standard error helper (shell-specific timestamps — see `@references/style-guide-bash.md` §4 / `@references/style-guide-zsh.md` §8):
 
 ```bash
 err() {
@@ -274,7 +274,7 @@ if [[ "filename" == f* ]]; then …; fi
 ```
 
 > Regex capture variable differs per shell: Bash uses `${BASH_REMATCH}` (see
-> `${SKILL_DIR}/references/style-guide-bash.md`), Zsh uses `${match}` (see `${SKILL_DIR}/references/style-guide-zsh.md` §4).
+> `@references/style-guide-bash.md`), Zsh uses `${match}` (see `@references/style-guide-zsh.md` §4).
 
 ## 10. Testing Strings
 
@@ -347,8 +347,8 @@ mybinary ${flags}
 Array rules:
 - Always expand with `"${array[@]}"` (quoted).
 - Append with `+=( … )`.
-- Avoid assigning from command output that gets split/globbed unexpectedly — use the shell-native safe idiom (see `${SKILL_DIR}/references/style-guide-bash.md` §6 or `${SKILL_DIR}/references/style-guide-zsh.md` §14/§15).
-- Be aware of index base: Bash arrays are 0-indexed; **Zsh arrays are 1-indexed** (see `${SKILL_DIR}/references/style-guide-zsh.md` §8).
+- Avoid assigning from command output that gets split/globbed unexpectedly — use the shell-native safe idiom (see `@references/style-guide-bash.md` §6 or `@references/style-guide-zsh.md` §14/§15).
+- Be aware of index base: Bash arrays are 0-indexed; **Zsh arrays are 1-indexed** (see `@references/style-guide-zsh.md` §8).
 
 ## 13. Pipes to While (Subshell Gotcha)
 
@@ -364,8 +364,8 @@ echo "${last_line}"  # NULL
 ```
 
 Fix with the shell-appropriate idiom:
-- **Bash:** process substitution `< <(your_command)` or `readarray` (`${SKILL_DIR}/references/style-guide-bash.md` §5).
-- **Zsh:** process substitution `< <(your_command)` or `${(f)"$(…)"}` (`${SKILL_DIR}/references/style-guide-zsh.md` §14/§15).
+- **Bash:** process substitution `< <(your_command)` or `readarray` (`@references/style-guide-bash.md` §5).
+- **Zsh:** process substitution `< <(your_command)` or `${(f)"$(…)"}` (`@references/style-guide-zsh.md` §14/§15).
 
 > `for var in $(...)` splits on whitespace, not newlines. Prefer `while read`
 > or the array-splitting idiom when lines may contain spaces.
@@ -458,7 +458,7 @@ my_func2() {
 ```
 
 Zsh nuance: use `typeset -g` to create a global from inside a function (see
-`${SKILL_DIR}/references/style-guide-zsh.md` §12); a bare assignment inside a function is a local unless declared.
+`@references/style-guide-zsh.md` §12); a bare assignment inside a function is a local unless declared.
 
 ## 19. Function Location and main
 
@@ -508,8 +508,8 @@ fi
 ### Pipeline segment statuses
 
 Capture immediately after the pipeline — the next command overwrites it.
-- Bash: `PIPESTATUS` array (`${SKILL_DIR}/references/style-guide-bash.md` §7).
-- Zsh: lowercase `pipestatus` array (`${SKILL_DIR}/references/style-guide-zsh.md` §16).
+- Bash: `PIPESTATUS` array (`@references/style-guide-bash.md` §7).
+- Zsh: lowercase `pipestatus` array (`@references/style-guide-zsh.md` §16).
 
 Note: `[` is a command and will wipe the pipeline status array.
 
@@ -530,4 +530,4 @@ Builtins to prefer over common external tools:
 - `read` / the native array-splitting idiom over `cut`/`awk` for splitting lines.
 
 Zsh extends this considerably with parameter expansion flags, string
-modifiers, and glob qualifiers — see `${SKILL_DIR}/references/style-guide-zsh.md` §5, §6, §10.
+modifiers, and glob qualifiers — see `@references/style-guide-zsh.md` §5, §6, §10.

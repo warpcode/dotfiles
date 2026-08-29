@@ -31,12 +31,12 @@ This skill provides guidelines and procedures for managing GitHub issues, pull r
 - If templates exist, structure the issue body to match the template.
 
 ### Structuring Content
-- If no repository templates exist, use the fallback templates located in the `${SKILL_DIR}/templates/` directory:
-  - `${SKILL_DIR}/templates/bug_report.md`
-  - `${SKILL_DIR}/templates/feature_request.md`
-  - `${SKILL_DIR}/templates/task_chore.md`
-  - `${SKILL_DIR}/templates/question_discussion.md`
-  - `${SKILL_DIR}/templates/security_vulnerability.md`
+- If no repository templates exist, use the fallback templates located in the `@templates/` directory:
+  - `@templates/bug_report.md`
+  - `@templates/feature_request.md`
+  - `@templates/task_chore.md`
+  - `@templates/question_discussion.md`
+  - `@templates/security_vulnerability.md`
 - Adapt the template and drop sections that do not apply. The user's input is the source of truth.
 - When updating, be surgical — only modify the parts the user explicitly asked to change.
 
@@ -52,13 +52,13 @@ Choose the format based on context:
 Rules for PR titles: Use imperative mood, keep under 70 characters, capitalise the first letter of the summary, avoid vague titles.
 
 ### Body Content
-Use the PR template (repo-specific or fallback `${SKILL_DIR}/templates/pull_request.md`). Ensure it explains *what* changed and *why*, links related issues (`Closes #number`), highlights areas needing reviewer attention, and includes testing notes if behaviour changed.
+Use the PR template (repo-specific or fallback `@templates/pull_request.md`). Ensure it explains *what* changed and *why*, links related issues (`Closes #number`), highlights areas needing reviewer attention, and includes testing notes if behaviour changed.
 
 ## 4. Code Review Orchestration
 
 ### Review Tone & Style
 - **Tone**: Strictly neutral, fact-based, and formal. Do not include encouraging adjectives, subjective evaluations, or conversational filler (e.g., "looks excellent", "successfully", "elegantly", "LGTM").
-- **Format**: For each finding use the structure: 1. Severity (High/Medium/Low), 2. Description, 3. Impact, 4. Proposed Solution. Refer to `${SKILL_DIR}/templates/pull_request_review_comment.md` for formatting details.
+- **Format**: For each finding use the structure: 1. Severity (High/Medium/Low), 2. Description, 3. Impact, 4. Proposed Solution. Refer to `@templates/pull_request_review_comment.md` for formatting details.
 
 ### Review Events
 - **REQUEST_CHANGES**: Use when there is one or more findings at Low/Medium/High severity, or if unresolved merge conflicts exist.

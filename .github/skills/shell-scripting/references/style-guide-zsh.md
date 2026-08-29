@@ -1,7 +1,7 @@
 # Zsh-Specific Rules
 
-Rules unique to Zsh. Apply together with the shared rules in `${SKILL_DIR}/references/style-guide.md`.
-For Bash-specific rules, see `${SKILL_DIR}/references/style-guide-bash.md`.
+Rules unique to Zsh. Apply together with the shared rules in `@references/style-guide.md`.
+For Bash-specific rules, see `@references/style-guide-bash.md`.
 
 ## Table of Contents
 
