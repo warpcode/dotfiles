@@ -1,5 +1,5 @@
 ---
-name: antigravity-cli
+name: google-antigravity-cli
 description: >
   Execute tasks, orchestrate subagents, extract structured JSON, query models, and
   manage MCP servers or plugins using the Google Antigravity CLI (`agy`). Use this
