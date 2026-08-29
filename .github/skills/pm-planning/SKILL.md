@@ -21,11 +21,9 @@ Standard Operating Procedure for translating business requirements and feature r
 
 ## Planning Workflow
 
-```
-┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────────┐
-│ 1. Requirements │ ──► │ 2. Technical Task    │ ──► │ 3. Ticket Drafting  │
-│    Decomposition│     │    Boundary Mapping  │     │    & Estimation     │
-└─────────────────┘     └──────────────────────┘     └─────────────────────┘
+```mermaid
+flowchart LR
+    A["1. Requirements Decomposition"] --> B["2. Technical Task Boundary Mapping"] --> C["3. Ticket Drafting & Estimation"]
 ```
 
 ### Phase 1: Requirements Decomposition & User Story Framing

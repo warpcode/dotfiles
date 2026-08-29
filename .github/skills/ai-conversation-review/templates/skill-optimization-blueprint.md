@@ -4,7 +4,7 @@ Template for generating new or refactored skill definitions adhering to the agen
 
 ---
 
-```markdown
+````markdown
 ---
 name: {{SKILL_NAME}}
 description: >
@@ -53,4 +53,4 @@ flowchart LR
 ## Output Contract & Verification
 
 - {{EXPLICIT_SUCCESS_CRITERIA_AND_RETURN_FORMAT}}
-```
+````

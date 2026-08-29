@@ -20,11 +20,9 @@ Standard Operating Procedure for identifying, measuring, and eliminating perform
 
 ## Diagnostic Workflow
 
-```
-┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────────┐
-│ 1. Locate Data  │ ──► │ 2. Compute & Memory  │ ──► │ 3. Frontend & Asset │
-│    Layer Churn  │     │    Hot-Paths         │     │    Optimization     │
-└─────────────────┘     └──────────────────────┘     └─────────────────────┘
+```mermaid
+flowchart LR
+    A["1. Locate Data Layer Churn"] --> B["2. Compute & Memory Hot-Paths"] --> C["3. Frontend & Asset Optimization"]
 ```
 
 ### Phase 1: Database & Search Engine Query Profiling
@@ -49,7 +47,7 @@ Standard Operating Procedure for identifying, measuring, and eliminating perform
 
 ## Performance Report Output Format
 
-```markdown
+````markdown
 ### Performance Audit Summary
 - **Primary Bottleneck**: [Database Query Loop / Memory Accumulation / Asset Bloat]
 - **Estimated Impact**: [High / Medium / Low]
@@ -66,5 +64,5 @@ Standard Operating Procedure for identifying, measuring, and eliminating perform
   - Inefficient code
   + Optimized code
   ```
-```
+````
 

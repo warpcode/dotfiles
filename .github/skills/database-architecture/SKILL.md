@@ -20,11 +20,9 @@ Standard Operating Procedure for discovering data models, auditing ORM architect
 
 ## Architecture Mapping Workflow
 
-```
-┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────────┐
-│ 1. Model & ORM  │ ──► │ 2. Relationship &    │ ──► │ 3. Migration Safety │
-│    Discovery    │     │    ERD Extraction    │     │    & Schema Audit   │
-└─────────────────┘     └──────────────────────┘     └─────────────────────┘
+```mermaid
+flowchart LR
+    A["1. Model & ORM Discovery"] --> B["2. Relationship & ERD Extraction"] --> C["3. Migration Safety & Schema Audit"]
 ```
 
 ### Phase 1: Model & ORM Discovery
@@ -49,7 +47,7 @@ Standard Operating Procedure for discovering data models, auditing ORM architect
 
 ## Output Contract: Schema Documentation & ERD
 
-```markdown
+````markdown
 ### Database Schema & Model Overview
 - **ORM / Driver**: [e.g., Eloquent / PostgreSQL]
 - **Total Entities**: [Count]
@@ -67,5 +65,5 @@ erDiagram
 ### Entity Catalog
 - **`users`** (`App\Models\User`): Core user entity (fields: `id`, `email`, `role`, `created_at`).
 - **`orders`** (`App\Models\Order`): Customer orders (fields: `id`, `user_id`, `status`, `total_cents`).
-```
+````
 

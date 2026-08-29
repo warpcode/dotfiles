@@ -8,25 +8,11 @@ However, these platforms provide **lifecycle hooks and plugin architectures** th
 
 ## 1. Architecture Overview
 
-```
-┌────────────────────────────────────────────────────────┐
-│ User Prompt or File Event                              │
-└──────────────────────────┬─────────────────────────────┘
-                           │
-                           ▼
-               ┌───────────────────────┐
-               │ Lifecycle Hook Fired  │
-               │ (e.g. PrePrompt/PreTool)
-               └───────────┬───────────┘
-                           │
-          ┌────────────────┴────────────────┐
-          ▼                                 ▼
-┌───────────────────────────┐   ┌───────────────────────────┐
-│ Path Matcher Engine       │   │ Hard Guardrail Enforcer   │
-│ - Inspect active files    │   │ - Validate tool / command │
-│ - Parse frontmatter globs │   │ - Deny dangerous actions  │
-│ - Inject matching rules   │   │ - Exit with error / block │
-└───────────────────────────┘   └───────────────────────────┘
+```mermaid
+flowchart TD
+    A["User Prompt or File Event"] --> B["Lifecycle Hook Fired<br/>(e.g. PrePrompt / PreTool)"]
+    B --> C["Path Matcher Engine<br/>- Inspect active files<br/>- Parse frontmatter globs<br/>- Inject matching rules"]
+    B --> D["Hard Guardrail Enforcer<br/>- Validate tool / command<br/>- Deny dangerous actions<br/>- Exit with error / block"]
 ```
 
 ---

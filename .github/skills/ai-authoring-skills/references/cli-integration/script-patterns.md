@@ -258,7 +258,7 @@ Across all scripts, apply these practices to minimise token usage:
 
 In the skill's SKILL.md, reference each script like this:
 
-```markdown
+````markdown
 ## Wrapper Scripts
 
 ### `scripts/list-my-prs.sh`
@@ -272,6 +272,6 @@ Invoke with:
 ```bash
 bash scripts/list-my-prs.sh --state open
 ```
-```
+````
 
 Always include: path, purpose, input flags, output schema, and the conditions under which the LLM should prefer this script over a direct `gh` invocation.

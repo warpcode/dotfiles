@@ -20,19 +20,16 @@ Standard Operating Procedure for practicing disciplined Test-Driven Development,
 
 ## Core TDD Workflows
 
-```
-Feature Development:       Bug Fixing (Regression Protocol):
-┌────────────────────┐     ┌────────────────────────────────┐
-│ 1. Red (Failing)   │     │ 1. Reproduce with Failing Test │
-└─────────┬──────────┘     └───────────────┬────────────────┘
-          │                                │
-┌─────────▼──────────┐     ┌───────────────▼────────────────┐
-│ 2. Green (Pass)    │     │ 2. Apply Minimal Code Fix      │
-└─────────┬──────────┘     └───────────────┬────────────────┘
-          │                                │
-┌─────────▼──────────┐     ┌───────────────▼────────────────┐
-│ 3. Refactor Clean  │     │ 3. Verify All Tests Green      │
-└────────────────────┘     └────────────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph Dev["Feature Development"]
+        direction TB
+        R1["1. Red (Failing)"] --> G1["2. Green (Pass)"] --> RF1["3. Refactor Clean"]
+    end
+    subgraph Fix["Bug Fixing (Regression Protocol)"]
+        direction TB
+        R2["1. Reproduce with Failing Test"] --> G2["2. Apply Minimal Code Fix"] --> RF2["3. Verify All Tests Green"]
+    end
 ```
 
 ---
