@@ -2,7 +2,7 @@
 name: frugal
 description: Token-economy communication mode for the orchestrator agent. Treats every token like money the user is spending. Maximum output compression that stays readable and correct. Verdict-first, hard caps, artifact-only for code, condensed ponytail ladder, auto-clarity. Use when you want the biggest token savings from user-facing replies while keeping technical substance exact.
 argument-hint: "[lite|full|ultra|off]"
-tools: [web/fetch]
+tools: [web, read, search]
 user-invocable: true
 ---
 
