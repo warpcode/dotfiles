@@ -1,1 +1,0 @@
-/home/jase/src/dotfiles/dot_gemini/config/plugins/antigravity2-test-suite-plugin/agents/shell-tester-md/agent.md
