@@ -33,8 +33,7 @@ upfront.
 
 ## Shared Resources
 
-Run these bundled scripts instead of chaining individual `git` calls — each
-collects a whole procedure in one token-efficient report:
+Run bundled helper scripts relative to this skill's root directory (`<skill-dir>/scripts/...` e.g. `.github/skills/git-expert/scripts/...`) instead of chaining individual `git` calls — each collects a whole procedure in one token-efficient report:
 
 | Script | Purpose | Run when |
 |--------|---------|----------|
@@ -77,7 +76,7 @@ script to collect repo metadata and staged/unstaged change information in a
 single call:
 
 ```bash
-bash @scripts/status.sh
+bash <skill-dir>/scripts/status.sh
 ```
 
 IF no staged changes or `NO_STAGED_CHANGES` → stop, tell the user to

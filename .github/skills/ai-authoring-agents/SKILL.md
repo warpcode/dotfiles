@@ -169,23 +169,23 @@ Subagent prompt bodies should assemble the **5-Layer Cognitive Stack** from `ai-
    and model tier.
 5. Write a concise, third-person `description` stating exact delegation triggers.
 6. Customize the system prompt body with domain rules and structured output schemas.
-7. Validate using `python3 scripts/validate.py <path-to-agent>` (Antigravity targets: `python3 scripts/validate_antigravity.py <path>`).
+7. Validate using `python3 <skill-dir>/scripts/validate.py <path-to-agent>` (Antigravity targets: `python3 <skill-dir>/scripts/validate_antigravity.py <path>`).
 8. Test invocation with a targeted task.
 
 ### 2. Validation Workflow
 
-Run the automated validator to ensure structural and platform conformance:
+Run the automated validator relative to this skill's root directory (`<skill-dir>/scripts/...` e.g. `.github/skills/ai-authoring-agents/scripts/...`):
 
 ```bash
 # Validate a specific agent definition
-python3 scripts/validate.py .github/agents/my-agent.agent.md
+python3 <skill-dir>/scripts/validate.py .github/agents/my-agent.agent.md
 
 # Validate all agents in a directory
-python3 scripts/validate.py .github/agents/
+python3 <skill-dir>/scripts/validate.py .github/agents/
 
 # Strict validation for Google Antigravity agents (documented keys only,
 # model/exec-policy values, tool-name hang check)
-python3 scripts/validate_antigravity.py .agents/agents/
+python3 <skill-dir>/scripts/validate_antigravity.py .agents/agents/
 ```
 
 Manual checks:

@@ -44,9 +44,11 @@ flowchart LR
 
 ## Script Helpers & Execution
 
+Run helper scripts relative to this skill's root directory (`<skill-dir>/scripts/...`):
+
 | Utility | Location | Invocation Syntax | Purpose |
 |---|---|---|---|
-| `{{SCRIPT_NAME}}` | `scripts/{{SCRIPT_FILENAME}}` | `scripts/{{SCRIPT_FILENAME}} [options]` | {{BRIEF_DESCRIPTION}} |
+| `{{SCRIPT_NAME}}` | `@scripts/{{SCRIPT_FILENAME}}` | `python3 <skill-dir>/scripts/{{SCRIPT_FILENAME}} [options]` | {{BRIEF_DESCRIPTION}} |
 
 ---
 

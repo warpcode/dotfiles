@@ -44,20 +44,20 @@ sequenceDiagram
 
 ## Commands & CLI Reference
 
-Run commands via the bundled `scripts/main.py` script. By default, all commands output token-efficient Markdown tables and summaries.
+Run commands via the bundled `@scripts/main.py` script relative to this skill's root directory (`<skill-dir>/scripts/main.py` e.g. `.github/skills/google-jules-api/scripts/main.py`). By default, all commands output token-efficient Markdown tables and summaries.
 
 ### 1. Connected Sources (`sources`, `source`)
 Inspect authorized GitHub repositories connected to Jules.
 
 ```bash
 # List all connected repositories
-python3 dot_agents/skills/google-jules-api/scripts/main.py sources
+python3 <skill-dir>/scripts/main.py sources
 
 # Filter sources by repository name
-python3 dot_agents/skills/google-jules-api/scripts/main.py sources --filter "name=sources/github/warpcode/cloakenv"
+python3 <skill-dir>/scripts/main.py sources --filter "name=sources/github/warpcode/cloakenv"
 
 # Get details for a specific repository source
-python3 dot_agents/skills/google-jules-api/scripts/main.py source github/warpcode/cloakenv
+python3 <skill-dir>/scripts/main.py source github/warpcode/cloakenv
 ```
 
 ### 2. Task Sessions (`sessions`, `session`, `create-session`)
@@ -65,20 +65,20 @@ List, inspect, and spawn asynchronous cloud task sessions.
 
 ```bash
 # List recent sessions (default or paginated)
-python3 dot_agents/skills/google-jules-api/scripts/main.py sessions --page-size 10
+python3 <skill-dir>/scripts/main.py sessions --page-size 10
 
 # Fetch full summary and outputs for a specific session
-python3 dot_agents/skills/google-jules-api/scripts/main.py session 4475409647262242777
+python3 <skill-dir>/scripts/main.py session 4475409647262242777
 
 # Create a new coding session
-python3 dot_agents/skills/google-jules-api/scripts/main.py create-session \
+python3 <skill-dir>/scripts/main.py create-session \
   "Refactor sensitive memory buffers to use ZeroBytes" \
   --source github/warpcode/cloakenv \
   --branch main \
   --title "Memory Scrubbing Refactor"
 
 # Create a session requiring explicit plan approval
-python3 dot_agents/skills/google-jules-api/scripts/main.py create-session \
+python3 <skill-dir>/scripts/main.py create-session \
   "Upgrade Go dependencies and verify test suite" \
   --source github/warpcode/cloakpkg \
   --require-approval
@@ -89,10 +89,10 @@ Inspect the chronological audit log of events, agent messages, plans, and diffs 
 
 ```bash
 # List activity events for a session
-python3 dot_agents/skills/google-jules-api/scripts/main.py activities 4475409647262242777 --page-size 20
+python3 <skill-dir>/scripts/main.py activities 4475409647262242777 --page-size 20
 
 # View single activity details (e.g., plan steps, message body, or git diff)
-python3 dot_agents/skills/google-jules-api/scripts/main.py activity 4475409647262242777 <ACTIVITY_ID>
+python3 <skill-dir>/scripts/main.py activity 4475409647262242777 <ACTIVITY_ID>
 ```
 
 ### 4. Human-in-the-Loop Interaction (`approve-plan`, `send-message`)
@@ -100,10 +100,10 @@ Approve pending implementation plans or send steering instructions to a running 
 
 ```bash
 # Approve a generated plan
-python3 dot_agents/skills/google-jules-api/scripts/main.py approve-plan 4475409647262242777 <PLAN_ID>
+python3 <skill-dir>/scripts/main.py approve-plan 4475409647262242777 <PLAN_ID>
 
 # Send clarifying message / guidance
-python3 dot_agents/skills/google-jules-api/scripts/main.py send-message 4475409647262242777 \
+python3 <skill-dir>/scripts/main.py send-message 4475409647262242777 \
   "Please preserve existing test assertions in internal/utils/zero_test.go"
 ```
 
@@ -112,10 +112,10 @@ Execute arbitrary REST requests against any endpoint under `/v1alpha`.
 
 ```bash
 # Direct GET call
-python3 dot_agents/skills/google-jules-api/scripts/main.py call GET sources
+python3 <skill-dir>/scripts/main.py call GET sources
 
 # Direct POST call with payload
-python3 dot_agents/skills/google-jules-api/scripts/main.py call POST sessions '{"prompt":"Fix typo","sourceContext":{"source":"sources/github/owner/repo"}}'
+python3 <skill-dir>/scripts/main.py call POST sessions '{"prompt":"Fix typo","sourceContext":{"source":"sources/github/owner/repo"}}'
 ```
 
 ---

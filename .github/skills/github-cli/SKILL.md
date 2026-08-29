@@ -15,7 +15,7 @@ Manage GitHub platform operations end-to-end through CLI and MCP tools. This ski
 1. **GitHub MCP server** — If the GitHub MCP server is available and
    authenticated, use its tools (e.g. `create_pull_request`, `list_issues`,
    `add_issue_comment`, `pull_request_review_write`) as the primary execution surface.
-2. **MCP Parity Scripts** — If MCP is unavailable, you MUST use the corresponding wrapper script in `@scripts/` (e.g., `@scripts/create_pull_request.sh`, `@scripts/list_issues.sh`). There is a 1-to-1 parity script for every MCP tool. Do NOT manually construct complex `gh` or `gh api` CLI commands yourself; pass the required MCP arguments as flags to the wrapper script (e.g. `--owner`, `--repo`, `--title`).
+2. **MCP Parity Scripts** — If MCP is unavailable, you MUST use the corresponding wrapper script in `<skill-dir>/scripts/` (e.g., `<skill-dir>/scripts/create_pull_request.sh`, `<skill-dir>/scripts/list_issues.sh`). There is a 1-to-1 parity script for every MCP tool. Do NOT manually construct complex `gh` or `gh api` CLI commands yourself; pass the required MCP arguments as flags to the wrapper script (e.g. `--owner`, `--repo`, `--title`).
 3. **No raw API access** — Do NOT fall back to raw `curl` calls against the
    GitHub REST or GraphQL APIs. If neither MCP nor `gh` is available, guide the
    user to install/authenticate `gh` (`gh auth login`) or enable the GitHub
@@ -40,12 +40,14 @@ Read only the reference(s) needed for the query. Never load all references upfro
 
 ## Shared Resources
 
-| Resource | Path | Purpose |
-|----------|------|---------|
-| List / Filter PRs script | `@scripts/list_pull_requests.sh [OPTIONS]` | List and filter PRs (approved, commits after review, waiting on author, unresponded) |
-| List PR review threads script | `@scripts/list_pull_request_review_threads.sh [OPTIONS]` | Retrieve review threads for a pull request via GraphQL |
-| Get PR script | `@scripts/get_pull_request.sh [OPTIONS]` | Fetch comprehensive PR state (summary table, merge readiness checks, comments, reviews, stats) |
-| Resolve thread script | `@scripts/update_pull_request_review_thread_resolution.sh [OPTIONS]` | Resolve PR review threads via GraphQL |
+Run bundled helper scripts relative to this skill's root directory (`<skill-dir>/scripts/...` e.g. `.github/skills/github-cli/scripts/...`):
+
+| Resource | Location | Invocation Syntax | Purpose |
+|----------|----------|-------------------|---------|
+| List / Filter PRs script | `@scripts/list_pull_requests.sh` | `bash <skill-dir>/scripts/list_pull_requests.sh [OPTIONS]` | List and filter PRs (approved, commits after review, waiting on author, unresponded) |
+| List PR review threads script | `@scripts/list_pull_request_review_threads.sh` | `bash <skill-dir>/scripts/list_pull_request_review_threads.sh [OPTIONS]` | Retrieve review threads for a pull request via GraphQL |
+| Get PR script | `@scripts/get_pull_request.sh` | `bash <skill-dir>/scripts/get_pull_request.sh [OPTIONS]` | Fetch comprehensive PR state (summary table, merge readiness checks, comments, reviews, stats) |
+| Resolve thread script | `@scripts/update_pull_request_review_thread_resolution.sh` | `bash <skill-dir>/scripts/update_pull_request_review_thread_resolution.sh [OPTIONS]` | Resolve PR review threads via GraphQL |
 | PR status query | `@queries/find_prs.gql` | GraphQL query for PR status, review, and activity classification |
 | Review threads query | `@queries/review_threads.gql` | GraphQL query to list review threads |
 | Resolve thread query | `@queries/resolve_review_thread.gql` | GraphQL mutation to resolve review threads |

@@ -130,10 +130,10 @@ flowchart LR
 - **The Pointer Pattern**: Reference canonical files (`file:///path/to/example.ts`) instead of copying massive code snippets.
 
 ### Step 5: Validate & Test
-Run the rule validation script to verify YAML syntax, glob patterns, file extensions, and token budgets:
+Run the rule validation script relative to this skill's root directory (`<skill-dir>/scripts/...` e.g. `.github/skills/ai-authoring-rules/scripts/...`) to verify YAML syntax, glob patterns, file extensions, and token budgets:
 
 ```bash
-python3 dot_agents/skills/ai-authoring-rules/scripts/validate.py <path-to-rule-or-dir>
+python3 <skill-dir>/scripts/validate.py <path-to-rule-or-dir>
 ```
 
 ---
@@ -159,4 +159,4 @@ Before finalizing any rule file, ensure:
 - [ ] **Dialect Conformity**: Keys match the platform (`applyTo` vs `globs` vs `paths` vs `trigger` — never mixed).
 - [ ] **Globs Tested**: Glob patterns match intended file paths and do not over-match unrelated files.
 - [ ] **Token Budget**: Character/line budget respected (< 12,000 chars for Antigravity, < 200 lines for Claude, < 500 lines for Cursor).
-- [ ] **Automated Validation**: `python3 scripts/validate.py <file>` outputs `PASS`.
+- [ ] **Automated Validation**: `python3 <skill-dir>/scripts/validate.py <file>` outputs `PASS`.
