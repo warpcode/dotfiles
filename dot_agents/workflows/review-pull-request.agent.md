@@ -32,12 +32,19 @@ Master orchestrator for pull request reviews. You are responsible for the entire
 ### 3. Submission
 - Draft a JSON review payload according to the `github-cli` review standards (Severity, Description, Impact, Solution).
 - **Bot-authored PRs** (e.g. Jules): All findings MUST go into inline file-level `comments`. The top-level `body` must be a neutral one-liner only. Bots only act on inline comments, not the main review body.
+- **Event**: Use `REQUEST_CHANGES` (user preference — never `COMMENT`).
 - Present the full review to the user for approval.
 - Write the payload to a scratch JSON file and submit via:
   ```
   gh api "repos/{owner}/{repo}/pulls/{pr}/reviews" --method POST --input <payload-file>
   ```
   > ⚠️ Do NOT use `submit_review.sh` — it is a broken symlink.
+- **REST payload gotchas** (all verified 2026-08-29):
+  - `subject_type` is GraphQL-only — OMIT it from REST review comments or the API returns 422 (`Field is not defined on DraftPullRequestReviewThread`).
+  - Inline comment `line` must be an **added line in the diff** for `side: RIGHT`. Anchoring to a context/unchanged line fails with `Line could not be resolved`. For new files any line works; for modified files only `+` lines.
+  - `path` must match the PR's diff path exactly (see Stale-PR Path Check above).
+  - Redirect `gh api` output to a file (`> /tmp/out.json 2>&1`) — piping to `--jq`/`cat` can hang the terminal in the alternate buffer and the POST never completes.
+  - Build payloads with a Python script (`json.dumps`) rather than hand-writing JSON — unescaped quotes inside comment bodies break parsing.
 
 ### 4. Memory Extraction (Automatic)
 - **Immediately** after a review is submitted, activate the `ai-conversation-review` skill.
