@@ -1,7 +1,7 @@
 # Bash-Specific Rules
 
-Rules unique to Bash. Apply together with the shared rules in `${SKILL_DIR}/references/style-guide.md`.
-For Zsh-specific rules, see `${SKILL_DIR}/references/style-guide-zsh.md`.
+Rules unique to Bash. Apply together with the shared rules in `@references/style-guide.md`.
+For Zsh-specific rules, see `@references/style-guide-zsh.md`.
 
 ## Table of Contents
 
@@ -28,7 +28,7 @@ For Zsh-specific rules, see `${SKILL_DIR}/references/style-guide-zsh.md`.
 - Use `set` to configure options so the script works when called as `bash script_name`.
 - No need to aim for POSIX-only / avoid "bashisms".
 - Exception: constrained environments (e.g., legacy OS) may require plain Bourne shell.
-- For interactive dotfiles, plugins, or zsh-feature code, prefer Zsh — see `${SKILL_DIR}/references/style-guide-zsh.md` §1.
+- For interactive dotfiles, plugins, or zsh-feature code, prefer Zsh — see `@references/style-guide-zsh.md` §1.
 
 ## 2. Shebang & Options
 
@@ -45,7 +45,7 @@ set -euo pipefail
 - `set -o pipefail` — fail if any pipe segment fails.
 - `set -x` — optional, trace commands while debugging.
 
-See also the arithmetic caution in `${SKILL_DIR}/references/style-guide.md` §11: a standalone
+See also the arithmetic caution in `@references/style-guide.md` §11: a standalone
 `(( expr ))` that evaluates to 0 will exit under `set -e`.
 
 ## 3. Word Splitting Semantics
@@ -166,7 +166,7 @@ readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 Use `BASH_SOURCE[0]`, not `$0` — `$0` is unreliable when the script is sourced
 or invoked via a symlink/PATH. (Zsh has no `BASH_SOURCE`; it uses the `$0`
-idiom — see `${SKILL_DIR}/references/style-guide-zsh.md` §25.)
+idiom — see `@references/style-guide-zsh.md` §25.)
 
 ## 11. Constant Declaration
 

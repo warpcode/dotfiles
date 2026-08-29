@@ -11,9 +11,9 @@ description: >
 This skill merges the former `bash-style-guide` and `zsh-style-guide` skills
 into one. It is a routing hub:
 
-- **Shared rules** (apply to both Bash and Zsh) → `${SKILL_DIR}/references/style-guide.md`
-- **Bash-only rules** → `${SKILL_DIR}/references/style-guide-bash.md`
-- **Zsh-only rules** → `${SKILL_DIR}/references/style-guide-zsh.md`
+- **Shared rules** (apply to both Bash and Zsh) → `@references/style-guide.md`
+- **Bash-only rules** → `@references/style-guide-bash.md`
+- **Zsh-only rules** → `@references/style-guide-zsh.md`
 
 Read only the reference(s) relevant to the file you are working on. Never load
 all references upfront.
@@ -24,11 +24,11 @@ all references upfront.
 
 | Context | Shebang / signal | Read |
 |---|---|---|
-| `.sh` file, `#!/bin/bash`, CI/cron/container script | `#!/bin/bash` | `${SKILL_DIR}/references/style-guide.md` + `${SKILL_DIR}/references/style-guide-bash.md` |
-| `.zsh` file, `#!/bin/zsh`, dotfile (`.zshrc` etc.), zsh plugin/completion | `#!/bin/zsh`, `emulate`, `setopt` | `${SKILL_DIR}/references/style-guide.md` + `${SKILL_DIR}/references/style-guide-zsh.md` |
-| Autoloaded zsh function file | No shebang, sourced | `${SKILL_DIR}/references/style-guide.md` + `${SKILL_DIR}/references/style-guide-zsh.md` |
+| `.sh` file, `#!/bin/bash`, CI/cron/container script | `#!/bin/bash` | `@references/style-guide.md` + `@references/style-guide-bash.md` |
+| `.zsh` file, `#!/bin/zsh`, dotfile (`.zshrc` etc.), zsh plugin/completion | `#!/bin/zsh`, `emulate`, `setopt` | `@references/style-guide.md` + `@references/style-guide-zsh.md` |
+| Autoloaded zsh function file | No shebang, sourced | `@references/style-guide.md` + `@references/style-guide-zsh.md` |
 | Reviewing an unknown script | Check shebang; if absent, check `setopt`/`autoload`/`BASH_SOURCE` | Route by findings |
-| Choosing a shell for a new task | Portability vs feature set | `${SKILL_DIR}/references/style-guide-bash.md` §1 / `${SKILL_DIR}/references/style-guide-zsh.md` §1 |
+| Choosing a shell for a new task | Portability vs feature set | `@references/style-guide-bash.md` §1 / `@references/style-guide-zsh.md` §1 |
 
 **Default for new dotfile code:** write in Zsh with native Zsh idioms — don't
 write bash-compatible code in zsh dotfiles unless portability is required. If
@@ -39,7 +39,7 @@ you need portability across machines or CI/cron, write a separate Bash script.
 ## Quick-Reference Checklist (Shared Rules)
 
 These apply to both shells. Detailed rules and examples live in
-`${SKILL_DIR}/references/style-guide.md`.
+`@references/style-guide.md`.
 
 ### When to Use Shell
 - [ ] Shell only for small utilities / wrapper scripts (< ~100 lines, simple logic).
@@ -139,10 +139,10 @@ implementation (Bash uses `date`, Zsh uses the `zsh/datetime` module).
 
 ## Shell-Specific Rules
 
-- **Bash**: `${SKILL_DIR}/references/style-guide-bash.md` — shebang/`set -euo pipefail`, `PIPESTATUS`,
+- **Bash**: `@references/style-guide-bash.md` — shebang/`set -euo pipefail`, `PIPESTATUS`,
   `readarray`, `${BASH_REMATCH}`, `${var,,}`, process substitution
   `< <(cmd)`, `declare`/`readonly`, word-splitting semantics, Bash skeleton.
-- **Zsh**: `${SKILL_DIR}/references/style-guide-zsh.md` — `emulate -LR zsh`, `setopt`, no default word
+- **Zsh**: `@references/style-guide-zsh.md` — `emulate -LR zsh`, `setopt`, no default word
   splitting, parameter expansion flags, string modifiers, pattern-substitution
   anchors, 1-indexed arrays, associative arrays, glob qualifiers, `print`
   vs `echo`, `zparseopts`, `autoload`/`fpath`, hooks, `zmodload`, dotfile

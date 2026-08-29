@@ -94,4 +94,4 @@ merge type. Always defer to explicit project/team conventions when they exist.
 - NEVER rebase shared/public branches.
 - NEVER force-push without `--force-with-lease` and user confirmation.
 - Recover from botched rebases with `git rebase --abort` or the reflog (see
-  `${SKILL_DIR}/references/merge-conflicts.md` Recovery Recipes).
+  `@references/merge-conflicts.md` Recovery Recipes).

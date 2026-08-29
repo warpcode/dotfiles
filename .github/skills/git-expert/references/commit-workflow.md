@@ -1,6 +1,6 @@
 # Commit Message Standards
 
-Reference for the *process* of performing a commit — collecting context and presenting the commit command to the user. The actual format rules (subjects, bodies, type tables, hard constraints on message shape) live in `${SKILL_DIR}/references/commit-message-format.md`. **Execute** this workflow whenever the user asks to commit or to review staged changes with intent to commit — run the provided scripts, don't just read them.
+Reference for the *process* of performing a commit — collecting context and presenting the commit command to the user. The actual format rules (subjects, bodies, type tables, hard constraints on message shape) live in `@references/commit-message-format.md`. **Execute** this workflow whenever the user asks to commit or to review staged changes with intent to commit — run the provided scripts, don't just read them.
 
 ## Workflow
 
@@ -9,7 +9,7 @@ Reference for the *process* of performing a commit — collecting context and pr
 **Execute** the status script first (do not read it — run it to get live repo context):
 
 ```bash
-bash ${SKILL_DIR}/scripts/status.sh
+bash @scripts/status.sh
 ```
 
 Then check for staged files:
@@ -28,7 +28,7 @@ Analyse the filenames for review and raise any issues or concerns to the user. I
 **Execute** the git-diff-triage script to efficiently triage the diff (run it, don't read it):
 
 ```bash
-python3 ${SKILL_DIR}/scripts/git-diff-triage.py --threshold=40 -- --staged
+python3 @scripts/git-diff-triage.py --threshold=40 -- --staged
 ```
 
 This script shows the full diff for files with ≤ 40 changed lines, and for larger files shows only structural headers (file header, @@ hunk markers, etc.) with a note on how many lines were omitted. If the diff size is over the threshold, the body content is omitted and the LLM then gets it efficiently in chunks.
@@ -37,11 +37,11 @@ Then, decide, based on the size of the diffs, to batch analyse files/chunks.
 
 ### 4. Assess Complexity
 
-Determine whether the commit message should be single-line or multiline. See `${SKILL_DIR}/references/commit-message-format.md` for complexity assessment rules.
+Determine whether the commit message should be single-line or multiline. See `@references/commit-message-format.md` for complexity assessment rules.
 
 ### 5. Draft Message
 
-Apply the format rules from `${SKILL_DIR}/references/commit-message-format.md` to draft the commit message.
+Apply the format rules from `@references/commit-message-format.md` to draft the commit message.
 
 ### 6. Write to File
 
@@ -55,7 +55,7 @@ By default, always show the draft commit message to the user for approval. When 
 ## Operational Hard Constraints
 
 These constraints govern *how* a commit is constructed and delivered — not the
-format of the message itself (those rules are in `${SKILL_DIR}/references/commit-message-format.md`).
+format of the message itself (those rules are in `@references/commit-message-format.md`).
 
 | Rule | Requirement |
 |------|-------------|

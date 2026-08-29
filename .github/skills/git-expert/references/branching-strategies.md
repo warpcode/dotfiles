@@ -43,7 +43,7 @@ Rules:
 
 ## Merge vs Rebase
 
-See `${SKILL_DIR}/references/merge-strategies.md` for the full breakdown of
+See `@references/merge-strategies.md` for the full breakdown of
 merge types (explicit, fast-forward, rebase, squash) and when to use each.
 
 **Rule: Merge (public), Rebase (private).**
@@ -87,17 +87,17 @@ git rebase -i $(git merge-base HEAD main)
 
 ```bash
 # Token-efficient divergence, commit list, and file diffs
-bash ${SKILL_DIR}/scripts/branch_diff.sh [base_branch]
+bash @scripts/branch_diff.sh [base_branch]
 ```
 
 ### Branch overview & cleanup
 
 ```bash
 # List local/remote branches with upstream tracking and merged status
-bash ${SKILL_DIR}/scripts/branches.sh
+bash @scripts/branches.sh
 
 # Prune stale tracking refs and delete merged local branches (requires confirmation)
-bash ${SKILL_DIR}/scripts/branches.sh --prune --delete-merged
+bash @scripts/branches.sh --prune --delete-merged
 ```
 
 ### Push safely
@@ -111,4 +111,4 @@ git push --force-with-lease   # never plain --force on shared branches
 - NEVER rebase shared/public branches.
 - NEVER force-push without `--force-with-lease` and user confirmation.
 - Recover from botched rebases with `git rebase --abort` or the reflog (see
-  `${SKILL_DIR}/references/cli-commands.md`).
+  `@references/cli-commands.md`).

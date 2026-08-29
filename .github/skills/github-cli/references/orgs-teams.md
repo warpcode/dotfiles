@@ -6,7 +6,7 @@ Query authenticated user information, organization teams, and team membership.
 
 ## Operations Overview
 
-| Operation | Risk Level | Primary MCP Action | Script Fallback (`${SKILL_DIR}/scripts/`) |
+| Operation | Risk Level | Primary MCP Action | Script Fallback (`@scripts/`) |
 | :--- | :--- | :--- | :--- |
 | **Get current user** | Read-Only | `get_me` | `get_me.sh` |
 | **Get organization teams** | Read-Only | `get_teams` | `get_teams.sh` |
@@ -19,7 +19,7 @@ Query authenticated user information, organization teams, and team membership.
 Inspect the currently authenticated user account:
 
 ```bash
-bash ${SKILL_DIR}/scripts/get_me.sh
+bash @scripts/get_me.sh
 ```
 
 ---
@@ -29,7 +29,7 @@ bash ${SKILL_DIR}/scripts/get_me.sh
 List all teams within an organization:
 
 ```bash
-bash ${SKILL_DIR}/scripts/get_teams.sh --org <org_name>
+bash @scripts/get_teams.sh --org <org_name>
 ```
 
 ---
@@ -39,5 +39,5 @@ bash ${SKILL_DIR}/scripts/get_teams.sh --org <org_name>
 List members of a specific organization team:
 
 ```bash
-bash ${SKILL_DIR}/scripts/get_team_members.sh --org <org_name> --team-slug <team_slug>
+bash @scripts/get_team_members.sh --org <org_name> --team-slug <team_slug>
 ```

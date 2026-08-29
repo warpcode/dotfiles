@@ -9,7 +9,7 @@ Manage remote repository content, files, branches, tags, commits, collaborators,
 
 ## Operations Overview
 
-| Operation | Risk Level | Primary MCP Action | Script Fallback (`${SKILL_DIR}/scripts/`) |
+| Operation | Risk Level | Primary MCP Action | Script Fallback (`@scripts/`) |
 | :--- | :--- | :--- | :--- |
 | **Get file contents** | Read-Only | `get_file_contents` | `get_file_contents.sh` |
 | **Create/update file** | Mutating (Write) | `create_or_update_file` | `create_or_update_file.sh` |
@@ -30,20 +30,20 @@ Manage remote repository content, files, branches, tags, commits, collaborators,
 ### Get File Contents
 Fetch remote file content without checking out the branch:
 ```bash
-bash ${SKILL_DIR}/scripts/get_file_contents.sh --path "path/to/file.txt" --branch "main" [--owner <owner>] [--repo <repo>]
+bash @scripts/get_file_contents.sh --path "path/to/file.txt" --branch "main" [--owner <owner>] [--repo <repo>]
 ```
 
 ### Create or Update a Single Remote File
 ```bash
 # 1. Create a brand new file (no --sha required)
-bash ${SKILL_DIR}/scripts/create_or_update_file.sh \
+bash @scripts/create_or_update_file.sh \
   --path "docs/guide.md" \
   --message "docs: create user guide" \
   --content "<base64_encoded_content>" \
   --branch "feature-branch"
 
 # 2. Update an existing file (passing optional --sha)
-bash ${SKILL_DIR}/scripts/create_or_update_file.sh \
+bash @scripts/create_or_update_file.sh \
   --path "docs/guide.md" \
   --message "docs: update user guide" \
   --content "<base64_encoded_content>" \
@@ -55,7 +55,7 @@ bash ${SKILL_DIR}/scripts/create_or_update_file.sh \
 
 ### Delete a Single Remote File
 ```bash
-bash ${SKILL_DIR}/scripts/delete_file.sh \
+bash @scripts/delete_file.sh \
   --path "path/to/file.txt" \
   --message "chore: remove obsolete file" \
   --branch "feature-branch" \
@@ -69,22 +69,22 @@ bash ${SKILL_DIR}/scripts/delete_file.sh \
 
 ### List Branches
 ```bash
-bash ${SKILL_DIR}/scripts/list_branches.sh [--owner <owner>] [--repo <repo>]
+bash @scripts/list_branches.sh [--owner <owner>] [--repo <repo>]
 ```
 
 ### Create a Remote Branch
 Create a branch pointing directly to a specific commit SHA:
 ```bash
-bash ${SKILL_DIR}/scripts/create_branch.sh --branch "new-feature" --sha "<commit_sha>" [--owner <owner>] [--repo <repo>]
+bash @scripts/create_branch.sh --branch "new-feature" --sha "<commit_sha>" [--owner <owner>] [--repo <repo>]
 ```
 
 ### List and Inspect Tags
 ```bash
 # List all tags
-bash ${SKILL_DIR}/scripts/list_tags.sh [--owner <owner>] [--repo <repo>]
+bash @scripts/list_tags.sh [--owner <owner>] [--repo <repo>]
 
 # Get specific tag ref
-bash ${SKILL_DIR}/scripts/get_tag.sh --tag "<tag_name>" [--owner <owner>] [--repo <repo>]
+bash @scripts/get_tag.sh --tag "<tag_name>" [--owner <owner>] [--repo <repo>]
 ```
 
 ---
@@ -93,12 +93,12 @@ bash ${SKILL_DIR}/scripts/get_tag.sh --tag "<tag_name>" [--owner <owner>] [--rep
 
 ### Get Commit Details
 ```bash
-bash ${SKILL_DIR}/scripts/get_commit.sh --sha "<commit_sha>" [--owner <owner>] [--repo <repo>]
+bash @scripts/get_commit.sh --sha "<commit_sha>" [--owner <owner>] [--repo <repo>]
 ```
 
 ### List Commits
 ```bash
-bash ${SKILL_DIR}/scripts/list_commits.sh [--owner <owner>] [--repo <repo>]
+bash @scripts/list_commits.sh [--owner <owner>] [--repo <repo>]
 ```
 
 ---
@@ -107,23 +107,23 @@ bash ${SKILL_DIR}/scripts/list_commits.sh [--owner <owner>] [--repo <repo>]
 
 ### List Collaborators
 ```bash
-bash ${SKILL_DIR}/scripts/list_repository_collaborators.sh [--owner <owner>] [--repo <repo>]
+bash @scripts/list_repository_collaborators.sh [--owner <owner>] [--repo <repo>]
 ```
 
 ### Create Repository
 ```bash
 # Minimal private repository (default)
-bash ${SKILL_DIR}/scripts/create_repository.sh --name "my-new-repo"
+bash @scripts/create_repository.sh --name "my-new-repo"
 
 # Public repository with optional description
-bash ${SKILL_DIR}/scripts/create_repository.sh --name "my-open-source-tool" --description "A CLI tool for developers" --public true
+bash @scripts/create_repository.sh --name "my-open-source-tool" --description "A CLI tool for developers" --public true
 ```
 
 ### Fork Repository
 ```bash
 # Fork the currently auto-detected repository
-bash ${SKILL_DIR}/scripts/fork_repository.sh
+bash @scripts/fork_repository.sh
 
 # Fork a specific external repository
-bash ${SKILL_DIR}/scripts/fork_repository.sh --owner upstream-org --repo project-template
+bash @scripts/fork_repository.sh --owner upstream-org --repo project-template
 ```
