@@ -145,21 +145,21 @@ Select the closest recipe template from `templates/`:
 4. Select and copy a template from `templates/`.
 5. Implement matcher filters (`matcher`, `if` conditions) to avoid unnecessary spawns.
 6. Write or configure the handler script in `scripts/` or project hooks dir.
-7. Validate using `python3 scripts/validate.py <path-to-hook-file-or-dir>`.
+7. Validate using `python3 <skill-dir>/scripts/validate.py <path-to-hook-file-or-dir>`.
 8. Test by triggering the agent in a test session and observing behavior.
 
 ### 2. Validation Workflow
 
-Validate all hook configuration files before deployment:
+Validate all hook configuration files relative to this skill's root directory (`<skill-dir>/scripts/...` e.g. `.github/skills/ai-authoring-hooks/scripts/...`):
 
 ```bash
 # Self-test validator
-python3 scripts/validate.py --self-test
+python3 <skill-dir>/scripts/validate.py --self-test
 
 # Validate specific hook config or directory
-python3 scripts/validate.py .github/hooks/
-python3 scripts/validate.py .agents/hooks.json
-python3 scripts/validate.py .claude/settings.json
+python3 <skill-dir>/scripts/validate.py .github/hooks/
+python3 <skill-dir>/scripts/validate.py .agents/hooks.json
+python3 <skill-dir>/scripts/validate.py .claude/settings.json
 ```
 
 The validator checks:

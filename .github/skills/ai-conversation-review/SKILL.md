@@ -62,14 +62,14 @@ The review system accepts conversation transcripts from any AI platform:
 - **Plain Markdown / Text**: Exported chat text (`User:` / `Assistant:`)
 
 ### Ingestion Helper
-To extract turns and tool invocations without consuming excessive tokens:
+To extract turns and tool invocations without consuming excessive tokens, run the parser relative to this skill's root directory (`<skill-dir>/scripts/...` e.g. `.github/skills/ai-conversation-review/scripts/...`):
 
 ```bash
 # Ingest from a log file
-python3 scripts/parse_conversation.py /path/to/transcript.jsonl
+python3 <skill-dir>/scripts/parse_conversation.py /path/to/transcript.jsonl
 
 # Ingest only errors and tool calls
-python3 scripts/parse_conversation.py /path/to/transcript.jsonl --errors-only
+python3 <skill-dir>/scripts/parse_conversation.py /path/to/transcript.jsonl --errors-only
 ```
 
 ---
