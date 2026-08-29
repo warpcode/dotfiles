@@ -119,6 +119,8 @@ class TestJulesClient(unittest.TestCase):
 
         data = self.client.send_message("4475409647262242777", "Please add unit tests.")
 
+        self.assertEqual(data.get("originator"), "user")
+        self.assertTrue(data.get("name", "").endswith("/activities/act-123"))
         self.assertIn("userMessage", data)
         self.assertEqual(data["userMessage"]["message"], "Please add unit tests.")
 
@@ -140,6 +142,7 @@ class TestJulesClient(unittest.TestCase):
         mock_urlopen.assert_called_once()
         req = mock_urlopen.call_args[0][0]
         self.assertEqual(req.get_full_url(), "https://jules.googleapis.com/v1alpha/sessions/4475409647262242777:sendMessage")
+        self.assertEqual(req.get_method(), "POST")
         self.assertEqual(json.loads(req.data.decode("utf-8")), {"message": "Trimmed message"})
 
 
