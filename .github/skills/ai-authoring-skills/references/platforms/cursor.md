@@ -62,5 +62,5 @@ metadata:
 
 - **Custom Mode backing**: Any skill can back a dedicated session-long Custom Mode; `icon` and `color` style its UI badge in the mode selector. Unrecognized icons fall back to a default lightning badge.
 - **Nested directory auto-scoping**: Skills placed in nested project subdirectories (e.g. `apps/web/.cursor/skills/<name>/`) automatically scope their context to files under that directory tree without requiring explicit `paths`.
-- **Bundled resources**: Supports standard resource directories (`scripts/`, `references/`, `assets/` / `templates/`).
+- **Bundled resources**: Supports standard resource directories (`scripts/`, `@references/`, `assets/` / `templates/`).
 

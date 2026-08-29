@@ -1,17 +1,9 @@
 ---
 name: ai-authoring-rules
 description: >
-  Create, modify, update, convert, or debug persistent instruction, rule, and
-  memory files across GitHub Copilot (.github/copilot-instructions.md and
-  .github/instructions/*.instructions.md), Cursor (.cursor/rules/*.mdc), Google
-  Antigravity (.agents/rules/*.md and GEMINI.md), Claude Code (CLAUDE.md and
-  .claude/rules/*.md), ChatGPT/OpenAI Codex (.codex/rules/*.rules, hooks.json, and
-  AGENTS.md), OpenCode (AGENTS.md and opencode.json instructions/plugins), and
-  Hermes Agent (SOUL.md, .hermes.md, and AGENTS.md). Use when the user says "add
-  a rule", "create a rule for X", "make Copilot/Cursor/Claude always do X", asks
-  where instructions live, why a rule is not applying, how to scope guidance to
-  specific file paths, how to transpile rules across platforms, or how to
-  simulate rules via hooks on platforms lacking native frontmatter rules.
+  Create, convert, or debug persistent instruction and rule files (AGENTS.md,
+  CLAUDE.md, .mdc, .instructions.md) across Copilot, Cursor, Antigravity, and
+  Claude. Use when adding or updating rules.
 ---
 
 # Authoring Rules & Instructions
@@ -97,15 +89,15 @@ scope:
 
 For exhaustive syntax, configuration options, and runtime execution rules:
 
-- [Google Antigravity Reference](references/platforms/antigravity.md) — Documentation: <https://antigravity.google/docs/rules-workflows/#workspace-rules>
-- [Cursor Reference](references/platforms/cursor.md) — Documentation: <https://cursor.com/docs/rules>
-- [GitHub Copilot & VS Code Reference](references/platforms/copilot-vscode.md) — Documentation: <https://code.visualstudio.com/docs/agent-customization/custom-instructions>
-- [Claude Code Reference](references/platforms/claude-code.md) — Documentation: <https://docs.anthropic.com/en/docs/claude-code>
-- [ChatGPT & Codex Reference](references/platforms/codex.md) — Documentation: <https://learn.chatgpt.com/docs/agent-configuration/rules>
-- [OpenCode Reference](references/platforms/opencode.md) — Documentation: <https://opencode.ai/docs/configuration>
-- [Hermes Agent Reference](references/platforms/hermes.md) — Documentation: <https://hermes-agent.nousresearch.com/docs/>
-- [Hooks & Rule Simulation Guide](references/hooks-and-simulation.md): In-depth guide and code recipes for simulating path-scoped rules on platforms lacking native frontmatter glob engines.
-- [Rule Authoring Best Practices](references/best-practices.md): Token budgeting, negative constraints, verifiable directives, and conflict hierarchy.
+- [Google Antigravity Reference](@references/platforms/antigravity.md) — Documentation: <https://antigravity.google/docs/rules-workflows/#workspace-rules>
+- [Cursor Reference](@references/platforms/cursor.md) — Documentation: <https://cursor.com/docs/rules>
+- [GitHub Copilot & VS Code Reference](@references/platforms/copilot-vscode.md) — Documentation: <https://code.visualstudio.com/docs/agent-customization/custom-instructions>
+- [Claude Code Reference](@references/platforms/claude-code.md) — Documentation: <https://docs.anthropic.com/en/docs/claude-code>
+- [ChatGPT & Codex Reference](@references/platforms/codex.md) — Documentation: <https://learn.chatgpt.com/docs/agent-configuration/rules>
+- [OpenCode Reference](@references/platforms/opencode.md) — Documentation: <https://opencode.ai/docs/configuration>
+- [Hermes Agent Reference](@references/platforms/hermes.md) — Documentation: <https://hermes-agent.nousresearch.com/docs/>
+- [Hooks & Rule Simulation Guide](@references/hooks-and-simulation.md): In-depth guide and code recipes for simulating path-scoped rules on platforms lacking native frontmatter glob engines.
+- [Rule Authoring Best Practices](@references/best-practices.md): Token budgeting, negative constraints, verifiable directives, and conflict hierarchy.
 
 ---
 

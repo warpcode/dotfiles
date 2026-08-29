@@ -24,7 +24,7 @@ Comprehensive catalog of prompt patterns, decision matrices, compatibility graph
 | **Untrusted data, prompt injection, mixed inputs** | Structured Markdown Frame | Few-Shot Exemplars | `templates/pattern-library.md` (`[P2.1]`) |
 | **Non-standard custom DSL syntax or regex** | Few-Shot Exemplars | Structured Markdown Frame | `templates/pattern-library.md` (`[P5.3]`) |
 | **Subjective quality grading or evaluation** | Rubric-as-Judge | Structured Scratchpad | `templates/pattern-library.md` (`[P5.2]`) |
-| **Visual architecture, decision trees, lifecycles** | Mermaid.js Standard | Flowchart, Sequence, State Diagram | `references/visual-diagrams.md` |
+| **Visual architecture, decision trees, lifecycles** | Mermaid.js Standard | Flowchart, Sequence, State Diagram | `@references/visual-diagrams.md` |
 
 ---
 

@@ -1,16 +1,9 @@
 ---
 name: ai-authoring-hooks
 description: >
-  Create, modify, configure, or debug custom lifecycle hooks, guardrails, and
-  plugin hooks across Claude Code (.claude/settings.json, hooks/hooks.json),
-  GitHub Copilot / VS Code (.github/hooks/*.json, .agent.md), Google Antigravity
-  (.agents/hooks.json), OpenCode (.opencode/plugins/*.ts, opencode.json),
-  ChatGPT/Codex (.codex/hooks.json, config.toml), Cursor (.cursor/hooks.json),
-  and Hermes Agent (~/.hermes/config.yaml, agent-hooks/). Use when the user says
-  "create a hook", "add a PreToolUse hook", "block dangerous commands", "run linter
-  after edits", "simulate rules with hooks", asks about hook events, matchers,
-  exit codes, JSON input/output schemas, additionalContext injection, or wants to
-  enforce deterministic safety policies.
+  Create, configure, or debug agent lifecycle hooks (PreToolUse, PostToolUse),
+  safety guardrails, and plugin event handlers across major AI platforms. Use
+  when adding or testing agent hooks.
 ---
 
 # Authoring Agent Lifecycle Hooks
@@ -72,13 +65,13 @@ formatting, or strict verification is required, pair rules with hooks.
 
 For exhaustive schema, input/output structures, and platform nuances, consult the local references and upstream documentation:
 
-- [Claude Code Reference](references/platforms/claude-code.md) — Upstream: [Claude Code Hooks Reference](https://code.claude.com/docs/en/hooks#hooks-reference)
-- [Copilot / VS Code Reference](references/platforms/copilot-vscode.md) — Upstream: [VS Code Agent Hooks](https://code.visualstudio.com/docs/agent-customization/hooks)
-- [Google Antigravity Reference](references/platforms/antigravity.md) — Upstream: [Antigravity Hooks Guide](https://antigravity.google/docs/hooks/)
-- [OpenCode Reference](references/platforms/opencode.md) — Upstream: [OpenCode Plugins Guide](https://opencode.ai/docs/plugins/)
-- [ChatGPT / Codex Reference](references/platforms/codex.md) — Upstream: [ChatGPT Agent Configuration](https://learn.chatgpt.com/docs/agent-configuration/rules)
-- [Cursor Reference](references/platforms/cursor.md) — Upstream: [Cursor Agent Hooks](https://cursor.com/docs/agent-customization/hooks)
-- [Hermes Agent Reference](references/platforms/hermes.md) — Upstream: [Hermes Lifecycle Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/lifecycle-hooks)
+- [Claude Code Reference](@references/platforms/claude-code.md) — Upstream: [Claude Code Hooks Reference](https://code.claude.com/docs/en/hooks#hooks-reference)
+- [Copilot / VS Code Reference](@references/platforms/copilot-vscode.md) — Upstream: [VS Code Agent Hooks](https://code.visualstudio.com/docs/agent-customization/hooks)
+- [Google Antigravity Reference](@references/platforms/antigravity.md) — Upstream: [Antigravity Hooks Guide](https://antigravity.google/docs/hooks/)
+- [OpenCode Reference](@references/platforms/opencode.md) — Upstream: [OpenCode Plugins Guide](https://opencode.ai/docs/plugins/)
+- [ChatGPT / Codex Reference](@references/platforms/codex.md) — Upstream: [ChatGPT Agent Configuration](https://learn.chatgpt.com/docs/agent-configuration/rules)
+- [Cursor Reference](@references/platforms/cursor.md) — Upstream: [Cursor Agent Hooks](https://cursor.com/docs/agent-customization/hooks)
+- [Hermes Agent Reference](@references/platforms/hermes.md) — Upstream: [Hermes Lifecycle Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/lifecycle-hooks)
 
 ## Lifecycle Event Equivalence Map
 
@@ -98,7 +91,7 @@ Platforms such as OpenAI Codex and OpenCode support static instructions (`AGENTS
 or static file arrays, but lack native runtime path-scoped or model-decided rule
 activation engines. Hooks solve this by providing dynamic rule simulation.
 
-See [Simulating Rules Guide](references/simulating-rules.md) for full architectural patterns:
+See [Simulating Rules Guide](@references/simulating-rules.md) for full architectural patterns:
 
 1. **Dynamic Context Injection (Soft Rules)**:
    - Trigger at `UserPromptSubmit` / `SessionStart` / `PreInvocation` / `pre_llm_call`.

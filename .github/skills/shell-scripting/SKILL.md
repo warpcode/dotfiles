@@ -1,14 +1,9 @@
 ---
 name: shell-scripting
 description: >
-  Apply correct shell scripting style to any Bash or Zsh code: scripts, .sh
-  files, dotfiles (.zshrc etc.), plugins, and completions. Load this skill
-  whenever writing, reviewing, refactoring, or debugging shell scripts, or when
-  asked how to write something "in shell", "in bash", or "in zsh". Covers
-  Google's Shell Style Guide plus shell-specific rules (naming, formatting,
-  quoting, arrays, control flow, error handling, setopts, glob qualifiers,
-  autoload/fpath). Also load when reviewing an unknown script to route it to
-  the right shell's rules.
+  Standards, syntax, and idioms for Bash and Zsh scripting: Google Shell
+  Style Guide, robust quoting/arrays, traps, setopts, and dotfiles conventions.
+  Use when writing, refactoring, or reviewing shell scripts.
 ---
 
 # Shell Scripting Style Guide

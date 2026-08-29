@@ -1,10 +1,8 @@
 ---
 name: github
 description: >
-  Procedure-based and preference-based guidelines for using GitHub. Covers PR
-  readiness criteria, review orchestration (when to approve vs request changes, tone),
-  issue/PR title and body formatting, comment templates, merge conflict
-  resolution workflow, and triage standards.
+  Workflow guidelines and standards for GitHub: PR readiness, review orchestration,
+  issue/PR formatting, and triage standards. Use when reviewing PRs or defining conventions.
   Requires either the GitHub MCP server or the `gh` CLI to be available, but
   does not provide direct execution commands (use the github-cli skill for execution).
 user-invocable: false

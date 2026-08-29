@@ -37,6 +37,5 @@ This is a **chezmoi-managed dotfiles repository** (`warpcode/dotfiles`): shell c
 - Mark deliberate simplifications with a `ponytail:` comment naming the ceiling + upgrade path.
 
 ## Skills
-- `.github/skills/`: `cli-to-skill`, `email-classifier`, `git-expert`, `github-cli`, `jules-cli`, `shell-scripting`
-- `dot_agents/skills/`: `prompt-engineering`, `technical-review-guidelines`, `jira-tasks`, `agentic-architecture`, and more
+- `.github/skills/`: `ai-authoring-*`, `email-classifier`, `git-expert`, `github`, `github-cli`, `google-antigravity-cli`, `google-jules-api`, `shell-scripting`
 - Load the relevant skill before executing (see `dot_agents/AGENTS.md` resource-selection rules).

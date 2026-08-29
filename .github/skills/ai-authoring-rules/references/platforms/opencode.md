@@ -79,4 +79,4 @@ export default class ScopedRulesPlugin implements Plugin {
 }
 ```
 
-For complete recipes and hook patterns, see [references/hooks-and-simulation.md](../hooks-and-simulation.md).
+For complete recipes and hook patterns, see [@references/hooks-and-simulation.md](../hooks-and-simulation.md).

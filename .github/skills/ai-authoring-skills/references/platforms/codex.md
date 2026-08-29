@@ -43,6 +43,6 @@ metadata:
 - The `metadata` map commonly carries `author`, `version`, `category`, and `plugin` identifiers when packaged or distributed.
 - Standard directory layout:
   - `scripts/`: Executable helper tools (agents learn invocation via `--help`).
-  - `references/`: Detailed documentation and reference manuals loaded on demand.
+  - `@references/`: Detailed documentation and reference manuals loaded on demand.
   - `assets/` / `templates/`: Boilerplate code, prompt templates, and structured output templates.
 

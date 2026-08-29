@@ -1,17 +1,9 @@
 ---
 name: git-expert
 description: >
-  Manage all local Git version control operations. Use this skill for git CLI
-  command syntax, error triage and repository recovery (detached HEAD, reflog,
-  rebase), branch handling and naming, branch strategy selection (Git Flow,
-  trunk-based, GitHub Flow), merge conflict resolution, merge strategies
-  (explicit, fast-forward, rebase, squash), submodule management,
-  git worktree operations, index/read-tree manipulation, and commit message
-  standards (Conventional Commits). Triggers: "git status", "how do I fix a
-  broken rebase", "squash commits", "branch naming", "commit message", "merge
-  conflict", "detached HEAD", "git reflog", "git worktree", "submodule", "git
-  stash", "git read-tree", "repo overview", "branch diff", "git triage",
-  "clean branches", "clean stash", "clean worktrees".
+  Expert local Git operations: branch strategies, conflict resolution,
+  rebase/reflog triage, worktrees, submodules, and Conventional Commits. Use
+  when performing local git operations.
 user-invocable: false
 ---
 

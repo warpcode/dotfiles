@@ -62,13 +62,13 @@ gh-admin      → auth, config, secrets (likely read-only for most agents)
 
 **Analysis:** Single operational mode. No subcommands. Rich filter language.
 
-**Decision:** One skill. However, the filter language is complex enough to warrant a `references/filters.md` with common filter patterns, rather than embedding them all in SKILL.md.
+**Decision:** One skill. However, the filter language is complex enough to warrant a `@references/filters.md` with common filter patterns, rather than embedding them all in SKILL.md.
 
 **Result:**
 ```
 jq/
 ├── SKILL.md           → invocation, common patterns, constraints
-└── references/
+└── @references/
     └── filters.md     → filter syntax reference: select, map, reduce, paths
 ```
 
@@ -103,7 +103,7 @@ ffprobe/
 ├── SKILL.md           → inspect media files, extract metadata as JSON
 ffmpeg-transcode/
 ├── SKILL.md           → format conversion, codec selection, output sizing
-└── references/
+└── @references/
     └── codecs.md      → common codec + container combinations
 ```
 

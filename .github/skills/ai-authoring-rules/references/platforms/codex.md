@@ -72,4 +72,4 @@ Because Codex does not natively parse YAML frontmatter `applyTo` / `globs` on ma
 }
 ```
 
-For complete implementation scripts and recipes for hook-simulated rules, see [references/hooks-and-simulation.md](../hooks-and-simulation.md).
+For complete implementation scripts and recipes for hook-simulated rules, see [@references/hooks-and-simulation.md](../hooks-and-simulation.md).
