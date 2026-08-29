@@ -108,7 +108,7 @@ A **wrapper script** is warranted when:
 
 ## Phase 3: Decomposition Decisions
 
-> For detailed heuristics and worked examples, read [`decomposition.md`](file:///home/jase/src/dotfiles/.github/skills/ai-authoring-skills/references/cli-integration/decomposition.md).
+> For detailed heuristics and worked examples, read [`decomposition.md`](@references/cli-integration/decomposition.md).
 
 ### 3.1 How Many Skills?
 
@@ -128,5 +128,5 @@ Split into separate `read` and `write` skills when:
 
 1. Apply `ai-authoring-prompts` rules to all LLM-facing instructions.
 2. Follow `templates/integration-tool.md` for skill layout.
-3. For wrapper scripts, follow the header conventions and patterns in [`script-patterns.md`](file:///home/jase/src/dotfiles/.github/skills/ai-authoring-skills/references/cli-integration/script-patterns.md).
+3. For wrapper scripts, follow the header conventions and patterns in [`script-patterns.md`](@references/cli-integration/script-patterns.md).
 4. Run validation: `python3 scripts/validate.py <skill-dir>`.
