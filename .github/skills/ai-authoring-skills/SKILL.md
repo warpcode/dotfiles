@@ -1,18 +1,9 @@
 ---
 name: ai-authoring-skills
 description: >
-  Create, modify, update, improve, merge, replace, split, rename, or audit
-  agent skills (SKILL.md packages) across Claude Code, GitHub Copilot,
-  OpenCode, Cursor, Gemini CLI/Antigravity, and Hermes Agent. Use when the
-  user says "create a skill", "make a skill for X", "skill-ify this", "turn
-  this into a skill", asks where skills live, how SKILL.md frontmatter works,
-  how to name/rename/group skills with prefixes, which template or skill type
-  fits (workflow/SOP, guidelines, tool integration, orchestrator, meta),
-  reports a skill not triggering, or wants proof a skill works ("test my
-  skill", "run evals", "trigger benchmark"). Not for agents, rules, slash
-  commands, or hooks - those have their own ai-authoring skills. Covers the
-  agentskills.io open standard, naming rules, folder hierarchy, script
-  standards, validation, and evals with subagents.
+  Create, audit, test, or refactor agent skill packages (SKILL.md, scripts, evals)
+  and CLI workflows across Claude, Copilot, Cursor, Antigravity, and Hermes. Use
+  when authoring, updating, or packaging skills.
 ---
 
 # Authoring Agent Skills
@@ -62,7 +53,7 @@ Illustrative example - subfolders are optional; bundle only what the skill needs
 deploy-app/
 ├── SKILL.md                  # required: YAML frontmatter + instructions;
 │                             #   body stays routing + core rules
-├── references/               # optional: detail loaded on demand
+├── @references/               # optional: detail loaded on demand
 │   ├── environments.md       #   deep-dive doc, read only when needed
 │   └── rollback/             #   group related docs in a subfolder
 │       └── procedure.md
@@ -135,13 +126,13 @@ reference before adding extras, and keep skills fully functional without them:
 
 | Platform | Extension highlights | Reference |
 |---|---|---|
-| Claude Code | Invocation control, tool grants, model/effort, forked context, `!` injection | `references/platforms/claude-code.md` |
-| Copilot / VS Code | `argument-hint`, `user-invocable`, experimental `context: fork` | `references/platforms/copilot-vscode.md` |
-| OpenCode | `license`, `compatibility`, `metadata` map; unknown keys ignored | `references/platforms/opencode.md` |
-| Cursor | `paths` file scoping, Custom Mode badge (`icon`/`color`), `metadata` | `references/platforms/cursor.md` |
-| Codex | `license`, `compatibility`, `metadata` map | `references/platforms/codex.md` |
-| Antigravity | Declarative JSON discovery (`skills.json`/`plugins.json`), agent scoping, hierarchical discovery | `references/platforms/antigravity.md` |
-| Hermes Agent | Version/platform gating, tool requirements, env vars, blueprints | `references/platforms/hermes.md` |
+| Claude Code | Invocation control, tool grants, model/effort, forked context, `!` injection | `@references/platforms/claude-code.md` |
+| Copilot / VS Code | `argument-hint`, `user-invocable`, experimental `context: fork` | `@references/platforms/copilot-vscode.md` |
+| OpenCode | `license`, `compatibility`, `metadata` map; unknown keys ignored | `@references/platforms/opencode.md` |
+| Cursor | `paths` file scoping, Custom Mode badge (`icon`/`color`), `metadata` | `@references/platforms/cursor.md` |
+| Codex | `license`, `compatibility`, `metadata` map | `@references/platforms/codex.md` |
+| Antigravity | Declarative JSON discovery (`skills.json`/`plugins.json`), agent scoping, hierarchical discovery | `@references/platforms/antigravity.md` |
+| Hermes Agent | Version/platform gating, tool requirements, env vars, blueprints | `@references/platforms/hermes.md` |
 
 Up-to-date sources: [Claude Code](https://code.claude.com/docs/en/skills),
 [Copilot/VS Code](https://code.visualstudio.com/docs/agent-customization/agent-skills),
@@ -157,12 +148,12 @@ Skills use a three-level loading system to optimize agent context:
 
 1. **Metadata** (`name` + `description` frontmatter) - always in context (~100 words).
 2. **SKILL.md body** - loaded into context only when the skill triggers (<500 lines target).
-3. **Bundled resources** (`references/`, `scripts/`, `templates/`) - loaded on demand by the agent as needed; unlimited size, and scripts can execute without being read.
+3. **Bundled resources** (`@references/`, `scripts/`, `templates/`) - loaded on demand by the agent as needed; unlimited size, and scripts can execute without being read.
 
 ### Progressive disclosure rules
 
-- **Keep SKILL.md body under 500 lines**: When approaching this limit, move deep domain documentation into `references/` or templates into `templates/`.
-- **Targeted reference pointers**: Provide explicit, conditional pointers in `SKILL.md` indicating *when* an agent should read a reference file (e.g. `See references/platforms/claude-code.md when deploying to Claude Code`). Never instruct the agent to "load all references upfront".
+- **Keep SKILL.md body under 500 lines**: When approaching this limit, move deep domain documentation into `@references/` or templates into `templates/`.
+- **Targeted reference pointers**: Provide explicit, conditional pointers in `SKILL.md` indicating *when* an agent should read a reference file (e.g. `See @references/platforms/claude-code.md when deploying to Claude Code`). Never instruct the agent to "load all references upfront".
 - **Prompt body composition**: For prompt body styling, imperative tone, RFC 2119 directives, calibrated specificity, negative constraints, and output contracts, consult and apply `ai-authoring-prompts`.
 
 
@@ -220,7 +211,7 @@ Before creating a skill, select the structural category template that matches th
 | Meta / self-improving | Authors, audits, or optimizes skills themselves | `templates/meta.md` |
 
 Every skill body follows a consistent structural hierarchy: **Objective → When to Use → Procedure / Directives → What NOT to Do → Verification / Exit Criteria**.
-- **Container structure**: Governed by this skill (`name`, `description`, `references/` and `scripts/` layout).
+- **Container structure**: Governed by this skill (`name`, `description`, `@references/` and `scripts/` layout).
 - **Prompt body contents**: Composed using patterns and archetypes from `ai-authoring-prompts`.
 
 
@@ -249,17 +240,22 @@ improving an existing one - and jump in at that stage. Full path:
 6. Validate (below); fix and rerun until clean.
 7. Wire discovery: symlink from platform directories (e.g.
    `.github/skills/`) where workspace-level discovery is needed.
-8. Offer proof: run test cases per `references/evals.md` - skills with
+8. Offer proof: run test cases per `@references/evals.md` - skills with
    subjective outputs may skip them - then optionally optimize the
    description for triggering (same reference).
 
-Stay flexible: a user who says "just vibe with me" gets a qualitative
-review, not the full harness.
+### CLI tool integration workflow
+
+When building a skill to wrap a CLI binary, script, or command suite:
+1. Follow the 4-phase procedure in `@references/cli-integration/cli-to-skill.md` (Discovery → Analysis → Decomposition → Authoring).
+2. For compound CLIs with multiple subcommands, apply decomposition heuristics in `@references/cli-integration/decomposition.md` to determine whether to split by domain or read/write operations.
+3. For multi-step, paginated, or bulk operations, author wrapper scripts following patterns in `@references/cli-integration/script-patterns.md`.
+4. Structure the final skill using `templates/integration-tool.md`.
 
 ### Testing & evals
 
 When the user wants proof a skill works - test prompts, graded runs, pass
-rates, or trigger benchmarks - follow `references/evals.md`. It executes
+rates, or trigger benchmarks - follow `@references/evals.md`. It executes
 every test case as a parallel subagent pair (with-skill vs baseline) so
 results stay independent of this conversation's context, and it works on any
 platform with native subagent spawning - no Claude Code CLI required.
@@ -293,7 +289,7 @@ improve, merge, or split skills, or for periodic audits of a skill set.
 1. Run the validation workflow above - clear structural faults first.
 2. Trigger check: does the description carry the phrases users actually
    type plus near-miss contexts? If triggering is the complaint, jump
-   straight to description optimization in `references/evals.md`.
+   straight to description optimization in `@references/evals.md`.
 3. Body review, reading end-to-end for:
    - Over-fitting to the example that prompted the skill - generalize; the
      skill must work for prompts nobody has typed yet
@@ -314,5 +310,5 @@ improve, merge, or split skills, or for periodic audits of a skill set.
    ## Recommended actions
 
 6. Close the loop: apply improvements, validate again, and for behavioural
-   changes rerun the test cases (`references/evals.md`, iteration step) so
+   changes rerun the test cases (`@references/evals.md`, iteration step) so
    numbers confirm the edit helped rather than assuming it did.

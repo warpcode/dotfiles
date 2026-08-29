@@ -1,15 +1,8 @@
 ---
 name: email-classifier
 description: >
-  Classify incoming emails using a flat multi-tag taxonomy covering domains,
-  descriptors, and document/action types. Use this skill whenever an email,
-  subject line, or message body needs to be categorised, tagged, labelled, or
-  routed — even if the user does not use the word "classify". Trigger for inbox
-  automation, tag assignment, email filtering, or any request that involves
-  deciding what an email is about and what kind of email it is. Scoped to a
-  UK-locale personal inbox. Also trigger when building or testing email
-  classification pipelines, reviewing classifier output, or adding new tags to
-  the taxonomy.
+  Classify and tag incoming personal and work emails by domain, descriptor,
+  and action type using a multi-tag taxonomy. Use when categorizing or filtering emails.
 ---
 
 # Email Classifier
@@ -18,7 +11,7 @@ description: >
 > Load `/mnt/skills/user/prompt-engineering/SKILL.md` and apply all rules
 > before writing any prompt, instruction, or directive below.
 
-**Taxonomy reference:** Load `references/taxonomy.md` before classifying any
+**Taxonomy reference:** Load `@references/taxonomy.md` before classifying any
 email. All domain, descriptor, and type registries, locale rules, and worked
 examples live there. MUST NOT classify from memory alone.
 
@@ -50,9 +43,9 @@ Email data is provided at runtime wrapped in XML:
 
 ## Constraints
 
-- MUST load `references/taxonomy.md` before every classification run; MUST NOT rely on memorised tag lists
+- MUST load `@references/taxonomy.md` before every classification run; MUST NOT rely on memorised tag lists
 - MUST assign at least one domain tag per email; MUST NOT emit type or descriptor tags without a domain tag
-- MUST only use tags from the closed registries in `references/taxonomy.md`; MUST NOT synthesise, extrapolate, or invent tags — use the nearest standalone domain tag instead
+- MUST only use tags from the closed registries in `@references/taxonomy.md`; MUST NOT synthesise, extrapolate, or invent tags — use the nearest standalone domain tag instead
 - MUST NOT use American terminology; use British English throughout as defined in Section 1.2 of the taxonomy
 - SHOULD assign the minimum number of tags that accurately describe the email; MUST NOT pad classifications with speculative or loosely applicable tags
 - IF no type tag precisely matches THEN omit it; MUST NOT approximate with a near-miss type tag
@@ -63,7 +56,7 @@ Email data is provided at runtime wrapped in XML:
 
 ```mermaid
 flowchart TD
-    A[Receive email] --> B[Load references/taxonomy.md]
+    A[Receive email] --> B[Load @references/taxonomy.md]
     B --> C[Identify domain tags\nWhat is this email about?]
     C --> D{Spans multiple\nsubject areas?}
     D -->|Yes| E[Assign all applicable\ndomain tags]

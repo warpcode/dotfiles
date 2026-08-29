@@ -1,15 +1,9 @@
 ---
 name: ai-authoring-agents
 description: >
-  Create, modify, update, configure, or debug custom subagent definitions
-  across Claude Code (.claude/agents/*.md), GitHub Copilot and VS Code
-  (.github/agents/*.agent.md), OpenCode (.opencode/agents/*.md), Google
-  Antigravity (.agents/*.md), ChatGPT/Codex (.codex/config.toml, AGENTS.md),
-  Cursor (.cursor/agents/*.md), and Hermes Agent (.hermes/agents/*.yaml). Use
-  when the user says "create an agent", "add a subagent", "make a subagent for
-  X", "agent frontmatter", asks about agent fields (tools, permissions, mode,
-  model routing, isolation, background), wants an agent made read-only, or is
-  deciding whether a task needs a subagent versus a skill, command, or rule.
+  Create, configure, or debug custom subagent definitions, tool permissions,
+  and model routing across Claude, Copilot, Antigravity, and Hermes. Use when
+  creating or modifying subagents.
 ---
 
 # Authoring Subagent Definitions
@@ -100,21 +94,21 @@ isolation: worktree             # Claude Code worktree sandboxing
 > **Warning**: Google Antigravity rejects undocumented frontmatter keys, and a
 > misspelled `tools` entry can hang the subagent (known issue). Never ship either
 > block above to `.agents/agents/` — emit only the keys documented in the
-> [Antigravity Reference](references/platforms/antigravity.md): `name`,
+> [Antigravity Reference](@references/platforms/antigravity.md): `name`,
 > `description`, `tools`, `mainAgent`, `subagent`, `model` (`inherit`/`flash`/`pro`),
 > `commandExecutionPolicy`, `mcpServers`, `skills`/`plugins`.
 
 ### Platform Reference Guides
 
-For exhaustive options, see platform references in `references/platforms/`:
+For exhaustive options, see platform references in `@references/platforms/`:
 
-- [Claude Code Reference](references/platforms/claude-code.md): `tools`, `disallowedTools`, `effort`, `maxTurns`, `isolation: worktree`, `background`. ([Source](https://code.claude.com/docs/en/sub-agents))
-- [Copilot / VS Code Reference](references/platforms/copilot-vscode.md): `name`, `description`, fallback `model` arrays, `tools` allowlists, `user-invocable`, `handoffs`. ([Source](https://code.visualstudio.com/docs/agent-customization/custom-agents))
-- [OpenCode Reference](references/platforms/opencode.md): `mode`, `model`, `temperature`, `permissions` object (`allow`/`ask`/`deny`), `steps`, `hidden`. ([Source](https://opencode.ai/docs/agents/))
-- [Antigravity Reference](references/platforms/antigravity.md): `name`, `description`, `tools`, `mainAgent`, `subagent`, `model` (`inherit`/`flash`/`pro`), `commandExecutionPolicy`, `mcpServers`, `skills`/`plugins`. Undocumented keys break config; misspelled tool names hang execution. ([Source](https://antigravity.google/docs/subagents/))
-- [ChatGPT / Codex Reference](references/platforms/codex.md): `.codex/config.toml` `[agents]` section, `AGENTS.md` subagent routing. ([Source](https://learn.chatgpt.com/docs/agent-configuration/subagents))
-- [Cursor Reference](references/platforms/cursor.md): `paths` scoping, custom agent models. ([Source](https://cursor.com/docs/agent-customization))
-- [Hermes Agent Reference](references/platforms/hermes.md): `.hermes/agents/*.yaml` blueprint schema. ([Source](https://hermes-agent.nousresearch.com/docs/developer-guide/creating-agents))
+- [Claude Code Reference](@references/platforms/claude-code.md): `tools`, `disallowedTools`, `effort`, `maxTurns`, `isolation: worktree`, `background`. ([Source](https://code.claude.com/docs/en/sub-agents))
+- [Copilot / VS Code Reference](@references/platforms/copilot-vscode.md): `name`, `description`, fallback `model` arrays, `tools` allowlists, `user-invocable`, `handoffs`. ([Source](https://code.visualstudio.com/docs/agent-customization/custom-agents))
+- [OpenCode Reference](@references/platforms/opencode.md): `mode`, `model`, `temperature`, `permissions` object (`allow`/`ask`/`deny`), `steps`, `hidden`. ([Source](https://opencode.ai/docs/agents/))
+- [Antigravity Reference](@references/platforms/antigravity.md): `name`, `description`, `tools`, `mainAgent`, `subagent`, `model` (`inherit`/`flash`/`pro`), `commandExecutionPolicy`, `mcpServers`, `skills`/`plugins`. Undocumented keys break config; misspelled tool names hang execution. ([Source](https://antigravity.google/docs/subagents/))
+- [ChatGPT / Codex Reference](@references/platforms/codex.md): `.codex/config.toml` `[agents]` section, `AGENTS.md` subagent routing. ([Source](https://learn.chatgpt.com/docs/agent-configuration/subagents))
+- [Cursor Reference](@references/platforms/cursor.md): `paths` scoping, custom agent models. ([Source](https://cursor.com/docs/agent-customization))
+- [Hermes Agent Reference](@references/platforms/hermes.md): `.hermes/agents/*.yaml` blueprint schema. ([Source](https://hermes-agent.nousresearch.com/docs/developer-guide/creating-agents))
 
 ## Role Archetypes & Templates
 
@@ -138,7 +132,7 @@ For structural patterns and real-world examples:
 - [Universal Janitor](https://github.com/github/awesome-copilot/blob/main/agents/janitor.agent.md): Codebase debt removal and cleanup specialist.
 - [Python Performance Expert](https://github.com/vijaythecoder/awesome-claude-agents/blob/main/agents/specialized/python/performance-expert.md): Profiling, optimization, and concurrent programming advisor.
 
-See `references/best-practices.md` for architectural guidelines on cognitive boundaries and least privilege.
+See `@references/best-practices.md` for architectural guidelines on cognitive boundaries and least privilege.
 
 ## System Prompt Body & Cognitive Architecture
 

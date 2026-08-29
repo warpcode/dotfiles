@@ -1,14 +1,9 @@
 ---
 name: ai-authoring-commands
 description: >
-  Create, modify, update, configure, or debug custom commands, slash prompts,
-  and workflows across Claude Code (.claude/commands, .claude/workflows), Google
-  Antigravity (.agents/workflows), OpenCode (.opencode/commands, opencode.json),
-  VS Code / Copilot (.github/prompts/*.prompt.md), Cursor (.cursor/commands),
-  OpenAI Codex (.codex/prompts), Nous Hermes Agent, and Gemini CLI (.gemini/commands).
-  Use when the user asks to "create a command", "make a slash command", "create a workflow",
-  "author a prompt file", configure parameter placeholders ($ARGUMENTS, $1..$n, ${input:...}),
-  wire pre-execution shell injections (!`cmd`), or isolate subtasks.
+  Create and configure custom slash commands, prompt templates, and workflow
+  automations across Claude Code, Antigravity, Copilot, Cursor, and Codex. Use
+  when authoring or editing commands.
 ---
 
 # Authoring Commands & Workflows
@@ -72,14 +67,14 @@ Consult the dedicated platform reference before authoring platform-specific feat
 
 | Platform | Reference File | Key Platform Capabilities |
 |---|---|---|
-| **Google Antigravity** | `references/platforms/antigravity.md` | `capabilities.allowed_tools`, `allowed_bash_commands`, `max_turns`, 12k char cap |
-| **Claude Code** | `references/platforms/claude-code.md` | `context: fork`, `effort`, `disable-model-invocation`, scripted JS `agent()` / `pipeline()` |
-| **VS Code / Copilot** | `references/platforms/copilot-vscode.md` | `${input:var:placeholder}`, `${selection}`, `${file}`, `handoffs: []` |
-| **OpenCode** | `references/platforms/opencode.md` | `agent:`, `subtask: true`, greedy positional parameters, `opencode.json` |
-| **Cursor** | `references/platforms/cursor.md` | `user-invocable: false`, `@Codebase`, `@Git`, `@Terminal`, plugin variables `${VAR}` |
-| **OpenAI Codex** | `references/platforms/codex.md` | `$ARGUMENTS`, `$UPPERCASE_NAME`, `allowed-tools` |
-| **Nous Hermes** | `references/platforms/hermes.md` | `metadata.hermes.blueprint` (`schedule`, `deliver`), slot-filling, `${HERMES_SKILL_DIR}` |
-| **Gemini CLI** | `references/platforms/gemini-cli.md` | TOML format (`description`, `prompt`), `{{args}}` |
+| **Google Antigravity** | `@references/platforms/antigravity.md` | `capabilities.allowed_tools`, `allowed_bash_commands`, `max_turns`, 12k char cap |
+| **Claude Code** | `@references/platforms/claude-code.md` | `context: fork`, `effort`, `disable-model-invocation`, scripted JS `agent()` / `pipeline()` |
+| **VS Code / Copilot** | `@references/platforms/copilot-vscode.md` | `${input:var:placeholder}`, `${selection}`, `${file}`, `handoffs: []` |
+| **OpenCode** | `@references/platforms/opencode.md` | `agent:`, `subtask: true`, greedy positional parameters, `opencode.json` |
+| **Cursor** | `@references/platforms/cursor.md` | `user-invocable: false`, `@Codebase`, `@Git`, `@Terminal`, plugin variables `${VAR}` |
+| **OpenAI Codex** | `@references/platforms/codex.md` | `$ARGUMENTS`, `$UPPERCASE_NAME`, `allowed-tools` |
+| **Nous Hermes** | `@references/platforms/hermes.md` | `metadata.hermes.blueprint` (`schedule`, `deliver`), slot-filling, `${HERMES_SKILL_DIR}` |
+| **Gemini CLI** | `@references/platforms/gemini-cli.md` | TOML format (`description`, `prompt`), `{{args}}` |
 
 Up-to-date sources:
 - [Google Antigravity Workflows](https://antigravity.google/docs/ide/workflows/#workflows)

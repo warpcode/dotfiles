@@ -1,12 +1,8 @@
 ---
 name: google-antigravity-cli
 description: >
-  Execute tasks, orchestrate subagents, extract structured JSON, query models, and
-  manage MCP servers or plugins using the Google Antigravity CLI (`agy`). Use this
-  skill when the user says "run with agy", "execute prompt with antigravity",
-  "agy headless", "agy models", "agy agents", "agy mcp", "agy plugins", "agy print mode",
-  wants to run a prompt using a specific model/effort via the agy CLI, extract schema-enforced
-  JSON output, or automate multi-turn headless agent pipelines with Antigravity.
+  Execute tasks, orchestrate subagents, query models, and extract structured
+  JSON via the Google Antigravity CLI (agy). Use when running agy commands.
 ---
 
 # Antigravity CLI (`agy`) Execution & Automation
@@ -59,7 +55,7 @@ agy mcp list
 agy plugin list
 ```
 
-For the complete catalog of flags and environment variables, read [references/flags.md](references/flags.md).
+For the complete catalog of flags and environment variables, read [@references/flags.md](@references/flags.md).
 
 ---
 
@@ -176,7 +172,7 @@ agy mcp disable <name>
 agy mcp remove <name>
 ```
 
-For advanced containerized configurations and auth details, read [references/mcp-and-plugins.md](references/mcp-and-plugins.md).
+For advanced containerized configurations and auth details, read [@references/mcp-and-plugins.md](@references/mcp-and-plugins.md).
 
 ### Plugin Management (`agy plugin`)
 ```bash
@@ -205,7 +201,7 @@ For real-time event processing and multi-turn piping over standard I/O:
 ```bash
 agy --input-format stream-json --output-format stream-json --dangerously-skip-permissions
 ```
-Read [references/stream-json.md](references/stream-json.md) for NDJSON message schemas and Python/Node integration examples.
+Read [@references/stream-json.md](@references/stream-json.md) for NDJSON message schemas and Python/Node integration examples.
 
 ---
 

@@ -1,14 +1,9 @@
 ---
 name: google-jules-api
 description: >
-  Programmatically interact with Google Jules via the official v1alpha REST API.
-  Use this skill whenever the user asks to query Jules sessions, inspect session
-  activity timelines, list authorized repositories/sources, create asynchronous coding
-  tasks via API, approve generated plans, send feedback messages to a running session,
-  or inspect git unidiff patch artifacts. Triggers on: "jules api", "query jules sessions",
-  "list jules sources", "jules rest", "approve jules plan", "jules task activities",
-  "fetch jules patch", "jules session details". For local CLI operations with
-  @google/jules, use the jules-cli skill instead.
+  Interact with Google Jules via the v1alpha REST API to inspect sessions,
+  submit coding tasks, review activity timelines, and approve plans. Use
+  when calling the Jules REST API.
 ---
 
 # Google Jules REST API
@@ -42,8 +37,8 @@ sequenceDiagram
 - If credentials cannot be resolved, stop and prompt the user to provide or set `JULES_API_KEY`.
 
 ### 2. Progressive Disclosure & Documentation
-- For exhaustive endpoint parameters, request bodies, and schema specifications, consult `references/api-reference.md`.
-- For execution lifecycle stages and VM state transitions, consult `references/session-lifecycle.md`.
+- For exhaustive endpoint parameters, request bodies, and schema specifications, consult `@references/api-reference.md`.
+- For execution lifecycle stages and VM state transitions, consult `@references/session-lifecycle.md`.
 
 ---
 

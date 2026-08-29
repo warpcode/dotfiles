@@ -1,15 +1,8 @@
 ---
 name: github-cli
 description: >
-  Execute GitHub platform operations: issues & sub-issues (create, update, query,
-  comment, hierarchy), pull requests (create, update, publish, view,
-  merge, list, search), remote repository files & commits (read, create, update, delete, push), 
-  releases & tags, global search, and organizations/teams.
-  Prioritises GitHub MCP server actions when available; falls back to the `gh` CLI
-  when MCP is unavailable. Use this skill for pure execution and CLI guidance. 
-  For procedure-based guidelines and preferences, refer to the `github` skill instead.
-  Do NOT use for local git operations (local commit, rebase, branch naming) — use the
-  git-expert skill instead.
+  Execute GitHub remote operations (issues, pull requests, releases, search,
+  repo files) using GitHub MCP or the gh CLI. Use when running GitHub commands.
 user-invocable: false
 ---
 

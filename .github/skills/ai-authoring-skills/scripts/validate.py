@@ -43,7 +43,7 @@ MAX_BODY_LINES = 500
 NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 TRIGGER_RE = re.compile(r"\buse (this skill )?when\b|\btriggers?\b", re.I)
 RESOURCE_RE = re.compile(
-    r"(?<![\w/.])((?:references|templates|scripts|assets)/[\w][\w./-]*[.\w])"
+    r"(?<![\w/.])@?((?:references|templates|scripts|assets)/[\w][\w./-]*[.\w])"
 )
 SCRIPT_CHECKS = {
     ".py": [sys.executable, "-m", "py_compile"],

@@ -1,15 +1,9 @@
 ---
 name: ai-authoring-prompts
 description: >
-  Author, structure, compose, and optimize prompt bodies, cognitive architectures,
-  orchestration topologies, execution workflows, persona/role archetypes, decision
-  matrices, and structured output contracts across AI agents, skills, commands,
-  rules, and hooks. Use this skill when the user says "author a prompt", "write a
-  system prompt", "improve this prompt", "optimize this prompt", "prompt pattern",
-  "orchestration pattern", "design a persona", "create a workflow prompt", "decision
-  matrix", "negative constraints", "output contract", "cognitive stack", "layered
-  prompt", "progressive disclosure", "Mermaid diagram for agent", or needs guidance
-  on structuring instructions for modern reasoning models.
+  Design and optimize cognitive prompt architectures, system prompts,
+  orchestration topologies, decision matrices, and output contracts. Use
+  when authoring or refining system prompts.
 ---
 
 # Authoring Prompts, Personas & Workflows
@@ -52,7 +46,7 @@ flowchart TD
 3. **Use Explicit Markdown Sections**: Organize prompt sections cleanly using standard Markdown headers (`## Context`, `## Rules`, `## Task`, `## Output Contract`) and fenced code blocks.
 4. **Zero-Shot by Default**: Start zero-shot with crisp constraints. Add few-shot examples only for fragile syntax or non-standard DSLs.
 
-See `references/modern-prompt-principles.md` for in-depth analysis.
+See `@references/modern-prompt-principles.md` for in-depth analysis.
 
 ---
 
@@ -84,7 +78,7 @@ In production systems, prompt patterns are assembled into a cohesive 5-layer cog
 When constructing custom prompts, select modular specification cards from the unified library:
 
 - **Full Catalog**: `templates/pattern-library.md` (Contains all 19 atomic specification cards across Layers 1–5 with intent, slot schemas, preconditions, and copy-paste clauses).
-- **Assembly Algorithm & Matrix**: See `references/pattern-catalog-and-matrices.md` for symptom selection matrices, slot-filling assembly steps, and precedence rules.
+- **Assembly Algorithm & Matrix**: See `@references/pattern-catalog-and-matrices.md` for symptom selection matrices, slot-filling assembly steps, and precedence rules.
 
 ---
 
@@ -101,7 +95,7 @@ Select the appropriate coordination pattern for multi-agent or multi-step execut
 | **Fan-Out / Fan-In** | Parallel processing of $N$ independent items | Split &rarr; Concurrent Workers &rarr; Aggregator |
 | **Human Checkpoint** | High-risk or destructive actions | Plan &rarr; **Approval Gate** &rarr; Execute |
 
-See `references/orchestration-and-topologies.md` for architecture diagrams and delegation rules.
+See `@references/orchestration-and-topologies.md` for architecture diagrams and delegation rules.
 
 ---
 
@@ -118,7 +112,7 @@ See `references/orchestration-and-topologies.md` for architecture diagrams and d
 4. **Entity Relationships**: `erDiagram` for configuration or data models.
 5. **Always Quote Labels**: Wrap node labels containing special characters in double quotes: `A["Step 1 (Check)"]`.
 
-See `references/visual-diagrams.md` for full syntax rules and copy-paste diagram templates.
+See `@references/visual-diagrams.md` for full syntax rules and copy-paste diagram templates.
 
 ---
 

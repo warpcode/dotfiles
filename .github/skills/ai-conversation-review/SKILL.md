@@ -1,15 +1,9 @@
 ---
 name: ai-conversation-review
 description: >
-  Audit and review conversations between humans and AI across any platform
-  (Claude Code, Antigravity, Copilot, ChatGPT, OpenCode, or plain text). Use
-  when the user asks to "review conversation", "audit chat history", "analyze
-  session", "review prompt/skill usage", "update AGENTS.md from chat", "improve
-  instructions", "fix AI mistakes in conversation", or "turn trial-and-error
-  commands into a script". Makes concrete suggestions to optimize prompts and
-  skills, improves workspace and user-level AGENTS.md / instruction files,
-  resolves ambiguity and inaccuracies, and consolidates iterative shell
-  commands into deterministic, reusable scripts.
+  Audit human-AI chat transcripts to extract improvements for instructions/AGENTS.md,
+  identify prompt/skill failure modes, and consolidate commands. Use when
+  reviewing conversations or updating instructions.
 ---
 
 # AI Conversation Review
@@ -38,8 +32,8 @@ flowchart TD
     end
 
     subgraph Audit["Stage 2: Prompts, Skills & Memory Audit"]
-        B --> C["Extract Durable Facts & Deduplicate<br/>(references/memory-and-instruction-hierarchy.md)"]
-        B --> D["Audit Prompts & Skill Triggers<br/>(references/prompt-and-skill-audit-rubric.md)"]
+        B --> C["Extract Durable Facts & Deduplicate<br/>(@references/memory-and-instruction-hierarchy.md)"]
+        B --> D["Audit Prompts & Skill Triggers<br/>(@references/prompt-and-skill-audit-rubric.md)"]
     end
 
     subgraph Rectification["Stage 3: Workflow & Ambiguity Rectification"]
@@ -50,7 +44,7 @@ flowchart TD
     subgraph Consolidation["Stage 4: Script Synthesis & Hardening"]
         E --> G["Identify Trial-and-Error Shell Chains"]
         F --> G
-        G --> H["Synthesize Deterministic Scripts<br/>(references/script-consolidation-guide.md)"]
+        G --> H["Synthesize Deterministic Scripts<br/>(@references/script-consolidation-guide.md)"]
     end
 
     H --> Out["Output Canonical Review Report<br/>(templates/conversation-review-report.md)"]
@@ -88,7 +82,7 @@ Extract durable facts following the Single Source of Truth Hierarchy:
 - **Workspace Memory (`AGENTS.md`)**: Repo-specific build recipes, conventions, and test commands.
 - **Instruction Diffs**: Check `.github/copilot-instructions.md`, `CLAUDE.md`, and `GEMINI.md` for outdated guidance or missing edge cases.
 
-See [references/memory-and-instruction-hierarchy.md](references/memory-and-instruction-hierarchy.md) for qualification criteria and deduplication logic.
+See [@references/memory-and-instruction-hierarchy.md](@references/memory-and-instruction-hierarchy.md) for qualification criteria and deduplication logic.
 
 ### 2. Prompt & Skill Sharpness
 Audit all prompts and skills used during the conversation:
@@ -96,7 +90,7 @@ Audit all prompts and skills used during the conversation:
 - **Negative Constraints**: Pre-empt observed agent failure modes with strict RFC 2119 negative constraints.
 - **Skill Lifecycle**: Evaluate whether to **Merge** fragmented skills, **Break Up** multi-purpose bloated skills, or **Refine Triggers** in `SKILL.md` frontmatter descriptions.
 
-See [references/prompt-and-skill-audit-rubric.md](references/prompt-and-skill-audit-rubric.md) for the evaluation rubric and symptom matrix.
+See [@references/prompt-and-skill-audit-rubric.md](@references/prompt-and-skill-audit-rubric.md) for the evaluation rubric and symptom matrix.
 
 ---
 
@@ -126,7 +120,7 @@ flowchart LR
 3. **Strict Error Handling**: Use `set -euo pipefail` in Bash/Zsh or structured exception handling in Python.
 4. **Placement**: Place workflow-specific scripts in `dot_agents/skills/<skill-name>/scripts/` or general utilities in `dot_local/bin/df.<name>`.
 
-See [references/script-consolidation-guide.md](references/script-consolidation-guide.md) and [templates/script-wrapper-blueprint.sh](templates/script-wrapper-blueprint.sh).
+See [@references/script-consolidation-guide.md](@references/script-consolidation-guide.md) and [templates/script-wrapper-blueprint.sh](templates/script-wrapper-blueprint.sh).
 
 ---
 

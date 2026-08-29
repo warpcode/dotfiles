@@ -51,7 +51,7 @@ metadata:
 ## Bundled resources
 
 - `scripts/`: Executable helper utilities and scripts (agents learn flags via `--help`, never read source before running).
-- `references/`: Detailed reference documentation and deep-dive manuals loaded on demand.
+- `@references/`: Detailed reference documentation and deep-dive manuals loaded on demand.
 - `examples/`: Reference implementations and test fixtures.
 - `resources/` / `templates/`: Assets, prompt templates, and structured output templates.
 
