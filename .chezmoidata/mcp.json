@@ -16,13 +16,34 @@
     "global": {
       "github": {
         "command": [
-          "npx",
-          "-y",
-          "@github/github-mcp-server"
+          "bash",
+          "-c",
+          "export GITHUB_PERSONAL_ACCESS_TOKEN=\"$(gh auth token 2>/dev/null || echo \"$GITHUB_TOKEN\")\"; export MISE_QUIET=1 MISE_SILENT=1; exec docker run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io/github/github-mcp-server"
         ],
-        "description": "GitHub API integration — repos, PRs, issues, search",
+        "description": "Official GitHub Go-based MCP server container",
+        "type": "local"
+      },
+      "docker": {
+        "command": [
+          "bash",
+          "-c",
+          "export MISE_QUIET=1 MISE_SILENT=1; exec docker run -i --rm -v /var/run/docker.sock:/var/run/docker.sock mcp/docker"
+        ],
+        "description": "Docker container management MCP server",
+        "type": "local"
+      }
+    },
+    "knowledge": {
+
+      "obsidian": {
+        "command": [
+          "bash",
+          "-c",
+          "export MISE_QUIET=1 MISE_SILENT=1; export OBSIDIAN_VAULT=\"${OBSIDIAN_VAULT:-$HOME/Documents/Obsidian}\"; export OBSIDIAN_API_KEY=\"${OBSIDIAN_API_KEY:-$(df.config resolve OBSIDIAN_API_KEY 2>/dev/null || df.keychain get OBSIDIAN_API_KEY 2>/dev/null)}\"; exec mise exec node@latest -- npx -y obsidian-mcp-server \"$OBSIDIAN_VAULT\""
+        ],
+        "description": "Obsidian Markdown vault integration",
         "env": {
-          "GITHUB_TOKEN": "{secret:GITHUB_TOKEN}"
+          "OBSIDIAN_API_KEY": "${OBSIDIAN_API_KEY}"
         },
         "type": "local"
       }
@@ -30,9 +51,9 @@
     "websearch": {
       "browsermcp": {
         "command": [
-          "npx",
-          "-y",
-          "@browsermcp/mcp@latest"
+          "bash",
+          "-c",
+          "export MISE_QUIET=1 MISE_SILENT=1; exec mise exec node@latest -- npx -y @browsermcp/mcp@latest"
         ],
         "description": "Browser control and automation via Playwright",
         "profiles_deny": [
@@ -42,10 +63,9 @@
       },
       "chrome-devtools": {
         "command": [
-          "npx",
-          "-y",
-          "chrome-devtools-mcp@latest",
-          "--autoConnect"
+          "bash",
+          "-c",
+          "export MISE_QUIET=1 MISE_SILENT=1; exec mise exec node@latest -- npx -y chrome-devtools-mcp@latest --autoConnect"
         ],
         "description": "Chrome DevTools protocol integration for browser interaction",
         "profiles_allow": [
@@ -56,21 +76,22 @@
       },
       "firecrawl": {
         "command": [
-          "npx",
-          "-y",
-          "firecrawl-mcp"
+          "bash",
+          "-c",
+          "export MISE_QUIET=1 MISE_SILENT=1; exec mise exec node@latest -- npx -y firecrawl-mcp"
         ],
         "env": {
-          "FIRECRAWL_API_KEY": "{secret:FIRE_CRAWL_API_KEY}"
+          "FIRECRAWL_API_KEY": "${FIRECRAWL_API_KEY}"
         },
         "type": "local"
       },
       "serena": {
         "command": [
-          "npx",
-          "-y",
-          "serena-mcp"
+          "bash",
+          "-c",
+          "export MISE_QUIET=1 MISE_SILENT=1; exec mise exec uv@latest -- uvx --from git+https://github.com/oraios/serena serena start-mcp-server --context antigravity --open-web-dashboard false"
         ],
+        "description": "Serena semantic code retrieval and editing agent toolkit (oraios/serena)",
         "profiles_allow": [
           "default"
         ],
