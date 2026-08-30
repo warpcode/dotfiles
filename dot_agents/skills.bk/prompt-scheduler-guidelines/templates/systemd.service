@@ -1,8 +1,0 @@
-[Unit]
-Description=Dotfiles Scheduled Task: {{ .config.name }}
-
-[Service]
-Type=oneshot
-ExecStart=/bin/zsh -lc {{ .config.command | quote }}
-StandardOutput=journal
-StandardError=journal
