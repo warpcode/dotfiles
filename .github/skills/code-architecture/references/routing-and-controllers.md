@@ -30,7 +30,45 @@ Reference guide for locating, cataloging, and auditing application HTTP routes, 
 
 ---
 
-## 3. Hybrid Rendering Architectures
+## 3. Canonical 8-Stage Middleware Pipeline Execution Order
+
+To maintain security, performance, and deterministic request flow, middleware pipelines must execute in strict order:
+
+```mermaid
+flowchart TD
+    M1["1. Network & Proxies (TrustProxies, HTTPS, Host Header)"] --> M2["2. Security Headers & CORS (Helmet, CSP, CORS Preflight)"]
+    M2 --> M3["3. Performance & Transport (Gzip/Brotli, Cache-Control)"]
+    M3 --> M4["4. Request Normalization (Body Parser, String Trimming)"]
+    M4 --> M5["5. Session & State (Cookies, Session Hydration, CSRF)"]
+    M5 --> M6["6. Authentication (JWT / Bearer Token, Session Auth)"]
+    M6 --> M7["7. Authorization & Throttling (RBAC, Rate Limiting)"]
+    M7 --> M8["8. Route Dispatch & Binding (Route Model Binding, Controller)"]
+    M8 -.-> EH["Terminal: Global Error Handler & 404 Catcher"]
+```
+
+### Stage Responsibilities
+1. **Network & Proxies**: Trust forward headers (`X-Forwarded-For`, `X-Forwarded-Proto`), force HTTPS redirect, validate Host header.
+2. **Security Headers & CORS**: Set baseline defensive headers (`X-Frame-Options`, `X-Content-Type-Options`, CSP), evaluate CORS preflight `OPTIONS` requests before stateful logic.
+3. **Performance & Transport**: Response compression (`compression`, `GZipMiddleware`), caching headers (`ETag`, `Last-Modified`).
+4. **Request Normalization & Body Parsing**: Parse JSON / URL-encoded bodies, trim strings, convert empty strings to null.
+5. **Session & State Management**: Hydrate encrypted cookies, initialize session storage, verify CSRF tokens on state-changing requests (`POST`, `PUT`, `DELETE`).
+6. **Authentication**: Resolve and verify caller identity (bearer tokens, session cookie), populate `req.user` / `request->user()`.
+7. **Authorization & Throttling**: Validate permissions / roles (RBAC/ABAC), evaluate client rate limit quotas.
+8. **Route Dispatch & Model Binding**: Resolve route parameters, perform route model binding, dispatch to target controller action.
+
+### Middleware Ordering Anti-Patterns
+
+| Anti-Pattern | Root Cause | Impact | Fix |
+|---|---|---|---|
+| **Body Parser before Security / Throttling** | Large payloads parsed prior to rate limits | Denial of Service (DoS) / memory exhaustion from unauthenticated requests | Place network filtering and rate limiting before heavy body parsers |
+| **CORS after Authentication** | Pre-flight `OPTIONS` requests hit auth gates | Browsers receive 401 Unauthorized for CORS pre-flight, breaking SPA integrations | Place CORS middleware before authentication |
+| **Auth before Session Hydration** | User session evaluated before session cookies are decrypted | Unauthenticated 401 errors despite valid session cookie | Ensure session middleware precedes authentication |
+| **CSRF before Session Start** | CSRF token checked without session token store | CSRF mismatch errors on all valid forms | Place session startup before `VerifyCsrfToken` |
+| **Error Handler before Routes** | Catch-all error middleware declared before route definitions | Uncaught exceptions inside controllers bubble up unhandled | Register 4-argument error handlers at the terminal end of the pipeline |
+
+---
+
+## 4. Hybrid Rendering Architectures
 
 Audit controller return statements and presentation mechanisms to distinguish between rendering strategies:
 
@@ -46,7 +84,7 @@ Audit controller return statements and presentation mechanisms to distinguish be
 
 ---
 
-## 4. Multi-Frontend & Monorepo Detection
+## 5. Multi-Frontend & Monorepo Detection
 
 When applications host multiple distinct frontend applications or modular client packages:
 

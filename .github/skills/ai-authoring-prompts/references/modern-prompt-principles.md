@@ -48,6 +48,22 @@ Return a unified diff of modified files followed by test verification commands.
 2. **Context Anchoring**: Headers allow the model's attention mechanism to reference specific blocks without cross-contaminating constraints.
 3. **Structured Extraction**: Downstream tools and parsers can reliably extract target sections.
 
+### Template Variable Hygiene
+When designing prompt templates, dynamic slots, or parameter placeholders:
+- **Standard Variable Format**: Use double curly braces with uppercase snake case: `{{VARIABLE_NAME}}`.
+- **Markdown Fences & Headers**: Present dynamic variables within clean Markdown code fences and explicit markdown headers.
+- **STRICTLY NO XML TAGS**: Do NOT wrap dynamic variables or prompt sections in pseudo-XML tags (e.g. `<context>{{CONTEXT}}</context>`, `<input>...</input>`, `<task>...</task>`). XML wrappers add token noise, trigger inconsistent schema inferences, and violate repository Markdown conventions. Use markdown headers and standard code blocks instead:
+
+```markdown
+## Input Context
+```json
+{{INPUT_JSON}}
+```
+
+## User Query
+{{USER_QUERY}}
+```
+
 ---
 
 ## 3. The "New Hire" Mental Model
@@ -87,6 +103,20 @@ State the rationale behind non-obvious rules rather than relying solely on bare 
 
 ### Write for the General Case (Theory of Mind)
 Apply theory of mind to prompt authoring: anticipate how the model will interpret each instruction in situations beyond the immediate test case. Prefer rules that generalize over ones over-fitted to the specific example that prompted them.
+
+### Ambiguity Resolution Lookup Table
+Every prompt instruction must have exactly one valid interpretation. Replace vague adjectives, subjective qualitative goals, and loose temporal descriptors with concrete metrics and deterministic bounds:
+
+| Ambiguous / Vague Directive | Concrete Metric & Deterministic Bound | Rationale / Resolution |
+|---|---|---|
+| *"Be concise"* | *"Respond in ≤3 sentences (or ≤50 words)."* | Eliminates subjectivity in output length. |
+| *"Summarise briefly"* | *"Provide a bulleted summary with ≤5 items, each ≤20 words."* | Bounded bullet count and word limits. |
+| *"Use a friendly / professional tone"* | *"Use second person ('you'), active voice, contractions allowed, zero conversational filler or hedges."* | Concrete stylistic constraints. |
+| *"Handle errors gracefully"* | *"On error: log message to stderr, emit JSON error payload `{\"error\": \"...\"}`, exit status 1 without uncaught exceptions."* | Deterministic error handling and exit codes. |
+| *"Process recent items"* | *"Process items with `timestamp >= NOW() - 30 days`."* | Explicit, queryable time window. |
+| *"Ensure high performance / fast"* | *"Execution latency MUST remain <200ms for p95 requests; memory allocation capped at ≤256MB."* | Measurable SLA and resource ceiling. |
+| *"Handle large payloads / files"* | *"For payloads >10MB, stream chunked in 64KB buffers instead of loading into RAM."* | Deterministic threshold and processing mechanism. |
+| *"Keep code clean and maintainable"* | *"Functions ≤30 lines, cyclomatic complexity ≤10, 100% linter compliance with zero warnings."* | Verifiable code quality and complexity bounds. |
 
 ---
 

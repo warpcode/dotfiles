@@ -1,0 +1,15 @@
+[project]
+name = "youtube-scripts"
+version = "0.1.0"
+description = "Standalone scripts for YouTube skill"
+requires-python = ">=3.12"
+dependencies = [
+    "youtube-transcript-api",
+    "yt-dlp",
+    "jinja2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

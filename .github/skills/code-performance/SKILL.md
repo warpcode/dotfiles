@@ -22,16 +22,17 @@ Standard Operating Procedure for identifying, measuring, and eliminating perform
 
 ```mermaid
 flowchart LR
-    A["1. Locate Data Layer Churn"] --> B["2. Compute & Memory Hot-Paths"] --> C["3. Frontend & Asset Optimization"]
+    A["1. Data Layer & Caching"] --> B["2. Compute & Memory Hot-Paths"] --> C["3. Frontend & Asset Optimization"]
 ```
 
-### Phase 1: Database & Search Engine Query Profiling
+### Phase 1: Database, Caching & Data Layer Profiling
 1. Identify ORM N+1 query patterns: Look for relation accesses inside loops or template iterations without eager loading (`with()`, `preload`, `include`).
-2. Audit index coverage: Ensure foreign keys, unique constraint columns, and filter columns in `WHERE` / `ORDER BY` clauses are backed by database indexes.
+2. Audit index coverage: Ensure foreign keys, unique constraint columns, and filter columns in `WHERE` / `ORDER BY` clauses are backed by database indexes, partial indexes, or covering indexes.
 3. Check for unbounded result sets: Enforce pagination or chunked streaming for large data sets.
-4. Audit connection lifecycle & pooling: Verify connection pool limits (PgBouncer, ProxySQL) and prevent persistent connection leaks in containerized/serverless runtimes.
+4. Audit connection lifecycle & socket pooling: Verify database connection pool limits (PgBouncer, ProxySQL) and HTTP keep-alive socket reuse (Node `http.Agent`, Python `HTTPAdapter`) to avoid `TIME_WAIT` socket exhaustion.
 5. Profile search engine queries (Elasticsearch/OpenSearch): Ensure filter context usage over scoring clauses, eliminate leading wildcards, and enforce cursor-based (`search_after`) deep pagination.
-6. Read `@references/database-bottlenecks.md` for patterns.
+6. Audit caching strategies: Verify HTTP caching directives (`Cache-Control`, `ETags`), application cache topologies, key namespacing, TTL jittering, and stampede mitigations.
+7. Read `@references/database-bottlenecks.md` and `@references/caching-strategies.md` for patterns.
 
 ### Phase 2: Compute & Memory Hot-Paths
 1. Detect nested collection iterations (`O(n^2)` or worse) when maps/hash lookups (`O(1)`) should be used.

@@ -38,3 +38,26 @@ Mocking every collaborator and private method instead of exercising real code. T
 - Use database transactions with automatic rollbacks (e.g. `RefreshDatabase`, transactional test runners).
 - Freeze system clock in test setups (`Carbon::setTestNow()`, `vi.useFakeTimers()`).
 
+---
+
+## 4. Assertion Roulette
+
+### The Smell
+Tests containing multiple unlabelled assertions where a failure gives no diagnostic context on which assertion failed or why. When an assertion fails without an explanatory message or among multiple similar assertions, developers must inspect line numbers or attach a debugger to determine which invariant broke.
+
+### Remediation
+- Follow the **Single Concept per Test** rule: split unrelated assertions into focused, discrete test cases.
+- Provide descriptive assertion messages explaining the failure context (e.g., `assert(user.isActive, "Expected user to be active after activation email verification")`).
+- Use table-driven / parameterized tests to isolate discrete inputs and expected outputs with clear test case descriptions.
+
+---
+
+## 5. Leaky / Shared State Fixtures
+
+### The Smell
+Tests mutating shared global singletons, static class state, environment variables, or database records without isolated per-test teardown or transactional rollback. This introduces cross-test pollution and order-dependent test failures.
+
+### Remediation
+- Wrap database tests in per-test transactions with automatic rollback (`RefreshDatabase`, transactional test fixtures).
+- Reset global singletons, static state, and environment overrides in `tearDown` / `afterEach` hooks.
+- Use fresh dependency injection containers and in-memory test fixtures per test execution.

@@ -77,6 +77,16 @@ Use the PR template (repo-specific or fallback `@templates/pull_request.md`). En
 - Unfulfilled Threads: DO NOT resolve; post a reply describing what remains outstanding.
 
 ### General Review Guidelines
+- **Audit Prioritization Hierarchy**: Systematically evaluate each area, prioritizing findings in the following order:
+  1. Bugs and functional correctness
+  2. Security issues
+  3. Style guideline violations
+  4. Performance and efficiency
+  5. Readability and maintainability
+  6. Anti-patterns and duplication
+  7. Project convention consistency
+  8. Issue requirement compliance
+  9. Unresolved PR comments and review questions
 - **Branch Dynamism**: PR review scripts MUST NOT hardcode default branch names (e.g. `origin/master` or `master`). Instead, query the PR metadata dynamically to determine the target base branch.
 - **Merge Regression Check**: If the PR has a merge/rebase commit at its tip, diff changed files against their base-branch versions to verify formatting, fixture whitespace, and trailing newlines weren't regressed.
 - **Line-Comment Constraint**: Line-level comments MUST be on lines within the current PR diff hunks.

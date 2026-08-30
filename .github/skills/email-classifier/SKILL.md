@@ -7,10 +7,6 @@ description: >
 
 # Email Classifier
 
-> **Dependency:** This skill produces LLM-facing classification output.
-> Load `/mnt/skills/user/prompt-engineering/SKILL.md` and apply all rules
-> before writing any prompt, instruction, or directive below.
-
 **Taxonomy reference:** Load `@references/taxonomy.md` before classifying any
 email. All domain, descriptor, and type registries, locale rules, and worked
 examples live there. MUST NOT classify from memory alone.
