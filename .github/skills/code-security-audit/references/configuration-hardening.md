@@ -45,6 +45,29 @@ Verify application session settings (e.g., `config/session.php`, express-session
 - **`lifetime` / `maxAge`**: Should enforce reasonable inactivity timeouts (e.g., 120 minutes).
 - **Session ID Regeneration**: Ensure session IDs are regenerated upon authentication state changes (login, privilege escalation) to prevent session fixation.
 
+### Session Fixation Defense
+Session fixation occurs when an attacker establishes or intercepts an unauthenticated session ID and tricks a victim into authenticating using that identifier. If the server does not regenerate the session token upon authentication, the attacker retains access to the victim's authenticated session.
+
+#### Remediation Patterns
+- **PHP (Native)**: Always invoke `session_regenerate_id(true)` immediately upon successful credential validation or privilege escalation. The `true` parameter ensures the old session storage is deleted:
+  ```php
+  // Safe Login Handler
+  if (password_verify($password, $user['password_hash'])) {
+      session_regenerate_id(true); // Destroy old session ID and issue new cryptographic token
+      $_SESSION['user_id'] = $user['id'];
+      $_SESSION['auth_time'] = time();
+  }
+  ```
+- **Laravel**: Framework automatically regenerates session on login via `Auth::attempt()`; for manual flows use `$request->session()->regenerate()`.
+- **Node.js (Express)**:
+  ```javascript
+  req.session.regenerate((err) => {
+      if (err) throw err;
+      req.session.userId = user.id;
+  });
+  ```
+- **Django**: Django automatically calls `request.session.cycle_key()` on login.
+
 ---
 
 ## 4. CORS (Cross-Origin Resource Sharing)
@@ -99,5 +122,73 @@ When triaging outdated packages or security patches, categorize risk according t
 - **Patch Releases (`x.y.Z`)**: Bug fixes and backward-compatible security patches. Low risk; prioritize immediate deployment for CVE remediation.
 - **Minor Releases (`x.Y.z`)**: New functionality in a backward-compatible manner. Moderate risk; review release notes for deprecations or behavioral changes, test regression suites.
 - **Major Releases (`X.y.z`)**: Breaking API changes and architectural shifts. High risk; plan dedicated upgrade tasks with comprehensive integration and acceptance testing.
+
+---
+
+## 7. Timing-Attack Safe Comparison
+
+### Mechanism & Risk
+Standard equality operators (`==`, `===`, `strcmp`, `==` in Python/JavaScript) execute byte-by-byte comparisons that return `false` at the very first mismatched byte. An attacker can measure minor execution timing differences (over network averages or local executions) to incrementally guess secrets byte by byte.
+
+### High-Risk Targets
+- CSRF token verification.
+- HMAC signatures (e.g. webhook verification for Stripe, GitHub, Slack).
+- API token / Secret key authentication.
+- Password reset tokens, magic links, OTP codes.
+
+### Dangerous Patterns
+```php
+// VULNERABLE: Short-circuiting equality comparison leaks timing
+if ($request->header('X-Webhook-Signature') === $computedHmac) { ... }
+if ($userToken === $storedApiSecret) { ... }
+```
+```python
+# VULNERABLE: Python standard comparison short-circuits
+if client_token == secret_api_key:
+    ...
+```
+
+### Remediation: Constant-Time Comparisons
+
+#### PHP
+Use native `hash_equals()` which executes in constant time regardless of where or whether strings differ:
+```php
+// Constant-time token verification
+if (!hash_equals($storedCsrfToken, $incomingCsrfToken)) {
+    throw new InvalidCsrfTokenException("CSRF token mismatch");
+}
+
+// Constant-time webhook HMAC verification
+$expectedSignature = hash_hmac('sha256', $payload, $webhookSecret);
+if (!hash_equals($expectedSignature, $receivedSignature)) {
+    abort(403, 'Invalid signature');
+}
+```
+
+#### Python
+Use `hmac.compare_digest()` or `secrets.compare_digest()`:
+```python
+import hmac
+import secrets
+
+# Constant-time comparison
+if not hmac.compare_digest(expected_signature, received_signature):
+    raise PermissionDenied("Signature verification failed")
+```
+
+#### Node.js
+Use `crypto.timingSafeEqual()`:
+```javascript
+import crypto from 'crypto';
+
+function safeCompare(a, b) {
+    const bufA = Buffer.from(a);
+    const bufB = Buffer.from(b);
+    if (bufA.length !== bufB.length) {
+        return false;
+    }
+    return crypto.timingSafeEqual(bufA, bufB);
+}
+```
 
 

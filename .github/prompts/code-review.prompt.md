@@ -14,7 +14,7 @@ Review code only. Use issue/PR context to validate requirements and surface defe
   - GitHub issue link
   - GitHub pull request link
   - Branch name
-- If the input is a Jira issue, use the `jira-tasks` skill to load it.
+- If the input is a Jira issue, use the `jira-api` skill to load it.
 - If the Jira issue is an epic, retrieve the epic and its tasks/subtasks, but treat the provided issue as primary.
 - If the Jira issue is not an epic, use that issue and its subtasks as the review context.
 - If the provided Jira issue does not include a primary PR, stop and ask for the PR.
