@@ -1,0 +1,690 @@
+#!/usr/bin/env python3
+"""df.ai-guard - Unified security guard and lifecycle gate for AI coding assistants."""
+
+import fnmatch
+import glob
+import json
+import os
+import re
+import shlex
+import sys
+import unicodedata
+from dataclasses import dataclass, field
+from pathlib import Path
+from urllib.parse import unquote, urlparse
+
+PROMPT_KEYS = ("prompt", "user_prompt", "userPrompt", "message", "userMessage", "text", "content")
+PATH_KEYS = (
+    "AbsolutePath", "TargetFile", "filePath", "path", "file", "target_file", "targetFile",
+    "filename", "file_path", "src", "dest", "source", "destination", "DirectoryPath",
+    "SearchPath", "SearchDirectory", "TargetDirectory", "Uri", "uri", "resourceUri",
+    "cwd", "Cwd", "dir", "directory", "path_to_file", "filepath", "dest_file", "source_file"
+)
+CMD_KEYS = ("CommandLine", "commandLine", "command", "cmd", "input")
+CWD_KEYS = ("Cwd", "cwd", "DirectoryPath", "directory", "dir", "workspaceRoot", "directoryPath")
+CONTAINER_KEYS = ("toolCall", "tool_input", "toolArgs", "tool_args", "tool_use", "args", "arguments", "params", "parameters")
+
+
+def load_config(custom_path: str | None = None) -> dict:
+    if custom_path:
+        p = Path(custom_path)
+        if not p.is_file():
+            sys.stderr.write(f"Custom config file not found: {custom_path}\n")
+            sys.exit(1)
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            sys.stderr.write(f"Error loading custom config {custom_path}: {e}\n")
+            sys.exit(1)
+
+    for c in [
+        os.environ.get("XDG_CONFIG_HOME") and Path(os.environ["XDG_CONFIG_HOME"]) / "dotfiles/ai-guard.json",
+        Path.home() / ".config/dotfiles/ai-guard.json",
+        Path(__file__).resolve().parent.parent.parent / "dot_config/dotfiles/ai-guard.json"
+    ]:
+        if c and Path(c).is_file():
+            try:
+                with open(c, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                pass
+    return {"commands": {"rules": []}, "files": {"rules": []}, "prompts": {"rules": []}}
+
+
+def normalize_rules(data: dict | list) -> list[dict]:
+    raw = data if isinstance(data, list) else data.get("rules", []) if isinstance(data, dict) else []
+    def_perm = "ask" if isinstance(data, list) else data.get("default_perm", data.get("default_action", "ask"))
+    res = []
+    for r in raw:
+        if isinstance(r, str):
+            res.append({"pattern": r.strip(), "match": "glob", "perm": def_perm, "reason": f"Matched pattern: {r.strip()}"})
+        elif isinstance(r, dict):
+            entry = {
+                "pattern": r.get("pattern", ""),
+                "match": r.get("match", "glob").lower(),
+                "perm": (r.get("perm") or r.get("permission") or def_perm).lower(),
+                "reason": r.get("reason", "")
+            }
+            if "replace" in r:
+                entry["replace"] = r["replace"]
+            res.append(entry)
+    return res
+
+
+def clean_path(raw: str) -> str:
+    if not raw or not isinstance(raw, str):
+        return ""
+    val = raw.strip()
+    if val.startswith("file://"):
+        try:
+            val = unquote(urlparse(val).path)
+        except Exception:
+            val = val[7:]
+    if "=" in val and not os.path.exists(val):
+        val = val.split("=", 1)[1]
+    return val.strip("'\"()[]{} \t\n\r").lstrip("@<>").strip("'\"()[]{} \t\n\r")
+
+
+def match_str(cand: str, pat: str, m: str = "glob") -> bool:
+    cand, pat = cand.strip(), pat.strip()
+    if not cand or not pat:
+        return False
+    ce, pe = os.path.expandvars(os.path.expanduser(cand)), os.path.expandvars(os.path.expanduser(pat))
+    if m == "exact":
+        return cand == pat or ce == pe
+    if m == "prefix":
+        return any(c == p or c.startswith(p + " ") or c.startswith(p + "/") for c, p in ((cand, pat), (ce, pe)))
+    if m == "suffix":
+        return cand.endswith(pat) or ce.endswith(pe)
+    if m == "substring":
+        return pat in cand or pe in ce
+    if m == "regex":
+        try:
+            return bool(re.search(pat, cand) or re.search(pat, ce))
+        except Exception:
+            return False
+    # glob (default)
+    if any(fnmatch.fnmatch(c, p) for c in (cand, "/" + cand.lstrip("/"), ce, "/" + ce.lstrip("/")) for p in (pat, pe)):
+        return True
+    return bool(("~" in pat or "$HOME" in pat) and fnmatch.fnmatch(ce, pe))
+
+
+def match_file(path_str: str, rule: dict, cwd: str | None = None) -> tuple[bool, str]:
+    pat = rule.get("pattern", "")
+    cand = clean_path(path_str)
+    if not cand or not pat:
+        return False, ""
+    m, rsn = rule.get("match", "glob").lower(), rule.get("reason", f"Access to sensitive file '{path_str}' is blocked.")
+
+    exp = os.path.expandvars(os.path.expanduser(cand))
+    if cwd and not os.path.isabs(exp):
+        exp = os.path.join(cwd, exp)
+    norm = os.path.normpath(exp)
+    base = os.path.basename(norm)
+
+    exp_pat = os.path.expandvars(os.path.expanduser(pat))
+    norm_pat = os.path.normpath(exp_pat)
+
+    if m == "exact":
+        if any(c == p for c in (cand, norm, base) for p in (pat, exp_pat, norm_pat)):
+            return True, rsn
+    elif m == "prefix":
+        if any(c == pat or c.startswith(pat + "/") or c.startswith(pat + os.sep) for c in (cand, norm, base)):
+            return True, rsn
+    elif m == "suffix":
+        if any(c.endswith(pat) for c in (cand, norm, base)):
+            return True, rsn
+    elif m == "substring":
+        if pat in cand or pat in norm:
+            return True, rsn
+    elif m == "regex":
+        try:
+            if re.search(pat, cand) or re.search(pat, norm):
+                return True, rsn
+        except Exception:
+            pass
+    else:  # glob
+        if any(fnmatch.fnmatch(c, p) for c in (base, cand, "/" + cand.lstrip("/"), norm, exp) for p in (pat, exp_pat)):
+            return True, rsn
+        cd = norm_pat.rstrip("/*")
+        if cd and (norm.startswith(cd + os.sep) or (not pat.endswith("/*") and norm == cd)):
+            return True, rsn
+        if pat.startswith("*/") and (fnmatch.fnmatch(base, pat[2:]) or fnmatch.fnmatch(norm, "*" + pat[2:])):
+            return True, rsn
+        if "~/" in pat and fnmatch.fnmatch(norm, pat.replace("~/", "*/")):
+            return True, rsn
+    return False, ""
+
+
+def find_rule(cand: str | list[str], rules: list[dict], perm: str, mtypes: set[str] | None = None, d_rsn: str = "Forbidden") -> tuple[dict, str, str] | None:
+    cands = cand if isinstance(cand, list) else [cand]
+    for c in cands:
+        for r in rules:
+            if r.get("perm") == perm:
+                m = r.get("match", "glob")
+                if mtypes and m not in mtypes:
+                    continue
+                if match_str(c, r.get("pattern", ""), m):
+                    return r, c, f"{r.get('reason', d_rsn)} ({c})"
+    return None
+
+
+def emit(decision: str, reason: str, extra: dict | None = None) -> None:
+    payload = {"decision": decision, "permissionDecision": decision}
+    if reason:
+        payload["reason"] = reason
+    if decision == "deny":
+        msg = f"SECURITY GUARD: {reason}"
+        payload.update({"decision": "deny", "permissionDecision": "deny", "permissionDecisionReason": msg,
+                        "allow": False, "permission": "deny", "reason": msg})
+        if extra:
+            payload.update(extra)
+        print(json.dumps(payload, indent=2))
+        sys.stderr.write(f"{msg}\n")
+        sys.exit(2)
+
+    if decision in ("allow", "replace"):
+        payload.update({"allow": True, "permission": "allow", "permissionDecision": "allow"})
+    elif decision == "ask":
+        payload.update({"permission": "ask", "permissionDecision": "ask"})
+    if extra:
+        payload.update(extra)
+    print(json.dumps(payload, indent=2))
+    sys.exit(0)
+
+
+# ==============================================================================
+# Command Parser Engine
+# ==============================================================================
+
+@dataclass
+class ParsedCommand:
+    segments: list[list[str]] = field(default_factory=list)
+    operators: list[str] = field(default_factory=list)
+    file_targets: list[str] = field(default_factory=list)
+    subshells: list[str] = field(default_factory=list)
+    raw: str = ""
+    error: str | None = None
+
+
+class CommandParser:
+    SEPARATORS = {";", "&&", "||", "|", "&", ";;", "\n", "\r"}
+    REDIRECTIONS = {">", ">>", "<", "<<", "2>", "1>", "2>>", "1>>", "&>", ">|", "<<<"}
+
+    @staticmethod
+    def _is_escaped(t: str, i: int) -> bool:
+        b, j = 0, i - 1
+        while j >= 0 and t[j] == "\\":
+            b, j = b + 1, j - 1
+        return b % 2 == 1
+
+    @classmethod
+    def extract_subshells(cls, text: str) -> list[str]:
+        sub_cmds, i, n = [], 0, len(text)
+        while i < n:
+            is_sub = (text[i:i + 2] == "$(") and not cls._is_escaped(text, i)
+            is_proc = (i > 0 and text[i - 1] in "<>" and text[i] == "(") and not cls._is_escaped(text, i - 1)
+            if is_sub or is_proc:
+                start, depth = (i + 2 if is_sub else i + 1), 1
+                j, in_sq, in_dq = start, False, False
+                while j < n and depth > 0:
+                    c = text[j]
+                    if c == "\\" and not in_sq:
+                        j += 2
+                        continue
+                    if c == "'" and not in_dq:
+                        in_sq = not in_sq
+                    elif c == '"' and not in_sq:
+                        in_dq = not in_dq
+                    elif not in_sq and not in_dq:
+                        depth += 1 if c == "(" else -1 if c == ")" else 0
+                    j += 1
+                if depth == 0:
+                    inner = text[start:j - 1].strip()
+                    if inner:
+                        sub_cmds.append(inner)
+                        sub_cmds.extend(cls.extract_subshells(inner))
+                    i = j
+                    continue
+            elif text[i] == "`" and not cls._is_escaped(text, i):
+                j = i + 1
+                while j < n and text[j] != "`":
+                    j += 2 if text[j] == "\\" else 1
+                if j < n:
+                    inner = text[i + 1:j].strip()
+                    if inner:
+                        sub_cmds.append(inner)
+                        sub_cmds.extend(cls.extract_subshells(inner))
+                    i = j + 1
+                    continue
+            i += 1
+        return sub_cmds
+
+    @classmethod
+    def tokenize(cls, text: str) -> list[str]:
+        norm, in_sq, in_dq, i, n = [], False, False, 0, len(text)
+        while i < n:
+            c = text[i]
+            if c == "\\" and not in_sq:
+                norm.extend([c, text[i + 1]] if i + 1 < n else [c])
+                i += 2
+                continue
+            if c == "'" and not in_dq:
+                in_sq = not in_sq
+            elif c == '"' and not in_sq:
+                in_dq = not in_dq
+            elif c in ("\n", "\r") and not in_sq and not in_dq:
+                c = ";"
+            norm.append(c)
+            i += 1
+        cleaned = "".join(norm)
+        try:
+            s = shlex.shlex(cleaned, posix=True, punctuation_chars=True)
+            s.whitespace_split, s.commenters = True, ""
+            return list(s)
+        except Exception:
+            try:
+                return shlex.split(cleaned, posix=True)
+            except Exception:
+                return cleaned.split()
+
+    @classmethod
+    def parse(cls, cmd_str: str) -> ParsedCommand:
+        raw = cmd_str.strip()
+        if not raw:
+            return ParsedCommand(raw=raw)
+
+        for c in raw:
+            code, cat = ord(c), unicodedata.category(c)
+            if code < 32 and c not in (" ", "\t", "\n", "\r"):
+                return ParsedCommand(raw=cmd_clean, error="Command contains illegal control characters.")
+            if c not in ("\t", "\n", "\r") and cat in ("Cc", "Cf", "Zl", "Zp"):
+                return ParsedCommand(raw=cmd_clean, error="Command contains hidden unicode line or control separators.")
+
+        p = ParsedCommand(raw=raw, subshells=cls.extract_subshells(raw))
+        for sub in p.subshells:
+            sr = cls.parse(sub)
+            if sr.error:
+                return ParsedCommand(raw=raw, error=sr.error)
+            p.segments.extend(sr.segments)
+            p.file_targets.extend(sr.file_targets)
+
+        tokens = cls.tokenize(raw)
+        curr, is_redir = [], False
+        for t in tokens:
+            if t in cls.REDIRECTIONS:
+                is_redir = True
+                p.operators.append(t)
+                if curr:
+                    p.segments.append(curr)
+                    curr = []
+            elif t in cls.SEPARATORS:
+                is_redir = False
+                p.operators.append(t)
+                if curr:
+                    p.segments.append(curr)
+                    curr = []
+            else:
+                if is_redir:
+                    p.file_targets.append(t)
+                    is_redir = False
+                else:
+                    curr.append(t)
+        if curr:
+            p.segments.append(curr)
+        return p
+
+
+# ==============================================================================
+# Unified Payload Extraction
+# ==============================================================================
+
+@dataclass
+class PayloadContext:
+    command: str = ""
+    file_targets: list[str] = field(default_factory=list)
+    prompt: str = ""
+    cwd: str = ""
+    original_payload: dict | list | str | None = None
+
+
+def extract_context(payload: dict | list | str | None, cli_args: list[str]) -> PayloadContext:
+    ctx = PayloadContext(original_payload=payload, cwd=os.getcwd())
+    if cli_args:
+        ctx.file_targets.extend(cli_args)
+        ctx.command = ctx.prompt = " ".join(cli_args)
+    if not payload:
+        return ctx
+    if isinstance(payload, str):
+        ctx.command, ctx.prompt = payload.strip(), payload
+        ctx.file_targets.append(payload)
+        return ctx
+    if isinstance(payload, list):
+        for item in payload:
+            sub = extract_context(item, [])
+            ctx.file_targets.extend(sub.file_targets)
+            ctx.command = ctx.command or sub.command
+            ctx.prompt = ctx.prompt or sub.prompt
+        return ctx
+
+    containers, stack = [], [payload]
+    while stack:
+        curr = stack.pop()
+        if isinstance(curr, dict):
+            containers.append(curr)
+            for k in CONTAINER_KEYS:
+                if isinstance(curr.get(k), dict):
+                    stack.append(curr[k])
+
+    for d in containers:
+        if ctx.cwd == os.getcwd():
+            for k in CWD_KEYS:
+                if isinstance(d.get(k), str) and d[k].strip():
+                    ctx.cwd = os.path.expandvars(os.path.expanduser(d[k].strip()))
+                    break
+        if not ctx.command:
+            for k in CMD_KEYS:
+                v = d.get(k)
+                if isinstance(v, str) and v.strip():
+                    ctx.command = v.strip()
+                    break
+                elif isinstance(v, list):
+                    ctx.command = " ".join(str(x) for x in v).strip()
+                    break
+        for k in PATH_KEYS:
+            if isinstance(d.get(k), str) and d[k].strip():
+                ctx.file_targets.append(d[k])
+        for lk in ("paths", "files", "targets"):
+            if isinstance(d.get(lk), list):
+                ctx.file_targets.extend(x for x in d[lk] if isinstance(x, str))
+        if not ctx.prompt:
+            for k in PROMPT_KEYS:
+                if isinstance(d.get(k), str) and d[k].strip():
+                    ctx.prompt = d[k]
+                    break
+
+    if not ctx.prompt:
+        msgs = payload.get("messages")
+        if isinstance(msgs, list) and msgs and isinstance(msgs[-1], dict):
+            last = msgs[-1]
+            ctx.prompt = str(last.get("content") or last.get("text") or last.get("userMessage") or "")
+        elif isinstance(payload.get("parts"), list):
+            ctx.prompt = "\n".join(str(p.get("text", "")) for p in payload["parts"] if isinstance(p, dict))
+
+    if ctx.command:
+        parsed = CommandParser.parse(ctx.command)
+        for seg in parsed.segments:
+            for tok in seg:
+                ctx.file_targets.append(tok)
+                if any(c in tok for c in ("*", "?", "[")):
+                    if tok.startswith("/**") or tok.startswith("/*") or "**" in tok:
+                        continue
+                    try:
+                        exp = os.path.expandvars(os.path.expanduser(tok))
+                        m = glob.glob(exp) if os.path.isabs(exp) else glob.glob(tok, root_dir=ctx.cwd)
+                        ctx.file_targets.extend(m[:100] if os.path.isabs(exp) else [os.path.join(ctx.cwd, x) for x in m[:100]])
+                    except Exception:
+                        pass
+        ctx.file_targets.extend(parsed.file_targets)
+    return ctx
+
+
+# ==============================================================================
+# Security Evaluators
+# ==============================================================================
+
+def eval_segment(tokens: list[str], rules: list[dict], all_deny: list[dict], cwd: str | None) -> tuple[str, str, dict | None]:
+    if not tokens:
+        return "none", "", None
+    cmd_repr = " ".join(tokens)
+    hit = find_rule(tokens, all_deny, "deny", d_rsn="Access to sensitive file blocked")
+    if hit:
+        return "deny", hit[2], hit[0]
+    for tok in tokens:
+        if not tok.startswith("-"):
+            for r in all_deny:
+                m, rsn = match_file(tok, r, cwd=cwd)
+                if m:
+                    return "deny", f"{rsn} ({tok})", r
+    hit = find_rule(cmd_repr, rules, "deny", d_rsn="Command is forbidden")
+    if hit:
+        return "deny", hit[2], hit[0]
+    hit = find_rule(cmd_repr, rules, "ask", d_rsn="Operation requires manual confirmation")
+    if hit:
+        return "ask", hit[2], hit[0]
+    for r in rules:
+        if r.get("perm") == "replace" and r.get("match") == "regex":
+            try:
+                if re.search(r.get("pattern", ""), cmd_repr):
+                    return "replace", f"{r.get('reason', 'Command modified')} ({cmd_repr})", r
+            except Exception:
+                pass
+    hit = find_rule(cmd_repr, rules, "allow", d_rsn="Safe command auto-approved")
+    if hit:
+        return "allow", hit[2], hit[0]
+    return "none", "", None
+
+
+def eval_file_target(target: str, rules: list[dict], cwd: str | None) -> tuple[str, str, dict | None]:
+    cand = clean_path(target)
+    if not cand:
+        return "none", "", None
+    rp = None
+    try:
+        exp = os.path.expandvars(os.path.expanduser(cand))
+        if cwd and not os.path.isabs(exp):
+            exp = os.path.join(cwd, exp)
+        if os.path.islink(cand) or os.path.islink(exp) or os.path.exists(exp):
+            real = os.path.realpath(exp)
+            if real != os.path.normpath(exp):
+                rp = real
+    except Exception:
+        pass
+
+    for p in ("deny", "ask", "replace", "allow"):
+        for r in rules:
+            if r.get("perm") == p:
+                m, rsn = match_file(cand, r, cwd=cwd)
+                if m:
+                    return p, rsn, r
+                if p == "deny" and rp:
+                    m_sym, rsn_sym = match_file(rp, r, cwd=cwd)
+                    if m_sym:
+                        return "deny", f"Symlink targets protected path: {rsn_sym}", r
+    return "none", "", None
+
+
+# ==============================================================================
+# Subcommand Handlers & CLI
+# ==============================================================================
+
+def handle_command(config: dict, ctx: PayloadContext) -> None:
+    if not ctx.command:
+        print("{}")
+        sys.exit(0)
+    raw = ctx.command.strip()
+    cmd_rules = normalize_rules(config.get("commands", {}))
+    file_rules = normalize_rules(config.get("files", {}))
+    all_deny = [r for r in (cmd_rules + file_rules) if r.get("perm") == "deny"]
+
+    hit = find_rule(raw, all_deny, "deny", mtypes={"substring", "regex"}, d_rsn="Forbidden command pattern")
+    if hit:
+        emit("deny", hit[2])
+
+    p = CommandParser.parse(raw)
+    if p.error:
+        emit("deny", p.error)
+    if not p.segments and not p.file_targets:
+        print("{}")
+        sys.exit(0)
+
+    for tgt in p.file_targets:
+        hit = find_rule(tgt, all_deny, "deny", d_rsn="Access to sensitive file blocked")
+        if hit:
+            emit("deny", hit[2])
+
+    actions = [eval_segment(seg, cmd_rules, all_deny, ctx.cwd) for seg in p.segments]
+    for act, rsn, _ in actions:
+        if act == "deny":
+            emit("deny", rsn)
+    for act, rsn, _ in actions:
+        if act == "ask":
+            emit("ask", rsn)
+
+    replaces = [r for act, _, r in actions if act == "replace" and r]
+    if replaces:
+        mod = raw
+        reasons = []
+        for r in replaces:
+            try:
+                mod = re.sub(r["pattern"], r["replace"], mod)
+                reasons.append(r.get("reason", "Command modified"))
+            except Exception:
+                pass
+        extra = {"command": mod, "CommandLine": mod, "modified": mod, "overwrite": {"CommandLine": mod, "command": mod}}
+        if isinstance(ctx.original_payload, dict):
+            for k in CMD_KEYS:
+                if k in ctx.original_payload:
+                    ctx.original_payload[k] = mod
+            extra["payload"] = ctx.original_payload
+        emit("replace", "; ".join(reasons), extra)
+
+    if all(act == "allow" for act, _, _ in actions) and p.segments:
+        rsn = actions[0][1] if len(p.segments) == 1 else f"Chained pipeline auto-approved: {raw}"
+        emit("allow", rsn)
+
+    print("{}")
+    sys.exit(0)
+
+
+def handle_file(config: dict, ctx: PayloadContext) -> None:
+    if not ctx.file_targets:
+        print("{}")
+        sys.exit(0)
+    file_rules = normalize_rules(config.get("files", {}))
+    results = [eval_file_target(t, file_rules, ctx.cwd) + (t,) for t in ctx.file_targets]
+
+    for dec, rsn, _, t in results:
+        if dec == "deny":
+            emit("deny", f"Access to sensitive file or path '{t}' is blocked ({rsn}).")
+    for dec, rsn, _, _ in results:
+        if dec == "ask":
+            emit("ask", rsn)
+    for dec, rsn, r, t in results:
+        if dec == "replace":
+            new_t = re.sub(r["pattern"], r["replace"], t)
+            emit("replace", rsn, {"replacement": new_t, "path": new_t, "target": new_t})
+    for dec, rsn, _, _ in results:
+        if dec == "allow":
+            emit("allow", rsn)
+    print("{}")
+    sys.exit(0)
+
+
+def handle_prompt(config: dict, ctx: PayloadContext) -> None:
+    text = ctx.prompt
+    if not text:
+        print("{}")
+        sys.exit(0)
+    rules = normalize_rules(config.get("prompts", {}))
+    for p in ("deny", "ask"):
+        for r in rules:
+            pat = r.get("pattern")
+            if r.get("perm") == p and pat and re.search(pat, text):
+                rsn = r.get("reason", "Prompt requires confirmation")
+                emit(p, f"Prompt submission blocked ({rsn})" if p == "deny" else rsn)
+
+    sanitized, applied = text, []
+    for r in rules:
+        pat = r.get("pattern")
+        if r.get("perm") == "replace" and pat:
+            try:
+                if re.search(pat, sanitized):
+                    sanitized = re.sub(pat, r.get("replace", "[REDACTED]"), sanitized)
+                    applied.append(r.get("reason", "Sensitive data redacted"))
+            except Exception:
+                pass
+    if applied:
+        notice = f"Security Notice: {len(applied)} sensitive item(s) redacted ({', '.join(sorted(list(set(applied))))})."
+        extra = {"sanitized": sanitized, "text": sanitized, "reasons": applied,
+                 "systemMessage": notice, "additionalContext": notice, "injectSteps": [{"ephemeralMessage": notice}]}
+        for k in PROMPT_KEYS:
+            extra[k] = sanitized
+        if isinstance(ctx.original_payload, dict):
+            for k in PROMPT_KEYS:
+                if k in ctx.original_payload:
+                    ctx.original_payload[k] = sanitized
+            extra["payload"] = ctx.original_payload
+        emit("replace", "; ".join(sorted(list(set(applied)))), extra)
+
+    for r in rules:
+        pat = r.get("pattern")
+        if r.get("perm") == "allow" and pat and re.search(pat, text):
+            emit("allow", r.get("reason", "Prompt approved"))
+    print("{}")
+    sys.exit(0)
+
+
+def handle_parse(ctx: PayloadContext, cli_args: list[str]) -> None:
+    cmd = ctx.command or (" ".join(cli_args) if cli_args else "")
+    if not cmd:
+        print(json.dumps({"segments": [], "operators": [], "file_targets": [], "subshells": [], "raw": ""}, indent=2))
+        sys.exit(0)
+    p = CommandParser.parse(cmd)
+    if p.error:
+        print(json.dumps({"error": p.error, "decision": "deny"}, indent=2))
+        sys.exit(2)
+    print(json.dumps({"segments": p.segments, "operators": p.operators, "file_targets": p.file_targets, "subshells": p.subshells, "raw": p.raw}, indent=2))
+    sys.exit(0)
+
+
+def main():
+    args, custom_config = sys.argv[1:], None
+    idx = 0
+    while idx < len(args):
+        if args[idx] in ("-c", "--config"):
+            if idx + 1 < len(args):
+                custom_config, idx = args[idx + 1], idx + 2
+            else:
+                sys.stderr.write("Error: -c / --config requires a configuration file path.\n")
+                sys.exit(1)
+        else:
+            break
+
+    sub_args = args[idx:]
+    if not sub_args:
+        sys.stderr.write("Usage: df.ai-guard [-c <config_path>] <subcommand> [args...]\n")
+        sys.exit(1)
+    subcmd, rest = sub_args[0], sub_args[1:]
+    valids = ("command", "file", "prompt", "parse")
+    if subcmd not in valids:
+        sys.stderr.write(f"Unknown subcommand '{subcmd}'. Supported subcommands: {', '.join(valids)}\n")
+        sys.exit(1)
+
+    payload = None
+    if not sys.stdin.isatty():
+        try:
+            raw = sys.stdin.read()
+            if raw.strip():
+                try:
+                    payload = json.loads(raw)
+                except Exception:
+                    payload = None if raw.strip().startswith(("{", "[")) else raw.strip()
+        except Exception:
+            pass
+
+    ctx = extract_context(payload, rest)
+    if subcmd == "parse":
+        handle_parse(ctx, rest)
+    config = load_config(custom_config)
+    if subcmd == "command":
+        handle_command(config, ctx)
+    elif subcmd == "file":
+        handle_file(config, ctx)
+    elif subcmd == "prompt":
+        handle_prompt(config, ctx)
+
+
+if __name__ == "__main__":
+    main()
