@@ -18,20 +18,20 @@ The following will be bootstrapped automatically:
 This dotfiles repository comes with a wide range of features to enhance your shell environment:
 
 -   **Modular Zsh Configuration:** The Zsh configuration is organized into `config`, `functions`, `apps`, and `projects` directories, making it easy to extend and manage.
--   **Cross-Platform Support:** An installation script is provided to install dependencies on macOS, Debian/Ubuntu, Fedora, and Arch Linux.
+-   **Cross-Platform Support:** An installation script is provided to install dependencies on macOS, Debian/Ubuntu, Fedora, Arch Linux, and Termux.
 -   **Oh My Zsh Integration:** Includes the popular [Oh My Zsh](https://github.com/ohmyzsh/ohmyzsh) framework for themes and plugins.
--   **AI Command-Line Tools:** A suite of aliases is provided for interacting with various AI services directly from the command line, including:
-    -   `ai.chat`: A wrapper for the `aichat` tool.
-    -   `ai.code` (alias for `ai.opencode`): For code generation with OpenCode.
-    -   `ai.crush`: To use the crush.dev CLI.
-    -   `ai.gemini`: To use the Google Gemini CLI.
+-   **AI Command-Line Tools:** A suite of aliases and functions for interacting with AI providers and tooling directly from the command line, including:
+    -   `ai.chat <provider>/<model> [prompt]`: Chat against any configured OpenAI-compatible provider (openai, openrouter, groq, docker, ollama, opencode, …).
+    -   `ai.models`, `ai.models.free`: List models from a provider, including a free-model filter.
+    -   `ai.provider.list`, `ai.provider.define`: Manage the provider registry.
+    -   `ai.speckit`, `ai.speckit.init`: Run the [spec-kit](https://github.com/github/spec-kit) CLI via `uvx`.
+    -   Providers are defined in [`dot_zsh/apps/ai/providers/`](dot_zsh/apps/ai/providers/) (openai, openrouter, groq, docker, ollama, opencode).
 -   **Automatic Python Virtualenv:** Automatically activates and deactivates Python virtual environments (`.venv`) as you navigate your filesystem.
--   **Project-Specific Workflows:** The `src/zsh/projects` directory allows you to define aliases and functions to streamline workflows for your individual projects.
+-   **Project-Specific Workflows:** The [`dot_zsh/projects/`](dot_zsh/projects/) directory allows you to define aliases and functions to streamline workflows for your individual projects.
 -   **FZF Integration:** Integrates [fzf](https://github.com/junegunn/fzf) for powerful fuzzy history search.
--   **Neovim Support:** Includes Neovim in the automatic package installation system.
+-   **Neovim:** Configurable via [`dot_zsh/projects/neovim.zsh`](dot_zsh/projects/neovim.zsh), which provides `nvim.cd` / `nvim.edit` helpers to clone and edit the [warpcode/vim-config](https://github.com/warpcode/vim-config) repository inside a tmux session.
 -   **Automatic PATH management:** Automatically scans `/opt/` and `~/.local/opt/` for subdirectories containing `bin`, `sbin`, `usr/bin`, `usr/sbin`, `usr/local/bin`, and `usr/local/sbin`, and adds them to PATH.
--   **Universal Secret Manager:** A unified interface (`src/zsh/functions/secrets.zsh`) for managing master passwords via OS Keychains (macOS Keychain, Linux Secret Service).
-    -   **KeePassXC Integration:** The `kp` command now uses this system to securely retrieve your master password without storing it in shell variables permanently.
+-   **KeePassXC Integration:** The [`df.keepass`](dot_local/bin/executable_df.keepass) helper wraps `keepassxc-cli` for vault access. It is invoked by chezmoi at apply-time (see `.chezmoi.toml.tmpl`) to detect whether `keepassxc-cli` is available and which database to use.
 -   **GitHub Release Installer:** Automatically downloads and installs applications directly from GitHub releases. Supports OS and architecture detection, version management, and creates executable symlinks in a `bin/` directory. Configurable installation directory via `GITHUB_RELEASES_INSTALL_DIR` environment variable (defaults to `~/.local/opt`).
 
 ## Installation
@@ -47,10 +47,11 @@ wget -O- https://raw.githubusercontent.com/warpcode/dotfiles/master/install.sh |
 ```
 
 This script will:
-1. Detect your OS and install core dependencies (`git`, `zsh`).
-2. Ensure `zsh` is your default shell.
-3. Clone this repository to `~/.dotfiles`.
-4. Initialize the modular configuration system.
+1. Detect your OS and install core dependencies (`git`, `zsh`, `curl`, `jq`).
+2. Clone this repository to `${DOTFILES_INSTALL_DIR:-~/.dotfiles}` (overridable).
+3. Install `chezmoi` and `mise` if missing.
+4. Run `mise bootstrap --only packages` for system packages.
+5. Apply the dotfiles via `chezmoi init --apply` (this is what sets `zsh` as the default shell and runs the `run_once_after_*` scripts).
 
 ### Manual Installation (Optional)
 
@@ -69,82 +70,57 @@ If you prefer to install manually:
 
 ### Installing Applications from GitHub Releases
 
-The installer supports downloading applications directly from GitHub releases with automatic OS and architecture detection:
+Helper functions in [`dot_zsh/functions/github.zsh`](dot_zsh/functions/github.zsh) fetch and install GitHub release artifacts:
 
-1. Register a GitHub release in your app configuration:
-   ```zsh
-   _installer_package "github" "fzf" "junegunn/fzf@v0.66.1"
-   _installer_package "github" "uv" "astral-sh/uv@latest"
-   ```
+- `github.get_latest_release <owner>/<repo>` — returns the latest tag.
+- `github.get_asset_url <owner>/<repo> <pattern>` — resolves a matching release asset URL (auto-detects OS/arch suffixes).
+- `github.install_release <owner>/<repo> <pattern> [dest_dir]` — downloads the matching asset, extracts `.tar.gz`/`.zip`, flattens top-level `bin/`, `sbin/`, `usr/`, or `lib/` dirs, and symlinks executables into `bin/`.
 
-2. Install all registered packages:
-   ```zsh
-   _installer_install
-   ```
-
- This will:
-- Download the appropriate `.tar.gz` asset for your OS and architecture
-- Extract it to `~/.local/opt/appname/` (configurable via `GITHUB_RELEASES_INSTALL_DIR`)
-- Automatically flatten top-level directories containing `bin/`, `sbin/`, `usr/`, or `lib/`
-- Create symlinks to all executable files in `bin/` for PATH access
-- Track versions in `.version` files to avoid unnecessary re-downloads
-
-Supported formats: `.tar.gz` and `.zip` archives. The system detects Linux/macOS and x86_64/aarch64 architectures, with fallback patterns for common naming variations.
+Extraction lands in `$GITHUB_RELEASES_INSTALL_DIR` (default `~/.local/opt`). Set the variable to override.
 
 ## External Dependencies
 
-This project uses `git submodule` to manage external dependencies.
+This repository has no git submodules. All configuration is bundled in-tree; vendored snippets live alongside their consumers (e.g. [`dot_zsh/config/50-oh-my-zsh.zsh`](dot_zsh/config/50-oh-my-zsh.zsh) for Oh My Zsh integration).
 
--   **[ohmyzsh/ohmyzsh](https://github.com/ohmyzsh/ohmyzsh):** The Oh My Zsh framework.
--   **[zsh-users/zsh-autosuggestions](https://github.com/zsh-users/zsh-autosuggestions):** A plugin for Zsh that provides command suggestions.
+To update vendored tool configurations after pulling, re-apply with chezmoi:
 
-To initialize all submodules after cloning, run:
 ```bash
-git submodule update --init --recursive
-```
-
-To update all submodules to their latest versions, run:
-```bash
-make update-submodules
+chezmoi apply
 ```
 
 ## Troubleshooting
 
 ### Dependencies not installing?
-- Ensure your OS is supported (macOS, Debian/Ubuntu, Fedora, Arch Linux)
+- Ensure your OS is supported (macOS, Debian/Ubuntu, Fedora, Arch Linux, Termux)
 - Check that you have `sudo` access for system package installation
-- For GitHub releases, ensure `curl` and `tar` are available
+- For GitHub releases, ensure `curl`, `jq`, and `tar` are available
 
 ### Conflicts with existing configuration?
 - The dotfiles use `chezmoi` to manage configuration files. If there is a conflict in your home directory, `chezmoi diff` or `chezmoi apply` will prompt you to merge or overwrite changes.
 - Check for conflicts in `~/.zshrc`, `~/.gitconfig`, etc.
-- User overrides can be added to `~/.zshrc.d/` or `~/.zshrc.{functions,config,apps,projects}/`
+- Machine-local overrides can be added to `~/.zshrc.local` (sourced at the end of [`dot_zshrc.tmpl`](dot_zshrc.tmpl)).
 
 ### Profiles
 - Different configurations and packages are conditionally loaded based on profiles (`default`, `work`, `phone`).
 - The active profile is stored in `~/.dotfiles_profile` and read automatically by Chezmoi to apply profile-specific constraints on packages and configurations.
 
 ### Customizing the setup
-- Add personal aliases/functions to `~/.zshrc.d/`
-- Override app configurations in `~/.zshrc.apps/`
-- Add project-specific settings to `~/.zshrc.projects/`
-- Modify `GITHUB_RELEASES_INSTALL_DIR` to change where GitHub releases are installed
+- Add personal aliases/functions to `~/.zshrc.local` (sourced after the main config).
+- Add project-specific settings as new files under `dot_zsh/projects/`.
+- Modify `GITHUB_RELEASES_INSTALL_DIR` to change where GitHub releases are installed.
 
 ## Customization
 
 ### Adding new applications
-Create a new file in `src/zsh/apps/yourapp.zsh`:
+Create a new file in [`dot_zsh/apps/yourapp.zsh`](dot_zsh/apps/):
 ```zsh
-# Register packages
-_installer_package "default" yourapp
-
 # Add app-specific configuration
 alias youralias="yourapp --option"
 ```
 
 ### Project-specific configurations
-Add files to `src/zsh/projects/yourproject.zsh` for project-specific aliases and functions.
+Add files to [`dot_zsh/projects/yourproject.zsh`](dot_zsh/projects/) for project-specific aliases and functions.
 
 ### Overriding settings
-Any file in `~/.zshrc.d/` will be sourced after the main configuration, allowing you to override or add settings.
+Add machine-local aliases or environment overrides to `~/.zshrc.local`. It is sourced at the end of [`dot_zshrc.tmpl`](dot_zshrc.tmpl), after the main configuration.
 

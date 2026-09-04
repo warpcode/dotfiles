@@ -33,7 +33,7 @@ These instructions capture persistent memories, behavioral guardrails, and techn
 ## 🛠️ Technical Context & Invariants
 
 - **Source of Truth Hierarchy**: `~/.agents/AGENTS.md` is the authoritative source for durable memory. Keep workspace-only notes ephemeral.
-- **Git & PR Workflows**: Delegated to `git-expert`, `github`, and `github-cli` skills. Always use a rebase strategy when pulling or syncing remote changes.
+- **Git & PR Workflows**: Delegated to `git-expert`, `github`, and `github-cli` skills. Always use a rebase strategy when pulling or syncing remote changes. For bot-authored PR reviews (e.g. Jules), if previous review comments remain uncompleted in subsequent commits, bump existing unresolved threads with replies rather than creating duplicate review comments.
 - **AI Infrastructure**: Use **Docker Model Runner** (running `llama.cpp`) for local models over `ollama`.
 - **Secrets Management**: Scripts and tools MUST remain blind to the secret provider (such as `cloakenv`); rely on standard environment variables (`GITHUB_TOKEN` / `GH_TOKEN`) or native tool configs. Secret resolution is handled via `bin/df.config` (`resolve`/`hydrate`) and `bin/df.keychain`/`bin/df.keepass`.
 - **Package Management Architecture**: The legacy `zinstall` logic is deprecated; use the `pkg.zsh` recipe system (`pkg.recipe.define` + `registry.zsh`).
