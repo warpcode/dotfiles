@@ -1,0 +1,432 @@
+{
+  "commands": {
+    "default_perm": "ask",
+    "default_reason": "Command requires manual user confirmation",
+    "rules": [
+      {
+        "pattern": "python3 -m py_compile",
+        "match": "prefix",
+        "perm": "allow",
+        "reason": "Python compilation is safe."
+      },
+      {
+        "pattern": "python3 -c ",
+        "match": "prefix",
+        "perm": "deny",
+        "reason": "Python inline execution is unsafe."
+      },
+      {
+        "pattern": "python3 -m unittest",
+        "match": "prefix",
+        "perm": "allow",
+        "reason": "Python unit testing is safe."
+      },
+      {
+        "pattern": "zsh -n",
+        "match": "prefix",
+        "perm": "allow",
+        "reason": "Zsh -n syntax check is safe."
+      },
+      {
+        "pattern": "bash -n",
+        "match": "prefix",
+        "perm": "allow",
+        "reason": "Bash -n syntax check is safe."
+      },
+      {
+        "pattern": "find",
+        "match": "prefix",
+        "perm": "allow",
+        "reason": "Find is safe for search operations without mutating flags."
+      },
+      {
+        "pattern": "git status*",
+        "match": "glob",
+        "perm": "allow",
+        "reason": "Safe git status command"
+      },
+      {
+        "pattern": "git diff*",
+        "match": "glob",
+        "perm": "allow",
+        "reason": "Safe git diff command"
+      },
+      {
+        "pattern": "git log*",
+        "match": "glob",
+        "perm": "allow",
+        "reason": "Safe git log command"
+      },
+      {
+        "pattern": "ls -la*",
+        "match": "glob",
+        "perm": "allow",
+        "reason": "Safe directory listing"
+      },
+      {
+        "pattern": "pwd",
+        "match": "exact",
+        "perm": "allow",
+        "reason": "Safe working directory check"
+      },
+      {
+        "pattern": "rm -rf /",
+        "match": "prefix",
+        "perm": "deny",
+        "reason": "Root bulk deletion forbidden"
+      },
+      {
+        "pattern": "rm -rf ~",
+        "match": "prefix",
+        "perm": "deny",
+        "reason": "Home bulk deletion forbidden"
+      },
+      {
+        "pattern": "rm -rf $HOME",
+        "match": "prefix",
+        "perm": "deny",
+        "reason": "Home bulk deletion forbidden"
+      },
+      {
+        "pattern": "(?i)\\b(DROP\\s+DATABASE|TRUNCATE\\s+TABLE)\\b",
+        "match": "regex",
+        "perm": "deny",
+        "reason": "Destructive SQL commands forbidden"
+      },
+      {
+        "pattern": "git rm*",
+        "match": "glob",
+        "perm": "ask",
+        "reason": "Git file removal requires manual confirmation."
+      },
+      {
+        "pattern": "git branch -D*",
+        "match": "glob",
+        "perm": "ask",
+        "reason": "Forced git branch deletion requires confirmation."
+      },
+      {
+        "pattern": "git branch -d*",
+        "match": "glob",
+        "perm": "ask",
+        "reason": "Git branch deletion requires confirmation."
+      },
+      {
+        "pattern": ".*\\|\\s*(?:/bin/)?(?:sudo\\s+)?(?:bash|sh|zsh).*",
+        "match": "regex",
+        "perm": "deny",
+        "reason": "Piping commands directly into shell interpreters is forbidden."
+      },
+      {
+        "pattern": "\\bfind\\b.*-(?:exec|delete|ok|fprint|fprintf|fls)",
+        "match": "regex",
+        "perm": "deny",
+        "reason": "Unsafe find flags (-exec, -delete, -ok, -fprint, -fprintf, -fls) are strictly forbidden."
+      },
+      {
+        "pattern": "(?:^|[;&|]\\s*)(?:env|printenv|export(\\s+-p)?|declare\\s+-p|typeset\\s+-p)\\b",
+        "match": "regex",
+        "perm": "deny",
+        "reason": "Environment inspection commands (env/printenv/set/export) are blocked: they would expose injected secrets to model-visible output."
+      },
+      {
+        "pattern": "(?:^|[;&|]\\s*)set\\s*(?:$|[;&|])",
+        "match": "regex",
+        "perm": "deny",
+        "reason": "Bare set command is blocked: it would expose injected secrets to model-visible output."
+      },
+      {
+        "pattern": "(?:^|[;&|]\\s*)sudo\\b",
+        "match": "regex",
+        "perm": "ask",
+        "reason": "Privileged execution (sudo) requires manual confirmation."
+      },
+      {
+        "pattern": "\\bgit\\s+push\\b.*(?:\\s|^)(?:-f\\b|--force\\b|--force-with-lease\\b)",
+        "match": "regex",
+        "perm": "deny",
+        "reason": "Force pushing via git push is forbidden. Use regular branch pushes and open a PR."
+      },
+      {
+        "pattern": "git reset --hard*",
+        "match": "glob",
+        "perm": "ask",
+        "reason": "Hard git reset discards working copy changes and requires manual confirmation."
+      },
+      {
+        "pattern": "\\bgit\\s+clean\\b.*-[a-zA-Z]*f",
+        "match": "regex",
+        "perm": "ask",
+        "reason": "Forced git clean discards untracked files and requires manual confirmation."
+      },
+      {
+        "pattern": "chmod -R*",
+        "match": "glob",
+        "perm": "ask",
+        "reason": "Recursive permission modification requires manual confirmation."
+      },
+      {
+        "pattern": "chown -R*",
+        "match": "glob",
+        "perm": "ask",
+        "reason": "Recursive ownership modification requires manual confirmation."
+      },
+      {
+        "pattern": "kill -9*",
+        "match": "glob",
+        "perm": "ask",
+        "reason": "Force killing processes (SIGKILL) requires manual confirmation."
+      },
+      {
+        "pattern": "(^|[;&|]\\s*)(litellm\\b.*)$",
+        "match": "regex",
+        "perm": "replace",
+        "replace": "\\1cloakenv run -- \\2",
+        "reason": "Prepend cloakenv run for litellm commands"
+      }
+    ]
+  },
+  "files": {
+    "default_perm": "ask",
+    "default_reason": "Access to sensitive file or path is blocked",
+    "rules": [
+      {
+        "pattern": "*/.env*",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "Direct access to .env files is blocked. Use 'df.config resolve' or environment variables."
+      },
+      {
+        "pattern": "*.env*",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "Direct access to .env files is blocked. Use 'df.config resolve' or environment variables."
+      },
+      {
+        "pattern": "*env.tmpl*",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "Direct access to environment template files is blocked. Use 'df.config resolve'."
+      },
+      {
+        "pattern": "*dot_env*",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "Direct access to dot_env files is blocked. Use 'df.config resolve'."
+      },
+      {
+        "pattern": "*env.template*",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "Direct access to env.template files is blocked. Use 'df.config resolve'."
+      },
+      {
+        "pattern": "*env.vault*",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "Direct access to env.vault files is blocked. Use 'df.config resolve'."
+      },
+      {
+        "pattern": "~/.ssh/*",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "Direct access to SSH private keys is forbidden. Use ssh-agent or keychain credentials."
+      },
+      {
+        "pattern": "*.kdbx",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "KeePass vault databases are protected."
+      },
+      {
+        "pattern": "*.key",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "Cryptographic key files are protected."
+      },
+      {
+        "pattern": "*.pem",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "Cryptographic certificates and keys are protected."
+      },
+      {
+        "pattern": "~/.aws/*",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "AWS credentials and configs are protected."
+      },
+      {
+        "pattern": "~/.gnupg/*",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "GPG keys and configs are protected."
+      },
+      {
+        "pattern": "~/.docker/*",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "Docker configuration and credentials are protected."
+      },
+      {
+        "pattern": "~/.config/cloakenv/*",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "Cloakenv credentials are protected."
+      },
+      {
+        "pattern": "*credentials.json*",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "Credentials files are protected."
+      },
+      {
+        "pattern": "*secrets.json*",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "Secrets files are protected."
+      },
+      {
+        "pattern": "*.p12",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "PKCS#12 certificate bundles are protected."
+      },
+      {
+        "pattern": "*.pfx",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "PFX certificate bundles are protected."
+      },
+      {
+        "pattern": "*.keystore",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "Java keystore files are protected."
+      },
+      {
+        "pattern": "*.jks",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "Java keystore files are protected."
+      },
+      {
+        "pattern": "*id_rsa*",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "SSH private keys are protected."
+      },
+      {
+        "pattern": "*id_ed25519*",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "SSH private keys are protected."
+      },
+      {
+        "pattern": "*id_ecdsa*",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "SSH private keys are protected."
+      },
+      {
+        "pattern": "*id_dsa*",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "SSH private keys are protected."
+      },
+      {
+        "pattern": "*.pub",
+        "match": "glob",
+        "perm": "deny",
+        "reason": "Public key files are protected from agent inspection."
+      },
+      {
+        "pattern": "*.netrc",
+        "match": "glob",
+        "perm": "deny",
+        "reason": ".netrc credentials files are protected."
+      },
+      {
+        "pattern": "*.npmrc",
+        "match": "glob",
+        "perm": "deny",
+        "reason": ".npmrc auth token files are protected."
+      }
+    ]
+  },
+  "prompts": {
+    "default_perm": "allow",
+    "default_reason": "Sensitive prompt content detected",
+    "rules": [
+      {
+        "pattern": "sk-(?:proj-|admin-|svcacct-)?[a-zA-Z0-9_-]{20,}",
+        "match": "regex",
+        "perm": "replace",
+        "reason": "OpenAI API Key redacted",
+        "replace": "[REDACTED_SECRET_OPENAI_API_KEY]"
+      },
+      {
+        "pattern": "sk-ant-(?:api[0-9]{2}-)?[A-Za-z0-9_-]{30,}",
+        "match": "regex",
+        "perm": "replace",
+        "reason": "Anthropic API Key redacted",
+        "replace": "[REDACTED_SECRET_ANTHROPIC_API_KEY]"
+      },
+      {
+        "pattern": "(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36,}",
+        "match": "regex",
+        "perm": "replace",
+        "reason": "GitHub Token redacted",
+        "replace": "[REDACTED_SECRET_GITHUB_TOKEN]"
+      },
+      {
+        "pattern": "github_pat_[A-Za-z0-9_]{80,}",
+        "match": "regex",
+        "perm": "replace",
+        "reason": "GitHub Fine-Grained Token redacted",
+        "replace": "[REDACTED_SECRET_GITHUB_PAT]"
+      },
+      {
+        "pattern": "\\b(?:A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}\\b",
+        "match": "regex",
+        "perm": "replace",
+        "reason": "AWS Access Key redacted",
+        "replace": "[REDACTED_SECRET_AWS_ACCESS_KEY]"
+      },
+      {
+        "pattern": "AIza[0-9A-Za-z\\-_]{35}",
+        "match": "regex",
+        "perm": "replace",
+        "reason": "Google AI / GCP Key redacted",
+        "replace": "[REDACTED_SECRET_GOOGLE_AI_KEY]"
+      },
+      {
+        "pattern": "xox[baprs]-[0-9]{10,13}-[0-9]{10,13}[a-zA-Z0-9-]*",
+        "match": "regex",
+        "perm": "replace",
+        "reason": "Slack Token redacted",
+        "replace": "[REDACTED_SECRET_SLACK_TOKEN]"
+      },
+      {
+        "pattern": "-----BEGIN (?:[A-Z0-9_-]+ )?PRIVATE KEY(?: BLOCK)?-----",
+        "match": "regex",
+        "perm": "deny",
+        "reason": "Private Key Header detected; prompt submission is blocked"
+      },
+      {
+        "pattern": "(?i)\\b(password|passwd|secret|api_key|apikey|access_token|auth_token)(\\s*[:=]\\s*)(?:['\"][^'\"]{8,}['\"]|[A-Za-z0-9!@#$%^&*()_+\\-=\\[\\]{};:,.<>?/]{8,})",
+        "match": "regex",
+        "perm": "replace",
+        "reason": "Password/secret assignment redacted",
+        "replace": "\\1\\2[REDACTED_SECRET_PASSWORD]"
+      },
+      {
+        "pattern": "(/home/[^\\s/]+)",
+        "match": "regex",
+        "perm": "replace",
+        "reason": "User directory path detected; redacted for privacy",
+        "replace": "~"
+      }
+    ]
+  }
+}

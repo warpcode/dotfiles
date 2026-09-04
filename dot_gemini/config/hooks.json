@@ -1,0 +1,42 @@
+{
+  "ai-command-gate": {
+    "enabled": true,
+    "PreToolUse": [
+      {
+        "matcher": "run_command|runTerminalCommand|bash|execute_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./ai-guard-wrapper.py command",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  },
+  "ai-file-guard": {
+    "enabled": true,
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./ai-guard-wrapper.py file",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  },
+  "ai-prompt-sanitizer": {
+    "enabled": true,
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "./ai-guard-wrapper.py prompt",
+        "timeout": 5
+      }
+    ]
+  }
+}

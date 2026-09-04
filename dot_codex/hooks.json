@@ -1,0 +1,23 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "type": "command",
+        "command": "./ai-guard-wrapper.sh prompt",
+        "timeout": 5
+      }
+    ],
+    "PreToolUse": [
+      {
+        "type": "command",
+        "command": "./ai-guard-wrapper.sh command",
+        "timeout": 5
+      },
+      {
+        "type": "command",
+        "command": "./ai-guard-wrapper.sh file",
+        "timeout": 5
+      }
+    ]
+  }
+}

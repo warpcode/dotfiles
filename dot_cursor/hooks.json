@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeSubmitPrompt": [
+      {
+        "command": "./ai-guard-wrapper.sh prompt"
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "./ai-guard-wrapper.sh command"
+      },
+      {
+        "command": "./ai-guard-wrapper.sh file"
+      }
+    ]
+  }
+}
