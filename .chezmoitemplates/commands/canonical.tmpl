@@ -30,6 +30,7 @@
 {{- end -}}
 
 {{- $dynamicScripts := list -}}
+{{- if hasKey . "chezmoi" -}}
 {{- $source := .chezmoi.sourceDir -}}
 {{- if $source -}}
   {{- range $s := glob (printf "%s/.github/skills/*/scripts/*" $source) -}}
@@ -41,6 +42,7 @@
       {{- end -}}
     {{- end -}}
   {{- end -}}
+{{- end -}}
 {{- end -}}
 
 {{- $allAllow := list -}}
