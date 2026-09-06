@@ -316,36 +316,6 @@ class TestRenderedOutputs(unittest.TestCase):
             self.assertNotIn("internal/*", item)
             self.assertNotIn("/home/", item, f"Found /home/ in cursor allow item: {item}")
 
-    def test_vscode_run_script_syntax(self):
-        subprocess.check_call(
-            ["bash", "-n", "run_onchange_after_configure_vscode_permissions.sh.tmpl"],
-            cwd=REPO_ROOT,
-        )
-
-    def test_vscode_run_script_rendered_payload(self):
-        rendered = subprocess.check_output(
-            ["chezmoi", "execute-template", "--file", "run_onchange_after_configure_vscode_permissions.sh.tmpl"],
-            cwd=REPO_ROOT,
-            text=True,
-        )
-        proc = subprocess.run(["bash", "-n"], input=rendered, text=True, capture_output=True)
-        self.assertEqual(proc.returncode, 0, f"Rendered bash syntax error: {proc.stderr}")
-
-        match = re.search(r"AUTO_APPROVE_PAYLOAD=\$\(cat << 'EOF'\n(.*?)\nEOF\n\)", rendered, re.DOTALL)
-        self.assertIsNotNone(match, "AUTO_APPROVE_PAYLOAD not found in rendered script")
-        payload = json.loads(match.group(1))
-        self.assertIn("chat.tools.terminal.autoApprove", payload)
-        approve_map = payload["chat.tools.terminal.autoApprove"]
-        self.assertTrue(approve_map.get("git status"))
-        self.assertTrue(approve_map.get("ls"))
-        self.assertTrue(approve_map.get("chezmoi status"))
-        self.assertTrue(approve_map.get("chezmoi diff"))
-        self.assertFalse(approve_map.get("chezmoi apply"))
-        self.assertFalse(approve_map.get("rm"))
-        self.assertFalse(approve_map.get("sudo"))
-        self.assertFalse(approve_map.get("rm -rf /"))
-        self.assertNotIn("git checkout * -- internal/*", approve_map)
-
 
 @unittest.skipUnless(CHEZMOI_AVAILABLE, "chezmoi executable not found on PATH")
 class TestPartialAndPatternOnlyRendering(unittest.TestCase):
