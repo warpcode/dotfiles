@@ -14,15 +14,19 @@ from pathlib import Path
 
 
 def resolve_ai_guard() -> str:
+    script_dir = Path(__file__).resolve().parent
+    repo_cand = script_dir.parent.parent / "dot_local" / "bin" / "executable_df.ai-guard"
+    if repo_cand.is_file() and os.access(repo_cand, os.X_OK):
+        return str(repo_cand)
+    home_cand = Path.home() / "src" / "dotfiles" / "dot_local" / "bin" / "executable_df.ai-guard"
+    if home_cand.is_file() and os.access(home_cand, os.X_OK):
+        return str(home_cand)
     local_bin = Path.home() / ".local" / "bin" / "df.ai-guard"
     if local_bin.is_file() and os.access(local_bin, os.X_OK):
         return str(local_bin)
     p = shutil.which("df.ai-guard")
     if p:
         return p
-    repo_cand = Path.home() / "src" / "dotfiles" / "dot_local" / "bin" / "executable_df.ai-guard"
-    if repo_cand.is_file():
-        return str(repo_cand)
     return "df.ai-guard"
 
 
@@ -45,7 +49,7 @@ def run_guard(subcmd: str, args: list[str] = None, stdin_str: str = None) -> tup
         return res.returncode, data
     except Exception as e:
         sys.stderr.write(f"Error invoking {cmd}: {e}\n")
-        return 0, {}
+        return 2, {"decision": "deny", "reason": f"Security guard execution failed: {e}"}
 
 
 def main():
@@ -67,13 +71,28 @@ def main():
     tool_name = tool_call.get("name", "") if isinstance(tool_call, dict) else ""
     tool_args = tool_call.get("args", {}) if isinstance(tool_call, dict) else {}
 
+    command_tools = (
+        "run_command", "bash", "execute_command", "runTerminalCommand",
+        "terminal", "sh", "zsh", "shell", "exec"
+    )
+
     if not route:
-        if "transcriptPath" in payload or "invocationNum" in payload or "prompt" in payload:
+        if (
+            "toolResult" in payload
+            or "tool_result" in payload
+            or payload.get("hook_event_name") == "PostToolUse"
+            or ("result" in payload and "toolCall" not in payload)
+            or ("output" in payload and "toolCall" not in payload)
+        ):
+            route = "output"
+        elif "transcriptPath" in payload or "invocationNum" in payload or ("prompt" in payload and not tool_call):
             route = "prompt"
-        elif tool_name in ("run_command", "bash", "execute_command", "runTerminalCommand", "terminal"):
+        elif tool_name in command_tools:
             route = "command"
-        else:
+        elif tool_call:
             route = "file"
+        else:
+            route = "prompt"
 
     # =========================================================================
     # ROUTE: PROMPT (PreInvocation)
@@ -101,7 +120,7 @@ def main():
                 pass
 
         if not prompt_text:
-            print(json.dumps({}))
+            print(json.dumps({"decision": "allow"}))
             sys.exit(0)
 
         code, data = run_guard("prompt", stdin_str=json.dumps({"text": prompt_text}))
@@ -150,7 +169,45 @@ def main():
             print(json.dumps(proto_resp))
             sys.exit(0)
 
-        print(json.dumps({}))
+        print(json.dumps({"decision": "allow"}))
+        sys.exit(0)
+
+    # =========================================================================
+    # ROUTE: OUTPUT (PostToolUse on tool execution)
+    # =========================================================================
+    if route in ("output", "post-tool", "PostToolUse"):
+        code, data = run_guard("output", stdin_str=json.dumps(payload))
+        if code == 2 or data.get("decision") == "deny":
+            reason = data.get("reason", "Tool output blocked by security guard")
+            sys.stderr.write(f"SECURITY GUARD: {reason}\n")
+            print(json.dumps({"decision": "deny", "reason": reason}))
+            sys.exit(2)
+
+        if data.get("decision") == "replace" and data.get("sanitized"):
+            sanitized = data["sanitized"]
+            reasons = data.get("reasons", [])
+            notice = f"Security Notice: Redacted sensitive items in tool output ({', '.join(reasons)})" if reasons else "Security Notice: Redacted sensitive items in tool output."
+            resp = {
+                "decision": "allow",
+                "toolResult": sanitized,
+                "result": sanitized,
+                "output": sanitized,
+                "overwrite": {"toolResult": sanitized, "result": sanitized, "output": sanitized},
+                "sanitized": sanitized,
+                "injectSteps": [
+                    {"ephemeralMessage": notice}
+                ]
+            }
+            if isinstance(payload.get("toolResult"), dict) and isinstance(data.get("payload"), dict):
+                resp["toolResult"] = data["payload"].get("toolResult", sanitized)
+                resp["overwrite"]["toolResult"] = resp["toolResult"]
+            if isinstance(payload.get("result"), dict) and isinstance(data.get("payload"), dict):
+                resp["result"] = data["payload"].get("result", sanitized)
+                resp["overwrite"]["result"] = resp["result"]
+            print(json.dumps(resp))
+            sys.exit(0)
+
+        print(json.dumps({"decision": "allow"}))
         sys.exit(0)
 
     # =========================================================================
@@ -181,7 +238,7 @@ def main():
             sys.exit(2)
 
         # 2. Evaluate command against command rules
-        code, data = run_guard("command", args=[cmd])
+        code, data = run_guard("command", args=[cmd], stdin_str=json.dumps(payload))
         if code == 2 or data.get("decision") == "deny":
             reason = data.get("reason", f"Command is forbidden: {cmd}")
             sys.stderr.write(f"SECURITY GUARD: {reason}\n")
@@ -197,39 +254,8 @@ def main():
             }))
             sys.exit(0)
 
-        if dec == "allow":
-            resp = {
-                "decision": "allow"
-            }
-            if cmd != tool_args.get("CommandLine"):
-                resp["overwrite"] = {"CommandLine": cmd}
-            try:
-                with open("/tmp/ai-guard-wrapper.log", "a") as lf:
-                    lf.write(f"ALLOW: cmd={cmd!r} data={data!r} resp={resp!r}\n")
-            except Exception:
-                pass
-            print(json.dumps(resp))
-            sys.exit(0)
-
-        if dec == "ask":
-            resp = {"decision": "ask"}
-            if data.get("reason"):
-                resp["reason"] = data["reason"]
-            try:
-                with open("/tmp/ai-guard-wrapper.log", "a") as lf:
-                    lf.write(f"ASK: cmd={cmd!r} data={data!r} resp={resp!r}\n")
-            except Exception:
-                pass
-            print(json.dumps(resp))
-            sys.exit(0)
-
-        # Unmatched command: default to ask
-        try:
-            with open("/tmp/ai-guard-wrapper.log", "a") as lf:
-                lf.write(f"UNMATCHED (ASK): cmd={cmd!r} data={data!r}\n")
-        except Exception:
-            pass
-        print(json.dumps({"decision": "ask"}))
+        # Safe command: pass through to IDE policy / commands.json
+        print(json.dumps({"decision": "allow"}))
         sys.exit(0)
 
     # =========================================================================
@@ -255,7 +281,7 @@ def main():
             print(json.dumps({"decision": "allow"}))
             sys.exit(0)
 
-        code, data = run_guard("file", args=targets)
+        code, data = run_guard("file", args=targets, stdin_str=json.dumps(payload))
         if code == 2 or data.get("decision") == "deny":
             reason = data.get("reason", f"Access to sensitive file blocked: {', '.join(targets)}")
             sys.stderr.write(f"SECURITY GUARD: {reason}\n")
@@ -263,14 +289,14 @@ def main():
             sys.exit(2)
 
         dec = data.get("decision")
-        if dec in ("allow", "ask"):
-            resp = {"decision": dec}
-            if data.get("reason"):
-                resp["reason"] = data["reason"]
+        if dec == "replace":
+            resp = {"decision": "allow"}
+            if data.get("replacement"):
+                resp["overwrite"] = {pk: data["replacement"] for pk in path_keys if pk in tool_args}
             print(json.dumps(resp))
             sys.exit(0)
 
-        # Unmatched file: proceed to IDE checks
+        # Unmatched / safe file: proceed to IDE checks
         print(json.dumps({"decision": "allow"}))
         sys.exit(0)
 

@@ -1,0 +1,8 @@
+{{- $canonical := includeTemplate "commands/canonical.tmpl" . | fromJson -}}
+{{- $commands := $canonical.commands -}}
+
+{{- $approve := dict -}}
+{{- range $c := $commands.allow }}{{ $_ := set $approve $c true }}{{ end -}}
+{{- range $c := $commands.ask   }}{{ $_ := set $approve $c false }}{{ end -}}
+{{- range $c := $commands.deny  }}{{ $_ := set $approve $c false }}{{ end -}}
+"chat.tools.terminal.autoApprove": {{ $approve | toPrettyJson "  " }}

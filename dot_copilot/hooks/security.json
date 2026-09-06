@@ -9,24 +9,16 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "runTerminalCommand|run_in_terminal|bash|terminal|execute_command",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$HOME/.copilot/hooks/ai-guard-wrapper.sh command",
-            "timeout": 5
-          }
-        ]
-      },
+        "type": "command",
+        "command": "$HOME/.copilot/hooks/ai-guard-wrapper.sh",
+        "timeout": 5
+      }
+    ],
+    "PostToolUse": [
       {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$HOME/.copilot/hooks/ai-guard-wrapper.sh file",
-            "timeout": 5
-          }
-        ]
+        "type": "command",
+        "command": "$HOME/.copilot/hooks/ai-guard-wrapper.sh output",
+        "timeout": 5
       }
     ]
   }

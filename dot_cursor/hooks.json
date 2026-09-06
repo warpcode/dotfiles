@@ -8,10 +8,12 @@
     ],
     "preToolUse": [
       {
-        "command": "./ai-guard-wrapper.sh command"
-      },
+        "command": "./ai-guard-wrapper.sh"
+      }
+    ],
+    "postToolUse": [
       {
-        "command": "./ai-guard-wrapper.sh file"
+        "command": "./ai-guard-wrapper.sh output"
       }
     ]
   }

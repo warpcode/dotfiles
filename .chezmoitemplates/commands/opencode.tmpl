@@ -1,0 +1,71 @@
+{{- $canonical := includeTemplate "commands/canonical.tmpl" . | fromJson -}}
+{{- $commands := $canonical.commands -}}
+{{- $paths := $canonical.paths -}}
+
+{{- $bash := dict "*" "ask" -}}
+{{- range $c := $commands.allow -}}
+  {{- $_ := set $bash $c "allow" -}}
+  {{- $_ := set $bash (printf "%s *" $c) "allow" -}}
+{{- end -}}
+{{- range $c := $commands.ask -}}
+  {{- $_ := set $bash $c "ask" -}}
+  {{- $_ := set $bash (printf "%s *" $c) "ask" -}}
+{{- end -}}
+{{- range $c := $commands.deny -}}
+  {{- $_ := set $bash $c "deny" -}}
+  {{- $_ := set $bash (printf "%s *" $c) "deny" -}}
+  {{- if or (hasSuffix "/" $c) (hasSuffix "~" $c) (hasSuffix "$HOME" $c) -}}
+    {{- $_ := set $bash (printf "%s*" $c) "deny" -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $read := dict "*" "allow" -}}
+{{- range $p := $paths.read -}}
+  {{- $_ := set $read $p "allow" -}}
+{{- end -}}
+{{- range $p := $paths.deny -}}
+  {{- $_ := set $read $p "deny" -}}
+{{- end -}}
+
+{{- $edit := dict "*" "ask" -}}
+{{- range $p := $paths.write -}}
+  {{- $_ := set $edit $p "allow" -}}
+{{- end -}}
+{{- range $p := $paths.deny -}}
+  {{- $_ := set $edit $p "deny" -}}
+{{- end -}}
+
+{{- $write := dict "*" "ask" -}}
+{{- range $p := $paths.write -}}
+  {{- $_ := set $write $p "allow" -}}
+{{- end -}}
+{{- range $p := $paths.deny -}}
+  {{- $_ := set $write $p "deny" -}}
+{{- end -}}
+
+{{- $extDir := dict "*" "ask" -}}
+{{- range $p := $paths.read -}}
+  {{- $_ := set $extDir $p "allow" -}}
+{{- end -}}
+{{- range $p := $paths.write -}}
+  {{- $_ := set $extDir $p "allow" -}}
+{{- end -}}
+{{- range $p := $paths.deny -}}
+  {{- $_ := set $extDir $p "deny" -}}
+{{- end -}}
+
+{{- $perm := dict
+    "*" "ask"
+    "external_directory" $extDir
+    "skill" "allow"
+    "read" $read
+    "glob" "allow"
+    "grep" "allow"
+    "edit" $edit
+    "write" $write
+    "question" "allow"
+    "todowrite" "allow"
+    "task" "allow"
+    "lsp" "allow"
+    "bash" $bash -}}
+"permission": {{ $perm | toPrettyJson "  " }}

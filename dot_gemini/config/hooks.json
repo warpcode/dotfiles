@@ -29,6 +29,21 @@
       }
     ]
   },
+  "ai-output-scrubber": {
+    "enabled": true,
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./ai-guard-wrapper.py output",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  },
   "ai-prompt-sanitizer": {
     "enabled": true,
     "PreInvocation": [

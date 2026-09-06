@@ -10,12 +10,14 @@
     "PreToolUse": [
       {
         "type": "command",
-        "command": "./ai-guard-wrapper.sh command",
+        "command": "./ai-guard-wrapper.sh",
         "timeout": 5
-      },
+      }
+    ],
+    "PostToolUse": [
       {
         "type": "command",
-        "command": "./ai-guard-wrapper.sh file",
+        "command": "./ai-guard-wrapper.sh output",
         "timeout": 5
       }
     ]
