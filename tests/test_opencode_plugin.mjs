@@ -64,6 +64,7 @@ async function runTests() {
   const mockDirectory = REPO_ROOT
   const plugin = await SecuritySuitePlugin({ directory: mockDirectory })
   assert(plugin["tool.execute.before"], "Plugin must define tool.execute.before hook")
+  assert(plugin["tool.execute.after"], "Plugin must define tool.execute.after hook")
   assert(plugin["shell.env"], "Plugin must define shell.env hook")
 
   let passed = 0
@@ -156,11 +157,12 @@ async function runTests() {
     { tool: "runTerminalCommand", command: "cat .env" },
     { tool: "terminal", command: "rm -rf ~" },
     { tool: "run_command", CommandLine: "rm -rf /" },
+    { tool: "bash", command: "git reset --hard HEAD~1" },
     { tool: "execute_command", command: 'mysql -e "TRUNCATE TABLE users;"' }
   ]
 
   for (const dc of dangerousCommands) {
-    await testCase(`Dangerous command blocked: ${dc.tool} (${dc.command || dc.CommandLine})`, async () => {
+    await testCase(`Dangerous/unconfirmed command blocked: ${dc.tool} (${dc.command || dc.CommandLine})`, async () => {
       const input = { tool: dc.tool }
       const output = { args: dc }
       let threw = false
@@ -169,7 +171,7 @@ async function runTests() {
       } catch (err) {
         threw = true
         assert(
-          err.message.includes("SECURITY GUARD") || err.message.includes("blocked"),
+          err.message.includes("SECURITY GUARD") || err.message.includes("blocked") || err.message.includes("confirmation"),
           `Expected SECURITY GUARD error, got: ${err.message}`
         )
       }
@@ -184,6 +186,40 @@ async function runTests() {
     await plugin["shell.env"]({}, output)
     assert.strictEqual(output.env.DOTFILES_AI_GUARD, "1", "DOTFILES_AI_GUARD should be '1'")
     assert.strictEqual(output.env.WORKSPACE_ROOT, mockDirectory, "WORKSPACE_ROOT should match directory")
+  })
+
+  // 6. tool.execute.after output scrubbing
+  console.log("\n[6] tool.execute.after Output Scrubbing Tests")
+  await testCase("scrubs leaked API keys from tool output", async () => {
+    const input = { tool: "bash" }
+    const output = { result: "Process completed. Secret key: sk-proj-1234567890abcdef1234567890" }
+    await plugin["tool.execute.after"](input, output)
+    assert(!output.result.includes("sk-proj-1234567890abcdef1234567890"), "Raw secret key should be redacted")
+    assert(output.result.includes("[REDACTED_SECRET_OPENAI_API_KEY]"), "Should contain redacted placeholder")
+  })
+
+  await testCase("scrubs multiline private keys completely from tool output", async () => {
+    const input = { tool: "bash" }
+    const output = { result: "Key:\n-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAA...\n-----END OPENSSH PRIVATE KEY-----" }
+    await plugin["tool.execute.after"](input, output)
+    assert(!output.result.includes("-----BEGIN OPENSSH PRIVATE KEY-----"), "Header should be removed")
+    assert(!output.result.includes("b3BlbnNzaC1rZXktdjEAAAA..."), "Private key body should be redacted")
+    assert(output.result.includes("[REDACTED_PRIVATE_KEY]"), "Should contain redacted placeholder")
+  })
+
+  await testCase("scrubs secrets in structured object tool outputs", async () => {
+    const input = { tool: "bash" }
+    const output = { result: { message: "Auth failed", token: "ghp_1234567890abcdefghijklmnopqrstuvwxyz" } }
+    await plugin["tool.execute.after"](input, output)
+    assert(!JSON.stringify(output.result).includes("ghp_1234567890abcdefghijklmnopqrstuvwxyz"), "Raw token should be redacted")
+    assert(JSON.stringify(output.result).includes("[REDACTED_SECRET_GITHUB_TOKEN]"), "Should contain redacted token placeholder")
+  })
+
+  await testCase("preserves safe tool output without modification", async () => {
+    const input = { tool: "bash" }
+    const output = { result: "All 15 tests passed successfully." }
+    await plugin["tool.execute.after"](input, output)
+    assert.strictEqual(output.result, "All 15 tests passed successfully.")
   })
 
   console.log(`\n========================================`)

@@ -1,0 +1,30 @@
+{{- $configPath := joinPath .chezmoi.homeDir ".gemini/config/config.json" -}}
+{{- $hasRemoteControlHostname := false -}}
+{{- $remoteControlHostname := "" -}}
+{{- if stat $configPath -}}
+  {{- $existingConfig := include $configPath | fromJson -}}
+  {{- if and (hasKey $existingConfig "userSettings") (hasKey (index $existingConfig "userSettings") "remoteControlHostname") -}}
+    {{- $hasRemoteControlHostname = true -}}
+    {{- $remoteControlHostname = index (index $existingConfig "userSettings") "remoteControlHostname" -}}
+  {{- end -}}
+{{- end -}}
+{
+  "model": "Gemini 3.8 Flash (Medium)",
+  "enableTelemetry": false,
+  {{- if $hasRemoteControlHostname }}
+  "remoteControlHostname": {{ $remoteControlHostname | toJson }},
+  {{- end }}
+  {{ template "commands/antigravity_cli.tmpl" . }},
+  "runningLightSpeed": "fast",
+  "statusLine": {
+    "type": "",
+    "command": "",
+    "enabled": true
+  },
+  "toolPermission": "proceed-in-sandbox",
+  "trustedWorkspaces": [
+    "{{ .chezmoi.sourceDir }}"
+  ],
+  "remoteControlEnabled": true,
+  "useAiCredits": false
+}

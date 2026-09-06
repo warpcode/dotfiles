@@ -1,0 +1,77 @@
+{{- $commands := dict -}}
+{{- if kindIs "map" . -}}
+  {{- if hasKey . "commands" -}}
+    {{- $commands = .commands -}}
+  {{- else if or (hasKey . "allow") (hasKey . "ask") (hasKey . "deny") -}}
+    {{- $commands = . -}}
+  {{- end -}}
+{{- end -}}
+{{- $paths := dict -}}
+{{- if and (kindIs "map" .) (hasKey . "paths") -}}
+  {{- $paths = .paths -}}
+{{- end -}}
+
+{{- $rawAllow := list -}}
+{{- range $c := (get $commands "allow" | default list) -}}
+  {{- $c = trim $c -}}
+  {{- if $c }}{{ $rawAllow = append $rawAllow $c }}{{ end -}}
+{{- end -}}
+
+{{- $rawAsk := list -}}
+{{- range $c := (get $commands "ask" | default list) -}}
+  {{- $c = trim $c -}}
+  {{- if $c }}{{ $rawAsk = append $rawAsk $c }}{{ end -}}
+{{- end -}}
+
+{{- $rawDeny := list -}}
+{{- range $c := (get $commands "deny" | default list) -}}
+  {{- $c = trim $c -}}
+  {{- if $c }}{{ $rawDeny = append $rawDeny $c }}{{ end -}}
+{{- end -}}
+
+{{- $dynamicScripts := list -}}
+{{- $source := .chezmoi.sourceDir -}}
+{{- if $source -}}
+  {{- range $s := glob (printf "%s/.github/skills/*/scripts/*" $source) -}}
+    {{- if regexMatch `^(list_|read_|search_|get_)[^/]*\.(py|sh)$` (base $s) -}}
+      {{- $skillSub := trimPrefix (printf "%s/.github/skills/" $source) $s -}}
+      {{- range list $s (printf "~/.agents/skills/%s" $skillSub) -}}
+        {{- $dynamicScripts = append $dynamicScripts . -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $allAllow := list -}}
+{{- range $c := $rawAllow }}{{ $allAllow = append $allAllow $c }}{{ end -}}
+{{- range $c := $dynamicScripts }}{{ $allAllow = append $allAllow $c }}{{ end -}}
+{{- $allAllow = $allAllow | uniq -}}
+{{- $allAsk := $rawAsk | uniq -}}
+{{- $allDeny := $rawDeny | uniq -}}
+
+{{- $pathsRead := list -}}
+{{- range $p := (get $paths "read" | default list) -}}
+  {{- $p = trim $p -}}
+  {{- if $p }}{{ $pathsRead = append $pathsRead $p }}{{ end -}}
+{{- end -}}
+{{- $pathsRead = $pathsRead | uniq -}}
+
+{{- $pathsWrite := list -}}
+{{- range $p := (get $paths "write" | default list) -}}
+  {{- $p = trim $p -}}
+  {{- if $p }}{{ $pathsWrite = append $pathsWrite $p }}{{ end -}}
+{{- end -}}
+{{- $pathsWrite = $pathsWrite | uniq -}}
+
+{{- $pathsDeny := list -}}
+{{- range $p := (get $paths "deny" | default list) -}}
+  {{- $p = trim $p -}}
+  {{- if $p }}{{ $pathsDeny = append $pathsDeny $p }}{{ end -}}
+{{- end -}}
+{{- $pathsDeny = $pathsDeny | uniq -}}
+
+{{- dict
+    "commands" (dict "allow" $allAllow "ask" $allAsk "deny" $allDeny)
+    "paths" (dict "read" $pathsRead "write" $pathsWrite "deny" $pathsDeny)
+    | toJson
+-}}

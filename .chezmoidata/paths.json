@@ -1,0 +1,46 @@
+{
+  "paths": {
+    "read": [
+      "~/.agents/**",
+      "~/.agents/skills/**",
+      "~/.gemini/config/**",
+      "~/.gemini/config/skills/**",
+      "~/src/**"
+    ],
+    "write": [
+      "~/src/**"
+    ],
+    "deny": [
+      "~/.ssh/*",
+      "~/.gnupg/*",
+      "~/.aws/*",
+      "~/.docker/*",
+      "~/.kube/*",
+      "~/.config/cloakenv/*",
+      "~/.config/gh/hosts.yml",
+      "~/.git-credentials",
+      "*.kdbx",
+      "*.key",
+      "*.pem",
+      "*.p12",
+      "*.pfx",
+      "*.keystore",
+      "*.jks",
+      "*id_rsa*",
+      "*id_ed25519*",
+      "*id_ecdsa*",
+      "*id_dsa*",
+      "*.netrc",
+      "*.npmrc",
+      "*.env*",
+      "*env.tmpl*",
+      "*dot_env*",
+      "*env.template*",
+      "*env.vault*",
+      "*credentials.json*",
+      "*secrets.json*",
+      "/etc/shadow*",
+      "/etc/passwd*"
+    ]
+  }
+}

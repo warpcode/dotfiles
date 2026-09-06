@@ -1,0 +1,36 @@
+{{- $canonical := includeTemplate "commands/canonical.tmpl" . | fromJson -}}
+{{- $commands := $canonical.commands -}}
+{{- $paths := $canonical.paths -}}
+
+{{- $allow := list -}}
+{{- range $c := $commands.allow -}}
+  {{- $allow = append $allow (printf "Bash(%s)" $c) -}}
+  {{- $allow = append $allow (printf "Bash(%s *)" $c) -}}
+{{- end -}}
+{{- range $p := $paths.read -}}
+  {{- $allow = append $allow (printf "Read(%s)" $p) -}}
+{{- end -}}
+{{- range $p := $paths.write -}}
+  {{- $allow = append $allow (printf "Write(%s)" $p) -}}
+{{- end -}}
+
+{{- $ask := list -}}
+{{- range $c := $commands.ask -}}
+  {{- $ask = append $ask (printf "Bash(%s)" $c) -}}
+  {{- $ask = append $ask (printf "Bash(%s *)" $c) -}}
+{{- end -}}
+
+{{- $deny := list -}}
+{{- range $c := $commands.deny -}}
+  {{- $deny = append $deny (printf "Bash(%s)" $c) -}}
+  {{- $deny = append $deny (printf "Bash(%s *)" $c) -}}
+  {{- if or (hasSuffix "/" $c) (hasSuffix "~" $c) (hasSuffix "$HOME" $c) -}}
+    {{- $deny = append $deny (printf "Bash(%s*)" $c) -}}
+  {{- end -}}
+{{- end -}}
+{{- range $p := $paths.deny -}}
+  {{- $deny = append $deny (printf "Read(%s)" $p) -}}
+  {{- $deny = append $deny (printf "Write(%s)" $p) -}}
+{{- end -}}
+
+"permissions": {{ dict "allow" ($allow | uniq) "deny" ($deny | uniq) "ask" ($ask | uniq) | toPrettyJson "  " }}

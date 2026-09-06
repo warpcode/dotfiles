@@ -1,0 +1,3 @@
+{{- $canonical := includeTemplate "commands/canonical.tmpl" . | fromJson -}}
+{{- $allow := $canonical.commands.allow | uniq -}}
+{{ dict "terminalAllowlist" $allow | toPrettyJson "  " }}
