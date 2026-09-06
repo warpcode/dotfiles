@@ -35,7 +35,8 @@
   {{- range $s := glob (printf "%s/.github/skills/*/scripts/*" $source) -}}
     {{- if regexMatch `^(list_|read_|search_|get_)[^/]*\.(py|sh)$` (base $s) -}}
       {{- $skillSub := trimPrefix (printf "%s/.github/skills/" $source) $s -}}
-      {{- range list $s (printf "~/.agents/skills/%s" $skillSub) -}}
+      {{- $tilded := replace (env "HOME") "~" $s -}}
+      {{- range list $tilded (printf "~/.agents/skills/%s" $skillSub) -}}
         {{- $dynamicScripts = append $dynamicScripts . -}}
       {{- end -}}
     {{- end -}}

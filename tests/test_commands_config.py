@@ -471,7 +471,7 @@ class TestCanonicalCommandsGenerator(unittest.TestCase):
 
     def test_dynamic_skills_parity_across_all_assistants(self):
         """Verify dynamic skill scripts in canonical data are correctly formatted by each assistant template."""
-        sample_script = "/home/jase/src/dotfiles/.github/skills/github-cli/scripts/list_issue_types.sh"
+        sample_script = "~/src/dotfiles/.github/skills/github-cli/scripts/list_issue_types.sh"
         sample_variant = "~/.agents/skills/github-cli/scripts/list_issue_types.sh"
 
         # 1. Canonical data compiler

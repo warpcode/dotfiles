@@ -4,7 +4,7 @@
       "bash -n",
       "cargo check",
       "cargo test",
-      "cd /tmp",
+      "cd /tmp/",
       "chezmoi archive",
       "chezmoi cat",
       "chezmoi cat-config",
