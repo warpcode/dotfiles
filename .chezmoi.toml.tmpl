@@ -12,20 +12,6 @@
   {{- $is_termux = true -}}
 {{- end -}}
 
-{{- $sys_manager := "" -}}
-{{- if eq .chezmoi.os "darwin" -}}
-  {{- $sys_manager = "brew" -}}
-{{- else if $is_termux -}}
-  {{- $sys_manager = "termux" -}}
-{{- else if eq .chezmoi.os "linux" -}}
-  {{- if or (eq .chezmoi.osRelease.id "ubuntu" "debian") (and (hasKey .chezmoi.osRelease "idLike") (regexMatch "(ubuntu|debian)" .chezmoi.osRelease.idLike)) -}}
-    {{- $sys_manager = "apt" -}}
-  {{- else if or (eq .chezmoi.osRelease.id "fedora") (and (hasKey .chezmoi.osRelease "idLike") (regexMatch "fedora" .chezmoi.osRelease.idLike)) -}}
-    {{- $sys_manager = "dnf" -}}
-  {{- else if or (eq .chezmoi.osRelease.id "arch") (and (hasKey .chezmoi.osRelease "idLike") (regexMatch "arch" .chezmoi.osRelease.idLike)) -}}
-    {{- $sys_manager = "pacman" -}}
-  {{- end -}}
-{{- end -}}
 
 {{- $git_name := "" -}}
 {{- if hasKey . "git_name" -}}
@@ -52,24 +38,6 @@
   {{- $keepass_db = promptStringOnce . "keepass_db" "KeePass XC Database Path" (joinPath .chezmoi.homeDir ".keepass/Accounts.kdbx") -}}
 {{- end -}}
 
-{{- $os := "linux" -}}
-{{- if eq .chezmoi.os "darwin" -}}
-  {{- $os = "darwin" -}}
-{{- else if $is_termux -}}
-  {{- $os = "termux" -}}
-{{- else if eq .chezmoi.os "linux" -}}
-  {{- $id := .chezmoi.osRelease.id -}}
-  {{- if eq $id "ubuntu" -}}
-    {{- $os = "ubuntu" -}}
-  {{- else if eq $id "debian" -}}
-    {{- $os = "debian" -}}
-  {{- else if or (eq $id "arch") (and (hasKey .chezmoi.osRelease "idLike") (regexMatch "arch" .chezmoi.osRelease.idLike)) -}}
-    {{- $os = "archlinux" -}}
-  {{- else if or (eq $id "fedora") (and (hasKey .chezmoi.osRelease "idLike") (regexMatch "fedora" .chezmoi.osRelease.idLike)) -}}
-    {{- $os = "fedora" -}}
-  {{- end -}}
-{{- end -}}
-
 sourceDir = "{{ .chezmoi.sourceDir }}"
 mode = "symlink"
 
@@ -77,8 +45,6 @@ mode = "symlink"
     profile = {{ $profile | quote }}
     is_termux = {{ $is_termux }}
     is_default_linux = {{ and (eq .chezmoi.os "linux") (not $is_termux) (eq $profile "default") }}
-    sys_manager = {{ $sys_manager | quote }}
-    os_detected = {{ $os | quote }}
     git_name = {{ $git_name | quote }}
     git_email = {{ $git_email | quote }}
     keepass_db = {{ $keepass_db | quote }}
