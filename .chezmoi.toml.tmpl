@@ -52,14 +52,6 @@
   {{- $keepass_db = promptStringOnce . "keepass_db" "KeePass XC Database Path" (joinPath .chezmoi.homeDir ".keepass/Accounts.kdbx") -}}
 {{- end -}}
 
-{{- $keepass_installed := false -}}
-{{- $keepass_cli := "" -}}
-{{- if and $keepass_db (stat $keepass_db) -}}
-  {{- $keepass_cli = output "sh" "-c" (printf "%s cli 2>/dev/null || true" (joinPath .chezmoi.sourceDir "bin/df.keepass")) | trim -}}
-  {{- if ne $keepass_cli "" -}}
-    {{- $keepass_installed = true -}}
-  {{- end -}}
-{{- end -}}
 {{- $os := "linux" -}}
 {{- if eq .chezmoi.os "darwin" -}}
   {{- $os = "darwin" -}}
@@ -90,12 +82,3 @@ mode = "symlink"
     git_name = {{ $git_name | quote }}
     git_email = {{ $git_email | quote }}
     keepass_db = {{ $keepass_db | quote }}
-    keepass_installed = {{ $keepass_installed }}
-
-{{- if $keepass_installed }}
-[keepassxc]
-    database = {{ $keepass_db | quote }}
-    {{- $keepass_cli_parts := splitList " " $keepass_cli }}
-    command = {{ first $keepass_cli_parts | quote }}
-    args = {{ rest $keepass_cli_parts | toJson }}
-{{- end }}
