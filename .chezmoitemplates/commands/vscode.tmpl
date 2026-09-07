@@ -1,8 +1,43 @@
 {{- $canonical := includeTemplate "commands/canonical.tmpl" . | fromJson -}}
 {{- $commands := $canonical.commands -}}
+{{- $paths := $canonical.paths | default dict -}}
 
-{{- $approve := dict -}}
-{{- range $c := $commands.allow }}{{ $_ := set $approve $c true }}{{ end -}}
-{{- range $c := $commands.ask   }}{{ $_ := set $approve $c false }}{{ end -}}
-{{- range $c := $commands.deny  }}{{ $_ := set $approve $c false }}{{ end -}}
-"chat.tools.terminal.autoApprove": {{ $approve | toPrettyJson "  " }}
+{{- $termApprove := dict -}}
+
+{{- range $c := $commands.allow -}}
+  {{- $raw := trim $c -}}
+  {{- if $raw -}}
+    {{- $esc := $raw | replace `\` `\\` | replace `.` `\.` | replace `+` `\+` | replace `?` `\?` | replace `^` `\^` | replace `$` `\$` | replace `(` `\(` | replace `)` `\)` | replace `[` `\[` | replace `]` `\]` | replace `{` `\{` | replace `}` `\}` | replace `*` `.*` -}}
+    {{- $_ := set $termApprove (printf "/^%s$/" $esc) true -}}
+  {{- end -}}
+{{- end -}}
+
+{{- range $c := $commands.ask -}}
+  {{- $raw := trim $c -}}
+  {{- if $raw -}}
+    {{- $esc := $raw | replace `\` `\\` | replace `.` `\.` | replace `+` `\+` | replace `?` `\?` | replace `^` `\^` | replace `$` `\$` | replace `(` `\(` | replace `)` `\)` | replace `[` `\[` | replace `]` `\]` | replace `{` `\{` | replace `}` `\}` | replace `*` `.*` -}}
+    {{- $_ := set $termApprove (printf "/^%s$/" $esc) false -}}
+  {{- end -}}
+{{- end -}}
+
+{{- range $c := $commands.deny -}}
+  {{- $raw := trim $c -}}
+  {{- if $raw -}}
+    {{- $esc := $raw | replace `\` `\\` | replace `.` `\.` | replace `+` `\+` | replace `?` `\?` | replace `^` `\^` | replace `$` `\$` | replace `(` `\(` | replace `)` `\)` | replace `[` `\[` | replace `]` `\]` | replace `{` `\{` | replace `}` `\}` | replace `*` `.*` -}}
+    {{- $_ := set $termApprove (printf "/^%s$/" $esc) false -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $editsApprove := dict -}}
+{{- range $p := ($paths.write | default list) -}}
+  {{- $raw := trim $p -}}
+  {{- if $raw }}{{ $_ := set $editsApprove $raw true }}{{ end -}}
+{{- end -}}
+{{- range $p := ($paths.deny | default list) -}}
+  {{- $raw := trim $p -}}
+  {{- if $raw }}{{ $_ := set $editsApprove $raw false }}{{ end -}}
+{{- end -}}
+
+"chat.tools.terminal.autoApprove": {{ $termApprove | toPrettyJson "  " }},
+"chat.tools.edits.autoApprove": {{ $editsApprove | toPrettyJson "  " }}
+

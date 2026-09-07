@@ -5,18 +5,12 @@
 {{- $bash := dict "*" "ask" -}}
 {{- range $c := $commands.allow -}}
   {{- $_ := set $bash $c "allow" -}}
-  {{- $_ := set $bash (printf "%s *" $c) "allow" -}}
 {{- end -}}
 {{- range $c := $commands.ask -}}
   {{- $_ := set $bash $c "ask" -}}
-  {{- $_ := set $bash (printf "%s *" $c) "ask" -}}
 {{- end -}}
 {{- range $c := $commands.deny -}}
   {{- $_ := set $bash $c "deny" -}}
-  {{- $_ := set $bash (printf "%s *" $c) "deny" -}}
-  {{- if or (hasSuffix "/" $c) (hasSuffix "~" $c) (hasSuffix "$HOME" $c) -}}
-    {{- $_ := set $bash (printf "%s*" $c) "deny" -}}
-  {{- end -}}
 {{- end -}}
 
 {{- $read := dict "*" "allow" -}}
