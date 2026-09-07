@@ -1,28 +1,4 @@
-{{- $defaultModel := "gemma-4-E2B-it-qat-GGUF" -}}
-{{- $ctxSize := 0 -}}
-{{- range $providerKey, $provider := .providers -}}
-  {{- if $provider.models -}}
-    {{- range $modelKey, $model := $provider.models -}}
-      {{- if eq $model.model_name $defaultModel -}}
-        {{- if $model.configuration -}}
-          {{- if index $model.configuration "ctx-size" -}}
-            {{- $ctxSize = index $model.configuration "ctx-size" -}}
-          {{- else if index $model.configuration "context-size" -}}
-            {{- $ctxSize = index $model.configuration "context-size" -}}
-          {{- end -}}
-        {{- end -}}
-      {{- end -}}
-    {{- end -}}
-  {{- end -}}
-{{- end -}}
-model:
-  default: {{ $defaultModel }}
-  provider: llama_cpp
-  base_url: http://localhost:8080/v1
-  api_mode: chat_completions
-  {{- if and (gt $ctxSize 0) (lt $ctxSize 64000) }}
-  context_length: {{ $ctxSize }}
-  {{- end }}
+{{ template "hermes/model_header.tmpl" (dict "providers" .providers "defaultModel" "gemma-4-E2B-it-qat-GGUF") }}
 providers:
   llama_cpp:
     base_url: http://localhost:8080/v1

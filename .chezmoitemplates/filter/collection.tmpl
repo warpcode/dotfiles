@@ -4,9 +4,14 @@
 {{- if kindIs "slice" .data -}}
   {{- $filtered := list -}}
   {{- range $item := .data -}}
-    {{- $check := dict -}}
-    {{- template "filter/check_leaf.tmpl" (dict "item" $item "key" $.key "val" $.val "result" $check) -}}
-    {{- if $check.allowed -}}
+    {{- $allowed := true -}}
+    {{- if hasKey $item $deny_key -}}
+      {{- if has $.val (index $item $deny_key) }}{{ $allowed = false }}{{ end -}}
+    {{- end -}}
+    {{- if and $allowed (hasKey $item $allow_key) -}}
+      {{- if not (has $.val (index $item $allow_key)) }}{{ $allowed = false }}{{ end -}}
+    {{- end -}}
+    {{- if $allowed -}}
       {{- $cleaned := omit $item $allow_key $deny_key -}}
       {{- $filtered = append $filtered $cleaned -}}
     {{- end -}}
@@ -15,9 +20,14 @@
 {{- else if kindIs "map" .data -}}
   {{- $filtered := dict -}}
   {{- range $k, $item := .data -}}
-    {{- $check := dict -}}
-    {{- template "filter/check_leaf.tmpl" (dict "item" $item "key" $.key "val" $.val "result" $check) -}}
-    {{- if $check.allowed -}}
+    {{- $allowed := true -}}
+    {{- if hasKey $item $deny_key -}}
+      {{- if has $.val (index $item $deny_key) }}{{ $allowed = false }}{{ end -}}
+    {{- end -}}
+    {{- if and $allowed (hasKey $item $allow_key) -}}
+      {{- if not (has $.val (index $item $allow_key)) }}{{ $allowed = false }}{{ end -}}
+    {{- end -}}
+    {{- if $allowed -}}
       {{- $cleaned := omit $item $allow_key $deny_key -}}
       {{- $_ := set $filtered $k $cleaned -}}
     {{- end -}}
