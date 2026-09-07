@@ -1,0 +1,26 @@
+{{- /* Expects dict with "providers" (map) and "defaultModel" (string) */ -}}
+{{- $defaultModel := .defaultModel -}}
+{{- $ctxSize := 0 -}}
+{{- range $providerKey, $provider := .providers -}}
+  {{- if $provider.models -}}
+    {{- range $modelKey, $model := $provider.models -}}
+      {{- if or (eq $model.model_name $defaultModel) (eq (replace "-qat-" "-" $defaultModel) $model.model_name) -}}
+        {{- if $model.configuration -}}
+          {{- if index $model.configuration "ctx-size" -}}
+            {{- $ctxSize = index $model.configuration "ctx-size" -}}
+          {{- else if index $model.configuration "context-size" -}}
+            {{- $ctxSize = index $model.configuration "context-size" -}}
+          {{- end -}}
+        {{- end -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+model:
+  default: {{ $defaultModel }}
+  provider: llama_cpp
+  base_url: http://localhost:8080/v1
+  api_mode: chat_completions
+  {{- if and (gt $ctxSize 0) (lt $ctxSize 64000) }}
+  context_length: {{ $ctxSize }}
+  {{- end }}
