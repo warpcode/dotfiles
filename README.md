@@ -31,7 +31,7 @@ This dotfiles repository comes with a wide range of features to enhance your she
 -   **FZF Integration:** Integrates [fzf](https://github.com/junegunn/fzf) for powerful fuzzy history search.
 -   **Neovim:** Configurable via [`dot_zsh/projects/neovim.zsh`](dot_zsh/projects/neovim.zsh), which provides `nvim.cd` / `nvim.edit` helpers to clone and edit the [warpcode/vim-config](https://github.com/warpcode/vim-config) repository inside a tmux session.
 -   **Automatic PATH management:** Automatically scans `/opt/` and `~/.local/opt/` for subdirectories containing `bin`, `sbin`, `usr/bin`, `usr/sbin`, `usr/local/bin`, and `usr/local/sbin`, and adds them to PATH.
--   **KeePassXC Integration:** The [`df.keepass`](dot_local/bin/executable_df.keepass) helper wraps `keepassxc-cli` for vault access. It is invoked by chezmoi at apply-time (see `.chezmoi.toml.tmpl`) to detect whether `keepassxc-cli` is available and which database to use.
+-   **KeePassXC Integration:** The [`df.keepass`](dot_local/bin/executable_df.keepass) helper wraps `keepassxc-cli` for vault access.
 -   **GitHub Release Installer:** Automatically downloads and installs applications directly from GitHub releases. Supports OS and architecture detection, version management, and creates executable symlinks in a `bin/` directory. Configurable installation directory via `GITHUB_RELEASES_INSTALL_DIR` environment variable (defaults to `~/.local/opt`).
 
 ## Installation
