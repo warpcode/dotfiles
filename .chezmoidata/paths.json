@@ -11,11 +11,17 @@
       "~/src/**"
     ],
     "deny": [
+      "~/.ssh/**",
       "~/.ssh/*",
+      "~/.gnupg/**",
       "~/.gnupg/*",
+      "~/.aws/**",
       "~/.aws/*",
+      "~/.docker/**",
       "~/.docker/*",
+      "~/.kube/**",
       "~/.kube/*",
+      "~/.config/cloakenv/**",
       "~/.config/cloakenv/*",
       "~/.config/gh/hosts.yml",
       "~/.git-credentials",

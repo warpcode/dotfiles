@@ -14,7 +14,7 @@
   {{- if $hasRemoteControlHostname }}
   "remoteControlHostname": {{ $remoteControlHostname | toJson }},
   {{- end }}
-  {{ template "commands/antigravity_cli.tmpl" . }},
+  {{ template "commands/antigravity.tmpl" . }},
   "runningLightSpeed": "fast",
   "statusLine": {
     "type": "",
