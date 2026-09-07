@@ -26,6 +26,10 @@ vendor/
 Library/Fonts/**/*.uuid
 .fonts/**/*.uuid
 
+{{ if ne .chezmoi.os "darwin" }}
+Library/
+{{ end }}
+
 {{ if eq .profile "work" }}
 .hermes/
 .ssh/

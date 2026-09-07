@@ -1,0 +1,65 @@
+{
+  "workbench.colorTheme": "Dark+",
+  "redhat.telemetry.enabled": false,
+  "@azure.argTenant": "",
+  "github.copilot.nextEditSuggestions.enabled": true,
+  "chat.mcp.gallery.enabled": true,
+  "chat.viewSessions.orientation": "stacked",
+  "github.copilot.chat.agentDebugLog.enabled": true,
+  "chat.byokUtilityModelDefault": "mainAgent",
+  "yaml.disableSchemaDetection": [
+    "azure-pipelines.yml",
+    "azure-pipelines.yaml",
+    "**/.github/workflows/*.yml",
+    "**/.github/workflows/*.yaml",
+    "**/.gitea/workflows/*.yml",
+    "**/.gitea/workflows/*.yaml",
+    "**/.forgejo/workflows/*.yml",
+    "**/.forgejo/workflows/*.yaml"
+  ],
+  "makefile.configureOnOpen": true,
+  "chat.tools.urls.autoApprove": {
+    "https://code.visualstudio.com": true,
+    "https://github.com/microsoft/vscode/wiki/*": true,
+    "https://www.chezmoi.io": true,
+    "https://news.google.com/search": true,
+    "https://news.google.com": true,
+    "https://*.google.com": true,
+    "https://www.bbc.com/news/topics/cx1m7zg0gylt": true,
+    "https://www.bbc.com/news/topics": true,
+    "https://www.bbc.com/news": true,
+    "https://www.bbc.com": true,
+    "https://*.bbc.com": true,
+    "https://blog.google/technology/ai": true,
+    "https://blog.google/technology": true,
+    "https://blog.google": true,
+    "https://cloud.google.com/blog/products/ai-machine-learning": true,
+    "https://cloud.google.com/blog/products": true,
+    "https://cloud.google.com/blog": true,
+    "https://cloud.google.com": true,
+    "https://www.antigravity.ai": true,
+    "https://*.antigravity.ai": true,
+    "https://www.bbc.co.uk/weather": {
+      "approveRequest": true,
+      "approveResponse": false
+    },
+    "https://antigravity.google/docs/rules-workflows": {
+      "approveRequest": false,
+      "approveResponse": true
+    },
+    "https://opencode.ai": true
+  },
+  "git.confirmSync": false,
+  "git.replaceTagsWhenPull": true,
+  "git.autofetch": true,
+  "extensions.supportAgentsWindow": {
+    "ltmoerdani.opencode-copilot-chat": true
+  },
+  "chat.agentHost.byokModels.enabled": true,
+  "js/ts.experimental.useTsgo": true,
+  "chat.agent.sandbox.enabled": "off",
+  "chat.agent.maxRequests": 100,
+  "antigravity.enableTelemetry": false,
+  "chat.tools.terminal.enableAutoApprove": true,
+  {{ template "commands/vscode.tmpl" . }}
+}
