@@ -165,6 +165,34 @@ class TestJulesFormatters(unittest.TestCase):
         self.assertIn("main", md)
         self.assertIn("token123", md)
 
+    def test_format_sources_empty(self):
+        self.assertEqual(format_sources({}), "_No connected repositories found._")
+        self.assertEqual(format_sources({"sources": []}), "_No connected repositories found._")
+
+    def test_format_sources_name_fallback(self):
+        data = {
+            "sources": [
+                {
+                    "name": "sources/github/owner/repo"
+                }
+            ]
+        }
+        md = format_sources(data)
+        self.assertIn("github/owner/repo", md)
+        self.assertIn("N/A", md)
+
+    def test_format_sources_missing_repo_info(self):
+        data = {
+            "sources": [
+                {
+                    "id": "repo1"
+                }
+            ]
+        }
+        md = format_sources(data)
+        self.assertIn("repo1", md)
+        self.assertIn("N/A", md)
+
     def test_format_sessions(self):
         data = {
             "sessions": [
