@@ -24,9 +24,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 BIN_DIR = REPO_ROOT / "dot_local" / "bin"
 AI_GUARD_SCRIPT = BIN_DIR / "executable_df.ai-guard"
 GEMINI_WRAPPER_SCRIPT = REPO_ROOT / "dot_gemini" / "config" / "executable_ai-guard-wrapper.py"
-CURSOR_WRAPPER_SCRIPT = REPO_ROOT / "dot_cursor" / "executable_ai-guard-wrapper.sh"
-COPILOT_WRAPPER_SCRIPT = REPO_ROOT / "dot_copilot" / "hooks" / "executable_ai-guard-wrapper.sh"
-CODEX_WRAPPER_SCRIPT = REPO_ROOT / "dot_codex" / "executable_ai-guard-wrapper.sh"
+CURSOR_WRAPPER_SCRIPT = BIN_DIR / "executable_df.ai-guard-hook"
+COPILOT_WRAPPER_SCRIPT = BIN_DIR / "executable_df.ai-guard-hook"
+CODEX_WRAPPER_SCRIPT = BIN_DIR / "executable_df.ai-guard-hook"
 
 import atexit
 
@@ -279,17 +279,18 @@ class TestAIGuardCommand(unittest.TestCase):
                 self.assertEqual(data, {})
 
     def test_explicit_deny_commands(self):
-        """Destructive commands matching explicit deny list must exit code 2 and deny."""
+        """Destructive commands matching ai-guard deny rules must exit code 2 and deny.
+
+        Note: Simple glob denies (mkfs, dd, chmod -R 777, shutdown, reboot, poweroff)
+        have been moved to the platform-native commands.json deny list.
+        ai-guard retains the rm regex variant to catch flag-reordering (rm -fr, rm -r -f).
+        rm -rf $HOME is caught because match_str expands $HOME → /home/jase before
+        applying the regex, so [/~] at the end of the pattern matches the leading /.
+        """
         deny_cmds = [
             "rm -rf /",
             "rm -rf ~",
             "rm -rf $HOME",
-            "mkfs /dev/sda1",
-            "dd if=/dev/zero of=/dev/sda",
-            "chmod -R 777 /",
-            "shutdown -h now",
-            "reboot",
-            "poweroff"
         ]
         for cmd in deny_cmds:
             with self.subTest(cmd=cmd):
@@ -298,6 +299,28 @@ class TestAIGuardCommand(unittest.TestCase):
                 self.assertEqual(res.returncode, 2)
                 data = json.loads(res.stdout)
                 self.assertEqual(data.get("decision"), "deny")
+
+    def test_platform_delegated_commands_pass_through_ai_guard(self):
+        """Commands delegated to the platform-native deny list pass through ai-guard.
+
+        These are still denied at runtime by the platform (commands.json) but ai-guard
+        itself returns exit 0 / empty dict for them since they are no longer in ai-guard.json.
+        """
+        platform_denied_cmds = [
+            "mkfs /dev/sda1",
+            "dd if=/dev/zero of=/dev/sda",
+            "chmod -R 777 /",
+            "shutdown -h now",
+            "reboot",
+            "poweroff",
+        ]
+        for cmd in platform_denied_cmds:
+            with self.subTest(cmd=cmd):
+                payload = {"command": cmd}
+                res = run_guard("command", stdin_payload=payload)
+                self.assertEqual(res.returncode, 0)
+                data = json.loads(res.stdout)
+                self.assertEqual(data, {})
 
     def test_regex_matching_rules(self):
         """Commands matching regex deny patterns must exit code 2 and deny."""
@@ -1071,6 +1094,114 @@ class TestAIGuardCLI(unittest.TestCase):
         res = subprocess.run(cmd, capture_output=True, text=True)
         self.assertEqual(res.returncode, 1)
         self.assertIn("not found", res.stderr)
+
+
+# ==============================================================================
+# 5b. Shared Secrets Expansion Tests
+# ==============================================================================
+
+class TestAIGuardSecretsExpansion(unittest.TestCase):
+    """Verify that secrets.rules are expanded into both prompts and output at load time."""
+
+    SHARED_PATTERNS = [
+        # (input_text, expected_redaction_placeholder)
+        # Note: Anthropic rule must appear before OpenAI in secrets.rules (both start with sk-)
+        ("sk-ant-api01-ABCDEFGHIJKLMNOPQRSTUVWXYZabcde", "[REDACTED_SECRET_ANTHROPIC_API_KEY]"),
+        ("sk-proj-1234567890abcdefghijklmn", "[REDACTED_SECRET_OPENAI_API_KEY]"),
+        ("ghp_1234567890abcdefghijklmnopqrstuvwxyz", "[REDACTED_SECRET_GITHUB_TOKEN]"),
+        # Google key: exactly 35 chars after AIza (AIza[0-9A-Za-z\-_]{35})
+        ("AIzaSyDummyGoogleKeyAbcdefghijklmnopqrs", "[REDACTED_SECRET_GOOGLE_AI_KEY]"),
+        ("hf_abcdefghijklmnopqrstuvwxyz01234567", "[REDACTED_SECRET_HUGGINGFACE_TOKEN]"),
+        ("sk_live_abcdefghijklmnopqrstuvwx", "[REDACTED_SECRET_STRIPE_KEY]"),
+    ]
+
+    def test_shared_secrets_redacted_in_prompts(self):
+        """Secrets defined in secrets.rules must be redacted in user prompts."""
+        for secret, placeholder in self.SHARED_PATTERNS:
+            with self.subTest(secret=secret[:12] + "…"):
+                res = run_guard("prompt", stdin_payload={"prompt": f"My key is {secret} please help"})
+                self.assertEqual(res.returncode, 0, msg=res.stderr)
+                data = json.loads(res.stdout)
+                self.assertEqual(data.get("decision"), "replace", msg=f"Expected replace for {secret[:12]}…")
+                self.assertNotIn(secret, data.get("prompt", ""))
+                self.assertIn(placeholder, data.get("prompt", ""))
+
+    def test_shared_secrets_redacted_in_output(self):
+        """Secrets defined in secrets.rules must be redacted in tool output."""
+        for secret, placeholder in self.SHARED_PATTERNS:
+            with self.subTest(secret=secret[:12] + "…"):
+                res = run_guard("output", stdin_payload={"output": f"Result contained {secret} in the response"})
+                self.assertEqual(res.returncode, 0, msg=res.stderr)
+                data = json.loads(res.stdout)
+                self.assertEqual(data.get("decision"), "replace", msg=f"Expected replace for {secret[:12]}…")
+                self.assertNotIn(secret, data.get("output", ""))
+                self.assertIn(placeholder, data.get("output", ""))
+
+    def test_config_has_secrets_section(self):
+        """The config file must contain a top-level 'secrets' key with at least one rule."""
+        cfg_path = REPO_ROOT / "dot_config" / "dotfiles" / "ai-guard.json"
+        with open(cfg_path, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+        self.assertIn("secrets", cfg, "Missing top-level 'secrets' key in ai-guard.json")
+        rules = cfg["secrets"].get("rules", [])
+        self.assertGreater(len(rules), 0, "secrets.rules must not be empty")
+        # prompts and output sections must NOT duplicate the shared patterns
+        shared_patterns = {r["pattern"] for r in rules}
+        for section in ("prompts", "output"):
+            section_patterns = {r["pattern"] for r in cfg.get(section, {}).get("rules", [])}
+            duplicates = shared_patterns & section_patterns
+            self.assertFalse(
+                duplicates,
+                f"Section '{section}' duplicates secrets patterns: {duplicates}"
+            )
+
+    def test_config_has_no_match_field_and_replaces_have_no_reason(self):
+        """ai-guard.json must not have 'match' fields, and replace rules must not have 'reason'."""
+        cfg_path = REPO_ROOT / "dot_config" / "dotfiles" / "ai-guard.json"
+        with open(cfg_path, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+        for section_name, section in cfg.items():
+            if not isinstance(section, dict):
+                continue
+            for r in section.get("rules", []):
+                self.assertNotIn("match", r, f"Rule in {section_name} contains 'match' field: {r}")
+                if r.get("perm") == "replace":
+                    self.assertNotIn("reason", r, f"Replace rule in {section_name} contains 'reason' field: {r}")
+
+    def test_non_regex_match_type_is_rejected(self):
+        """Rules specifying non-regex match types like 'glob' are rejected and ignored."""
+        with tempfile.NamedTemporaryFile("w", suffix=".json") as f:
+            cfg = {
+                "commands": {
+                    "rules": [
+                        {
+                            "pattern": "echo hello*",
+                            "match": "glob",
+                            "perm": "deny",
+                            "reason": "Should be ignored because glob is not allowed"
+                        },
+                        {
+                            "pattern": r"^echo\s+blocked_regex$",
+                            "perm": "deny",
+                            "reason": "Regex rule is active"
+                        }
+                    ]
+                }
+            }
+            json.dump(cfg, f)
+            f.flush()
+
+            # Non-regex rule should be rejected, so 'echo hello world' passes
+            res = run_guard("command", args=["echo", "hello world"], custom_config=f.name)
+            self.assertEqual(res.returncode, 0)
+            data = json.loads(res.stdout)
+            self.assertEqual(data, {})
+
+            # Regex rule without 'match' field works as regex
+            res2 = run_guard("command", args=["echo", "blocked_regex"], custom_config=f.name)
+            self.assertEqual(res2.returncode, 2)
+            data2 = json.loads(res2.stdout)
+            self.assertEqual(data2.get("decision"), "deny")
 
 
 # ==============================================================================

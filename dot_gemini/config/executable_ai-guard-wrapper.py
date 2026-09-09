@@ -55,11 +55,12 @@ def run_guard(subcmd: str, args: list[str] = None, stdin_str: str = None) -> tup
 def main():
     route = sys.argv[1] if len(sys.argv) > 1 else ""
     raw_input = sys.stdin.read()
-    try:
-        with open("/tmp/ai-guard-wrapper.log", "a") as f:
-            f.write(f"HOOK CALLED: argv={sys.argv!r} len={len(raw_input)}\n")
-    except Exception:
-        pass
+    if os.environ.get("AI_GUARD_DEBUG"):
+        try:
+            with open("/tmp/ai-guard-wrapper.log", "a") as f:
+                f.write(f"HOOK CALLED: argv={sys.argv!r} len={len(raw_input)}\n")
+        except Exception:
+            pass
     payload = {}
     if raw_input.strip():
         try:

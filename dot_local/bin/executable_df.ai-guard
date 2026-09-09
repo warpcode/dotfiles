@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """df.ai-guard - Unified security guard and lifecycle gate for AI coding assistants."""
 
-import fnmatch
 import glob
 import json
 import os
@@ -30,14 +29,27 @@ OUTPUT_KEYS = (
 
 
 def load_config(custom_path: str | None = None) -> dict:
+    def _load_raw(path: Path) -> dict:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    def _expand_secrets(cfg: dict) -> dict:
+        """Append shared secrets rules into both prompts and output sections."""
+        shared = cfg.get("secrets", {}).get("rules", [])
+        if not shared:
+            return cfg
+        for section in ("prompts", "output"):
+            cfg.setdefault(section, {}).setdefault("rules", [])
+            cfg[section]["rules"] = cfg[section]["rules"] + shared
+        return cfg
+
     if custom_path:
         p = Path(custom_path)
         if not p.is_file():
             sys.stderr.write(f"Custom config file not found: {custom_path}\n")
             sys.exit(1)
         try:
-            with open(p, "r", encoding="utf-8") as f:
-                return json.load(f)
+            return _expand_secrets(_load_raw(p))
         except Exception as e:
             sys.stderr.write(f"Error loading custom config {custom_path}: {e}\n")
             sys.exit(1)
@@ -49,8 +61,7 @@ def load_config(custom_path: str | None = None) -> dict:
     ]:
         if c and Path(c).is_file():
             try:
-                with open(c, "r", encoding="utf-8") as f:
-                    return json.load(f)
+                return _expand_secrets(_load_raw(Path(c)))
             except Exception:
                 pass
     return {"commands": {"rules": []}, "files": {"rules": []}, "prompts": {"rules": []}, "output": {"rules": []}}
@@ -61,14 +72,17 @@ def normalize_rules(data: dict | list) -> list[dict]:
     res = []
     for r in raw:
         if isinstance(r, str):
-            res.append({"pattern": r.strip(), "match": "glob", "perm": "deny", "reason": f"Matched pattern: {r.strip()}"})
+            res.append({"pattern": r.strip(), "perm": "deny", "reason": f"Matched pattern: {r.strip()}"})
         elif isinstance(r, dict):
             perm = (r.get("perm") or r.get("permission") or "deny").lower()
             if perm not in ("deny", "replace"):
                 continue
+            # Only regex is supported; reject rules specifying any non-regex match type
+            m = r.get("match")
+            if m and m.lower() != "regex":
+                continue
             entry = {
                 "pattern": r.get("pattern", ""),
-                "match": r.get("match", "glob").lower(),
                 "perm": perm,
                 "reason": r.get("reason", "")
             }
@@ -92,28 +106,15 @@ def clean_path(raw: str) -> str:
     return val.strip("'\"()[]{} \t\n\r").lstrip("@<>").strip("'\"()[]{} \t\n\r")
 
 
-def match_str(cand: str, pat: str, m: str = "glob") -> bool:
+def match_str(cand: str, pat: str) -> bool:
     cand, pat = cand.strip(), pat.strip()
     if not cand or not pat:
         return False
     ce, pe = os.path.expandvars(os.path.expanduser(cand)), os.path.expandvars(os.path.expanduser(pat))
-    if m == "exact":
-        return cand == pat or ce == pe
-    if m == "prefix":
-        return any(c == p or c.startswith(p + " ") or c.startswith(p + "/") for c, p in ((cand, pat), (ce, pe)))
-    if m == "suffix":
-        return cand.endswith(pat) or ce.endswith(pe)
-    if m == "substring":
-        return pat in cand or pe in ce
-    if m == "regex":
-        try:
-            return bool(re.search(pat, cand) or re.search(pat, ce))
-        except Exception:
-            return False
-    # glob (default)
-    if any(fnmatch.fnmatch(c, p) for c in (cand, "/" + cand.lstrip("/"), ce, "/" + ce.lstrip("/")) for p in (pat, pe)):
-        return True
-    return bool(("~" in pat or "$HOME" in pat) and fnmatch.fnmatch(ce, pe))
+    try:
+        return bool(re.search(pat, cand) or re.search(pat, ce) or re.search(pe, cand) or re.search(pe, ce))
+    except Exception:
+        return False
 
 
 def match_file(path_str: str, rule: dict, cwd: str | None = None) -> tuple[bool, str]:
@@ -121,60 +122,31 @@ def match_file(path_str: str, rule: dict, cwd: str | None = None) -> tuple[bool,
     cand = clean_path(path_str)
     if not cand or not pat:
         return False, ""
-    m, rsn = rule.get("match", "glob").lower(), rule.get("reason", f"Access to sensitive file '{path_str}' is blocked.")
+    rsn = rule.get("reason", f"Access to sensitive file '{path_str}' is blocked.")
 
     exp = os.path.expandvars(os.path.expanduser(cand))
     if cwd and not os.path.isabs(exp):
         exp = os.path.join(cwd, exp)
     norm = os.path.normpath(exp)
-    base = os.path.basename(norm)
 
     exp_pat = os.path.expandvars(os.path.expanduser(pat))
-    norm_pat = os.path.normpath(exp_pat)
 
-    if m == "exact":
-        if any(c == p for c in (cand, norm, base) for p in (pat, exp_pat, norm_pat)):
+    try:
+        if re.search(pat, cand) or re.search(pat, norm) or re.search(exp_pat, cand) or re.search(exp_pat, norm):
             return True, rsn
-    elif m == "prefix":
-        if any(c == pat or c.startswith(pat + "/") or c.startswith(pat + os.sep) for c in (cand, norm, base)):
-            return True, rsn
-    elif m == "suffix":
-        if any(c.endswith(pat) for c in (cand, norm, base)):
-            return True, rsn
-    elif m == "substring":
-        if pat in cand or pat in norm:
-            return True, rsn
-    elif m == "regex":
-        try:
-            if re.search(pat, cand) or re.search(pat, norm):
-                return True, rsn
-        except Exception:
-            pass
-    else:  # glob
-        if any(fnmatch.fnmatch(c, p) for c in (base, cand, "/" + cand.lstrip("/"), norm, exp) for p in (pat, exp_pat)):
-            return True, rsn
-        cd = norm_pat.rstrip("/*")
-        if cd and (norm.startswith(cd + os.sep) or norm == cd):
-            return True, rsn
-        if os.path.basename(norm).startswith(".") and norm == os.path.dirname(norm_pat):
-            return True, rsn
-        if pat.startswith("*/") and (fnmatch.fnmatch(base, pat[2:]) or fnmatch.fnmatch(norm, "*" + pat[2:])):
-            return True, rsn
-        if "~/" in pat and fnmatch.fnmatch(norm, pat.replace("~/", "*/")):
-            return True, rsn
+    except Exception:
+        pass
     return False, ""
 
 
-def find_rule(cand: str | list[str], rules: list[dict], perm: str, mtypes: set[str] | None = None, d_rsn: str = "Forbidden") -> tuple[dict, str, str] | None:
+def find_rule(cand: str | list[str], rules: list[dict], perm: str, d_rsn: str = "Forbidden") -> tuple[dict, str, str] | None:
     cands = cand if isinstance(cand, list) else [cand]
     for c in cands:
         for r in rules:
             if r.get("perm") == perm:
-                m = r.get("match", "glob")
-                if mtypes and m not in mtypes:
-                    continue
-                if match_str(c, r.get("pattern", ""), m):
-                    return r, c, f"{r.get('reason', d_rsn)} ({c})"
+                if match_str(c, r.get("pattern", "")):
+                    rsn = r.get("reason") or d_rsn
+                    return r, c, f"{rsn} ({c})"
     return None
 
 
@@ -582,10 +554,11 @@ def eval_segment(tokens: list[str], rules: list[dict], file_deny: list[dict], cw
     # 3. Replace checks
     full_cmd_repr = " ".join(tokens)
     for r in rules:
-        if r.get("perm") == "replace" and r.get("match") == "regex":
+        if r.get("perm") == "replace":
             try:
                 if re.search(r.get("pattern", ""), full_cmd_repr):
-                    return "replace", f"{r.get('reason', 'Command modified')} ({full_cmd_repr})", r
+                    rsn = r.get("reason") or "Command modified"
+                    return "replace", f"{rsn} ({full_cmd_repr})", r
             except Exception:
                 pass
 
@@ -636,7 +609,7 @@ def handle_command(config: dict, ctx: PayloadContext) -> None:
     file_deny = [r for r in file_rules if r.get("perm") == "deny"]
     all_deny = cmd_deny + file_deny
 
-    hit = find_rule(raw, all_deny, "deny", mtypes={"substring", "regex"}, d_rsn="Forbidden command pattern")
+    hit = find_rule(raw, all_deny, "deny", d_rsn="Forbidden command pattern")
     if hit:
         emit("deny", hit[2])
 
@@ -667,7 +640,7 @@ def handle_command(config: dict, ctx: PayloadContext) -> None:
         for r in replaces:
             try:
                 mod = re.sub(r["pattern"], r["replace"], mod)
-                reasons.append(r.get("reason", "Command modified"))
+                reasons.append(r.get("reason") or "Command modified")
             except Exception:
                 pass
         extra = {"command": mod, "CommandLine": mod, "modified": mod, "overwrite": {"CommandLine": mod, "command": mod}}
@@ -719,7 +692,7 @@ def handle_prompt(config: dict, ctx: PayloadContext) -> None:
             try:
                 if re.search(pat, sanitized):
                     sanitized = re.sub(pat, r.get("replace", "[REDACTED]"), sanitized)
-                    applied.append(r.get("reason", "Sensitive data redacted"))
+                    applied.append(r.get("reason") or "Sensitive data redacted")
             except Exception:
                 pass
     if applied:
@@ -753,10 +726,8 @@ def redact_text_and_report(text: str, rules: list[dict]) -> tuple[str, list[str]
             try:
                 if re.search(pat, sanitized):
                     rsn = r.get("reason", "Blocked sensitive content")
-                    if "PRIVATE KEY" in pat:
-                        sanitized = re.sub(r"-----BEGIN (?:[A-Z0-9_-]+ )?PRIVATE KEY(?: BLOCK)?-----[\s\S]*?(?:-----END (?:[A-Z0-9_-]+ )?PRIVATE KEY(?: BLOCK)?-----|$)", "[REDACTED_PRIVATE_KEY]", sanitized)
-                    else:
-                        sanitized = re.sub(pat, "[REDACTED_BLOCKED_SECRET]", sanitized)
+                    repl = r.get("replace", "[REDACTED_BLOCKED_SECRET]")
+                    sanitized = re.sub(pat, repl, sanitized)
                     applied.append(rsn)
             except Exception:
                 pass
@@ -764,11 +735,8 @@ def redact_text_and_report(text: str, rules: list[dict]) -> tuple[str, list[str]
             try:
                 if re.search(pat, sanitized):
                     repl = r.get("replace", "[REDACTED]")
-                    if "PRIVATE KEY" in pat:
-                        sanitized = re.sub(r"-----BEGIN (?:[A-Z0-9_-]+ )?PRIVATE KEY(?: BLOCK)?-----[\s\S]*?(?:-----END (?:[A-Z0-9_-]+ )?PRIVATE KEY(?: BLOCK)?-----|$)", repl, sanitized)
-                    else:
-                        sanitized = re.sub(pat, repl, sanitized)
-                    applied.append(r.get("reason", "Sensitive data redacted"))
+                    sanitized = re.sub(pat, repl, sanitized)
+                    applied.append(r.get("reason") or "Sensitive data redacted")
             except Exception:
                 pass
     return sanitized, applied
