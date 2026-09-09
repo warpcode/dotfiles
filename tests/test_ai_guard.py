@@ -385,10 +385,8 @@ class TestAIGuardCommand(unittest.TestCase):
                     "rules": [
                         {
                             "pattern": r"^cat\s+([a-zA-Z0-9_\.-]+)$",
-                            "match": "regex",
                             "perm": "replace",
-                            "replace": r"bat \1",
-                            "reason": "Alias cat to bat"
+                            "replace": r"bat \1"
                         }
                     ]
                 }
@@ -912,10 +910,8 @@ class TestAIGuardPrompt(unittest.TestCase):
                     "rules": [
                         {
                             "pattern": r"sk-(?:proj-)?([a-zA-Z0-9_-]{4})[a-zA-Z0-9_-]+",
-                            "match": "regex",
                             "perm": "replace",
-                            "replace": r"[REDACTED_PREFIX_\1]",
-                            "reason": "Preserved key prefix"
+                            "replace": r"[REDACTED_PREFIX_\1]"
                         }
                     ]
                 }
