@@ -84,8 +84,11 @@ def normalize_rules(data: dict | list) -> list[dict]:
             entry = {
                 "pattern": r.get("pattern", ""),
                 "perm": perm,
-                "reason": r.get("reason", "")
             }
+            if "reason" in r:
+                entry["reason"] = r["reason"]
+            elif perm != "replace":
+                entry["reason"] = ""
             if "replace" in r:
                 entry["replace"] = r["replace"]
             res.append(entry)
