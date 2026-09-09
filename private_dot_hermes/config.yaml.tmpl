@@ -581,6 +581,13 @@ secrets:
     override_existing: true
     auto_install: true
     server_url: ''
+  cloakenv:
+    enabled: false
+    path: /services/my-service
+    namespace: prod
+    token: '${CLOAK_TOKEN}'
+    cache_ttl_seconds: 300
+    override_existing: true
 paste_collapse_threshold: 5
 paste_collapse_threshold_fallback: 5
 paste_collapse_char_threshold: 2000
