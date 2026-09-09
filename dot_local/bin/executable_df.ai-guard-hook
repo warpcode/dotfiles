@@ -1,19 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Cursor Hook Bridge (sits in ~/.cursor/ next to hooks.json)
+# Shared AI Guard hook bridge for Cursor, Copilot, and Codex.
+# Installed to ~/.local/bin/df.ai-guard-hook by chezmoi.
+# Reads a JSON payload from stdin and routes it to df.ai-guard.
 
 INPUT=$(cat)
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 AI_GUARD_BIN="df.ai-guard"
-if ! command -v "$AI_GUARD_BIN" >/dev/null 2>&1; then
+if ! command -v "$AI_GUARD_BIN" > /dev/null 2>&1; then
   if [[ -x "$HOME/.local/bin/df.ai-guard" ]]; then
     AI_GUARD_BIN="$HOME/.local/bin/df.ai-guard"
   elif [[ -x "$HOME/src/dotfiles/dot_local/bin/executable_df.ai-guard" ]]; then
     AI_GUARD_BIN="$HOME/src/dotfiles/dot_local/bin/executable_df.ai-guard"
-  elif [[ -x "$SCRIPT_DIR/../dot_local/bin/executable_df.ai-guard" ]]; then
-    AI_GUARD_BIN="$SCRIPT_DIR/../dot_local/bin/executable_df.ai-guard"
   fi
 fi
 
@@ -46,7 +45,7 @@ if [[ $EXIT_CODE -ne 0 ]]; then
   exit 2
 fi
 
-if command -v jq >/dev/null 2>&1; then
+if command -v jq > /dev/null 2>&1; then
   DECISION=$(echo "$RAW_OUTPUT" | jq -r '.decision // empty' 2>/dev/null || true)
   REASON=$(echo "$RAW_OUTPUT" | jq -r '.reason // ""' 2>/dev/null || true)
   if [[ "$DECISION" == "deny" ]]; then

@@ -3,17 +3,17 @@
   "hooks": {
     "beforeSubmitPrompt": [
       {
-        "command": "./ai-guard-wrapper.sh prompt"
+        "command": "df.ai-guard-hook prompt"
       }
     ],
     "preToolUse": [
       {
-        "command": "./ai-guard-wrapper.sh"
+        "command": "df.ai-guard-hook"
       }
     ],
     "postToolUse": [
       {
-        "command": "./ai-guard-wrapper.sh output"
+        "command": "df.ai-guard-hook output"
       }
     ]
   }

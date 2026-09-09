@@ -3,21 +3,21 @@
     "UserPromptSubmit": [
       {
         "type": "command",
-        "command": "./ai-guard-wrapper.sh prompt",
+        "command": "df.ai-guard-hook prompt",
         "timeout": 5
       }
     ],
     "PreToolUse": [
       {
         "type": "command",
-        "command": "./ai-guard-wrapper.sh",
+        "command": "df.ai-guard-hook",
         "timeout": 5
       }
     ],
     "PostToolUse": [
       {
         "type": "command",
-        "command": "./ai-guard-wrapper.sh output",
+        "command": "df.ai-guard-hook output",
         "timeout": 5
       }
     ]
