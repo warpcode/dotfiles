@@ -1,19 +1,36 @@
 {{- $configPath := joinPath .chezmoi.homeDir ".gemini/config/config.json" -}}
-{{- $hasUserSettings := false -}}
-{{- $userSettings := dict -}}
+{{- $remoteControlEnabled := true -}}
+{{- $hasRemoteControlHostname := false -}}
+{{- $remoteControlHostname := "" -}}
 {{- if stat $configPath -}}
   {{- $existingConfig := include $configPath | fromJson -}}
   {{- if hasKey $existingConfig "userSettings" -}}
-    {{- $hasUserSettings = true -}}
-    {{- $userSettings = index $existingConfig "userSettings" -}}
+    {{- $existingUserSettings := index $existingConfig "userSettings" -}}
+    {{- if hasKey $existingUserSettings "remoteControlEnabled" -}}
+      {{- $remoteControlEnabled = index $existingUserSettings "remoteControlEnabled" -}}
+    {{- else if hasKey $existingConfig "remoteControlEnabled" -}}
+      {{- $remoteControlEnabled = index $existingConfig "remoteControlEnabled" -}}
+    {{- end -}}
+    {{- if hasKey $existingUserSettings "remoteControlHostname" -}}
+      {{- $hasRemoteControlHostname = true -}}
+      {{- $remoteControlHostname = index $existingUserSettings "remoteControlHostname" -}}
+    {{- else if hasKey $existingConfig "remoteControlHostname" -}}
+      {{- $hasRemoteControlHostname = true -}}
+      {{- $remoteControlHostname = index $existingConfig "remoteControlHostname" -}}
+    {{- end -}}
+  {{- else -}}
+    {{- if hasKey $existingConfig "remoteControlEnabled" -}}
+      {{- $remoteControlEnabled = index $existingConfig "remoteControlEnabled" -}}
+    {{- end -}}
+    {{- if hasKey $existingConfig "remoteControlHostname" -}}
+      {{- $hasRemoteControlHostname = true -}}
+      {{- $remoteControlHostname = index $existingConfig "remoteControlHostname" -}}
+    {{- end -}}
   {{- end -}}
 {{- end -}}
 {
   "model": "Gemini 3.8 Flash (Medium)",
   "enableTelemetry": false,
-  {{ template "commands/antigravity.tmpl" . }},
-  "remoteControlEnabled": true,
-  "runningLightSpeed": "fast",
   "statusLine": {
     "type": "",
     "command": "",
@@ -23,8 +40,12 @@
   "trustedWorkspaces": [
     "{{ .chezmoi.sourceDir }}"
   ],
-  {{ if $hasUserSettings -}}
-  "userSettings": {{ $userSettings | toPrettyJson "  " | trim | indent 2 | trimPrefix "  " }},
-  {{- end }}
+  "userSettings": {
+    {{- if $hasRemoteControlHostname }}
+    "remoteControlHostname": {{ $remoteControlHostname | toJson }},
+    {{- end }}
+    "remoteControlEnabled": {{ $remoteControlEnabled }},
+    {{ template "commands/antigravity.tmpl" . }}
+  },
   "useAiCredits": false
 }
