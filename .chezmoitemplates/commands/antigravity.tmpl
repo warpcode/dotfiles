@@ -14,6 +14,12 @@
   {{- $allow = append $allow (printf "write_file(%s)" $p) -}}
 {{- end -}}
 
+{{- $ask := list -}}
+{{- range $c := $commands.ask -}}
+  {{- $ask = append $ask (printf "command(%s)" $c) -}}
+  {{- $ask = append $ask (printf "unsandboxed(%s)" $c) -}}
+{{- end -}}
+
 {{- $deny := list -}}
 {{- range $c := $commands.deny -}}
   {{- $deny = append $deny (printf "command(%s)" $c) -}}
@@ -24,4 +30,4 @@
   {{- $deny = append $deny (printf "write_file(%s)" $p) -}}
 {{- end -}}
 
-"permissions": {{ dict "allow" ($allow | uniq) "deny" ($deny | uniq) | toPrettyJson "  " }}
+"globalPermissionGrants": {{ dict "allow" ($allow | uniq) "deny" ($deny | uniq) "ask" ($ask | uniq) | toPrettyJson "  " }}
