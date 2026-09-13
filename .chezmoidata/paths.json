@@ -1,28 +1,22 @@
 {
   "paths": {
     "read": [
-      "~/.agents/**",
-      "~/.agents/skills/**",
-      "~/.gemini/config/**",
-      "~/.gemini/config/skills/**",
-      "~/src/**"
+      "~/.agents",
+      "~/.agents/skills",
+      "~/.gemini/config",
+      "~/.gemini/config/skills",
+      "~/src"
     ],
     "write": [
       "~/src/**"
     ],
     "deny": [
-      "~/.ssh/**",
-      "~/.ssh/*",
-      "~/.gnupg/**",
-      "~/.gnupg/*",
-      "~/.aws/**",
-      "~/.aws/*",
-      "~/.docker/**",
-      "~/.docker/*",
-      "~/.kube/**",
-      "~/.kube/*",
-      "~/.config/cloakenv/**",
-      "~/.config/cloakenv/*",
+      "~/.ssh",
+      "~/.gnupg",
+      "~/.aws",
+      "~/.docker",
+      "~/.kube",
+      "~/.config/cloakenv",
       "~/.config/gh/hosts.yml",
       "~/.git-credentials",
       "*.kdbx",
