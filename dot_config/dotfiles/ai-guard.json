@@ -3,73 +3,59 @@
     "rules": [
       {
         "pattern": "(?:^|[;\\&|\\s])(?:/usr(?:/local)?/bin/)?python[0-9.]*\\s+-c\\b",
-        "perm": "deny",
         "reason": "Python inline execution is unsafe."
       },
       {
         "pattern": "(?:^|[;\\&|\\s])(?:/(?:usr/)?(?:local/)?bin/)?(?:node\\s+-e|perl\\s+-e|ruby\\s+-e|php\\s+-r)\\b",
-        "perm": "deny",
         "reason": "Inline script evaluation is unsafe."
       },
       {
         "pattern": "\\brm\\s+.*-[a-zA-Z]*(?:r.*f|f.*r).*\\s+[/~]",
-        "perm": "deny",
         "reason": "Recursive force removal targeting root or home directory is strictly forbidden."
       },
       {
         "pattern": "(?i)\\b(DROP\\s+DATABASE|TRUNCATE\\s+TABLE|FLUSHALL|FLUSHDB)\\b",
-        "perm": "deny",
         "reason": "Destructive database operations (DROP/TRUNCATE/FLUSHALL) are strictly forbidden."
       },
       {
         "pattern": "(?i)\\b(AWS_SECRET_ACCESS_KEY|OPENAI_API_KEY|ANTHROPIC_API_KEY|GITHUB_TOKEN)\\s*=\\s*['\"]?[a-zA-Z0-9_\\-]{12,}",
-        "perm": "deny",
         "reason": "Passing plaintext API credentials via inline terminal environment variables is forbidden."
       },
       {
         "pattern": ".*\\|\\s*(?:/bin/)?(?:sudo\\s+)?(?:bash|sh|zsh).*",
-        "perm": "deny",
         "reason": "Piping commands directly into shell interpreters is forbidden."
       },
       {
         "pattern": "\\b(?:curl|wget)\\b.*\\|\\s*(?:sudo\\s+)?(?:/usr(?:/local)?/bin/|/bin/)?(?:ba|z)?sh\\b",
-        "perm": "deny",
         "reason": "Piping remote network scripts directly into a shell interpreter is forbidden."
       },
       {
         "pattern": "\\b(?:curl|wget)\\b.*\\|\\s*(?:sudo\\s+)?(?:/usr(?:/local)?/bin/|/bin/)?python[0-9.]*\\b",
-        "perm": "deny",
         "reason": "Piping remote network scripts directly into Python is forbidden."
       },
       {
         "pattern": "\\bfind\\b.*-(?:exec|execdir|ok|okdir|delete|fprint|fprintf|fls)\\b",
-        "perm": "deny",
         "reason": "Destructive or modifying find operations (-delete, -exec, -ok, -fprint, etc.) are strictly forbidden."
       },
       {
         "pattern": "(?:^|[;\\&|]\\s*)(?:env(?:\\s+-[a-zA-Z0-9_-]+|\\s+[a-zA-Z0-9_]+=[^\\s]*)*\\s*(?:$|[;\\&|])|printenv|export(\\s+-p)?|declare\\s+-p|typeset\\s+-p)\\b",
-        "perm": "deny",
         "reason": "Environment inspection commands (env/printenv/export/declare/typeset) are blocked to prevent exposing injected secrets."
       },
       {
         "pattern": "(?:^|[;\\&|]\\s*)set\\s*(?:$|[;\\&|])",
-        "perm": "deny",
         "reason": "Bare set command is blocked: it would expose injected secrets to model-visible output."
       },
       {
         "pattern": "\\bgit\\s+push\\b.*(?:\\s|^)(?:-f\\b|--force\\b|--force-with-lease\\b)",
-        "perm": "deny",
         "reason": "Force pushing via git push is forbidden. Use regular branch pushes and open a PR."
       },
       {
         "pattern": "\\bxargs\\s+(?:-[^\\s]*\\s+)*(?:/usr(?:/local)?/bin/|/bin/)?(?:ba|z|da)?sh\\b",
-        "perm": "deny",
         "reason": "Piping commands via xargs into a shell interpreter is forbidden."
       },
       {
-        "pattern": "(^|[;\\&|]\\s*)(litellm\\b.*)$",
-        "perm": "replace",
-        "replace": "\\1cloakenv run -- \\2"
+        "pattern": "(?:^|[;\\&|\\s])litellm\\b",
+        "reason": "Direct litellm execution is forbidden. Run via 'cloakenv run -- litellm'."
       }
     ]
   },
@@ -77,82 +63,66 @@
     "rules": [
       {
         "pattern": "(?i)(?:^|[/\\\\])(?:.*\\.env(?:\\..*)?|.*env\\.(?:tmpl|template|vault).*|.*dot_env.*)$",
-        "perm": "deny",
         "reason": "Direct access to .env files is blocked. Use 'df.config resolve' or environment variables."
       },
       {
         "pattern": "\\.(?:pem|key|p12|pfx|keystore|jks|kdbx)$",
-        "perm": "deny",
         "reason": "Cryptographic key and certificate files are protected."
       },
       {
         "pattern": "(?:id_(?:rsa|ed25519|ecdsa|dsa).*|.*\\.pub)$",
-        "perm": "deny",
         "reason": "SSH private and public key files are protected."
       },
       {
         "pattern": "(?:credentials|secrets)\\.json",
-        "perm": "deny",
         "reason": "Credential and secret JSON files are protected."
       },
       {
         "pattern": "\\.(?:netrc|npmrc)$",
-        "perm": "deny",
         "reason": "Network credential files are protected."
       },
       {
         "pattern": "(?:^|[/\\\\])\\.ssh(?:[/\\\\]|$)",
-        "perm": "deny",
         "reason": "SSH directory is protected."
       },
       {
         "pattern": "(?:^|[/\\\\])\\.aws(?:[/\\\\]|$)",
-        "perm": "deny",
         "reason": "AWS credential directory is protected."
       },
       {
         "pattern": "(?:^|[/\\\\])\\.gnupg(?:[/\\\\]|$)",
-        "perm": "deny",
         "reason": "GnuPG directory is protected."
       },
       {
         "pattern": "(?:^|[/\\\\])\\.docker(?:[/\\\\]|$)",
-        "perm": "deny",
         "reason": "Docker credential directory is protected."
       },
       {
         "pattern": "(?:^|[/\\\\])\\.kube(?:[/\\\\]|$)",
-        "perm": "deny",
         "reason": "Kubernetes credential directory is protected."
       },
       {
         "pattern": "(?:^|[/\\\\])\\.config/cloakenv(?:[/\\\\]|$)",
-        "perm": "deny",
         "reason": "Cloakenv configuration is protected."
       },
       {
         "pattern": "(?:^|[/\\\\])\\.git-credentials(?:[/\\\\]|$)",
-        "perm": "deny",
         "reason": "Git credentials file is protected."
       },
       {
         "pattern": "(?:^|[/\\\\])\\.config/gh/hosts\\.yml$",
-        "perm": "deny",
         "reason": "GitHub CLI token configuration is protected."
       },
       {
         "pattern": "^/etc/shadow.*",
-        "perm": "deny",
         "reason": "System shadow password file is protected."
       },
       {
         "pattern": "^/etc/passwd.*",
-        "perm": "deny",
         "reason": "System user database is protected."
       },
       {
         "pattern": "/proc/[^/]+/environ",
-        "perm": "deny",
         "reason": "/proc environment files are protected to prevent secret exposure."
       }
     ]
@@ -161,69 +131,68 @@
     "rules": [
       {
         "pattern": "-----BEGIN (?:[A-Z0-9_-]+ )?PRIVATE KEY(?: BLOCK)?-----[\\s\\S]*?(?:-----END (?:[A-Z0-9_-]+ )?PRIVATE KEY(?: BLOCK)?-----|$)",
-        "perm": "deny",
-        "replace": "[REDACTED_PRIVATE_KEY]",
-        "reason": "Private Key material detected and blocked."
+        "reason": "Private Key material detected and blocked.",
+        "placeholder": "[REDACTED_PRIVATE_KEY]"
       },
       {
         "pattern": "sk-ant-(?:api[0-9]{2}-)?[A-Za-z0-9_-]{30,}",
-        "perm": "replace",
-        "replace": "[REDACTED_SECRET_ANTHROPIC_API_KEY]"
+        "reason": "Anthropic API key detected and blocked.",
+        "placeholder": "[REDACTED_SECRET_ANTHROPIC_API_KEY]"
       },
       {
         "pattern": "sk-(?:proj-|admin-|svcacct-)?[a-zA-Z0-9_-]{20,}",
-        "perm": "replace",
-        "replace": "[REDACTED_SECRET_OPENAI_API_KEY]"
+        "reason": "OpenAI API key detected and blocked.",
+        "placeholder": "[REDACTED_SECRET_OPENAI_API_KEY]"
       },
       {
         "pattern": "github_pat_[A-Za-z0-9_]{80,}",
-        "perm": "replace",
-        "replace": "[REDACTED_SECRET_GITHUB_PAT]"
+        "reason": "GitHub Personal Access Token (Fine-grained) detected and blocked.",
+        "placeholder": "[REDACTED_SECRET_GITHUB_PAT]"
       },
       {
         "pattern": "(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36,}",
-        "perm": "replace",
-        "replace": "[REDACTED_SECRET_GITHUB_TOKEN]"
+        "reason": "GitHub token detected and blocked.",
+        "placeholder": "[REDACTED_SECRET_GITHUB_TOKEN]"
       },
       {
         "pattern": "\\b(?:A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}\\b",
-        "perm": "replace",
-        "replace": "[REDACTED_SECRET_AWS_ACCESS_KEY]"
+        "reason": "AWS Access Key detected and blocked.",
+        "placeholder": "[REDACTED_SECRET_AWS_ACCESS_KEY]"
       },
       {
         "pattern": "(?i)\\b(aws_secret_access_key|aws_session_token)(\\s*[:=]\\s*)['\"]?([A-Za-z0-9/+=]{40})['\"]?",
-        "perm": "replace",
-        "replace": "\\1\\2[REDACTED_SECRET_AWS_SECRET_KEY]"
+        "reason": "AWS Secret Key detected and blocked.",
+        "placeholder": "\\1\\2[REDACTED_SECRET_AWS_SECRET_KEY]"
       },
       {
         "pattern": "AIza[0-9A-Za-z\\-_]{35}",
-        "perm": "replace",
-        "replace": "[REDACTED_SECRET_GOOGLE_AI_KEY]"
+        "reason": "Google AI API Key detected and blocked.",
+        "placeholder": "[REDACTED_SECRET_GOOGLE_AI_KEY]"
       },
       {
         "pattern": "xox[baprs]-[0-9]{10,13}-[0-9]{10,13}[a-zA-Z0-9-]*",
-        "perm": "replace",
-        "replace": "[REDACTED_SECRET_SLACK_TOKEN]"
+        "reason": "Slack token detected and blocked.",
+        "placeholder": "[REDACTED_SECRET_SLACK_TOKEN]"
       },
       {
         "pattern": "(?i)\\b(bearer\\s+)[a-zA-Z0-9_\\-\\.]{25,}",
-        "perm": "replace",
-        "replace": "\\1[REDACTED_BEARER_TOKEN]"
+        "reason": "Bearer authentication token detected and blocked.",
+        "placeholder": "\\1[REDACTED_BEARER_TOKEN]"
       },
       {
         "pattern": "(?i)\\b(password|passwd|secret|api_key|apikey|access_token|auth_token)(\\s*[:=]\\s*)(?:['\"][^'\"]{8,}['\"]|[A-Za-z0-9!@#$%^&*()_+\\-=\\[\\]{};:,.<>?/]{8,})",
-        "perm": "replace",
-        "replace": "\\1\\2[REDACTED_SECRET_PASSWORD]"
+        "reason": "Plaintext credential or password detected and blocked.",
+        "placeholder": "\\1\\2[REDACTED_SECRET_PASSWORD]"
       },
       {
         "pattern": "hf_[a-zA-Z0-9]{34,}",
-        "perm": "replace",
-        "replace": "[REDACTED_SECRET_HUGGINGFACE_TOKEN]"
+        "reason": "HuggingFace API token detected and blocked.",
+        "placeholder": "[REDACTED_SECRET_HUGGINGFACE_TOKEN]"
       },
       {
         "pattern": "(?:sk|pk)_(?:live|test)_[0-9a-zA-Z]{24,}",
-        "perm": "replace",
-        "replace": "[REDACTED_SECRET_STRIPE_KEY]"
+        "reason": "Stripe API key detected and blocked.",
+        "placeholder": "[REDACTED_SECRET_STRIPE_KEY]"
       }
     ]
   }
