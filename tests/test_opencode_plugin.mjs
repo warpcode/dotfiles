@@ -157,7 +157,7 @@ async function runTests() {
     { tool: "runTerminalCommand", command: "cat .env" },
     { tool: "terminal", command: "rm -rf ~" },
     { tool: "run_command", CommandLine: "rm -rf /" },
-    { tool: "bash", command: "git reset --hard HEAD~1" },
+    { tool: "bash", command: "git push origin --force-with-lease" },
     { tool: "execute_command", command: 'mysql -e "TRUNCATE TABLE users;"' }
   ]
 

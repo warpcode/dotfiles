@@ -1353,19 +1353,26 @@ class TestGeminiAIGuardWrapper(unittest.TestCase):
 
     def test_gemini_prompt_route_safe(self):
         """Safe prompts return exit code 0 and decision: allow."""
+        """Safe prompts return exit code 0 and empty JSON dict."""
         payload = {"prompt": "Please explain how python unittest works."}
         res = run_wrapper(GEMINI_WRAPPER_SCRIPT, ["prompt"], stdin_payload=payload)
         self.assertEqual(res.returncode, 0)
         data = json.loads(res.stdout)
         self.assertEqual(data.get("decision"), "allow")
+        self.assertEqual(data, {})
 
     def test_gemini_prompt_route_sanitized(self):
         """Prompts with secrets inject ephemeral security notice and sanitized content."""
+    def test_gemini_prompt_route_blocks_secrets(self):
+        """Prompts with secrets are blocked with exit code 2 and decision: deny."""
         payload = {"prompt": "Here is key sk-proj-1234567890abcdef1234567890"}
         res = run_wrapper(GEMINI_WRAPPER_SCRIPT, ["prompt"], stdin_payload=payload)
         self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.returncode, 2)
         data = json.loads(res.stdout)
         self.assertIn("injectSteps", data)
+        self.assertEqual(data.get("decision"), "deny")
+        self.assertIn("SECURITY GUARD", res.stderr)
 
     def test_gemini_prompt_route_denied(self):
         """Prompts with raw private keys are denied."""

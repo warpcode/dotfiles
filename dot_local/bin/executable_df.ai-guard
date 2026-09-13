@@ -34,11 +34,11 @@ def load_config(custom_path: str | None = None) -> dict:
             return json.load(f)
 
     def _expand_secrets(cfg: dict) -> dict:
-        """Append shared secrets rules into both prompts and output sections."""
+        """Append shared secrets rules into commands, prompts, and output sections."""
         shared = cfg.get("secrets", {}).get("rules", [])
         if not shared:
             return cfg
-        for section in ("prompts", "output"):
+        for section in ("commands", "prompts", "output"):
             cfg.setdefault(section, {}).setdefault("rules", [])
             cfg[section]["rules"] = cfg[section]["rules"] + shared
         return cfg
@@ -72,25 +72,29 @@ def normalize_rules(data: dict | list) -> list[dict]:
     res = []
     for r in raw:
         if isinstance(r, str):
-            res.append({"pattern": r.strip(), "perm": "deny", "reason": f"Matched pattern: {r.strip()}"})
+            res.append({
+                "pattern": r.strip(),
+                "perm": "deny",
+                "reason": f"Matched pattern: {r.strip()}",
+                "placeholder": "[SECRET_REDACTED]",
+                "replace": "[SECRET_REDACTED]"
+            })
         elif isinstance(r, dict):
-            perm = (r.get("perm") or r.get("permission") or "deny").lower()
-            if perm not in ("deny", "replace"):
-                continue
-            # Only regex is supported; reject rules specifying any non-regex match type
             m = r.get("match")
             if m and m.lower() != "regex":
                 continue
+            pat = r.get("pattern", "")
+            if not pat:
+                continue
+            reason = r.get("reason", "")
+            placeholder = r.get("placeholder") or r.get("replace") or "[SECRET_REDACTED]"
             entry = {
-                "pattern": r.get("pattern", ""),
-                "perm": perm,
+                "pattern": pat,
+                "reason": reason,
+                "placeholder": placeholder,
+                "replace": placeholder,
+                "perm": "deny"
             }
-            if "reason" in r:
-                entry["reason"] = r["reason"]
-            elif perm != "replace":
-                entry["reason"] = ""
-            if "replace" in r:
-                entry["replace"] = r["replace"]
             res.append(entry)
     return res
 
@@ -142,14 +146,13 @@ def match_file(path_str: str, rule: dict, cwd: str | None = None) -> tuple[bool,
     return False, ""
 
 
-def find_rule(cand: str | list[str], rules: list[dict], perm: str, d_rsn: str = "Forbidden") -> tuple[dict, str, str] | None:
+def find_rule(cand: str | list[str], rules: list[dict], perm: str = "deny", d_rsn: str = "Forbidden") -> tuple[dict, str, str] | None:
     cands = cand if isinstance(cand, list) else [cand]
     for c in cands:
         for r in rules:
-            if r.get("perm") == perm:
-                if match_str(c, r.get("pattern", "")):
-                    rsn = r.get("reason") or d_rsn
-                    return r, c, f"{rsn} ({c})"
+            if match_str(c, r.get("pattern", "")):
+                rsn = r.get("reason") or d_rsn
+                return r, c, f"{rsn} ({c})"
     return None
 
 
@@ -554,17 +557,6 @@ def eval_segment(tokens: list[str], rules: list[dict], file_deny: list[dict], cw
         if hit:
             return "deny", hit[2], hit[0]
 
-    # 3. Replace checks
-    full_cmd_repr = " ".join(tokens)
-    for r in rules:
-        if r.get("perm") == "replace":
-            try:
-                if re.search(r.get("pattern", ""), full_cmd_repr):
-                    rsn = r.get("reason") or "Command modified"
-                    return "replace", f"{rsn} ({full_cmd_repr})", r
-            except Exception:
-                pass
-
     return "none", "", None
 
 
@@ -584,16 +576,14 @@ def eval_file_target(target: str, rules: list[dict], cwd: str | None) -> tuple[s
     except Exception:
         pass
 
-    for p in ("deny", "replace"):
-        for r in rules:
-            if r.get("perm") == p:
-                m, rsn = match_file(cand, r, cwd=cwd)
-                if m:
-                    return p, rsn, r
-                if p == "deny" and rp:
-                    m_sym, rsn_sym = match_file(rp, r, cwd=cwd)
-                    if m_sym:
-                        return "deny", f"Symlink targets protected path: {rsn_sym}", r
+    for r in rules:
+        m, rsn = match_file(cand, r, cwd=cwd)
+        if m:
+            return "deny", rsn, r
+        if rp:
+            m_sym, rsn_sym = match_file(rp, r, cwd=cwd)
+            if m_sym:
+                return "deny", f"Symlink targets protected path: {rsn_sym}", r
     return "none", "", None
 
 
@@ -608,9 +598,7 @@ def handle_command(config: dict, ctx: PayloadContext) -> None:
     raw = ctx.command.strip()
     cmd_rules = normalize_rules(config.get("commands", {}))
     file_rules = normalize_rules(config.get("files", {}))
-    cmd_deny = [r for r in cmd_rules if r.get("perm") == "deny"]
-    file_deny = [r for r in file_rules if r.get("perm") == "deny"]
-    all_deny = cmd_deny + file_deny
+    all_deny = cmd_rules + file_rules
 
     hit = find_rule(raw, all_deny, "deny", d_rsn="Forbidden command pattern")
     if hit:
@@ -627,32 +615,14 @@ def handle_command(config: dict, ctx: PayloadContext) -> None:
         dec, rsn, _ = eval_file_target(tgt, file_rules, cwd=ctx.cwd)
         if dec == "deny":
             emit("deny", f"Access to sensitive file blocked ({rsn})")
-        hit = find_rule(tgt, file_deny, "deny", d_rsn="Access to sensitive file blocked")
+        hit = find_rule(tgt, file_rules, "deny", d_rsn="Access to sensitive file blocked")
         if hit:
             emit("deny", hit[2])
 
-    actions = [eval_segment(seg, cmd_rules, file_deny, ctx.cwd) for seg in p.segments]
+    actions = [eval_segment(seg, cmd_rules, file_rules, ctx.cwd) for seg in p.segments]
     for act, rsn, _ in actions:
         if act == "deny":
             emit("deny", rsn)
-
-    replaces = [r for act, _, r in actions if act == "replace" and r]
-    if replaces:
-        mod = raw
-        reasons = []
-        for r in replaces:
-            try:
-                mod = re.sub(r["pattern"], r["replace"], mod)
-                reasons.append(r.get("reason") or "Command modified")
-            except Exception:
-                pass
-        extra = {"command": mod, "CommandLine": mod, "modified": mod, "overwrite": {"CommandLine": mod, "command": mod}}
-        if isinstance(ctx.original_payload, dict):
-            for k in CMD_KEYS:
-                if k in ctx.original_payload:
-                    ctx.original_payload[k] = mod
-            extra["payload"] = ctx.original_payload
-        emit("replace", "; ".join(reasons), extra)
 
     print("{}")
     sys.exit(0)
@@ -668,10 +638,6 @@ def handle_file(config: dict, ctx: PayloadContext) -> None:
     for dec, rsn, _, t in results:
         if dec == "deny":
             emit("deny", f"Access to sensitive file or path '{t}' is blocked ({rsn}).")
-    for dec, rsn, r, t in results:
-        if dec == "replace":
-            new_t = re.sub(r["pattern"], r["replace"], t)
-            emit("replace", rsn, {"replacement": new_t, "path": new_t, "target": new_t})
     print("{}")
     sys.exit(0)
 
@@ -684,32 +650,9 @@ def handle_prompt(config: dict, ctx: PayloadContext) -> None:
     rules = normalize_rules(config.get("prompts", {}))
     for r in rules:
         pat = r.get("pattern")
-        if r.get("perm") == "deny" and pat and re.search(pat, text):
-            rsn = r.get("reason", "Prompt submission blocked")
+        if pat and re.search(pat, text):
+            rsn = r.get("reason") or f"Matched pattern: {pat}"
             emit("deny", f"Prompt submission blocked ({rsn})")
-
-    sanitized, applied = text, []
-    for r in rules:
-        pat = r.get("pattern")
-        if r.get("perm") == "replace" and pat:
-            try:
-                if re.search(pat, sanitized):
-                    sanitized = re.sub(pat, r.get("replace", "[REDACTED]"), sanitized)
-                    applied.append(r.get("reason") or "Sensitive data redacted")
-            except Exception:
-                pass
-    if applied:
-        notice = f"Security Notice: {len(applied)} sensitive item(s) redacted ({', '.join(sorted(list(set(applied))))})."
-        extra = {"sanitized": sanitized, "text": sanitized, "reasons": applied,
-                 "systemMessage": notice, "additionalContext": notice, "injectSteps": [{"ephemeralMessage": notice}]}
-        for k in PROMPT_KEYS:
-            extra[k] = sanitized
-        if isinstance(ctx.original_payload, dict):
-            for k in PROMPT_KEYS:
-                if k in ctx.original_payload:
-                    ctx.original_payload[k] = sanitized
-            extra["payload"] = ctx.original_payload
-        emit("replace", "; ".join(sorted(list(set(applied)))), extra)
 
     print("{}")
     sys.exit(0)
@@ -724,24 +667,13 @@ def redact_text_and_report(text: str, rules: list[dict]) -> tuple[str, list[str]
         pat = r.get("pattern")
         if not pat:
             continue
-        perm = r.get("perm")
-        if perm == "deny":
-            try:
-                if re.search(pat, sanitized):
-                    rsn = r.get("reason", "Blocked sensitive content")
-                    repl = r.get("replace", "[REDACTED_BLOCKED_SECRET]")
-                    sanitized = re.sub(pat, repl, sanitized)
-                    applied.append(rsn)
-            except Exception:
-                pass
-        elif perm == "replace":
-            try:
-                if re.search(pat, sanitized):
-                    repl = r.get("replace", "[REDACTED]")
-                    sanitized = re.sub(pat, repl, sanitized)
-                    applied.append(r.get("reason") or "Sensitive data redacted")
-            except Exception:
-                pass
+        try:
+            if re.search(pat, sanitized):
+                placeholder = r.get("placeholder") or r.get("replace") or "[SECRET_REDACTED]"
+                sanitized = re.sub(pat, placeholder, sanitized)
+                applied.append(r.get("reason") or "Sensitive data redacted")
+        except Exception:
+            pass
     return sanitized, applied
 
 
@@ -759,8 +691,7 @@ def sanitize_value(val: any, rules: list[dict], applied_reasons: list[str]) -> a
 
 def handle_output(config: dict, ctx: PayloadContext) -> None:
     rules = normalize_rules(config.get("output", {}))
-    prompt_rules = normalize_rules(config.get("prompts", {}))
-    combined_rules = rules + [r for r in prompt_rules if r.get("perm") in ("replace", "deny")]
+    combined_rules = rules
 
     applied_reasons = []
 

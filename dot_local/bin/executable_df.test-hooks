@@ -1,0 +1,219 @@
+#!/usr/bin/env python3
+"""
+df.test-hooks - Test AI Agent Lifecycle Hooks with Software Runtimes
+
+Tests AI Guard lifecycle hooks against actual target software environments:
+  - Antigravity CLI (agy) & Antigravity Hook Bridge
+  - GitHub Copilot CLI (copilot) & Rust Hook Engine
+  - OpenCode (opencode) & TypeScript Security Plugin Suite
+  - Visual Studio Code (code) & VS Code Agent Customization Hooks
+
+Usage:
+  df.test-hooks [options]
+  df.test-hooks -s, --software [antigravity|copilot|opencode|vscode|all]
+  df.test-hooks -v, --verbose
+  df.test-hooks --json
+  df.test-hooks -h, --help
+"""
+
+import argparse
+import json
+import os
+import shutil
+import subprocess
+import sys
+import time
+import unittest
+from pathlib import Path
+
+# Paths
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent.parent
+TESTS_DIR = REPO_ROOT / "tests"
+SOFTWARE_TESTS_PY = TESTS_DIR / "test_software_hooks.py"
+OPENCODE_TEST_MJS = TESTS_DIR / "test_opencode_plugin.mjs"
+
+# ANSI Colors
+CYAN = "\033[36m"
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+RED = "\033[31m"
+BOLD = "\033[1m"
+RESET = "\033[0m"
+
+
+def resolve_binary(name: str) -> str | None:
+    found = shutil.which(name)
+    if found:
+        return found
+    search_paths = [
+        Path.home() / ".local/share/mise/installs/agy/latest/agy",
+        Path.home() / ".gemini/bin/agy",
+        Path.home() / ".local/share/mise/installs/npm-github-copilot/latest/bin/copilot",
+        Path.home() / ".local/share/mise/installs/opencode/latest/opencode",
+        Path.home() / ".local/share/mise/installs/node/latest/bin/node",
+        Path.home() / ".local/bin" / name,
+        Path("/usr/bin") / name,
+    ]
+    for p in search_paths:
+        cand = p / name if p.is_dir() else p
+        if cand.name == name and cand.is_file() and os.access(cand, os.X_OK):
+            return str(cand)
+    return None
+
+
+def get_base_env() -> dict[str, str]:
+    env = os.environ.copy()
+    mise_paths = [
+        str(Path.home() / ".local/share/mise/installs/agy/latest"),
+        str(Path.home() / ".gemini/bin"),
+        str(Path.home() / ".local/share/mise/installs/npm-github-copilot/latest/bin"),
+        str(Path.home() / ".local/share/mise/installs/opencode/latest"),
+        str(Path.home() / ".local/share/mise/installs/node/latest/bin"),
+        str(SCRIPT_DIR),
+        str(Path.home() / ".local/bin"),
+    ]
+    current_path = env.get("PATH", "")
+    env["PATH"] = ":".join(mise_paths + [current_path])
+    return env
+
+
+def run_unittest_suite(test_class_name: str | None = None, verbose: bool = False, quiet: bool = False) -> tuple[int, int, int, list[str]]:
+    """Runs tests from test_software_hooks.py and returns (passed, failed, skipped, errors)."""
+    sys.path.insert(0, str(REPO_ROOT))
+    import tests.test_software_hooks as t_hooks
+
+    loader = unittest.TestLoader()
+    suite = unittest.TestSuite()
+
+    if test_class_name:
+        cls = getattr(t_hooks, test_class_name, None)
+        if cls:
+            suite.addTests(loader.loadTestsFromTestCase(cls))
+    else:
+        suite.addTests(loader.loadTestsFromTestCase(t_hooks.TestAntigravityHooks))
+        suite.addTests(loader.loadTestsFromTestCase(t_hooks.TestCopilotHooks))
+        suite.addTests(loader.loadTestsFromTestCase(t_hooks.TestOpenCodeHooks))
+        suite.addTests(loader.loadTestsFromTestCase(t_hooks.TestVSCodeHooks))
+        suite.addTests(loader.loadTestsFromTestCase(t_hooks.TestCrossPlatformHookSchemas))
+
+    stream = open(os.devnull, "w") if quiet else sys.stderr
+    verbosity = 2 if verbose else (0 if quiet else 1)
+    runner = unittest.TextTestRunner(stream=stream, verbosity=verbosity)
+    result = runner.run(suite)
+
+    passed = result.testsRun - len(result.failures) - len(result.errors) - len(result.skipped)
+    failed = len(result.failures) + len(result.errors)
+    skipped = len(result.skipped)
+    err_msgs = [f"{t}: {m}" for t, m in result.failures + result.errors]
+
+    return passed, failed, skipped, err_msgs
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Test AI Agent Lifecycle Hooks with Software Runtimes (Antigravity, Copilot, OpenCode, VS Code)"
+    )
+    parser.add_argument(
+        "-s", "--software",
+        choices=["antigravity", "copilot", "opencode", "vscode", "all"],
+        default="all",
+        help="Target software runtime to test (default: all)"
+    )
+    parser.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        help="Show detailed output per test"
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output structured JSON results"
+    )
+    args = parser.parse_args()
+
+    env = get_base_env()
+    start_time = time.time()
+
+    # Pre-flight binary discovery
+    binaries = {
+        "antigravity": resolve_binary("agy"),
+        "copilot": resolve_binary("copilot"),
+        "opencode": resolve_binary("opencode"),
+        "vscode": resolve_binary("code"),
+        "node": resolve_binary("node"),
+    }
+
+    if not args.json:
+        print(f"\n{BOLD}{CYAN}=== AI Agent Lifecycle Hooks Test Runner ==={RESET}")
+        print(f"Software Target: {BOLD}{args.software}{RESET}")
+        print(f"Discovered Host Software:")
+        for name, path in binaries.items():
+            status = f"{GREEN}✓ {path}{RESET}" if path else f"{RED}✗ Not found{RESET}"
+            print(f"  - {name:<12}: {status}")
+        print()
+
+    results = {}
+    total_passed = 0
+    total_failed = 0
+    total_skipped = 0
+
+    suites_to_run = []
+    if args.software in ("antigravity", "all"):
+        suites_to_run.append(("Antigravity CLI (agy)", "TestAntigravityHooks"))
+    if args.software in ("copilot", "all"):
+        suites_to_run.append(("GitHub Copilot CLI (copilot)", "TestCopilotHooks"))
+    if args.software in ("opencode", "all"):
+        suites_to_run.append(("OpenCode CLI (opencode)", "TestOpenCodeHooks"))
+    if args.software in ("vscode", "all"):
+        suites_to_run.append(("VS Code Agent (code)", "TestVSCodeHooks"))
+    if args.software == "all":
+        suites_to_run.append(("Universal Schema Validation", "TestCrossPlatformHookSchemas"))
+
+    for label, cls_name in suites_to_run:
+        if not args.json:
+            print(f"{BOLD}► Running {label} hooks tests...{RESET}")
+        p, f, s, errs = run_unittest_suite(cls_name, verbose=args.verbose, quiet=args.json)
+        results[label] = {
+            "passed": p,
+            "failed": f,
+            "skipped": s,
+            "errors": errs,
+            "status": "PASS" if f == 0 else "FAIL"
+        }
+        total_passed += p
+        total_failed += f
+        total_skipped += s
+
+    elapsed = time.time() - start_time
+
+    if args.json:
+        summary = {
+            "target": args.software,
+            "passed": total_passed,
+            "failed": total_failed,
+            "skipped": total_skipped,
+            "elapsed_seconds": round(elapsed, 3),
+            "binaries": binaries,
+            "results": results
+        }
+        print(json.dumps(summary, indent=2))
+    else:
+        print(f"\n{BOLD}{CYAN}=== Test Summary ==={RESET}")
+        for label, r in results.items():
+            st_color = GREEN if r["status"] == "PASS" else RED
+            print(f"  {st_color}{r['status']:<4}{RESET}  {label:<32} (passed: {r['passed']}, failed: {r['failed']})")
+            if r["errors"] and args.verbose:
+                for e in r["errors"]:
+                    print(f"        {RED}Error:{RESET} {e[:120]}")
+
+        print("-" * 50)
+        overall = f"{GREEN}ALL HOOKS VERIFIED{RESET}" if total_failed == 0 else f"{RED}SOME HOOKS FAILED{RESET}"
+        print(f"Status:  {overall}")
+        print(f"Totals:  {total_passed} passed, {total_failed} failed, {total_skipped} skipped in {elapsed:.2f}s\n")
+
+    sys.exit(0 if total_failed == 0 else 1)
+
+
+if __name__ == "__main__":
+    main()
