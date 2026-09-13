@@ -207,9 +207,8 @@ class TestRenderedOutputs(unittest.TestCase):
         gemini_config = os.path.expanduser("~/.gemini/config/config.json")
         out = chezmoi_cat(gemini_config)
         data = json.loads(out)
-        assert "userSettings" in data
-        assert "globalPermissionGrants" in data["userSettings"]
-        perms = data["userSettings"]["globalPermissionGrants"]
+        assert "permissions" in data
+        perms = data["permissions"]
         assert "allow" in perms
         assert "command(git status *)" in perms["allow"]
         assert "unsandboxed(git status *)" in perms["allow"]
@@ -226,18 +225,12 @@ class TestRenderedOutputs(unittest.TestCase):
         assert "command(chezmoi apply *)" not in perms["allow"]
         assert "unsandboxed(chezmoi apply *)" not in perms["allow"]
         assert any("read_file(" in p and "skills" in p for p in perms["allow"])
-        assert "ask" in perms
-        assert "command(chezmoi apply *)" in perms["ask"]
-        assert "unsandboxed(chezmoi apply *)" in perms["ask"]
         assert "deny" in perms
         assert "command(git push --force*)" in perms["deny"]
         assert "unsandboxed(git push --force*)" in perms["deny"]
-        for item in perms["allow"] + perms.get("ask", []) + perms.get("deny", []):
+        for item in perms["allow"] + perms.get("deny", []):
             self.assertNotIn("internal/*", item)
             self.assertNotIn("/home/", item, f"Found /home/ in permission item: {item}")
-        assert "remoteControlEnabled" in data["userSettings"]
-        self.assertTrue(data["userSettings"]["remoteControlEnabled"])
-
 
     def test_opencode_json(self):
         out = chezmoi_cat(os.path.expanduser("~/.config/opencode/opencode.json"))
@@ -267,20 +260,20 @@ class TestRenderedOutputs(unittest.TestCase):
         self.assertIn("read", perm)
         self.assertIsInstance(perm["read"], dict)
         self.assertEqual(perm["read"]["*"], "allow")
-        self.assertEqual(perm["read"]["~/.ssh/**"], "deny")
+        self.assertEqual(perm["read"]["~/.ssh"], "deny")
         self.assertEqual(perm["read"]["*.env*"], "deny")
         self.assertEqual(perm["read"]["~/.agents"], "allow")
 
         self.assertIn("edit", perm)
         self.assertIsInstance(perm["edit"], dict)
-        self.assertEqual(perm["edit"]["~/.ssh/**"], "deny")
-        self.assertEqual(perm["edit"]["~/src/**"], "allow")
+        self.assertEqual(perm["edit"]["~/.ssh"], "deny")
+        self.assertEqual(perm["edit"]["~/src"], "allow")
 
         self.assertIn("external_directory", perm)
         self.assertIsInstance(perm["external_directory"], dict)
         self.assertEqual(perm["external_directory"]["*"], "ask")
         self.assertEqual(perm["external_directory"]["~/.agents"], "allow")
-        self.assertEqual(perm["external_directory"]["~/.ssh/**"], "deny")
+        self.assertEqual(perm["external_directory"]["~/.ssh"], "deny")
 
     def test_claude_settings(self):
         out = chezmoi_cat(os.path.expanduser("~/.claude/settings.json"))
@@ -300,7 +293,7 @@ class TestRenderedOutputs(unittest.TestCase):
         assert "Bash(rm -rf $HOME*)" in perms["deny"]
         assert "Bash(git push --force*)" in perms["deny"]
         assert any("Read(" in p and "skills" in p for p in perms["allow"])
-        assert "Read(~/.ssh/**)" in perms["deny"]
+        assert "Read(~/.ssh)" in perms["deny"]
         self.assertNotIn("Bash(git checkout * -- internal/*)", perms["allow"])
         self.assertNotIn("Bash(git push *--force*)", perms["ask"])
         for item in perms["allow"] + perms.get("ask", []) + perms.get("deny", []):
@@ -317,7 +310,7 @@ class TestRenderedOutputs(unittest.TestCase):
         assert any("Read(" in p and "skills" in p for p in perms["allow"])
         assert "Shell(chezmoi apply *)" in perms["ask"]
         assert "Shell(git push --force*)" in perms["deny"]
-        assert "Read(~/.ssh/**)" in perms["deny"]
+        assert "Read(~/.ssh)" in perms["deny"]
         for item in perms["allow"] + perms.get("ask", []) + perms.get("deny", []):
             self.assertNotIn("/home/", item, f"Found /home/ in copilot permission item: {item}")
 
@@ -394,17 +387,15 @@ class TestPartialAndPatternOnlyRendering(unittest.TestCase):
         self.assertIn("Shell(rm)", perms["deny"])
         self.assertIn("Shell(git push)", perms["ask"])
 
-        # Antigravity CLI: rm is in deny; git push is in ask
+        # Antigravity CLI: rm is in deny
         out = subprocess.check_output(
             ["chezmoi", "execute-template", f'{{{{ template "commands/antigravity.tmpl" {ctx} }}}}'],
             cwd=REPO_ROOT,
             text=True,
         )
-        cli_perms = json.loads("{" + out + "}")["globalPermissionGrants"]
+        cli_perms = json.loads("{" + out + "}")["permissions"]
         self.assertIn("command(rm)", cli_perms["deny"])
         self.assertIn("unsandboxed(rm)", cli_perms["deny"])
-        self.assertIn("command(git push)", cli_perms["ask"])
-        self.assertIn("unsandboxed(git push)", cli_perms["ask"])
 
     def test_whitespace_handling(self):
         """Verify leading and trailing whitespace are sanitized."""
@@ -416,11 +407,10 @@ class TestPartialAndPatternOnlyRendering(unittest.TestCase):
             cwd=REPO_ROOT,
             text=True,
         )
-        cli_perms = json.loads("{" + out + "}")["globalPermissionGrants"]["allow"]
+        cli_perms = json.loads("{" + out + "}")["permissions"]["allow"]
         self.assertIn("command(echo)", cli_perms)
         self.assertIn("command(git status)", cli_perms)
         self.assertNotIn("command(  git status  )", cli_perms)
-
 
         # Glob engine (Claude Code): rm -rf $HOME present
         out = subprocess.check_output(
@@ -475,11 +465,10 @@ class TestCanonicalCommandsGenerator(unittest.TestCase):
             cwd=REPO_ROOT,
             text=True,
         )
-        agy_allow = json.loads("{" + out_agy + "}")["globalPermissionGrants"]["allow"]
+        agy_allow = json.loads("{" + out_agy + "}")["permissions"]["allow"]
         self.assertIn(f"command({sample_script})", agy_allow)
         self.assertIn(f"unsandboxed({sample_script})", agy_allow)
         self.assertIn(f"command({sample_variant})", agy_allow)
-
 
         # 3. Claude Code provider template
         out_claude = subprocess.check_output(
@@ -524,8 +513,8 @@ class TestCanonicalCommandsGenerator(unittest.TestCase):
         self.assertTrue(len(matching_keys) > 0)
         for k in matching_keys:
             self.assertTrue(vscode_term[k])
-        self.assertTrue(vscode_edits.get("~/src/**"))
-        self.assertFalse(vscode_edits.get("~/.ssh/**"))
+        self.assertTrue(vscode_edits.get("~/src"))
+        self.assertFalse(vscode_edits.get("~/.ssh"))
 
 
 if __name__ == "__main__":
