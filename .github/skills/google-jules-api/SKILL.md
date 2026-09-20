@@ -4,8 +4,13 @@ description: >
   Interact with Google Jules via the v1alpha REST API to inspect sessions,
   audit session health and status, review and approve plans, detect stalled runners,
   submit coding tasks, review activity timelines, and extract diff patches. Use
-  when calling Jules REST API, checking Jules sessions, auditing Jules tasks,
-  approving Jules plans, or inquiring about Jules task progress.
+  when:
+  - Querying/managing Google Jules async coding sessions
+  - Checking session health, status, and conversation history
+  - Approving or reviewing generated implementation plans
+  - Nudging stalled sessions or providing feedback
+  - Creating new coding tasks with plan-approval requirement
+  - Extracting git diff patches from completed sessions
   **Built-in workflows:** comprehensive audit with unmerged work detection (`--flag-unmerged`),
   standardized nudge templates (`nudge` command), plan assessment checklist,
   and duplicate work detection.
@@ -132,8 +137,11 @@ python3 <skill-dir>/scripts/main.py activity 4475409647262242777 <ACTIVITY_ID>
 Approve pending implementation plans or send steering instructions to a running session.
 
 ```bash
-# Approve a generated plan
+# Approve a generated plan (CLI wrapper - preferred)
 python3 <skill-dir>/scripts/main.py approve-plan 4475409647262242777 <PLAN_ID>
+
+# Or direct REST API (empty payload)
+python3 <skill-dir>/scripts/main.py call POST "sessions/4475409647262242777:approvePlan" '{}'
 
 # Send clarifying message / guidance
 python3 <skill-dir>/scripts/main.py send-message 4475409647262242777 \
@@ -247,6 +255,8 @@ Before creating a new session:
    `python3 <skill-dir>/scripts/main.py nudge <session_id> progress_check`
 4. If existing session is `CLOSED_NO_PR` with deliverables, request PR instead of spawning new work
 
+---
+
 ## Python Programmatic Client
 
 For custom automation pipelines, import `JulesClient` directly:
@@ -279,6 +289,12 @@ print(session.get("outputs"))
    - Do NOT modify existing scripts or templates unless explicitly tasked.
 4. **Token Efficiency**:
    - Limit list queries with `--page-size` (default 5–10 items) to prevent context overflow.
+5. **Follow Documented Workflows**:
+   - Always execute Workflow 1 (Status Scan) → Workflow 2 (Plan Review) → Workflow 5 (Plan Assessment) before approving plans. The `check-sessions --flag-unmerged --history` command detects sessions with deliverables awaiting PR.
+6. **Stale State Warning**:
+   - The `check-sessions` summary table can show outdated state. Always verify with direct session API call (`call GET sessions/{id}`) before assessing session health.
+7. **Session Timeout**:
+   - Sessions in `AWAITING_PLAN_APPROVAL` auto-complete after ~20-30 min. Approve plans promptly or nudge.
 
 ---
 
