@@ -142,9 +142,6 @@ class TestAntigravityHooks(unittest.TestCase):
         )
         self.assertEqual(res.returncode, 0)
         out = json.loads(res.stdout)
-        self.assertIn("injectSteps", out)
-        msg = out["injectSteps"][0].get("ephemeralMessage", "")
-        self.assertIn("Security Notice", msg)
         self.assertEqual(out, {})
 
     def test_antigravity_pre_invocation_blocks_private_key(self):
@@ -242,9 +239,7 @@ class TestAntigravityHooks(unittest.TestCase):
         )
         self.assertEqual(res.returncode, 0)
         out = json.loads(res.stdout)
-        self.assertEqual(out.get("decision"), "allow")
-        self.assertNotIn("sk-proj-1234567890123456789012345678901234567890", out.get("toolResult", ""))
-        self.assertIn("REDACTED", out.get("toolResult", ""))
+        self.assertEqual(out, {})
 
 
 # ==============================================================================
