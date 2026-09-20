@@ -121,7 +121,7 @@ def main():
                 pass
 
         if not prompt_text:
-            print(json.dumps({"decision": "allow"}))
+            print("{}")
             sys.exit(0)
 
         code, data = run_guard("prompt", stdin_str=json.dumps({"text": prompt_text}))
@@ -176,7 +176,6 @@ def main():
             print(json.dumps(proto_resp))
             sys.exit(0)
 
-        print(json.dumps({"decision": "allow"}))
         print("{}")
         sys.exit(0)
 
@@ -188,34 +187,12 @@ def main():
         if code == 2 or data.get("decision") == "deny":
             reason = data.get("reason", "Tool output blocked by security guard")
             sys.stderr.write(f"SECURITY GUARD: {reason}\n")
-            print(json.dumps({"decision": "deny", "reason": reason}))
+            print("{}")
             sys.exit(2)
 
-        if data.get("decision") == "replace" and data.get("sanitized"):
-            sanitized = data["sanitized"]
-            reasons = data.get("reasons", [])
-            notice = f"Security Notice: Redacted sensitive items in tool output ({', '.join(reasons)})" if reasons else "Security Notice: Redacted sensitive items in tool output."
-            resp = {
-                "decision": "allow",
-                "toolResult": sanitized,
-                "result": sanitized,
-                "output": sanitized,
-                "overwrite": {"toolResult": sanitized, "result": sanitized, "output": sanitized},
-                "sanitized": sanitized,
-                "injectSteps": [
-                    {"ephemeralMessage": notice}
-                ]
-            }
-            if isinstance(payload.get("toolResult"), dict) and isinstance(data.get("payload"), dict):
-                resp["toolResult"] = data["payload"].get("toolResult", sanitized)
-                resp["overwrite"]["toolResult"] = resp["toolResult"]
-            if isinstance(payload.get("result"), dict) and isinstance(data.get("payload"), dict):
-                resp["result"] = data["payload"].get("result", sanitized)
-                resp["overwrite"]["result"] = resp["result"]
-            print(json.dumps(resp))
-            sys.exit(0)
-
-        print(json.dumps({"decision": "allow"}))
+        # In Antigravity, PostToolUse expects an empty JSON object `{}`.
+        # PostToolUseResponse in protobuf schema has no fields (no decision, overwrite, etc.).
+        print("{}")
         sys.exit(0)
 
     # =========================================================================
