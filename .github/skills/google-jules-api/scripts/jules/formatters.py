@@ -267,7 +267,7 @@ def format_activity(data: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def format_session_check(audits: list[dict[str, Any]], show_history: bool = False) -> str:
+def format_session_check(audits: list[dict[str, Any]], show_history: bool = False, flag_unmerged: bool = False) -> str:
     """Format session audit results into an actionable markdown report with conversation history."""
     if not audits:
         return "_No sessions to audit._"
@@ -370,6 +370,34 @@ def format_session_check(audits: list[dict[str, Any]], show_history: bool = Fals
             lines.append(f"  - Last event: `{a['latest_type']}`: {a['latest_detail']}")
             lines.append(f"  - To nudge: `python3 <skill-dir>/scripts/main.py send-message {a['id']} \"What is your progress?\"`")
             _render_recent_history(lines, a)
+
+    # CLOSED_NO_PR sessions with deliverables (unmerged work)
+    if flag_unmerged:
+        closed_no_pr = [a for a in audits if a.get("assessment") == "COMPLETED_NO_OUTPUT"]
+        unmerged = []
+        for a in closed_no_pr:
+            history = a.get("conversation_history", [])
+            has_deliverables = any(
+                h.get("content", "").find("Completed pre-commit steps") >= 0
+                or h.get("content", "").find("Code review: Code reviewed") >= 0
+                or h.get("content", "").find("Code review: Completed") >= 0
+                or h.get("content", "").find("Completed") >= 0
+                for h in history
+                if h.get("role") == "agent"
+            )
+            if has_deliverables:
+                unmerged.append(a)
+
+        if unmerged:
+            lines.extend(["", "### ⚠️ CLOSED_NO_PR Sessions with Deliverables (Unmerged Work)", ""])
+            for a in unmerged:
+                lines.append(f"- **Session `{a['id']}`** ({a['title']}) — Completed work but no PR created")
+                lines.append(f"  - To request PR: `python3 <skill-dir>/scripts/main.py nudge {a['id']} pr_reminder`")
+                lines.append(f"  - To review: `python3 <skill-dir>/scripts/main.py check-sessions {a['id']} --history`")
+                _render_recent_history(lines, a)
+        else:
+            lines.extend(["", "### CLOSED_NO_PR Sessions with Deliverables", ""])
+            lines.append("_No CLOSED_NO_PR sessions with detected deliverables found._")
 
     # Full conversation history if requested (or single-session audit)
     if show_history:
