@@ -265,3 +265,146 @@ def format_activity(data: dict[str, Any]) -> str:
                 ])
 
     return "\n".join(lines)
+
+
+def format_session_check(audits: list[dict[str, Any]], show_history: bool = False) -> str:
+    """Format session audit results into an actionable markdown report with conversation history."""
+    if not audits:
+        return "_No sessions to audit._"
+
+    lines = [
+        "## Jules Sessions Health & Status Audit",
+        "",
+        "| Session ID | State | Assessment | Inactive | Dialogue | Title / Latest Activity | PR / Output |",
+        "|---|---|---|---|:---:|---|---|",
+    ]
+
+    actionable_plans = []
+    stalled_sessions = []
+    feedback_sessions = []
+
+    for a in audits:
+        sid = a["id"]
+        state = a["state"]
+        assessment = a["assessment"]
+        inactive_mins = a.get("inactive_mins", 0.0)
+        if inactive_mins >= 1440:
+            inactive = f"{round(inactive_mins / 1440.0, 1)}d"
+        elif inactive_mins >= 60:
+            inactive = f"{round(inactive_mins / 60.0, 1)}h"
+        elif inactive_mins > 0:
+            inactive = f"{round(inactive_mins, 1)}m"
+        else:
+            inactive = "<1m"
+
+        title = a["title"]
+        if len(title) > 36:
+            title = title[:33] + "..."
+        detail = a["latest_detail"]
+        if detail and len(detail) > 40:
+            detail = detail[:37] + "..."
+        summary_cell = f"**{title}**<br>_{detail}_" if detail else f"**{title}**"
+
+        # Dialogue column
+        u_count = a.get("user_message_count", 0)
+        a_count = a.get("agent_message_count", 0)
+        unanswered = a.get("unanswered_user_messages", 0)
+        diag_str = f"{u_count}U / {a_count}A"
+        if unanswered > 0:
+            diag_str += f"<br>⚠️ {unanswered} unreplied"
+        elif a.get("agent_awaiting_reply"):
+            diag_str += "<br>❓ agent asked"
+
+        pr_info = "-"
+        if a["pull_request_url"]:
+            pr_num = a["pull_request_url"].split("/")[-1]
+            pr_info = f"[PR #{pr_num}]({a['pull_request_url']})"
+
+        # Status badge
+        badge = assessment
+        if assessment == "INACTIVE" or a.get("is_inactive"):
+            badge = "💤 **INACTIVE**"
+        elif assessment == "AWAITING_PLAN_APPROVAL":
+            badge = "⚠️ **PLAN_GATE**"
+            actionable_plans.append(a)
+        elif assessment == "AWAITING_USER_FEEDBACK":
+            badge = "💬 **FEEDBACK_GATE**"
+            feedback_sessions.append(a)
+        elif assessment == "STALLED":
+            badge = "🚨 **STALLED**"
+            stalled_sessions.append(a)
+        elif assessment == "COMPLETED_WITH_PR":
+            badge = "✅ **COMPLETED**"
+        elif assessment == "COMPLETED_NO_OUTPUT":
+            badge = "⚪ **CLOSED_NO_PR**"
+        elif assessment == "ACTIVE":
+            badge = "🔵 **ACTIVE**"
+
+        lines.append(f"| `{sid}` | {state} | {badge} | {inactive} | {diag_str} | {summary_cell} | {pr_info} |")
+
+    # Actionable items with conversation history context
+    if actionable_plans or feedback_sessions or stalled_sessions:
+        lines.extend(["", "### Actionable Items", ""])
+
+    if actionable_plans:
+        lines.append("#### Plans Awaiting Approval")
+        for a in actionable_plans:
+            lines.append(f"- **Session `{a['id']}`** ({a['title']})")
+            if a["pending_plan_id"]:
+                lines.append(f"  - Plan ID: `{a['pending_plan_id']}`")
+                lines.append(f"  - To approve: `python3 <skill-dir>/scripts/main.py approve-plan {a['id']} {a['pending_plan_id']}`")
+            _render_recent_history(lines, a)
+
+    if feedback_sessions:
+        lines.append("#### Sessions Awaiting User Guidance")
+        for a in feedback_sessions:
+            lines.append(f"- **Session `{a['id']}`** ({a['title']})")
+            lines.append(f"  - Last agent message: {a.get('last_agent_message', a['latest_detail'])}")
+            lines.append(f"  - To respond: `python3 <skill-dir>/scripts/main.py send-message {a['id']} \"<feedback>\"`")
+            _render_recent_history(lines, a)
+
+    if stalled_sessions:
+        lines.append("#### Stalled / Silent Sessions")
+        for a in stalled_sessions:
+            lines.append(f"- **Session `{a['id']}`** ({a['title']}) — Inactive for {a['inactive_mins']}m")
+            lines.append(f"  - Last event: `{a['latest_type']}`: {a['latest_detail']}")
+            lines.append(f"  - To nudge: `python3 <skill-dir>/scripts/main.py send-message {a['id']} \"What is your progress?\"`")
+            _render_recent_history(lines, a)
+
+    # Full conversation history if requested (or single-session audit)
+    if show_history:
+        lines.extend(["", "### Detailed Conversation Histories", ""])
+        for a in audits:
+            lines.append(f"#### Session `{a['id']}`: {a['title']}")
+            history = a.get("conversation_history", [])
+            if not history:
+                lines.append("  _No conversation messages recorded._\n")
+                continue
+            for h in history:
+                role_icon = "👤 **User**" if h["role"] == "user" else ("🤖 **Agent**" if h["role"] == "agent" else "⚙️ **System**")
+                time_str = format_datetime(h.get("time"))
+                msg_type = h.get("type", "message")
+                content = h.get("content", "").replace("\n", "\n    > ")
+                lines.append(f"- `[{time_str}]` {role_icon} ({msg_type}):\n    > {content}")
+            lines.append("")
+
+    return "\n".join(lines)
+
+
+def _render_recent_history(lines: list[str], audit: dict[str, Any], max_items: int = 4) -> None:
+    """Helper to append recent conversation turns to an audit section."""
+    history = audit.get("conversation_history", [])
+    if not history:
+        return
+    lines.append("  - **Recent Conversation History:**")
+    recent = history[-max_items:]
+    for h in recent:
+        role_label = "User" if h["role"] == "user" else ("Agent" if h["role"] == "agent" else "System")
+        time_str = format_datetime(h.get("time"))
+        short_content = h.get("content", "").strip()
+        if len(short_content) > 100:
+            short_content = short_content[:97] + "..."
+        short_content = short_content.replace("\n", " ")
+        lines.append(f"    - `[{time_str}]` **{role_label}**: {short_content}")
+
+

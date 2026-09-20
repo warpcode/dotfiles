@@ -120,9 +120,7 @@ A session represents an asynchronous coding task executed by an isolated cloud V
 - **HTTP Method:** `POST /v1alpha/sessions/{sessionId}:approvePlan`
 - **Request Body:**
   ```json
-  {
-    "planId": "1b5bcc461e9140ba990f4601ec3b4734"
-  }
+  {}
   ```
 - **Response Body:** `{}` (empty object on success).
 
@@ -131,7 +129,7 @@ A session represents an asynchronous coding task executed by an isolated cloud V
 - **Request Body:**
   ```json
   {
-    "message": "Please also add unit tests for error cases."
+    "prompt": "Please also add unit tests for error cases."
   }
   ```
 - **Response Body:** `{}` (empty object on success).

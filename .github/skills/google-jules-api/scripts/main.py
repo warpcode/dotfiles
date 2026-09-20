@@ -23,6 +23,7 @@ from jules.formatters import (
     format_activity,
     format_session,
     format_sessions,
+    format_session_check,
     format_source,
     format_sources,
 )
@@ -57,6 +58,41 @@ def cmd_session(client: JulesClient, args: argparse.Namespace) -> None:
     print(format_session(data))
 
 
+def cmd_check_sessions(client: JulesClient, args: argparse.Namespace) -> None:
+    stale_threshold = getattr(args, "stale_threshold_mins", 60)
+    max_age_days = getattr(args, "max_age_days", 30)
+    if max_age_days == 0:
+        max_age_days = None
+    session_id = getattr(args, "session_id", None)
+    flag_unmerged = getattr(args, "flag_unmerged", False)
+
+    if session_id:
+        sess = client.get_session(session_id)
+        audits = [client.audit_session(sess, stale_threshold_mins=stale_threshold, max_age_days=max_age_days)]
+    else:
+        audits = client.audit_sessions(
+            page_size=getattr(args, "page_size", 10),
+            stale_threshold_mins=stale_threshold,
+            filter_expr=getattr(args, "filter", None),
+            max_age_days=max_age_days,
+        )
+
+    show_history = getattr(args, "history", False) or bool(session_id)
+    print(format_session_check(audits, show_history=show_history, flag_unmerged=flag_unmerged))
+
+    if getattr(args, "nudge", False):
+        nudge_targets = [a for a in audits if a["assessment"] in ("STALLED", "AWAITING_USER_FEEDBACK")]
+        if nudge_targets:
+            print("\n### Auto-Nudge Progress Updates")
+            for a in nudge_targets:
+                sid = a["id"]
+                msg = "What is your progress? Please provide a status update on this task."
+                client.send_message(sid, msg)
+                print(f"- Sent status check message to `{sid}` ({a['title']})")
+        else:
+            print("\n_No stalled sessions found to nudge._")
+
+
 def cmd_create_session(client: JulesClient, args: argparse.Namespace) -> None:
     prompt = args.prompt
     if prompt == "-" or not prompt:
@@ -84,6 +120,33 @@ def cmd_approve_plan(client: JulesClient, args: argparse.Namespace) -> None:
 def cmd_send_message(client: JulesClient, args: argparse.Namespace) -> None:
     data = client.send_message(args.session_id, args.message)
     print(f"Message sent to session `{args.session_id}`.")
+    if data:
+        print(json.dumps(data, indent=2))
+
+
+NUDGE_TEMPLATES = {
+    "plan_stalled": (
+        "The plan was approved but no implementation progress is visible. "
+        "Please proceed with implementation per the approved plan."
+    ),
+    "progress_check": (
+        "What is your progress? Please provide a status update on this task."
+    ),
+    "pr_reminder": (
+        "This session appears to have completed work. "
+        "Please create a pull request with the changes or provide a status update."
+    ),
+}
+
+
+def cmd_nudge(client: JulesClient, args: argparse.Namespace) -> None:
+    template = args.template
+    if template not in NUDGE_TEMPLATES:
+        die(f"Unknown nudge template: {template}. Available: {', '.join(NUDGE_TEMPLATES.keys())}")
+
+    message = NUDGE_TEMPLATES[template]
+    data = client.send_message(args.session_id, message)
+    print(f"Nudge `{template}` sent to session `{args.session_id}`.")
     if data:
         print(json.dumps(data, indent=2))
 
@@ -217,6 +280,53 @@ Authentication:
         help="Unique Jules session ID (e.g. 4475409647262242777)",
     )
 
+    # check-sessions
+    p_check = subparsers.add_parser(
+        "check-sessions",
+        parents=[common_parser],
+        help="Audit health, timeline activity, and plan status for sessions",
+        description="Audit recent sessions or a specific session. Analyzes timeline activity across all pages, detects stalled/silent runs (>threshold mins), identifies plans awaiting approval, and reports actionable steps.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p_check.add_argument(
+        "session_id",
+        nargs="?",
+        default=None,
+        help="Optional specific session ID to audit (if omitted, audits recent sessions)",
+    )
+    p_check.add_argument(
+        "--stale-threshold-mins",
+        type=int,
+        default=60,
+        help="Inactivity threshold in minutes before flagging an in-progress session as STALLED (default: 60)",
+    )
+    p_check.add_argument(
+        "--max-age-days",
+        type=int,
+        default=30,
+        help="Ignore sessions older than this threshold in days (default: 30; set 0 to disable)",
+    )
+    p_check.add_argument(
+        "--nudge",
+        action="store_true",
+        help="Automatically send a progress inquiry message to any session detected as STALLED or AWAITING_USER_FEEDBACK",
+    )
+    p_check.add_argument(
+        "--history",
+        "-H",
+        action="store_true",
+        help="Include full chronological conversation history thread for audited sessions",
+    )
+    p_check.add_argument(
+        "--filter",
+        help="Filter expression to narrow sessions",
+    )
+    p_check.add_argument(
+        "--flag-unmerged",
+        action="store_true",
+        help="Scan CLOSED_NO_PR sessions for completion markers (e.g., 'Completed pre-commit steps', 'Code review: Code reviewed') and flag sessions with deliverables but no PR",
+    )
+
     # create-session
     p_create = subparsers.add_parser(
         "create-session",
@@ -340,6 +450,24 @@ Authentication:
         help="Optional JSON payload string for POST/PUT requests",
     )
 
+    # nudge
+    p_nudge = subparsers.add_parser(
+        "nudge",
+        parents=[common_parser],
+        help="Send a standardized nudge message to a session",
+        description="Send a pre-defined nudge template to a Jules session. Templates: plan_stalled, progress_check, pr_reminder.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p_nudge.add_argument(
+        "session_id",
+        help="Target Jules session ID",
+    )
+    p_nudge.add_argument(
+        "template",
+        choices=["plan_stalled", "progress_check", "pr_reminder"],
+        help="Nudge template to use",
+    )
+
     args = parser.parse_args()
 
     token_val = getattr(args, "token", None)
@@ -356,9 +484,11 @@ Authentication:
         "source": cmd_source,
         "sessions": cmd_sessions,
         "session": cmd_session,
+        "check-sessions": cmd_check_sessions,
         "create-session": cmd_create_session,
         "approve-plan": cmd_approve_plan,
         "send-message": cmd_send_message,
+        "nudge": cmd_nudge,
         "activities": cmd_activities,
         "activity": cmd_activity,
         "call": cmd_call,
