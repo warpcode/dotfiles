@@ -110,7 +110,7 @@ echo "$JSON_RESPONSE" | jq -r --arg pr_num "$pull_number" --arg owner "$owner" -
         "- **Location**: `\($t.path)\($line_info)`\n" +
         "- **Resolution**: \($resolved_status)\n\n" +
         (if $first != null then
-          "### Initial Comment — @\($first.author.login // "ghost") (\($first.createdAt))\n\n" +
+          "### Initial Comment — @\($first.author.login // "ghost") (\($first.createdAt)) · `databaseId: \($first.databaseId)`\n\n" +
           ($first.body | split("\n") | map("> " + .) | join("\n")) + "\n\n"
         else
           "_(No initial comment recorded)_\n\n"

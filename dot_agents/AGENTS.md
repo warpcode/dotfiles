@@ -34,9 +34,30 @@ These instructions capture persistent memories, behavioral guardrails, and techn
 
 - **Source of Truth Hierarchy**: `~/.agents/AGENTS.md` is the authoritative source for durable memory. Keep workspace-only notes ephemeral.
 - **Git & PR Workflows**: Delegated to `git-expert`, `github`, and `github-cli` skills. Always use a rebase strategy when pulling or syncing remote changes. For bot-authored PR reviews (e.g. Jules), if previous review comments remain uncompleted in subsequent commits, bump existing unresolved threads with replies rather than creating duplicate review comments.
+- **Repo Routing**: When the user names a PR number, **always confirm which repo it belongs to** before attempting `gh pr view`. Do NOT default to `warpcode/dotfiles` — the user works across multiple repos (e.g. `warpcode/cloakenv`, `warpcode/dotfiles`). Use `gh pr view <n> --repo <owner>/<repo>` with the repo the user implies or ask to clarify if ambiguous.
 - **AI Infrastructure**: Use **Docker Model Runner** (running `llama.cpp`) for local models over `ollama`.
 - **Secrets Management**: Scripts and tools MUST remain blind to the secret provider (such as `cloakenv`); rely on standard environment variables (`GITHUB_TOKEN` / `GH_TOKEN`) or native tool configs. Secret resolution is handled via `bin/df.config` (`resolve`/`hydrate`) and `bin/df.keychain`/`bin/df.keepass`.
 - **Package Management Architecture**: The legacy `zinstall` logic is deprecated; use the `pkg.zsh` recipe system (`pkg.recipe.define` + `registry.zsh`).
 - **Profile Configuration Hierarchy**: Base configuration is loaded first, layered with `fs.profile.load` (`df.fs profile list`) overrides via `jq` recursive merge.
 - **Service Logging**: macOS `launchd` agents use shell redirection (`>`) in `ProgramArguments` for log truncation on each run; Linux `systemd` services delegate to `journald` via `StandardOutput=journal`.
 
+## 🤖 Bot PR Review Workflow (Outdated Thread Pattern)
+
+When reviewing a bot-authored PR (e.g. Jules) where the bot has **pushed amendment commits after a prior `CHANGES_REQUESTED` review**, the review threads become **outdated**. The correct handling is:
+
+### Phase 1 — Bump outdated threads with replies (BEFORE submitting a new review)
+1. Run `list_pull_request_review_threads.sh --owner <owner> --repo <repo> --pull-number <n>` to get all thread IDs and their resolved/outdated status.
+2. For each **unresolved + outdated** thread, read the `databaseId` from the initial comment header in the script output (format: `databaseId: <integer>`). This integer is what `add_reply_to_pull_request_comment.sh --comment-id` requires — it is the REST API integer ID, **not** the GraphQL node `id` string (like `PRRC_...`).
+3. Post a contextual reply to each outdated thread using:
+   ```bash
+   bash @scripts/add_reply_to_pull_request_comment.sh --owner <owner> --repo <repo> --pull-number <n> --comment-id <databaseId> --body "..."
+   ```
+
+### Phase 2 — Submit a fresh review on the current diff
+4. Build the new review payload against the **latest diff** (re-run `gh pr diff`) and submit via:
+   ```bash
+   gh api "repos/<owner>/<repo>/pulls/<n>/reviews" --method POST --input <payload-file>
+   ```
+   Use `REQUEST_CHANGES` or `APPROVE` as appropriate for the new diff — do not re-use the prior review's assessment.
+
+> **Key invariant**: `--comment-id` in `add_reply_to_pull_request_comment.sh` takes an **integer REST `databaseId`**, not the GraphQL `id` string. As of 2026-09-20, `list_pull_request_review_threads.sh` surfaces `databaseId` in the initial comment header — read it directly from the script output.
