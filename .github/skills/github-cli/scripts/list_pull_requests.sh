@@ -34,6 +34,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --author-response-prior-to-commit  Find PRs where author's last comment was prior to latest commit"
       echo "  --author-not-responded             Find PRs where author has not responded to repo owner / reviewer"
       echo "  --waiting-on-author                Find PRs needing author action (unresponsive, no commits, or prior response)"
+      echo "  --merged-today                     Show PRs merged today with business-friendly summary"
       echo "  --all                              Show comprehensive categorized status summary of all PRs"
       echo "  --state <value>                    PR state: OPEN, CLOSED, MERGED, ALL (default: OPEN)"
       echo "  --limit <value>                    Max PRs to fetch (default: 50)"
@@ -71,6 +72,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --waiting-on-author)
       filter="waiting_on_author"
+      shift
+      ;;
+    --merged-today)
+      filter="merged_today"
       shift
       ;;
     --all|--overview)
@@ -227,6 +232,10 @@ case "$filter" in
     ;;
   waiting_on_author)
     jq_query="${classify_defs} ${format_helpers} ${header} as \$hdr | classify_prs as \$prs | \$hdr + (\$prs | map(select(.waitingOnAuthor == true)) | format_section(\"⏳ Pull Requests Waiting on Author Action / Response\"; \"No pull requests waiting on author action\"))"
+    ;;
+  merged_today)
+    # Delegate to Python script for business-friendly summary
+    exec "${SCRIPT_DIR}/summarize_merged_prs.py" --owner "$owner" --repo "$repo"
     ;;
   all|"")
     jq_query="${classify_defs} ${format_helpers} ${header} as \$hdr | classify_prs as \$prs | \$hdr + (\$prs | map(select(.isApproved == true)) | format_section(\"1. ✅ Approved Pull Requests (Ready to Merge)\"; \"None\")) + (\$prs | map(select(.commitsAfterReview == true)) | format_section(\"2. 🔄 Commits Made After Review (Ready for Re-Review)\"; \"None\")) + (\$prs | map(select(.waitingOnAuthor == true)) | format_section(\"3. ⏳ Waiting on Author / Review Pending Action\"; \"None\")) + (\$prs | map(select(.hasReviews == false and .isApproved == false)) | format_section(\"4. 🆕 Awaiting Initial Review\"; \"None\"))"

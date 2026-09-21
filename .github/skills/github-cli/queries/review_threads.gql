@@ -20,6 +20,7 @@ query($owner: String!, $repo: String!, $pr: Int!) {
             totalCount
             nodes {
               id
+              databaseId
               author {
                 login
               }
