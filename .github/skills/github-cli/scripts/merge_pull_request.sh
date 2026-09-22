@@ -6,6 +6,7 @@ export PAGER=cat
 owner="$(gh repo view --json owner -q '.owner.login' 2>/dev/null || echo '')"
 repo="$(gh repo view --json name -q '.name' 2>/dev/null || echo '')"
 pull_number=""
+admin=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -18,6 +19,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --owner <value> (Required)"
       echo "  --repo <value> (Required)"
       echo "  --pull-number <value> (Required)"
+      echo "  --admin           Use administrator privileges to immediately merge"
       echo "  -h, --help        Show this help message"
       exit 0
       ;;
@@ -32,6 +34,10 @@ while [[ $# -gt 0 ]]; do
     --pull-number)
       pull_number="$2"
       shift 2
+      ;;
+    --admin)
+      admin="--admin"
+      shift
       ;;
     *)
       echo "Unknown argument: $1" >&2
@@ -53,4 +59,5 @@ if [[ -z "$pull_number" ]]; then
   exit 1
 fi
 
-gh pr merge "$pull_number" --repo "$owner"/"$repo" --squash --delete-branch
+gh pr merge "$pull_number" --repo "$owner"/"$repo" --squash --delete-branch ${admin:+"$admin"}
+

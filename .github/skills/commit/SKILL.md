@@ -1,0 +1,28 @@
+---
+name: commit
+description: Prepare and verify git commit messages following Conventional Commits, diff inspection, and explicit approval.
+user-invocable: true
+---
+
+# Git Commit
+
+Workflow for preparing and committing changes:
+
+1. **Determine what to commit** — Inspect the repository state. If the user named specific files, use those. Otherwise, if the user gave no direction and there are staged changes, use staged changes only. Otherwise use unstaged changes. If there is nothing to commit, halt and inform the user.
+
+2. **Review the changes** — Read the diffs of the files to be committed. Note any filename issues or concerns.
+
+3. **Generate the commit message** — Write a Conventional Commit message (imperative mood, subject under 50 chars, body lines under 72 chars) that accurately summarises the changes. Never invent details not present in the diff.
+
+4. **Present for approval** — Show the user:
+   - the proposed commit message, and
+   - a summary of the files to be committed.
+   Wait for explicit approval before proceeding.
+
+5. **Commit on approval** — Once the user approves, commit the changes using the approved commit message. If the user requested changes, revise and re-present before committing.
+
+## Hard Constraints
+
+- Never run `git commit` without explicit user approval
+- Generate the message from the actual diff, never from assumptions
+- No backticks in the commit message

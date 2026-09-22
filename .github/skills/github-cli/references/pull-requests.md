@@ -89,6 +89,9 @@ bash @scripts/merge_pull_request.sh --pull-number 42
 
 # Explicit repository override
 bash @scripts/merge_pull_request.sh --owner "octocat" --repo "hello-world" --pull-number 42
+
+# Merge with administrator privileges (required when rulesets block non-admin merges)
+bash @scripts/merge_pull_request.sh --owner "octocat" --repo "hello-world" --pull-number 42 --admin
 ```
 
 ### View & Read PR Details
