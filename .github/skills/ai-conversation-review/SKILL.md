@@ -2,24 +2,25 @@
 name: ai-conversation-review
 description: >
   Audit human-AI chat transcripts to extract improvements for instructions/AGENTS.md,
-  identify prompt/skill failure modes, and consolidate commands. Use when
+  audit tool and command usage efficiency, enforce simpler commands, identify missed
+  skills, and consolidate command patterns into reusable skill scripts. Use when
   reviewing conversations or updating instructions.
 ---
 
 # AI Conversation Review
 
-Comprehensive system for auditing human-AI conversations, extracting durable memory, optimizing prompt and skill architectures, rectifying ambiguity or inaccurate context, and synthesizing fragile terminal command trial-and-error into deterministic, reusable scripts.
+Comprehensive system for auditing human-AI conversations: reviewing tool and command efficiency, enforcing simpler commands, identifying missed skills, synthesizing command patterns into deterministic reusable skill scripts, and routing downstream improvements through a scope-aware, specificity-first hierarchy.
 
 ---
 
 ## When to Use
 
 - The user says "review this conversation", "audit our session", "analyze chat history", or "run conversation review".
-- You need to extract durable learnings, decisions, or user corrections into `~/.agents/AGENTS.md`.
-- You want to identify gaps in workspace instructions (`AGENTS.md`, `.github/copilot-instructions.md`, `CLAUDE.md`, `GEMINI.md`).
-- An agent struggled with tool execution, suffered from ambiguous instructions, or made repetitive mistakes that require prompt or skill refinement.
-- You need to consolidate trial-and-error terminal command sequences into small, reusable, deterministic scripts so future LLM turns no longer guess.
-- Auditing skill lifecycle (deciding whether to merge fragmented skills, break up bloated skills, or refine trigger descriptions).
+- You need to audit tool and command usage to eliminate complex inline Python scripts (`python3 -c "..."` / heredocs) or opaque bash pipelines in favor of simpler commands.
+- You need to identify command patterns from trial-and-error shell sequences and consolidate them into reusable scripts inside skills.
+- You want to discover which skills **should have been loaded but were missed**, diagnosing why the agent failed to trigger them.
+- You want to extract durable learnings, decisions, or user corrections into project or global memory.
+- You need to identify gaps in workspace instructions (`AGENTS.md`, `.github/copilot-instructions.md`, `CLAUDE.md`, `GEMINI.md`) or update skills/workflows/agents.
 
 ---
 
@@ -28,26 +29,27 @@ Comprehensive system for auditing human-AI conversations, extracting durable mem
 ```mermaid
 flowchart TD
     subgraph Ingestion["Stage 1: Multi-Format Ingestion"]
-        A["Raw Input<br/>(Inline, File, JSONL, URL)"] --> B["scripts/parse_conversation.py<br/>(Token-Efficient Normalization)"]
+        A["Raw Input<br/>(Inline, File, JSONL, URL)"] --> B["scripts/parse_conversation.py<br/>(Token-Efficient Ingestion)"]
     end
 
-    subgraph Audit["Stage 2: Prompts, Skills & Memory Audit"]
+    subgraph Audit["Stage 2: Prompts, Skills & Missed Triggers Audit"]
         B --> C["Extract Durable Facts & Deduplicate<br/>(@references/memory-and-instruction-hierarchy.md)"]
-        B --> D["Audit Prompts & Skill Triggers<br/>(@references/prompt-and-skill-audit-rubric.md)"]
+        B --> D["Audit Prompts, Loaded Skills & Missed Skills<br/>(@references/prompt-and-skill-audit-rubric.md)"]
     end
 
-    subgraph Rectification["Stage 3: Workflow & Ambiguity Rectification"]
-        C --> E["Update Root & Workspace AGENTS.md"]
-        D --> F["Refine Prompts, Rules & Decision Trees"]
+    subgraph Commands["Stage 3: Tool & Command Efficiency Audit"]
+        B --> E["Audit ALL Commands & Tool Invocations"]
+        E --> F["Flag Inefficiencies: Inline Python, Multi-Pipe Bash, Wasted Context"]
+        F --> G["Identify Patterns & Synthesize Skill Scripts<br/>(@references/script-consolidation-guide.md)"]
     end
 
-    subgraph Consolidation["Stage 4: Script Synthesis & Hardening"]
-        E --> G["Identify Trial-and-Error Shell Chains"]
-        F --> G
-        G --> H["Synthesize Deterministic Scripts<br/>(@references/script-consolidation-guide.md)"]
+    subgraph Routing["Stage 4: Downstream Updates & Issue-Focused Report"]
+        C --> H["Route Changes: Project vs. Global Scope"]
+        D --> H
+        G --> H
+        H --> I["Apply Specificity Hierarchy:<br/>Skill > Workflow > Subagent > Rule > AGENTS.md"]
+        I --> Out["Generate Lean Issue-Focused Report<br/>(templates/conversation-review-report.md)"]
     end
-
-    H --> Out["Output Canonical Review Report<br/>(templates/conversation-review-report.md)"]
 ```
 
 ---
@@ -74,79 +76,78 @@ python3 <skill-dir>/scripts/parse_conversation.py /path/to/transcript.jsonl --er
 
 ---
 
-## Stage 2: Prompts, Skills & Memory Audit
+## Stage 2: Prompts, Skills & Missed Triggers Audit
 
 ### 1. Durable Memory & Instructions
-Extract durable facts following the Single Source of Truth Hierarchy:
-- **Global Memory (`~/.agents/AGENTS.md`)**: Authoritative source for technical context, architectural decisions, and user corrections.
-- **Workspace Memory (`AGENTS.md`)**: Repo-specific build recipes, conventions, and test commands.
-- **Instruction Diffs**: Check `.github/copilot-instructions.md`, `CLAUDE.md`, and `GEMINI.md` for outdated guidance or missing edge cases.
+Extract durable facts following the Single Source of Truth Hierarchy and Scope Distinctions:
+- **Project Scope**: Repo-specific build recipes, testing flows, and architecture belong in project instructions (`<project>/AGENTS.md`, `.github/instructions/*.instructions.md`).
+- **Global Scope**: Universal developer context, user preferences, and cross-repo invariants belong in `~/.agents/AGENTS.md`.
 
 See [@references/memory-and-instruction-hierarchy.md](@references/memory-and-instruction-hierarchy.md) for qualification criteria and deduplication logic.
 
 ### 2. Prompt & Skill Sharpness
-Audit all prompts and skills used during the conversation:
+Audit all prompts and skills relevant to the conversation:
+- **Audit Loaded Skills**: Were loaded skills executed efficiently? Did the agent encounter gaps in the skill's instructions or scripts?
+- **Audit Missed Skills**: Identify tasks where an existing skill **should have been used but was never loaded**. Diagnose why: was the frontmatter `description` too narrow, missing trigger keywords, or failing to match user phrasing?
 - **Goal Scoping vs Micromanagement**: Strip manual "think step by step" scaffolding on reasoning models; declare clear output schemas and verifiable success criteria.
-- **Negative Constraints**: Pre-empt observed agent failure modes with strict RFC 2119 negative constraints.
-- **Skill Lifecycle**: Evaluate whether to **Merge** fragmented skills, **Break Up** multi-purpose bloated skills, or **Refine Triggers** in `SKILL.md` frontmatter descriptions.
+- **Negative Constraints**: Pre-empt observed failure modes with strict RFC 2119 negative constraints.
 
 See [@references/prompt-and-skill-audit-rubric.md](@references/prompt-and-skill-audit-rubric.md) for the evaluation rubric and symptom matrix.
 
 ---
 
-## Stage 3: Workflow Rectification & Ambiguity Elimination
+## Stage 3: Tool & Command Usage Efficiency Audit
 
-Identify where communication or instructions broke down:
-1. **Correct Inaccurate Context**: Rectify hallucinated flags, wrong paths, or deprecated APIs discovered during tool runs.
-2. **Eliminate Ambiguity**: Convert vague guidance ("handle edge cases") into concrete decision matrices or tables.
-3. **Streamline Multi-Step Workflows**: Introduce phase gates and clear handoff contracts between coordinator and subagents.
+Thoroughly inspect **all** terminal commands and tool invocations executed during the session:
 
----
+### 1. Efficiency & Simplicity Assessment
+- **Was tool and command usage efficient?** Did the agent run exploratory trial-and-error loops, guessing flags or syntax across multiple turns?
+- **Can commands be made simpler?** Enforce simpler, readable, declarative commands.
+- **Flag Anti-Patterns**:
+  - **Inline Python Scripts**: Flag any use of `python3 -c "..."` or heredocs (`python3 << 'EOF'`). These are hard to review in diffs/transcripts, prone to escaping bugs, and waste tokens.
+  - **Complex Bash Pipelines**: Flag commands with >2 pipes (`grep | awk | sed | jq`) or fragile regex acrobatics.
+  - **Context Window Flooding**: Flag commands that emit large, unformatted stdout dumps into the conversation context.
 
-## Stage 4: Terminal Command Consolidation & Script Synthesis
-
-When an agent iterates through trial-and-error shell commands (e.g. fiddling with `awk`, `grep`, or nested API loops), consolidate the sequence into a deterministic script.
-
-```mermaid
-flowchart LR
-    A["Iterative Shell Guesswork<br/><code>cmd | grep | awk | jq ...</code>"] --> B["Synthesize Script<br/><code>scripts/helper.sh</code>"]
-    B --> C["Document in <code>SKILL.md</code>"]
-    C --> D["Deterministic AI Tool Invocation<br/>(Zero Guesswork)"]
-```
-
-### Script Synthesis Directives
-1. **Self-Documenting `--help`**: Scripts MUST provide clear `--help` so agents discover usage without reading source files.
-2. **Token-Efficient Markdown Output**: Scripts MUST format output as clean Markdown summaries to stdout by default.
-3. **Strict Error Handling**: Use `set -euo pipefail` in Bash/Zsh or structured exception handling in Python.
-4. **Placement**: Place workflow-specific scripts in `dot_agents/skills/<skill-name>/scripts/` or general utilities in `dot_local/bin/df.<name>`.
+### 2. Pattern Detection & Skill Script Synthesis
+- Identify recurring command patterns across turns or common workflows.
+- Consolidate ad-hoc sequences into a deterministic, reusable script located **exclusively within the appropriate skill package** (`<skill-dir>/scripts/`).
+- Ensure every synthesized script satisfies:
+  1. **Self-Documenting `--help`**: Documents parameters and options so future LLMs do not need to guess or inspect source code.
+  2. **Token-Efficient Output**: Emits concise Markdown summaries to stdout by default.
+  3. **Strict Error Trapping**: Uses `set -euo pipefail` in shell or structured `try/except` in Python.
 
 See [@references/script-consolidation-guide.md](@references/script-consolidation-guide.md) and [templates/script-wrapper-blueprint.sh](templates/script-wrapper-blueprint.sh).
 
 ---
 
-## Cognitive Boundaries Matrix
+## Stage 4: Downstream Updates & Issue-Focused Reporting
 
-Route improvements to the appropriate artifact type:
+### Two-Dimensional Routing: Scope × Specificity
 
-| Need | Artifact | Target Location | Skill Reference |
-|---|---|---|---|
-| Persistent user facts & decisions | **Global Memory** | `~/.agents/AGENTS.md` | `ai-conversation-review` |
-| Workspace build recipes & rules | **Workspace Memory** | `AGENTS.md`, `CLAUDE.md` | `ai-authoring-rules` |
-| File/path-scoped coding rules | **Path Rule** | `.github/instructions/*.instructions.md` | `ai-authoring-rules` |
-| Multi-step capability or tool script | **Skill** | `dot_agents/skills/<name>/SKILL.md` | `ai-authoring-skills` |
-| Isolated context / custom model tier | **Subagent** | `.github/agents/*.agent.md` | `ai-authoring-agents` |
-| Slash shortcut or interactive prompt | **Command** | `.github/prompts/*.prompt.md` | `ai-authoring-commands` |
-| Deterministic lifecycle check | **Hook** | `hooks.json`, `.github/hooks/` | `ai-authoring-hooks` |
+When addressing issues, route fixes according to Scope (Project vs. Global) and Specificity:
+
+1. **Scope Selection**:
+   - **Project-Specific Scope**: Updates apply only to the repository where the task took place (e.g. project-specific skills, repo build instructions, project root `AGENTS.md`).
+   - **General Global Scope**: Updates apply universally across all workspaces in the user's dotfiles (e.g. global skills in dotfiles, universal agents, `~/.agents/AGENTS.md`).
+2. **Specificity Hierarchy**:
+   Always target the most granular artifact first:
+   $$\text{Skill} \longrightarrow \text{Workflow} \longrightarrow \text{Subagent} \longrightarrow \text{Path Rule / Instruction} \longrightarrow \text{Root AGENTS.md}$$
+   - If a command was ad-hoc: update or create a **Skill script** and document it in `SKILL.md`.
+   - If a multi-step sequence was fragile: update the **Workflow** or **Subagent**.
+   - If a file pattern had unstated rules: update the **Path Rule** (`.instructions.md`).
+   - **Root `AGENTS.md` (Project or Global) MUST ONLY be updated if the change represents a general behavior across that entire scope.**
 
 ---
 
 ## Output Contract & Review Report
 
-All conversation reviews MUST generate a structured Markdown report using [templates/conversation-review-report.md](templates/conversation-review-report.md).
+All conversation reviews MUST generate a lean, issue-focused Markdown report using [templates/conversation-review-report.md](templates/conversation-review-report.md).
 
-### Report Sections
-1. **Durable Memory Updates**: Additions, updates, and stale removals for `~/.agents/AGENTS.md`.
-2. **Workspace & Global Instruction Alignment**: Concrete file diffs and new rule blocks.
-3. **Skill & Prompt Optimizations**: Actionable refactors, merged skills, or trigger rewrites.
-4. **Terminal Command Consolidation & Scripts**: Complete, runnable script source code and invocation docs.
-5. **Compliance & Guardrails Audit**: Adherence findings, root cause analysis of deviations, and preventative fixes.
+### Lean Reporting Rules
+- **No Congratulatory Bloat**: Do not summarize what worked well or provide congratulatory commentary.
+- **Focus on Issues & Solutions**: Strictly report problems discovered, root cause analysis, and concrete fixes/diffs.
+- **Mandatory Sections**:
+  1. **Skill & Workflow Trigger Issues**: Missed skills that should have loaded, trigger fixes, and skill gaps.
+  2. **Tool & Command Usage Inefficiencies**: Flagged complex commands (inline Python, multi-pipe bash), wasted context, and synthesized skill scripts.
+  3. **Downstream Updates**: Concrete diffs for project-specific and/or global skills, workflows, subagents, rules, or `AGENTS.md`.
+  4. **Compliance & Guardrails Deviations**: Violations or near-misses of safety guardrails and proposed preventative rules.

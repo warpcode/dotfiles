@@ -1,90 +1,105 @@
 # Conversation Review Report Template
 
-Use this canonical template when generating review findings from a human-AI conversation.
+Use this canonical template when generating review findings from a human-AI conversation. Reports must remain lean and strictly issue-focused—documenting problems found, root causes, and concrete fixes/diffs, without congratulatory fluff or summaries of what worked well.
 
 ---
 
 ```markdown
 # AI Conversation Review Report
 
-- **Input Source**: `{{SOURCE_DESCRIPTION}}` (e.g. `inline session`, `transcript.jsonl`, or export file)
+- **Input Source**: `{{SOURCE_DESCRIPTION}}` (e.g. `inline session`, `transcript.jsonl`, export file)
 - **Session Focus**: `{{PRIMARY_TASK_OR_GOAL}}`
-- **Reviewed Artifacts**: `{{LIST_OF_SKILLS_PROMPTS_OR_INSTRUCTION_FILES_REVIEWED}}`
+- **Scope**: `{{PROJECT_SPECIFIC | GLOBAL}}` (Repo: `{{REPO_NAME}}` / Global Dotfiles)
 
 ---
 
-## 1. Durable Memory Updates (`~/.agents/AGENTS.md`)
+## 1. Skill & Workflow Trigger Issues
+*(Audit skills that failed, were misused, or SHOULD have been loaded but were not)*
 
-### Additions
-- **[{{CATEGORY}}]** {{FACT_DESCRIPTION}}
-  - *Rationale / Evidence*: {{REASON_OR_EVIDENCE_FROM_CONVERSATION}}
+### Missed Skills (Should have loaded, but didn't)
+- **Skill**: `{{SKILL_NAME}}` (`{{SKILL_PATH}}`)
+- **Observed Behavior**: {{TASK_THE_AGENT_TRIED_TO_SOLVE_MANUALLY_INSTEAD_OF_USING_SKILL}}
+- **Root Cause**: {{WHY_SKILL_DID_NOT_TRIGGER_E_G_FRONTMATTER_DESCRIPTION_MISSING_KEYWORDS_OR_USER_PHRASES}}
+- **Proposed Fix (Trigger / Description Update)**:
+  ```yaml
+  description: >
+    {{IMPROVED_FRONTMATTER_DESCRIPTION_WITH_EXPLICIT_TRIGGERS}}
+  ```
 
-### Updates & Enrichments
-- **[{{CATEGORY}}]** {{ENRICHED_FACT_DESCRIPTION}}
-  - *Replaces*: "{{EXACT_TEXT_OF_PREVIOUS_ENTRY}}"
-  - *Rationale*: {{WHY_THIS_UPDATE_IS_NEEDED}}
-
-### Stale Removals
-- "{{EXACT_TEXT_OF_STALE_OR_INVALIDATED_ENTRY}}"
-  - *Reason*: {{WHY_THIS_ENTRY_IS_NO_LONGER_APPLICABLE}}
-
----
-
-## 2. Workspace & Global Instruction Alignment
-
-### Files Audited
-- Located: `{{LIST_OF_FOUND_FILES}}`
-- Missing / Absent: `{{LIST_OF_MISSING_FILES}}`
-
-### Instruction Gaps & Corrections
-
-#### [{{ACTION: UPDATE | CREATE_RULE}}] - `{{TARGET_FILE_PATH}}`
-- **Section / Target Area**: `{{TARGET_SECTION}}`
-- **Identified Gap / Ambiguity**: `{{EXPLANATION_OF_WHAT_FAILED_OR_WAS_AMBIGUOUS}}`
-- **Proposed Content / Diff**:
+### Audited Skill Gaps & Workflow Inefficiencies
+- **Skill / Workflow**: `{{NAME}}` (`{{FILE_PATH}}`)
+- **Issue Found**: {{E_G_MISSING_SUBCOMMAND_UNHANDLED_EDGE_CASE_OR_OVERTRIGGERING}}
+- **Proposed Optimization**:
   ```markdown
-  {{EXACT_MARKDOWN_BLOCK_OR_DIFF_TO_APPLY}}
+  {{CONCRETE_FIX_OR_DIFF}}
   ```
 
 ---
 
-## 3. Skill & Prompt Optimizations
+## 2. Tool & Command Usage Inefficiencies
+*(Audit all commands executed: flag complex inline scripts, multi-pipe bash, trial-and-error, and wasted context)*
 
-### Audited Skills & Prompt Workflows
+### Flagged Command Complexity & Anti-Patterns
+- **Observed Command**:
+  ```bash
+  {{OFFENDING_INLINE_PYTHON_OR_COMPLEX_MULTI_PIPE_BASH}}
+  ```
+- **Complexity Smell**: `{{INLINE_PYTHON | COMPLEX_BASH_PIPELINE | BRITTLE_REGEX | WASTED_CONTEXT_DUMP}}`
+- **Problem**: {{WHY_THIS_IS_HARD_TO_REVIEW_FRAGILE_OR_TOKEN_INEFFICIENT}}
+- **Enforced Simpler Command or Wrapper**:
+  ```bash
+  {{SIMPLER_COMMAND_OR_SKILL_SCRIPT_INVOCATION}}
+  ```
 
-#### [{{SKILL_OR_PROMPT_NAME}}] (`{{ACTION: REFACTOR | MERGE | BREAK_UP | REFINE_TRIGGER | NEW_SKILL}}`)
-- **Location**: `{{FILE_PATH}}`
-- **Evaluation Finding**: {{SUMMARY_OF_ISSUE_E_G_UNDERTRIGGERING_PROMPT_MICROMANAGEMENT_OR_BLOAT}}
-- **Proposed Fix / Optimization**:
+### Command Pattern & Reusable Skill Script Proposal
+*(Consolidating recurring patterns or multi-turn trial-and-error into a deterministic skill script)*
+
+- **Target Skill**: `{{TARGET_SKILL_NAME}}`
+- **Script Location**: `{{TARGET_SKILL_DIR}}/scripts/{{SCRIPT_FILENAME}}`
+- **Consolidated Pattern**: {{WHAT_MULTI_TURN_OR_COMPLEX_OPERATION_THIS_REPLACES}}
+- **Synthesized Script Source**:
+  ```bash
+  #!/usr/bin/env bash
+  set -euo pipefail
+  {{COMPLETE_REUSABLE_SCRIPT_SOURCE}}
+  ```
+- **Documented Usage in `SKILL.md`**:
   ```markdown
-  {{UPDATED_FRONTMATTER_OR_REFACTORED_PROMPT_BODY}}
+  {{CLI_INVOCATION_EXAMPLE_WITH_HELP_AND_FLAGS}}
   ```
 
 ---
 
-## 4. Terminal Command Consolidation & Scripts
+## 3. Downstream Updates (Scope & Specificity Directed)
+*(Mandatory concrete diffs targeting the most specific artifact first)*
 
-### Candidate Shell Sequences Identified
-
-#### [{{SCRIPT_NAME}}] (`{{TARGET_PATH}}`)
-- **Observed Command Pattern**: `{{ONE_LINER_OR_FLAKY_SEQUENCE_USED_IN_SESSION}}`
-- **Problem with Ad-Hoc Execution**: {{WHY_THE_LLM_STRUGGLED_OR_GUESSED}}
-- **Synthesized Script Content**:
-  ```bash
-  {{COMPLETE_REUSABLE_SCRIPT_SOURCE_CODE}}
+### Project-Specific Updates (Repo: `{{REPO_NAME}}`)
+- **Target Artifact**: `{{SKILL | WORKFLOW | SUBAGENT | PATH_RULE | REPO_AGENTS_MD}}` - `{{FILE_PATH}}`
+- **Issue Resolved**: {{WHAT_INEFFICIENCY_OR_GAP_THIS_FIXES}}
+- **Concrete Diff / Content**:
+  ```markdown
+  {{EXACT_DIFF_OR_CODE_BLOCK}}
   ```
-- **Usage for AI Agent in `SKILL.md`**:
-  ```bash
-  {{INVOCATION_EXAMPLE}}
+
+### Global Updates (Dotfiles / Universal Conventions)
+*(ONLY if the change is a general global behavior)*
+- **Target Artifact**: `{{GLOBAL_SKILL | GLOBAL_AGENT | GLOBAL_INSTRUCTION | GLOBAL_AGENTS_MD}}` - `{{FILE_PATH}}`
+- **Rationale for Global Scope**: {{WHY_THIS_APPLIES_ACROSS_ALL_WORKSPACES}}
+- **Concrete Diff / Content**:
+  ```markdown
+  {{EXACT_DIFF_OR_CODE_BLOCK}}
   ```
 
 ---
 
-## 5. Compliance & Guardrails Audit
+## 4. Compliance & Guardrails Deviations
+*(Report strictly on violations, near-misses, or missing negative constraints)*
 
-### Guardrails Checked
-- **{{GUARDRAIL_OR_RULE_NAME}}**: {{STATUS: FULLY_ADHERED | PARTIALLY_ADHERED | VIOLATED}}
-  - *Observation*: {{FACTUAL_EVIDENCE_FROM_TRANSCRIPT}}
-  - *Root Cause Analysis*: {{IF_VIOLATED_WHY_DID_THE_AGENT_DEVIATE}}
-  - *Preventative Fix*: {{RULE_OR_HOOK_PROPOSED_TO_PREVENT_RECURRENCE}}
+- **Guardrail / Rule**: `{{RULE_NAME}}`
+- **Deviation / Near-Miss**: {{EXACT_OBSERVED_ACTION_IN_TRANSCRIPT}}
+- **Root Cause**: {{WHY_THE_AGENT_DEVIATED}}
+- **Preventative Rule / Guardrail Fix**:
+  ```markdown
+  {{EXACT_NEGATIVE_CONSTRAINT_TO_ADD}}
+  ```
 ```
