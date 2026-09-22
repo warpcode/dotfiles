@@ -208,6 +208,17 @@ class JulesClient:
         """Retrieve details for a single activity within a session."""
         sid = session_id.strip().removeprefix("sessions/")
         aid = activity_id.strip().split("/")[-1]
+        if len(aid) < 32:
+            all_acts = self.get_all_activities(sid)
+            matches = [
+                a for a in all_acts
+                if (a.get("id") or a.get("name", "").split("/")[-1]).startswith(aid)
+            ]
+            if len(matches) == 1:
+                return matches[0]
+            elif len(matches) > 1:
+                from jules.utils import die
+                die(f"Ambiguous activity ID prefix '{aid}' matches {len(matches)} activities.")
         return self.call("GET", f"sessions/{sid}/activities/{aid}")
 
     def get_all_activities(self, session_id: str) -> list[dict[str, Any]]:

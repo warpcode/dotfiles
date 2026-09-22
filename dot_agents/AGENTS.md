@@ -25,8 +25,10 @@ These instructions capture persistent memories, behavioral guardrails, and techn
    - **Script Execution Efficiency**: Do NOT open/read utility or helper script source code if usage and parameters are documented in `SKILL.md` or instructions. Run them directly.
    - **Skill Script Path Resolution**: When running scripts bundled with a skill (`@scripts/<name>` or `scripts/<name>`), always resolve them relative to the active skill package directory (e.g. `.github/skills/<skill-name>/scripts/<name>` or `~/.gemini/config/skills/<skill-name>/scripts/<name>`), never as `./scripts/<name>` from the workspace root.
 
-6. **Tool Parameter Hygiene**:
+6. **Tool Parameter & Command Hygiene**:
    - Never pass unnecessary escaped literal quotes in tool arguments (e.g., use `"/path"`, not `"\"/path\""`).
+   - **No Inline Python Scripts**: NEVER execute `python3 -c "..."` or heredoc Python scripts in `run_command`. Rely on skill subcommands or dedicated scripts.
+   - **No Shell Sleep**: Never run background or chained `sleep` commands in shell strings (`sleep <n> && ...`). Rely on reactive event notifications, background task completion, or the timer tool.
 
 7. **Conflict Resolution Order**: Safety > User Intent > Simplicity > Local Convention.
 

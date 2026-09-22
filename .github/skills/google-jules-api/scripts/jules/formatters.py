@@ -192,7 +192,8 @@ def format_activities(data: dict[str, Any], session_id: str = "") -> str:
             summary = (msg[:60] + "...") if len(msg) > 60 else msg
         elif "progressUpdated" in a:
             event_type = "Progress Update"
-            summary = "Status updated"
+            p_title = a["progressUpdated"].get("title", "")
+            summary = (p_title[:60] + "...") if len(p_title) > 60 else (p_title or "Status updated")
         elif "artifacts" in a:
             event_type = "Artifacts"
             artifacts = a.get("artifacts", [])
