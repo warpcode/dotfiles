@@ -16,6 +16,10 @@ stateDiagram-v2
 
     AWAITING_APPROVAL --> EXECUTING: POST /sessions/{id}:approvePlan
     AWAITING_APPROVAL --> PLANNING: POST /sessions/{id}:sendMessage (Feedback)
+    AWAITING_APPROVAL --> IDLE_COMPLETED: Inactivity Timeout (~20m)
+
+    IDLE_COMPLETED --> EXECUTING: POST /sessions/{id}:approvePlan (Resumes)
+    IDLE_COMPLETED --> PLANNING: POST /sessions/{id}:sendMessage (Resumes)
 
     EXECUTING --> RUNNING_TESTS: Code Edits & Test Execution
     RUNNING_TESTS --> ARTIFACT_GENERATED: Unidiff Patch Produced
@@ -51,3 +55,8 @@ stateDiagram-v2
 - Completed changes are recorded in an `artifacts` activity containing a unified git diff (`unidiffPatch`).
 - Jules creates a dedicated git branch and opens a GitHub Pull Request with a structured description and suggested commit message.
 - The session state transitions to `COMPLETED`.
+
+### 5. Idle Timeout vs. Terminal State (Resumption)
+- **Idle `COMPLETED`**: When a session halts at a plan approval gate or feedback prompt without user action for ~20 minutes, Jules marks the session as `COMPLETED`. This is an **idle** state, not a permanent termination.
+- **Resumption**: Calling `approvePlan` or sending a guidance message (`sendMessage`) immediately revives the cloud runner and transitions the session state back to `IN_PROGRESS`.
+- **Audit Rule**: Never treat a `COMPLETED` session as terminal without first verifying whether there are pending unapproved plans, unanswered inquiries, or solid confirmation that the task finished or should halt.
