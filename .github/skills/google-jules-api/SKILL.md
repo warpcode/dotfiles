@@ -183,10 +183,10 @@ python3 <skill-dir>/scripts/main.py call POST sessions '{"prompt":"Fix typo","so
    - Review prior user steering comments to ensure the agent complied with earlier guidance.
    - Verify intermediate testing and automated code review ratings (`#Correct#`, `#NeedsWork#`).
 3. Evaluate the assessment status:
-   - `⚠️ PLAN_GATE`: Jules is waiting for plan approval.
+   - `⚠️ PLAN_GATE`: Jules is waiting for plan approval (including idle sessions with pending unapproved plans).
    - `💬 FEEDBACK_GATE`: Jules is awaiting user guidance or clarification.
    - `🚨 STALLED`: Runner has had no activity for $\ge 60$ minutes or failed to answer user inquiries.
-   - `⚪ CLOSED_NO_PR`: Session completed without producing a pull request.
+   - `⚪ CLOSED_NO_PR`: Session completed without producing a PR and verified to have no pending plans, unanswered questions, or deliverables.
    - `🔵 ACTIVE`: Task is progressing normally.
    - `✅ COMPLETED`: Task finished with an attached pull request.
    - `💤 INACTIVE`: Session is over 30 days old and considered inactive (ignored by default).
@@ -293,8 +293,13 @@ print(session.get("outputs"))
    - Always execute Workflow 1 (Status Scan) → Workflow 2 (Plan Review) → Workflow 5 (Plan Assessment) before approving plans. The `check-sessions --flag-unmerged --history` command detects sessions with deliverables awaiting PR.
 6. **Stale State Warning**:
    - The `check-sessions` summary table can show outdated state. Always verify with direct session API call (`call GET sessions/{id}`) before assessing session health.
-7. **Session Timeout**:
-   - Sessions in `AWAITING_PLAN_APPROVAL` auto-complete after ~20-30 min. Approve plans promptly or nudge.
+7. **Session Timeout & Idle Invariant (Idle != Terminal)**:
+   - **Idle != Terminal**: Just because a session has `state: COMPLETED` does NOT mean it is finished. Jules automatically sets `state` to `COMPLETED` when the runner goes idle (~20-30 min waiting for plan approval or feedback).
+   - When a session has a status of `COMPLETED`, you must **ALWAYS** inspect session messages and activities for:
+     1. Approvals still yet to be approved (e.g. pending unapproved plan ID)
+     2. Questions or steering unanswered (agent asked or user asked)
+     3. Solid confirmation that the agent should halt immediately or finished with a PR
+   - Approving the plan (`approve-plan`) or sending guidance (`send-message`) immediately resumes the session back to `IN_PROGRESS`. Never assume a completed session cannot be resumed.
 
 ---
 

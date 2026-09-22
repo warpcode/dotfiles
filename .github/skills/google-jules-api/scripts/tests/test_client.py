@@ -240,6 +240,101 @@ class TestJulesClient(unittest.TestCase):
         self.assertFalse(audit["is_inactive"])
 
     @patch("jules.client.urlopen")
+    def test_audit_session_completed_with_pending_plan(self, mock_urlopen):
+        mock_response = MagicMock()
+        mock_response.getcode.return_value = 200
+        mock_response.read.return_value = json.dumps({
+            "activities": [
+                {
+                    "id": "act-plan",
+                    "originator": "agent",
+                    "createTime": "2026-08-22T08:50:25Z",
+                    "planGenerated": {
+                        "plan": {"id": "plan-idle-1", "steps": [{"title": "Step 1"}]}
+                    },
+                }
+            ]
+        }).encode("utf-8")
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        now = datetime.now(timezone.utc)
+        sess_data = {
+            "id": "12913510247616620986",
+            "title": "Optimize Regexp Caching",
+            "state": "COMPLETED",  # Idle state reported by Jules
+            "createTime": (now - timedelta(hours=1)).isoformat(),
+            "updateTime": (now - timedelta(minutes=40)).isoformat(),
+            "outputs": [],
+        }
+
+        audit = self.client.audit_session(sess_data)
+        self.assertEqual(audit["id"], "12913510247616620986")
+        self.assertEqual(audit["assessment"], "AWAITING_PLAN_APPROVAL")
+        self.assertEqual(audit["pending_plan_id"], "plan-idle-1")
+
+    @patch("jules.client.urlopen")
+    def test_audit_session_completed_with_agent_awaiting_reply(self, mock_urlopen):
+        mock_response = MagicMock()
+        mock_response.getcode.return_value = 200
+        mock_response.read.return_value = json.dumps({
+            "activities": [
+                {
+                    "id": "act-agent-q",
+                    "originator": "agent",
+                    "createTime": "2026-08-22T08:50:25Z",
+                    "agentMessaged": {
+                        "agentMessage": "Should I proceed with refactoring the database schema?"
+                    },
+                }
+            ]
+        }).encode("utf-8")
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        now = datetime.now(timezone.utc)
+        sess_data = {
+            "id": "2222222222222222222",
+            "title": "Database Refactor",
+            "state": "COMPLETED",
+            "createTime": (now - timedelta(hours=1)).isoformat(),
+            "updateTime": (now - timedelta(minutes=30)).isoformat(),
+            "outputs": [],
+        }
+
+        audit = self.client.audit_session(sess_data)
+        self.assertEqual(audit["assessment"], "AWAITING_USER_FEEDBACK")
+
+    @patch("jules.client.urlopen")
+    def test_audit_session_completed_with_unanswered_user_messages(self, mock_urlopen):
+        mock_response = MagicMock()
+        mock_response.getcode.return_value = 200
+        mock_response.read.return_value = json.dumps({
+            "activities": [
+                {
+                    "id": "act-u1",
+                    "originator": "user",
+                    "createTime": "2026-08-22T08:50:25Z",
+                    "userMessaged": {
+                        "userMessage": "Please check the failing test suite."
+                    },
+                }
+            ]
+        }).encode("utf-8")
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        now = datetime.now(timezone.utc)
+        sess_data = {
+            "id": "3333333333333333333",
+            "title": "Bugfix",
+            "state": "COMPLETED",
+            "createTime": (now - timedelta(hours=1)).isoformat(),
+            "updateTime": (now - timedelta(minutes=30)).isoformat(),
+            "outputs": [],
+        }
+
+        audit = self.client.audit_session(sess_data)
+        self.assertEqual(audit["assessment"], "STALLED")
+
+    @patch("jules.client.urlopen")
     def test_audit_session_inactive_over_30_days(self, mock_urlopen):
         mock_response = MagicMock()
         mock_response.getcode.return_value = 200

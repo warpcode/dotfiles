@@ -315,6 +315,7 @@ class JulesClient:
 
             if "planApproved" in a:
                 pid = a["planApproved"].get("planId", "")
+                pending_plan_id = None
                 conversation_history.append({
                     "role": "user",
                     "type": "plan_approved",
@@ -324,6 +325,7 @@ class JulesClient:
                 })
 
             if "progressUpdated" in a:
+                pending_plan_id = None
                 pu = a["progressUpdated"]
                 pu_title = pu.get("title", "")
                 pu_desc = pu.get("description", "")
@@ -432,12 +434,17 @@ class JulesClient:
 
         is_inactive = bool(max_age_days is not None and max_age_days > 0 and age_days > max_age_days)
 
-        # Determine assessment using state, age, and conversation history
+        # Determine assessment using state, age, and conversation history.
+        # CRITICAL INVARIANT: In Jules, sessions report state == "COMPLETED" when the runner
+        # goes idle (~20m) waiting for plan approval or feedback. "COMPLETED" does NOT mean
+        # terminal or finished! We must inspect messages and pending actions.
         if is_inactive:
             assessment = "INACTIVE"
-        elif state == "AWAITING_PLAN_APPROVAL" or (pending_plan_id and agent_awaiting_reply and state not in ("COMPLETED", "FAILED")):
+        elif pr_url:
+            assessment = "COMPLETED_WITH_PR"
+        elif state == "AWAITING_PLAN_APPROVAL" or (pending_plan_id and state not in ("FAILED",)):
             assessment = "AWAITING_PLAN_APPROVAL"
-        elif state == "AWAITING_USER_FEEDBACK" or (agent_awaiting_reply and state not in ("COMPLETED", "FAILED")):
+        elif state == "AWAITING_USER_FEEDBACK" or (agent_awaiting_reply and state not in ("FAILED",)):
             assessment = "AWAITING_USER_FEEDBACK"
         elif state == "IN_PROGRESS":
             if unanswered_user_messages > 0 and inactive_mins >= 15:
@@ -447,8 +454,8 @@ class JulesClient:
             else:
                 assessment = "ACTIVE"
         elif state == "COMPLETED":
-            if pr_url:
-                assessment = "COMPLETED_WITH_PR"
+            if unanswered_user_messages > 0:
+                assessment = "STALLED"
             else:
                 assessment = "COMPLETED_NO_OUTPUT"
         else:
