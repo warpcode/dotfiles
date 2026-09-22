@@ -162,6 +162,28 @@ class TestJulesClient(unittest.TestCase):
         self.assertEqual(json.loads(req.data.decode("utf-8")), {})
 
     @patch("jules.client.urlopen")
+    def test_get_activity_full_id(self, mock_urlopen):
+        mock_response = MagicMock()
+        mock_response.getcode.return_value = 200
+        mock_response.read.return_value = json.dumps({"id": "4294fc6cb8244441a23a8f007c45ad75"}).encode("utf-8")
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        res = self.client.get_activity("4475409647262242777", "4294fc6cb8244441a23a8f007c45ad75")
+        self.assertEqual(res["id"], "4294fc6cb8244441a23a8f007c45ad75")
+        req = mock_urlopen.call_args[0][0]
+        self.assertIn("activities/4294fc6cb8244441a23a8f007c45ad75", req.get_full_url())
+
+    @patch.object(JulesClient, "get_all_activities")
+    def test_get_activity_prefix_resolution(self, mock_get_all):
+        mock_get_all.return_value = [
+            {"id": "6f9ae1235703495ba0a051f1030a84fd", "type": "planGenerated"},
+            {"id": "4294fc6cb8244441a23a8f007c45ad75", "type": "progressUpdated"},
+        ]
+
+        res = self.client.get_activity("4475409647262242777", "4294fc6c")
+        self.assertEqual(res["id"], "4294fc6cb8244441a23a8f007c45ad75")
+
+    @patch("jules.client.urlopen")
     def test_get_all_activities(self, mock_urlopen):
         resp1 = MagicMock()
         resp1.getcode.return_value = 200
@@ -383,6 +405,23 @@ class TestJulesFormatters(unittest.TestCase):
         md = format_activities(data)
         self.assertIn("act-1234", md)
         self.assertIn("Plan Generated", md)
+
+    def test_format_activities_progress_updated(self):
+        data = {
+            "activities": [
+                {
+                    "id": "4294fc6cb8244441a23a8f007c45ad75",
+                    "originator": "agent",
+                    "createTime": "2026-08-22T08:55:00Z",
+                    "progressUpdated": {
+                        "title": "Code reviewed",
+                    },
+                }
+            ]
+        }
+        md = format_activities(data)
+        self.assertIn("4294fc6c", md)
+        self.assertIn("Code reviewed", md)
 
     def test_format_session_check(self):
         audits = [
