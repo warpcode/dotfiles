@@ -91,6 +91,8 @@ Use the PR template (repo-specific or fallback `@templates/pull_request.md`). En
 - **Merge Regression Check**: If the PR has a merge/rebase commit at its tip, diff changed files against their base-branch versions to verify formatting, fixture whitespace, and trailing newlines weren't regressed.
 - **Line-Comment Constraint**: Line-level comments MUST be on lines within the current PR diff hunks.
 - **Findings Outside Diff**: Use the main review body or a file-level comment describing the issue with the line number and proposed fix.
+- **No Base Branch Update Requests**: During PR reviews, never ask the author or bot to update, rebase, or sync the pull request branch with the main/base branch.
+
 
 ## 5. Merge Conflict Resolution & PR Merging
 
