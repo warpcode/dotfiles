@@ -51,10 +51,10 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
 - **Verify before submit**: Confirm event matches findings — *no blocking issues → APPROVE; blocking issues exist → REQUEST_CHANGES*.
 - Present the full review to the user for approval.
 - Write the payload to a scratch JSON file and submit via:
+  ```bash
+  bash <skills-dir>/github-cli/scripts/submit_pull_request_review_payload.sh --owner <owner> --repo <repo> --pull-number <pr> --input <payload-file>
   ```
-  gh api "repos/{owner}/{repo}/pulls/{pr}/reviews" --method POST --input <payload-file>
-  ```
-  > ⚠️ Note: `create_pull_request_review.sh` in `github-cli` only supports top-level review bodies. For structured reviews with inline line/file comments, post the JSON payload directly via `gh api` as shown above.
+  > ⚠️ Note: `create_pull_request_review.sh` in `github-cli` only supports top-level review bodies. For structured reviews with inline line/file comments, use `submit_pull_request_review_payload.sh` as shown above.
 - **REST payload gotchas** (all verified 2026-08-29):
   - `subject_type` is GraphQL-only — OMIT it from REST review comments or the API returns 422 (`Field is not defined on DraftPullRequestReviewThread`).
   - Inline comment `line` must be an **added line in the diff** for `side: RIGHT`. Anchoring to a context/unchanged line fails with `Line could not be resolved`. For new files any line works; for modified files only `+` lines.

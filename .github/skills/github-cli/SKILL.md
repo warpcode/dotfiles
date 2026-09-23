@@ -48,6 +48,7 @@ Run bundled helper scripts relative to this skill's root directory (`<skill-dir>
 | List PR review threads script | `@scripts/list_pull_request_review_threads.sh` | `bash <skill-dir>/scripts/list_pull_request_review_threads.sh [OPTIONS]` | Retrieve review threads for a pull request via GraphQL |
 | Get PR script | `@scripts/get_pull_request.sh` | `bash <skill-dir>/scripts/get_pull_request.sh [OPTIONS]` | Fetch comprehensive PR state (summary table, merge readiness checks, comments, reviews, stats) |
 | Resolve thread script | `@scripts/update_pull_request_review_thread_resolution.sh` | `bash <skill-dir>/scripts/update_pull_request_review_thread_resolution.sh [OPTIONS]` | Resolve PR review threads via GraphQL |
+| Submit review payload script | `@scripts/submit_pull_request_review_payload.sh` | `bash <skill-dir>/scripts/submit_pull_request_review_payload.sh [OPTIONS]` | Submit structured PR review payload (with file/line comments) via REST |
 | PR status query | `@queries/find_prs.gql` | GraphQL query for PR status, review, and activity classification |
 | Review threads query | `@queries/review_threads.gql` | GraphQL query to list review threads |
 | Resolve thread query | `@queries/resolve_review_thread.gql` | GraphQL mutation to resolve review threads |
