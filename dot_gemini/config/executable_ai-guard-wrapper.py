@@ -52,6 +52,188 @@ def run_guard(subcmd: str, args: list[str] = None, stdin_str: str = None) -> tup
         return 2, {"decision": "deny", "reason": f"Security guard execution failed: {e}"}
 
 
+def handle_prompt_route(payload):
+    prompt_text = payload.get("prompt") or payload.get("text") or ""
+    tp = payload.get("transcriptPath")
+    target_line_idx = None
+    lines = []
+
+    if not prompt_text and tp and os.path.isfile(tp):
+        try:
+            with open(tp, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            for idx in range(len(lines) - 1, -1, -1):
+                try:
+                    d = json.loads(lines[idx])
+                    if d.get("content") and d.get("type") in ("USER_INPUT", "GENERIC"):
+                        prompt_text = d.get("content")
+                        target_line_idx = idx
+                        break
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    if not prompt_text:
+        print("{}")
+        sys.exit(0)
+
+    code, data = run_guard("prompt", stdin_str=json.dumps({"text": prompt_text}))
+
+    if code == 2 or data.get("decision") == "deny":
+        reason = data.get("reason", "Content blocked by security guard")
+        sys.stderr.write(f"SECURITY GUARD: {reason}\n")
+        print(json.dumps({"decision": "deny", "reason": reason}))
+        sys.exit(2)
+
+    if data.get("decision") == "replace" and data.get("sanitized"):
+        sanitized = data["sanitized"]
+    if data.get("decision") == "replace" and data.get("sanitized") != prompt_text:
+        reasons = data.get("reasons", [])
+        notice = f"Security Notice: Redacted sensitive items ({', '.join(reasons)})" if reasons else "Security Notice: Redacted sensitive items."
+        detail = f" ({', '.join(reasons)})" if reasons else ""
+        reason = f"Prompt submission blocked: sensitive credentials or secrets detected{detail}. Remove secrets from prompt to prevent leakage."
+        sys.stderr.write(f"SECURITY GUARD: {reason}\n")
+        print(json.dumps({"decision": "deny", "reason": reason}))
+        sys.exit(2)
+
+        # Sanitize transcript step in-place if applicable
+        if tp and target_line_idx is not None and lines:
+            try:
+                step_data = json.loads(lines[target_line_idx])
+                step_data["content"] = sanitized
+                lines[target_line_idx] = json.dumps(step_data) + "\n"
+                with open(tp, "w", encoding="utf-8") as f:
+                    f.writelines(lines)
+            except Exception:
+                pass
+
+        proto_resp = {
+            "injectSteps": [
+                {"ephemeralMessage": notice}
+            ]
+        }
+        if target_line_idx is not None and lines:
+            try:
+                stype = json.loads(lines[target_line_idx]).get("type")
+                if stype == "USER_INPUT":
+                    proto_resp["injectSteps"].append({"userMessage": sanitized})
+            except Exception:
+                pass
+
+        try:
+            with open("/tmp/ai-guard-wrapper.log", "a") as lf:
+                lf.write(f"PROMPT SANITIZED: target_type={stype if 'stype' in locals() else 'unknown'} sanitized={sanitized[:100]!r}\n")
+        except Exception:
+            pass
+
+        print(json.dumps(proto_resp))
+        sys.exit(0)
+
+    print("{}")
+    sys.exit(0)
+
+
+def handle_output_route(payload):
+    code, data = run_guard("output", stdin_str=json.dumps(payload))
+    if code == 2 or data.get("decision") == "deny":
+        reason = data.get("reason", "Tool output blocked by security guard")
+        sys.stderr.write(f"SECURITY GUARD: {reason}\n")
+        print("{}")
+        sys.exit(2)
+
+    # In Antigravity, PostToolUse expects an empty JSON object `{}`.
+    # PostToolUseResponse in protobuf schema has no fields (no decision, overwrite, etc.).
+    print("{}")
+    sys.exit(0)
+
+
+def handle_command_route(payload, tool_args):
+    cmd = ""
+    for k in ("CommandLine", "commandLine", "command", "cmd"):
+        if k in tool_args and isinstance(tool_args[k], str):
+            cmd = tool_args[k].strip().strip("'\"")
+            break
+    if not cmd and isinstance(payload, dict):
+        for k in ("CommandLine", "commandLine", "command", "cmd"):
+            if k in payload and isinstance(payload[k], str):
+                cmd = payload[k].strip().strip("'\"")
+                break
+
+    if not cmd:
+        print(json.dumps({"decision": "allow"}))
+        sys.exit(0)
+
+    # 1. Inspect command line for restricted file targets
+    file_code, file_data = run_guard("file", stdin_str=json.dumps(payload))
+    if file_code == 2 or file_data.get("decision") == "deny":
+        reason = file_data.get("reason", f"Command references restricted file: {cmd}")
+        sys.stderr.write(f"SECURITY GUARD: {reason}\n")
+        print(json.dumps({"decision": "deny", "reason": reason}))
+        sys.exit(2)
+
+    # 2. Evaluate command against command rules
+    code, data = run_guard("command", args=[cmd], stdin_str=json.dumps(payload))
+    if code == 2 or data.get("decision") == "deny":
+        reason = data.get("reason", f"Command is forbidden: {cmd}")
+        sys.stderr.write(f"SECURITY GUARD: {reason}\n")
+        print(json.dumps({"decision": "deny", "reason": reason}))
+        sys.exit(2)
+
+    dec = data.get("decision")
+    if dec == "replace":
+        modified = data.get("modified") or data.get("command") or cmd
+        print(json.dumps({
+            "decision": "allow",
+            "overwrite": {"CommandLine": modified}
+        }))
+        sys.exit(0)
+
+    # Safe command: pass through to IDE policy / commands.json
+    print(json.dumps({"decision": "allow"}))
+    sys.exit(0)
+
+
+def handle_file_route(payload, tool_name, tool_args):
+    if tool_name in ("run_command", "bash", "execute_command", "runTerminalCommand", "terminal"):
+        print(json.dumps({"decision": "allow"}))
+        sys.exit(0)
+    targets = []
+    path_keys = (
+        "AbsolutePath", "TargetFile", "filePath", "path", "file",
+        "target_file", "targetFile", "DirectoryPath", "SearchPath",
+        "SearchDirectory", "Uri", "uri", "resourceUri"
+    )
+    for pk in path_keys:
+        if pk in tool_args and isinstance(tool_args[pk], str):
+            targets.append(tool_args[pk])
+        if pk in payload and isinstance(payload[pk], str):
+            targets.append(payload[pk])
+
+    if not targets:
+        print(json.dumps({"decision": "allow"}))
+        sys.exit(0)
+
+    code, data = run_guard("file", args=targets, stdin_str=json.dumps(payload))
+    if code == 2 or data.get("decision") == "deny":
+        reason = data.get("reason", f"Access to sensitive file blocked: {', '.join(targets)}")
+        sys.stderr.write(f"SECURITY GUARD: {reason}\n")
+        print(json.dumps({"decision": "deny", "reason": reason}))
+        sys.exit(2)
+
+    dec = data.get("decision")
+    if dec == "replace":
+        resp = {"decision": "allow"}
+        if data.get("replacement"):
+            resp["overwrite"] = {pk: data["replacement"] for pk in path_keys if pk in tool_args}
+        print(json.dumps(resp))
+        sys.exit(0)
+
+    # Unmatched / safe file: proceed to IDE checks
+    print(json.dumps({"decision": "allow"}))
+    sys.exit(0)
+
+
 def main():
     route = sys.argv[1] if len(sys.argv) > 1 else ""
     raw_input = sys.stdin.read()
@@ -95,199 +277,17 @@ def main():
         else:
             route = "prompt"
 
-    # =========================================================================
-    # ROUTE: PROMPT (PreInvocation)
-    # =========================================================================
     if route == "prompt":
-        prompt_text = payload.get("prompt") or payload.get("text") or ""
-        tp = payload.get("transcriptPath")
-        target_line_idx = None
-        lines = []
-
-        if not prompt_text and tp and os.path.isfile(tp):
-            try:
-                with open(tp, "r", encoding="utf-8") as f:
-                    lines = f.readlines()
-                for idx in range(len(lines) - 1, -1, -1):
-                    try:
-                        d = json.loads(lines[idx])
-                        if d.get("content") and d.get("type") in ("USER_INPUT", "GENERIC"):
-                            prompt_text = d.get("content")
-                            target_line_idx = idx
-                            break
-                    except Exception:
-                        pass
-            except Exception:
-                pass
-
-        if not prompt_text:
-            print("{}")
-            sys.exit(0)
-
-        code, data = run_guard("prompt", stdin_str=json.dumps({"text": prompt_text}))
-
-        if code == 2 or data.get("decision") == "deny":
-            reason = data.get("reason", "Content blocked by security guard")
-            sys.stderr.write(f"SECURITY GUARD: {reason}\n")
-            print(json.dumps({"decision": "deny", "reason": reason}))
-            sys.exit(2)
-
-        if data.get("decision") == "replace" and data.get("sanitized"):
-            sanitized = data["sanitized"]
-        if data.get("decision") == "replace" and data.get("sanitized") != prompt_text:
-            reasons = data.get("reasons", [])
-            notice = f"Security Notice: Redacted sensitive items ({', '.join(reasons)})" if reasons else "Security Notice: Redacted sensitive items."
-            detail = f" ({', '.join(reasons)})" if reasons else ""
-            reason = f"Prompt submission blocked: sensitive credentials or secrets detected{detail}. Remove secrets from prompt to prevent leakage."
-            sys.stderr.write(f"SECURITY GUARD: {reason}\n")
-            print(json.dumps({"decision": "deny", "reason": reason}))
-            sys.exit(2)
-
-            # Sanitize transcript step in-place if applicable
-            if tp and target_line_idx is not None and lines:
-                try:
-                    step_data = json.loads(lines[target_line_idx])
-                    step_data["content"] = sanitized
-                    lines[target_line_idx] = json.dumps(step_data) + "\n"
-                    with open(tp, "w", encoding="utf-8") as f:
-                        f.writelines(lines)
-                except Exception:
-                    pass
-
-            proto_resp = {
-                "injectSteps": [
-                    {"ephemeralMessage": notice}
-                ]
-            }
-            if target_line_idx is not None and lines:
-                try:
-                    stype = json.loads(lines[target_line_idx]).get("type")
-                    if stype == "USER_INPUT":
-                        proto_resp["injectSteps"].append({"userMessage": sanitized})
-                except Exception:
-                    pass
-
-            try:
-                with open("/tmp/ai-guard-wrapper.log", "a") as lf:
-                    lf.write(f"PROMPT SANITIZED: target_type={stype if 'stype' in locals() else 'unknown'} sanitized={sanitized[:100]!r}\n")
-            except Exception:
-                pass
-
-            print(json.dumps(proto_resp))
-            sys.exit(0)
-
-        print("{}")
-        sys.exit(0)
-
-    # =========================================================================
-    # ROUTE: OUTPUT (PostToolUse on tool execution)
-    # =========================================================================
-    if route in ("output", "post-tool", "PostToolUse"):
-        code, data = run_guard("output", stdin_str=json.dumps(payload))
-        if code == 2 or data.get("decision") == "deny":
-            reason = data.get("reason", "Tool output blocked by security guard")
-            sys.stderr.write(f"SECURITY GUARD: {reason}\n")
-            print("{}")
-            sys.exit(2)
-
-        # In Antigravity, PostToolUse expects an empty JSON object `{}`.
-        # PostToolUseResponse in protobuf schema has no fields (no decision, overwrite, etc.).
-        print("{}")
-        sys.exit(0)
-
-    # =========================================================================
-    # ROUTE: COMMAND (PreToolUse on command execution)
-    # =========================================================================
-    if route == "command":
-        cmd = ""
-        for k in ("CommandLine", "commandLine", "command", "cmd"):
-            if k in tool_args and isinstance(tool_args[k], str):
-                cmd = tool_args[k].strip().strip("'\"")
-                break
-        if not cmd and isinstance(payload, dict):
-            for k in ("CommandLine", "commandLine", "command", "cmd"):
-                if k in payload and isinstance(payload[k], str):
-                    cmd = payload[k].strip().strip("'\"")
-                    break
-
-        if not cmd:
-            print(json.dumps({"decision": "allow"}))
-            sys.exit(0)
-
-        # 1. Inspect command line for restricted file targets
-        file_code, file_data = run_guard("file", stdin_str=json.dumps(payload))
-        if file_code == 2 or file_data.get("decision") == "deny":
-            reason = file_data.get("reason", f"Command references restricted file: {cmd}")
-            sys.stderr.write(f"SECURITY GUARD: {reason}\n")
-            print(json.dumps({"decision": "deny", "reason": reason}))
-            sys.exit(2)
-
-        # 2. Evaluate command against command rules
-        code, data = run_guard("command", args=[cmd], stdin_str=json.dumps(payload))
-        if code == 2 or data.get("decision") == "deny":
-            reason = data.get("reason", f"Command is forbidden: {cmd}")
-            sys.stderr.write(f"SECURITY GUARD: {reason}\n")
-            print(json.dumps({"decision": "deny", "reason": reason}))
-            sys.exit(2)
-
-        dec = data.get("decision")
-        if dec == "replace":
-            modified = data.get("modified") or data.get("command") or cmd
-            print(json.dumps({
-                "decision": "allow",
-                "overwrite": {"CommandLine": modified}
-            }))
-            sys.exit(0)
-
-        # Safe command: pass through to IDE policy / commands.json
+        handle_prompt_route(payload)
+    elif route in ("output", "post-tool", "PostToolUse"):
+        handle_output_route(payload)
+    elif route == "command":
+        handle_command_route(payload, tool_args)
+    elif route == "file":
+        handle_file_route(payload, tool_name, tool_args)
+    else:
         print(json.dumps({"decision": "allow"}))
         sys.exit(0)
-
-    # =========================================================================
-    # ROUTE: FILE (PreToolUse on file tools)
-    # =========================================================================
-    if route == "file":
-        if tool_name in ("run_command", "bash", "execute_command", "runTerminalCommand", "terminal"):
-            print(json.dumps({"decision": "allow"}))
-            sys.exit(0)
-        targets = []
-        path_keys = (
-            "AbsolutePath", "TargetFile", "filePath", "path", "file",
-            "target_file", "targetFile", "DirectoryPath", "SearchPath",
-            "SearchDirectory", "Uri", "uri", "resourceUri"
-        )
-        for pk in path_keys:
-            if pk in tool_args and isinstance(tool_args[pk], str):
-                targets.append(tool_args[pk])
-            if pk in payload and isinstance(payload[pk], str):
-                targets.append(payload[pk])
-
-        if not targets:
-            print(json.dumps({"decision": "allow"}))
-            sys.exit(0)
-
-        code, data = run_guard("file", args=targets, stdin_str=json.dumps(payload))
-        if code == 2 or data.get("decision") == "deny":
-            reason = data.get("reason", f"Access to sensitive file blocked: {', '.join(targets)}")
-            sys.stderr.write(f"SECURITY GUARD: {reason}\n")
-            print(json.dumps({"decision": "deny", "reason": reason}))
-            sys.exit(2)
-
-        dec = data.get("decision")
-        if dec == "replace":
-            resp = {"decision": "allow"}
-            if data.get("replacement"):
-                resp["overwrite"] = {pk: data["replacement"] for pk in path_keys if pk in tool_args}
-            print(json.dumps(resp))
-            sys.exit(0)
-
-        # Unmatched / safe file: proceed to IDE checks
-        print(json.dumps({"decision": "allow"}))
-        sys.exit(0)
-
-    print(json.dumps({"decision": "allow"}))
-    sys.exit(0)
-
 
 if __name__ == "__main__":
     main()
