@@ -224,9 +224,19 @@ def generate_markdown_summary(events: List[Dict[str, Any]], max_turns: Optional[
     output.append("# Ingested Conversation Summary")
     output.append(f"**Total Events Extracted:** {len(events)}\n")
 
-    user_count = sum(1 for e in events if e.get("role") == "user")
-    assistant_count = sum(1 for e in events if e.get("role") == "assistant")
-    tool_count = sum(len(e.get("tool_calls", [])) for e in events)
+    user_count = 0
+    assistant_count = 0
+    tool_count = 0
+    for e in events:
+        role = e.get("role")
+        if role == "user":
+            user_count += 1
+        elif role == "assistant":
+            assistant_count += 1
+
+        tc = e.get("tool_calls")
+        if tc:
+            tool_count += len(tc)
 
     output.append(f"- **User Turns:** {user_count}")
     output.append(f"- **Assistant Turns:** {assistant_count}")
