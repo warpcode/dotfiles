@@ -28,6 +28,12 @@ ai.provider.define() {
     registry.define "ai_provider" "$@"
     
     local pid="${1//-/_}"
+
+    if [[ ! "$pid" =~ ^[a-zA-Z0-9_]+$ ]]; then
+        print -u2 "Error: Invalid AI provider ID '${pid}'. Must contain only alphanumeric characters and underscores."
+        return 1
+    fi
+
     if (( ! $+functions[ai.providers.${pid}.enabled] )); then
         functions[ai.providers.${pid}.enabled]="return 0"
     fi
