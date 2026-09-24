@@ -47,7 +47,15 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
      bash <skills-dir>/github-cli/scripts/add_reply_to_pull_request_comment.sh --owner <owner> --repo <repo> --pull-number <pr> --comment-id <databaseId> --body "..."
      ```
    > ⚠️ **Key Invariant**: `--comment-id` in `add_reply_to_pull_request_comment.sh` requires an **integer REST `databaseId`** (surfaced in `list_pull_request_review_threads.sh` output), NOT the GraphQL node `id` string (such as `PRRC_...`).
-   - **Empty amendments**: Verify the latest commit with commit statistics or `git diff-tree`; an amendment with no file changes does not resolve prior feedback. Keep affected threads open and cite the failing check in the new review.
+   - **Empty amendments**: Verify every commit pushed since the last review — an amendment with no file changes does not resolve prior feedback. Keep affected threads open and cite the failing check in the new review.
+     ```bash
+     git fetch origin pull/<pr>/head:refs/remotes/origin/pr-<pr>
+     mb=$(git merge-base origin/<base> origin/pr-<pr>)
+     for c in $(git rev-list --reverse origin/pr-<pr> ^$mb); do
+       git diff --name-status "$c^" "$c" | grep -q . || echo "EMPTY: $(git log -1 --format='%h %ci' $c)"
+     done
+     ```
+     Bot PRs routinely push sequences of empty commits after `CHANGES_REQUESTED`; do not credit them as fixes (observed on warpcode/dotfiles#122: 7 consecutive empty amendments, zero threads addressed).
 
 ### 4. Submission
 - Draft a JSON review payload according to the `github-cli` review standards (Severity, Description, Impact, Solution).
@@ -67,9 +75,11 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
   - `path` must match the PR's diff path exactly.
   - **Pre-submit anchor verification**: confirm every comment `line` is a `+` line in the saved `.diff` before posting (skip the check for wholly-new files):
     ```bash
-    awk '/^diff --git/{f=$3; sub("^a/","",f)} /^@@/{split($3,a,","); cur=substr(a[1],2)+0; next} /^\+\+\+|^\-\-\-/{next} /^\+/{cur++; if (f=="<path>" && cur==<line>) print "ADDED"; next} /^ /{cur++; next}' <pr>.diff
+    awk '/^diff --git/{f=$3; sub("^a/","",f)} /^@@/{split($3,a,","); cur=substr(a[1],2)+0; next} /^\+\+\+|^\-\-\-/{next} /^\+/{if (f=="<path>" && cur==<line>) print "ADDED"; cur++; next} /^ /{cur++; next}' <pr>.diff
     ```
+    > ⚠️ The `+` branch must compare `cur` **before** incrementing: after the `@@` header and context lines, `cur` holds the line number of the line currently being read, so `cur++` first shifts the test one line late (off-by-one, verified 2026-09-24).
     Note: `$3` on a `diff --git` header carries the `a/`-prefixed path — strip `a/` and compare without a `b/` prefix.
+    Authoritative cross-check (works for new and modified files alike): `git show origin/pr-<pr>:<path> | grep -n "<anchor text>"` and compare the reported line number.
   - Write payload files directly with file-writing tools into the agent scratch directory (`scratch/review_payload.json`) instead of spawning Python scripts, avoiding execution gate blocks and quoting errors.
   - Redirect `gh api` output to a scratch file (e.g. `> scratch/out.json 2>&1`) — piping to `--jq`/`cat` can hang the terminal in the alternate buffer and the POST never completes. Avoid redirecting to root `/tmp/` to adhere to security hooks.
 
