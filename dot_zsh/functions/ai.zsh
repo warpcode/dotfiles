@@ -27,22 +27,28 @@ ai.provider.define() {
     registry.define "ai_provider" "$@"
     
     local pid="${1//-/_}"
+
+    if [[ ! "$pid" =~ ^[a-zA-Z0-9_]+$ ]]; then
+        print -u2 "Error: Invalid AI provider ID '${pid}'. Must contain only alphanumeric characters and underscores."
+        return 1
+    fi
+
     if (( ! $+functions[ai.providers.${pid}.enabled] )); then
-        eval "ai.providers.${pid}.enabled() { return 0 }"
+        functions[ai.providers.${pid}.enabled]="return 0"
     fi
     local is_openai=$(registry.get "ai_provider" "$pid" "openai_compatible")
     
     if [[ "$is_openai" == "true" || "$is_openai" == "1" ]]; then
         if (( ! $+functions[ai.providers.${pid}.api] )); then
-            eval "ai.providers.${pid}.api() { _ai.provider.api_executor '$pid' \"\$1\"; }"
+            functions[ai.providers.${pid}.api]="_ai.provider.api_executor ${(q)pid} \"\$1\""
         fi
         
         if (( ! $+functions[ai.providers.${pid}.models] )); then
-            eval "ai.providers.${pid}.models() { _ai.provider.models_executor '$pid'; }"
+            functions[ai.providers.${pid}.models]="_ai.provider.models_executor ${(q)pid}"
         fi
 
         if (( ! $+functions[ai.providers.${pid}.models.free] )); then
-            eval "ai.providers.${pid}.models.free() { ai.providers.${pid}.models; }"
+            functions[ai.providers.${pid}.models.free]="ai.providers.${pid}.models"
         fi
     fi
 }
