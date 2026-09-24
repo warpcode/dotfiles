@@ -1,0 +1,4 @@
+name: cloakenv
+description: Secret source plugin delegating secret retrieval to @warpcode/cloakenv
+version: 1.0.0
+author: warpcode
