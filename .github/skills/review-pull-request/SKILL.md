@@ -21,7 +21,11 @@ Master orchestrator for pull request reviews. You are responsible for the entire
     - Verify if the PR implementation aligns with the stated AC.
     - Check for any incomplete subtasks or related issues that might impact the review.
 - Analyze the diff for functional correctness, security, and conventions.
+- For independent coverage, load `code-review` and `code-security-audit` before synthesizing findings; verify every proposed anchor against the PR diff.
 - **Semantic Merge & Base Drift**: Check whether package helpers or functions invoked by the PR branch had their signatures or contracts modified on the base branch (`main`) since the PR was branched. Git often marks additions textually mergeable even when function signatures conflict at compile time.
+    - **Same-Path Both-Sides Add**: When the PR adds a new file, verify the path does not already exist on `main`: `git fetch origin pull/<pr>/head:refs/remotes/origin/pr-<pr>`, then `git merge-base origin/main origin/pr-<pr>` and `git ls-tree origin/main <path>`. GitHub's `changeType: ADDED` is merge-base-relative — a file added on **both** sides yields `mergeable: CONFLICTING` and duplicate top-level symbols (e.g. same `Test*` function names) that fail to compile if a resolution keeps both sides. Typical with bot PRs whose premise was already merged via an earlier PR — check whether `main` already covers the claimed gap before evaluating the diff.
+    - **CI Absence Check**: `gh run list --repo <owner>/<repo> --branch <head-branch>` (empty = no workflow runs) and `gh api repos/<owner>/<repo>/commits/<sha>/check-suites` (surfaces app-based checks like CodeQL that mask a missing `CI` suite). Flag any "verified" claims in the PR body/commits as unconfirmed when lint/test never ran.
+- **Requirements Tracing — field gotcha**: `gh pr view --json linkedIssues` is invalid; use `closingIssuesReferences` (plus `comments`/`body` text) to detect linked issues.
 - **File Lifecycle Check**: If any file is emptied, significantly reduced, or appears obsolete:
     - Invoke the `file-cleaner` subagent to audit its references.
     - Incorporate the subagent's recommendation into your final feedback.
@@ -42,6 +46,7 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
      bash <skills-dir>/github-cli/scripts/add_reply_to_pull_request_comment.sh --owner <owner> --repo <repo> --pull-number <pr> --comment-id <databaseId> --body "..."
      ```
    > ⚠️ **Key Invariant**: `--comment-id` in `add_reply_to_pull_request_comment.sh` requires an **integer REST `databaseId`** (surfaced in `list_pull_request_review_threads.sh` output), NOT the GraphQL node `id` string (such as `PRRC_...`).
+   - **Empty amendments**: Verify the latest commit with commit statistics or `git diff-tree`; an amendment with no file changes does not resolve prior feedback. Keep affected threads open and cite the failing check in the new review.
 
 ### 4. Submission
 - Draft a JSON review payload according to the `github-cli` review standards (Severity, Description, Impact, Solution).
@@ -57,10 +62,10 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
   > ⚠️ Note: `create_pull_request_review.sh` in `github-cli` only supports top-level review bodies. For structured reviews with inline line/file comments, use `submit_pull_request_review_payload.sh` as shown above.
 - **REST payload gotchas** (all verified 2026-08-29):
   - `subject_type` is GraphQL-only — OMIT it from REST review comments or the API returns 422 (`Field is not defined on DraftPullRequestReviewThread`).
-  - Inline comment `line` must be an **added line in the diff** for `side: RIGHT`. Anchoring to a context/unchanged line fails with `Line could not be resolved`. For new files any line works; for modified files only `+` lines.
+  - Inline comment `line` must be an **added line in the diff** for `side: RIGHT`, measured as the 1-indexed line number in the **target file** in its post-change state (never the line offset within a saved `.diff` patch file). Anchoring to a context/unchanged line or using a `.diff` line number fails with `Line could not be resolved`. For new files any line in the file works; for modified files only `+` lines.
   - `path` must match the PR's diff path exactly.
-  - Redirect `gh api` output to a file (`> /tmp/out.json 2>&1`) — piping to `--jq`/`cat` can hang the terminal in the alternate buffer and the POST never completes.
-  - Build payloads with a Python script (`json.dumps`) rather than hand-writing JSON — unescaped quotes inside comment bodies break parsing.
+  - Write payload files directly with file-writing tools into the agent scratch directory (`scratch/review_payload.json`) instead of spawning Python scripts, avoiding execution gate blocks and quoting errors.
+  - Redirect `gh api` output to a scratch file (e.g. `> scratch/out.json 2>&1`) — piping to `--jq`/`cat` can hang the terminal in the alternate buffer and the POST never completes. Avoid redirecting to root `/tmp/` to adhere to security hooks.
 
 ### 5. Memory Extraction (Automatic)
 - **Immediately** after a review is submitted, activate the `ai-conversation-review` skill.
