@@ -49,6 +49,8 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
      bash <skills-dir>/github-cli/scripts/add_reply_to_pull_request_comment.sh --owner <owner> --repo <repo> --pull-number <pr> --comment-id <databaseId> --body "..."
      ```
    > ⚠️ **Key Invariant**: `--comment-id` in `add_reply_to_pull_request_comment.sh` requires an **integer REST `databaseId`** (surfaced in `list_pull_request_review_threads.sh` output), NOT the GraphQL node `id` string (such as `PRRC_...`).
+   > ⚠️ **Token-efficiency**: the reply script echoes the created comment's full JSON — including the entire `diff_hunk` of the whole file — which can dump thousands of lines into context. Always pipe to `jq -r '.html_url'`.
+   > ⚠️ **Thread-count cross-check**: hand-rolled extraction from the threads output silently drops entries (observed 2026-09-25: a 13-unresolved PR surfaced as 12, hiding thread `mAJXt`). Always parse the **full** thread list and filter to unresolved, then reconcile the total against the script's own `**Total Threads**: N (X resolved, Y unresolved)` header before triaging. Parsing belongs in a script file (`scratch/parse_threads.awk`), not an inline one-liner — split on backticks with `split($0, p, "\`")`, since `sub(/^.*\`/, "", x)` is greedy and silently yields an empty match.
    - **Empty amendments**: Verify every commit pushed since the last review — an amendment with no file changes does not resolve prior feedback. Keep affected threads open and cite the failing check in the new review.
      ```bash
      git fetch origin pull/<pr>/head:refs/remotes/origin/pr-<pr>
@@ -65,6 +67,16 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
   - `APPROVE`: Submit with empty body, no inline comments.
   - `REQUEST_CHANGES`: Neutral one-liner body + inline file-level `comments` with findings. Bots only act on inline comments.
 - **Verify before submit**: Confirm event matches findings — *no blocking issues → APPROVE; blocking issues exist → REQUEST_CHANGES*.
+- **NEVER validate a payload with a mutating `gh api` call.** There is no dry-run for `POST /repos/{o}/{r}/pulls/{n}/reviews` — a probe intended to "check" the payload *creates a real PENDING review* (observed 2026-09-25 on warpcode/cloakenv#180, where `POST ... --input /dev/null` produced review `5321342555`). Validate **locally** instead, which is sufficient:
+  ```bash
+  jq -e '.event' scratch/review_payload.json          # parses, confirms event
+  jq -r '.comments[] | "\(.path):\(.line) [\(.side)]"' scratch/review_payload.json
+  ```
+  If a stray PENDING review is ever created, delete it before continuing:
+  ```bash
+  gh api --method DELETE repos/<owner>/<repo>/pulls/<n>/reviews/<review_id>
+  gh api repos/<owner>/<repo>/pulls/<n>/reviews -q '.[] | select(.state=="PENDING") | .id'   # confirm none remain
+  ```
 - Present the full review to the user for approval.
 - Write the payload to a scratch JSON file and submit via:
   ```bash
