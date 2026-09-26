@@ -275,5 +275,63 @@ class TestFormatters(unittest.TestCase):
         self.assertEqual(result["metrics"], {"time_in_status": {"Open": 3600}})
         mock_calculate_metrics.assert_called_once_with(issue, {})
 
+    def test_process_issue_transitions_preserves_order(self):
+        issue = {
+            "id": "4",
+            "key": "TEST-4",
+            "transitions": [
+                {
+                    "id": "11",
+                    "name": "To Do",
+                    "to": {"id": "1", "name": "To Do"},
+                    "hasScreen": False,
+                    "isGlobal": True,
+                    "isInitial": False,
+                    "isAvailable": True,
+                    "isConditional": False,
+                    "isLooped": False
+                },
+                {
+                    "id": "21",
+                    "name": "In Progress",
+                    "to": {"id": "3", "name": "In Progress"},
+                    "hasScreen": True,
+                    "isGlobal": False,
+                    "isInitial": True,
+                    "isAvailable": False,
+                    "isConditional": True,
+                    "isLooped": True
+                }
+            ]
+        }
+        result = process_issue(issue, requested_expands=["transitions"])
+        self.assertIn("transitions", result)
+        transitions = result["transitions"]
+        self.assertEqual(len(transitions), 2)
+
+        # Verify first transition
+        self.assertEqual(transitions[0]["transitionId"], "11")
+        self.assertEqual(transitions[0]["transitionname"], "To Do")
+        self.assertEqual(transitions[0]["statusId"], "1")
+        self.assertEqual(transitions[0]["statusName"], "To Do")
+        self.assertEqual(transitions[0]["hasScreen"], False)
+        self.assertEqual(transitions[0]["isGlobal"], True)
+        self.assertEqual(transitions[0]["isInitial"], False)
+        self.assertEqual(transitions[0]["isAvailable"], True)
+        self.assertEqual(transitions[0]["isConditional"], False)
+        self.assertEqual(transitions[0]["isLooped"], False)
+
+        # Verify second transition (order and fields preserved)
+        self.assertEqual(transitions[1]["transitionId"], "21")
+        self.assertEqual(transitions[1]["transitionname"], "In Progress")
+        self.assertEqual(transitions[1]["statusId"], "3")
+        self.assertEqual(transitions[1]["statusName"], "In Progress")
+        self.assertEqual(transitions[1]["hasScreen"], True)
+        self.assertEqual(transitions[1]["isGlobal"], False)
+        self.assertEqual(transitions[1]["isInitial"], True)
+        self.assertEqual(transitions[1]["isAvailable"], False)
+        self.assertEqual(transitions[1]["isConditional"], True)
+        self.assertEqual(transitions[1]["isLooped"], True)
+
 if __name__ == "__main__":
     unittest.main()
