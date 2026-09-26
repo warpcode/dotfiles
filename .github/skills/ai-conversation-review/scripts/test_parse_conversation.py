@@ -44,5 +44,17 @@ System message
         self.assertEqual(events[0]["role"], "user")
         self.assertEqual(events[0]["content"], "Test prompt")
 
+    def test_generate_markdown_summary_counts(self):
+        events = [
+            {"role": "user", "content": "Hi", "tool_calls": []},
+            {"role": "assistant", "content": "Hello", "tool_calls": [{"name": "tool", "args": {}}]},
+            {"role": "assistant", "content": "Here is more", "tool_calls": [{"name": "tool2", "args": {}}, {"name": "tool3", "args": {}}]},
+        ]
+        summary = generate_markdown_summary(events)
+        self.assertIn("**Total Events Extracted:** 3", summary)
+        self.assertIn("**User Turns:** 1", summary)
+        self.assertIn("**Assistant Turns:** 2", summary)
+        self.assertIn("**Tool Invocations:** 3", summary)
+
 if __name__ == "__main__":
     unittest.main()
