@@ -16,6 +16,7 @@ Master orchestrator for pull request reviews. You are responsible for the entire
 - If the user requests multiple PRs, preserve strict boundaries by running them as separate lifecycles in the selected order; never broaden one lifecycle to cover multiple PRs.
 
 ### 2. Contextual Audit
+- **Resolve owner/repo first**: never assume the owner from the local directory or from a remembered `user/repo`. Run `git remote -v` (or `gh repo view --json nameWithOwner`) and use that `<owner>/<repo>` for every subsequent `gh` call. Verified 2026-09-26: a guessed owner (`jase9000/cloakenv`) failed with `Could not resolve to a Repository` while the real remote was `warpcode/cloakenv`.
 - Use `gh pr view <pr> --repo <owner>/<repo> --json <fields>` and `gh pr diff <pr> --repo <owner>/<repo>` to retrieve the PR state without checking out the branch.
 - **Requirements Tracing**: If the PR mentions or is linked to a parent issue:
     - Retrieve the parent issue's context, description, and acceptance criteria (AC).
@@ -33,6 +34,7 @@ Master orchestrator for pull request reviews. You are responsible for the entire
     - **Same-Path Both-Sides Add**: When the PR adds a new file, verify the path does not already exist on `main`: `git fetch origin pull/<pr>/head:refs/remotes/origin/pr-<pr>`, then `git merge-base origin/main origin/pr-<pr>` and `git ls-tree origin/main <path>`. GitHub's `changeType: ADDED` is merge-base-relative — a file added on **both** sides yields `mergeable: CONFLICTING` and duplicate top-level symbols (e.g. same `Test*` function names) that fail to compile if a resolution keeps both sides. Typical with bot PRs whose premise was already merged via an earlier PR — check whether `main` already covers the claimed gap before evaluating the diff.
     - **CI Absence Check**: `gh run list --repo <owner>/<repo> --branch <head-branch>` (empty = no workflow runs) and `gh api repos/<owner>/<repo>/commits/<sha>/check-suites` (surfaces app-based checks like CodeQL that mask a missing `CI` suite). Flag any "verified" claims in the PR body/commits as unconfirmed when lint/test never ran.
 - **Requirements Tracing — field gotcha**: `gh pr view --json linkedIssues` is invalid; use `closingIssuesReferences` (plus `comments`/`body` text) to detect linked issues.
+- **Test-only PRs still need branch-purity evidence**: For a diff that only touches `_test.go` files there is no production behaviour to reason about, so spend the audit budget on proving the *test* is meaningful instead: confirm the new tests actually fail if the code under test is broken (read the assertions, not just their presence), and grep the whole package for the untested branch so you can distinguish "this PR's gap" from "repo-wide gap". Strengthen-of-assertion findings (length-only checks, existence-only checks, values asserted nowhere) are the highest-yield category here — a dedicated coverage PR commonly still ships assertions too weak to catch the regression it claims to cover.
 - **File Lifecycle Check**: If any file is emptied, significantly reduced, or appears obsolete:
     - Invoke the `file-cleaner` subagent to audit its references.
     - Incorporate the subagent's recommendation into your final feedback.
@@ -82,6 +84,10 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
   gh api repos/<owner>/<repo>/pulls/<n>/reviews -q '.[] | select(.state=="PENDING") | .id'   # confirm none remain
   ```
 - Present the full review to the user for approval.
+- **Validate the payload with `jq`, not `python3 -c`.** One command is enough and avoids the execution gate:
+  ```bash
+  jq -r '"event: \(.event)\ncomments: \(.comments|length)", (.comments[] | "  \(.path) \(.line) \(.side)")' <payload-file>
+  ```
 - Write the payload to a scratch JSON file and submit via:
   ```bash
   bash <skills-dir>/github-cli/scripts/submit_pull_request_review_payload.sh --owner <owner> --repo <repo> --pull-number <pr> --input <payload-file>
@@ -91,11 +97,14 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
   - `subject_type` is GraphQL-only — OMIT it from REST review comments or the API returns 422 (`Field is not defined on DraftPullRequestReviewThread`).
   - Inline comment `line` must be an **added line in the diff** for `side: RIGHT`, measured as the 1-indexed line number in the **target file** in its post-change state (never the line offset within a saved `.diff` patch file). Anchoring to a context/unchanged line or using a `.diff` line number fails with `Line could not be resolved`. For new files any line in the file works; for modified files only `+` lines.
   - `path` must match the PR's diff path exactly.
-  - **Pre-submit anchor verification**: confirm every comment `line` is a `+` line in the saved `.diff` before posting (skip the check for wholly-new files):
+  - **Pre-submit anchor verification** (mandatory before `REQUEST_CHANGES`/`COMMENT` with inline comments): run the bundled script — it validates every `path`/`line` pair in the payload against the saved diff and exits non-zero if any anchor is not a `+` line.
     ```bash
-    awk '/^diff --git/{f=$3; sub("^a/","",f)} /^@@/{split($3,a,","); cur=substr(a[1],2)+0; next} /^\+\+\+|^\-\-\-/{next} /^\+/{if (f=="<path>" && cur==<line>) print "ADDED"; cur++; next} /^ /{cur++; next}' <pr>.diff
+    bash <skills-dir>/review-pull-request/scripts/verify_review_anchors.sh \
+      --diff <pr>.diff --payload <payload-file> --head origin/pr-<n>
     ```
-    > ⚠️ The `+` branch must compare `cur` **before** incrementing: after the `@@` header and context lines, `cur` holds the line number of the line currently being read, so `cur++` first shifts the test one line late (off-by-one, verified 2026-09-24).
+    Use `--path <file> --line <n> [--line <n> ...]` to check anchors ad hoc, and `--quiet` for the verdict only. A `PASS` verdict is a hard prerequisite for submission.
+    > ⚠️ **Never hand-transcribe the hunk-parsing awk.** Two failure modes were observed in practice (2026-09-26): (a) transcribing the one-liner from this file and dropping the `$3` field reference makes the script read the *pre*-change hunk start, so every anchor looks invalid; (b) inverting the diff-line ↔ file-line arithmetic when spot-checking. Both produce confident wrong answers. Let the script do it, and cross-check with `--head origin/pr-<n>` which prints the anchored line's actual text from the PR head blob — that output is the ground truth to eyeball before submitting.
+    > The `+` branch must compare `cur` **before** incrementing: after the `@@` header and context lines, `cur` holds the line number of the line currently being read, so `cur++` first shifts the test one line late (off-by-one, verified 2026-09-24).
     Note: `$3` on a `diff --git` header carries the `a/`-prefixed path — strip `a/` and compare without a `b/` prefix.
     Authoritative cross-check (works for new and modified files alike): `git show origin/pr-<pr>:<path> | grep -n "<anchor text>"` and compare the reported line number.
   - Write payload files directly with file-writing tools into the agent scratch directory (`scratch/review_payload.json`) instead of spawning Python scripts, avoiding execution gate blocks and quoting errors.
