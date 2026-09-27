@@ -52,6 +52,13 @@ def run_guard(subcmd: str, args: list[str] = None, stdin_str: str = None) -> tup
         return 2, {"decision": "deny", "reason": f"Security guard execution failed: {e}"}
 
 
+def extract_command(mapping):
+    for k in ("CommandLine", "commandLine", "command", "cmd"):
+        if k in mapping and isinstance(mapping[k], str):
+            return mapping[k].strip().strip("'\"")
+    return ""
+
+
 def main():
     route = sys.argv[1] if len(sys.argv) > 1 else ""
     raw_input = sys.stdin.read()
@@ -199,16 +206,9 @@ def main():
     # ROUTE: COMMAND (PreToolUse on command execution)
     # =========================================================================
     if route == "command":
-        cmd = ""
-        for k in ("CommandLine", "commandLine", "command", "cmd"):
-            if k in tool_args and isinstance(tool_args[k], str):
-                cmd = tool_args[k].strip().strip("'\"")
-                break
+        cmd = extract_command(tool_args)
         if not cmd and isinstance(payload, dict):
-            for k in ("CommandLine", "commandLine", "command", "cmd"):
-                if k in payload and isinstance(payload[k], str):
-                    cmd = payload[k].strip().strip("'\"")
-                    break
+            cmd = extract_command(payload)
 
         if not cmd:
             print(json.dumps({"decision": "allow"}))
