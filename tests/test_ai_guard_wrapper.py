@@ -5,8 +5,9 @@ import importlib.util
 # Load the wrapper since it has hyphens and doesn't end in .py... wait, it DOES end in .py
 # but has hyphens in the filename `executable_ai-guard-wrapper.py`.
 
-
-spec = importlib.util.spec_from_file_location("ai_guard_wrapper", "dot_gemini/config/executable_ai-guard-wrapper.py")
+import pathlib
+wrapper_path = pathlib.Path(__file__).resolve().parent.parent / "dot_gemini" / "config" / "executable_ai-guard-wrapper.py"
+spec = importlib.util.spec_from_file_location("ai_guard_wrapper", str(wrapper_path))
 ai_guard_wrapper = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ai_guard_wrapper)
 
@@ -50,6 +51,13 @@ class TestAiGuardWrapperHelper(unittest.TestCase):
         mapping = {"CommandLine": "'\"\"echo multi\"'\""}
         result = ai_guard_wrapper.extract_command(mapping)
         self.assertEqual(result, "echo multi")
+
+    def test_extract_command_guards_against_non_dict(self):
+        # We explicitly test that if mapping is None or not a dict, it returns empty string
+        # without crashing
+        self.assertEqual(ai_guard_wrapper.extract_command(None), "")
+        self.assertEqual(ai_guard_wrapper.extract_command(["list", "of", "items"]), "")
+        self.assertEqual(ai_guard_wrapper.extract_command("CommandLine string"), "")
 
 if __name__ == "__main__":
     unittest.main()

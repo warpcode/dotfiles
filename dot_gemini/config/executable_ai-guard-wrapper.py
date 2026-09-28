@@ -53,6 +53,8 @@ def run_guard(subcmd: str, args: list[str] = None, stdin_str: str = None) -> tup
 
 
 def extract_command(mapping):
+    if not isinstance(mapping, dict):
+        return ""
     for k in ("CommandLine", "commandLine", "command", "cmd"):
         if k in mapping and isinstance(mapping[k], str):
             return mapping[k].strip().strip("'\"")
