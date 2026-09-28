@@ -24,14 +24,15 @@ _ai.provider.models_executor() {
 
 # --- Provider ---
 ai.provider.define() {
-    registry.define "ai_provider" "$@"
-    
-    local pid="${1//-/_}"
+    local raw_pid="$1"
+    local pid="${raw_pid//-/_}"
 
     if [[ ! "$pid" =~ ^[a-zA-Z0-9_]+$ ]]; then
         print -u2 "Error: Invalid AI provider ID '${pid}'. Must contain only alphanumeric characters and underscores."
         return 1
     fi
+
+    registry.define "ai_provider" "$@"
 
     if (( ! $+functions[ai.providers.${pid}.enabled] )); then
         functions[ai.providers.${pid}.enabled]="return 0"
