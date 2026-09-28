@@ -96,6 +96,15 @@ python3 <skill-dir>/scripts/main.py create-session \
   --require-approval
 ```
 
+#### Creating a Sourceless Session (No Repository)
+For exploratory or non-code sessions without a connected repository, use the direct REST escape hatch (the `create-session` CLI enforces `--source` but the Jules API accepts sessions without `sourceContext`):
+
+```bash
+# Create a sourceless session (no repository attached)
+python3 <skill-dir>/scripts/main.py call POST sessions \
+  '{"prompt":"Your exploratory prompt","title":"Session Title"}'
+```
+
 ### 3. Session Health Audit & Triage (`check-sessions`)
 Audit the health, elapsed inactivity duration, latest activity, and plan status for recent sessions. Sessions over 30 days old are considered inactive and automatically ignored by default (`--max-age-days 30`).
 
@@ -254,6 +263,14 @@ Before creating a new session:
 3. If found, prefer nudging existing session over creating duplicate:
    `python3 <skill-dir>/scripts/main.py nudge <session_id> progress_check`
 4. If existing session is `CLOSED_NO_PR` with deliverables, request PR instead of spawning new work
+
+### Workflow 7: Stale Branch & Empty Commit Loop Remediation
+When Jules pushes empty commits or the base branch has advanced since session creation (see `@references/jules-git-architecture.md`):
+1. **Stop the loop immediately**:
+   `python3 <skill-dir>/scripts/main.py send-message <session_id> "Stop pushing. The remote branch has been updated since your session started. Your local /app is stale. Please stop all further push attempts."`
+2. **Close the stale session and create a new one** pointing at the updated branch:
+   `python3 <skill-dir>/scripts/main.py create-session "<original task prompt>" --source github/<owner>/<repo> --branch <updated-branch>`
+3. **Prevention**: Treat a Jules session as an exclusive lock on its target branch — avoid concurrent pushes to branches Jules is actively working on.
 
 ---
 
