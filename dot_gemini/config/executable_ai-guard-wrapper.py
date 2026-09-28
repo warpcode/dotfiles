@@ -94,8 +94,7 @@ def handle_prompt_route(payload):
         detail = f" ({', '.join(reasons)})" if reasons else ""
         reason = f"Prompt submission blocked: sensitive credentials or secrets detected{detail}. Remove secrets from prompt to prevent leakage."
         sys.stderr.write(f"SECURITY GUARD: {reason}\n")
-        print(json.dumps({"decision": "deny", "reason": reason}))
-        sys.exit(2)
+        # Do not print decision deny here, because we want to injectSteps via proto_resp instead
 
         # Sanitize transcript step in-place if applicable
         if tp and target_line_idx is not None and lines:

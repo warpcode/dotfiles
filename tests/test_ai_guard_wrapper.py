@@ -5,8 +5,12 @@ from unittest.mock import patch, MagicMock
 from io import StringIO
 import importlib.util
 
+from pathlib import Path
+
 # Load the module dynamically due to dashes in name
-spec = importlib.util.spec_from_file_location("ai_guard_wrapper", "dot_gemini/config/executable_ai-guard-wrapper.py")
+REPO_ROOT = Path(__file__).resolve().parent.parent
+WRAPPER_PATH = REPO_ROOT / "dot_gemini" / "config" / "executable_ai-guard-wrapper.py"
+spec = importlib.util.spec_from_file_location("ai_guard_wrapper", str(WRAPPER_PATH))
 ai_guard_wrapper = importlib.util.module_from_spec(spec)
 sys.modules["ai_guard_wrapper"] = ai_guard_wrapper
 spec.loader.exec_module(ai_guard_wrapper)
@@ -137,18 +141,59 @@ class TestAIGuardWrapper(unittest.TestCase):
     def test_empty_payload(self, mock_stdout):
         with patch('sys.argv', ['ai-guard-wrapper.py']):
             with patch('sys.stdin', StringIO('')):
-                with patch('ai_guard_wrapper.handle_prompt_route', side_effect=SystemExitException):
+                with patch('ai_guard_wrapper.handle_prompt_route', side_effect=SystemExitException) as mock_handle_prompt:
                     with self.assertRaises(SystemExitException):
                         ai_guard_wrapper.main()
+                    mock_handle_prompt.assert_called_once_with({})
 
 
     @patch('sys.stdout', new_callable=StringIO)
     def test_malformed_json(self, mock_stdout):
         with patch('sys.argv', ['ai-guard-wrapper.py']):
             with patch('sys.stdin', StringIO('not json')):
-                with patch('ai_guard_wrapper.handle_prompt_route', side_effect=SystemExitException):
+                with patch('ai_guard_wrapper.handle_prompt_route', side_effect=SystemExitException) as mock_handle_prompt:
                     with self.assertRaises(SystemExitException):
                         ai_guard_wrapper.main()
+                    mock_handle_prompt.assert_called_once_with({})
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_prompt_route_allow(self, mock_stdout, mock_run_guard):
+        mock_run_guard.return_value = (0, {"decision": "allow"})
+        payload = {"prompt": "What is the capital of France?"}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_prompt_route(payload)
+
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {})
+        self.mock_exit.assert_called_with(0)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_handle_prompt_route_deny(self, mock_stderr, mock_stdout, mock_run_guard):
+        mock_run_guard.return_value = (2, {"decision": "deny", "reason": "No way"})
+        payload = {"prompt": "Tell me a secret"}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_prompt_route(payload)
+
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {"decision": "deny", "reason": "No way"})
+        self.mock_exit.assert_called_with(2)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_handle_prompt_route_replace_sanitized(self, mock_stderr, mock_stdout, mock_run_guard):
+        mock_run_guard.return_value = (0, {"decision": "replace", "sanitized": "safe prompt"})
+        payload = {"prompt": "my secret is XYZ"}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_prompt_route(payload)
+
+        # The logic expects a proto_resp printed before exit(0)
+        self.assertTrue("injectSteps" in json.loads(mock_stdout.getvalue()))
+        self.mock_exit.assert_called_with(0)
 
 
 if __name__ == '__main__':
