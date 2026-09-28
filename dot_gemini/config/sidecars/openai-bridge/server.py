@@ -275,14 +275,6 @@ def run(port=18081):
     httpd.server_close()
 
 if __name__ == "__main__":
-    # Dump environment variables for inspection/debugging
-    logging.info("Dump of Environment Variables:")
-    for k, v in sorted(os.environ.items()):
-        if "TOKEN" in k or "KEY" in k or "SECRET" in k or "PASSWORD" in k:
-            logging.info(f"  {k}=********")
-        else:
-            logging.info(f"  {k}={v}")
-
     port_str = os.environ.get("PORT", "18081")
     try:
         port = int(port_str)
