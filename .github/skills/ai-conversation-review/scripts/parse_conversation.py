@@ -178,18 +178,81 @@ def parse_markdown_plain_text(text: str) -> List[Dict[str, Any]]:
     return events
 
 
+def compact_tool_args(arguments: Any) -> Any:
+    """Return tool arguments in their decoded form when possible."""
+    if isinstance(arguments, str):
+        try:
+            return json.loads(arguments)
+        except json.JSONDecodeError:
+            return arguments
+    return arguments or {}
+
+
+def parse_vscode_copilot_jsonl(lines: List[str]) -> List[Dict[str, Any]]:
+    """Parse VS Code Copilot session JSONL, including delegated-agent events."""
+    records = []
+    for line in lines:
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(record, dict):
+            records.append(record)
+
+    results = {}
+    for record in records:
+        data = record.get("data", {})
+        if record.get("type") == "tool.execution_complete" and data.get("toolCallId"):
+            results[data["toolCallId"]] = data
+
+    events = []
+    for record in records:
+        data = record.get("data", {})
+        record_type = record.get("type")
+        if record_type == "user.message":
+            events.append({
+                "role": "user",
+                "content": data.get("content", ""),
+                "tool_calls": [],
+                "error": None,
+            })
+        elif record_type == "assistant.message":
+            events.append({
+                "role": "assistant",
+                "content": data.get("content", ""),
+                "tool_calls": [],
+                "error": None,
+            })
+        elif record_type == "tool.execution_start":
+            result = results.get(data.get("toolCallId"), {})
+            success = result.get("success")
+            events.append({
+                "role": "tool",
+                "content": "",
+                "tool_calls": [{
+                    "name": data.get("toolName", "unknown_tool"),
+                    "args": compact_tool_args(data.get("arguments")),
+                    "status": "ok" if success is True else "failed" if success is False else "unknown",
+                }],
+                "error": result.get("error") if success is False else None,
+            })
+    return events
+
+
 def ingest_transcript(raw_text: str) -> List[Dict[str, Any]]:
     """Auto-detects format and normalizes into standard event sequence."""
     raw_text = raw_text.strip()
     if not raw_text:
         return []
 
-    # 1. Try JSONL (Antigravity or Claude Code lines)
+    # 1. Try JSONL (VS Code Copilot, Antigravity, or Claude Code lines)
     if "\n" in raw_text and ("{" in raw_text):
         lines = [ln for ln in raw_text.splitlines() if ln.strip().startswith("{")]
         if lines:
             try:
                 first_obj = json.loads(lines[0])
+                if "type" in first_obj and "data" in first_obj and "timestamp" in first_obj:
+                    return parse_vscode_copilot_jsonl(lines)
                 if "step_index" in first_obj or "source" in first_obj or "tool_calls" in first_obj:
                     return parse_antigravity_gemini_jsonl(lines)
             except Exception:
@@ -212,7 +275,7 @@ def ingest_transcript(raw_text: str) -> List[Dict[str, Any]]:
 
 def generate_markdown_summary(events: List[Dict[str, Any]], max_turns: Optional[int] = None,
                               tools_only: bool = False, errors_only: bool = False,
-                              user_only: bool = False) -> str:
+                              user_only: bool = False, stats_only: bool = False) -> str:
     """Formats events into a clean, token-efficient Markdown summary."""
     if not events:
         return "No conversation events found in transcript."
@@ -227,21 +290,32 @@ def generate_markdown_summary(events: List[Dict[str, Any]], max_turns: Optional[
     user_count = 0
     assistant_count = 0
     tool_count = 0
-    for e in events:
-        role = e.get("role")
+    failed_tools = 0
+    tool_names = {}
+
+    for event in events:
+        role = event.get("role")
         if role == "user":
             user_count += 1
         elif role == "assistant":
             assistant_count += 1
 
-        tc = e.get("tool_calls")
-        if tc:
-            tool_count += len(tc)
+        for call in event.get("tool_calls") or []:
+            tool_count += 1
+            if call.get("status") == "failed":
+                failed_tools += 1
+            tool_name = call.get("name", "tool")
+            tool_names[tool_name] = tool_names.get(tool_name, 0) + 1
 
     output.append(f"- **User Turns:** {user_count}")
     output.append(f"- **Assistant Turns:** {assistant_count}")
-    output.append(f"- **Tool Invocations:** {tool_count}\n")
+    output.append(f"- **Tool Invocations:** {tool_count}")
+    output.append(f"- **Failed Tool Invocations:** {failed_tools}")
+    output.append("- **Tools:** " + ", ".join(f"{name} ({count})" for name, count in sorted(tool_names.items())) + "\n")
     output.append("---")
+
+    if stats_only:
+        return "\n".join(output)
 
     for i, ev in enumerate(events, 1):
         role = ev.get("role", "unknown").capitalize()
@@ -274,7 +348,9 @@ def generate_markdown_summary(events: List[Dict[str, Any]], max_turns: Optional[
                 args_str = json.dumps(targs, separators=(',', ':')) if isinstance(targs, (dict, list)) else str(targs)
                 if len(args_str) > 200:
                     args_str = args_str[:180] + "...}"
-                output.append(f"- `{tname}`: `{args_str}`")
+                status = tc.get("status")
+                suffix = f" ({status})" if status else ""
+                output.append(f"- `{tname}`{suffix}: `{args_str}`")
 
         if error:
             output.append(f"\n> [!WARNING]\n> **Execution Error:** {error}")
@@ -292,6 +368,7 @@ def main():
     parser.add_argument("--tools-only", action="store_true", help="Extract only tool calls and statuses")
     parser.add_argument("--errors-only", action="store_true", help="Extract only errors and corrections")
     parser.add_argument("--user-only", action="store_true", help="Extract only user prompts")
+    parser.add_argument("--stats", action="store_true", help="Print event, actor, tool, and failure counts only")
 
     args = parser.parse_args()
 
@@ -314,7 +391,8 @@ def main():
         max_turns=args.max_turns,
         tools_only=args.tools_only,
         errors_only=args.errors_only,
-        user_only=args.user_only
+        user_only=args.user_only,
+        stats_only=args.stats
     )
     print(summary_md)
 

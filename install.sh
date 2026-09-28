@@ -300,15 +300,12 @@ main() {
   # chezmoi --override-data accepts a JSON string as a global flag (before subcommand)
   local override_data="{}"
   if [[ -n "${dotfiles_profile}" || -n "${git_name}" || -n "${git_email}" || -n "${keepass_db}" ]]; then
-    local profile_json="null"
-    local git_name_json="null"
-    local git_email_json="null"
-    local keepass_db_json="null"
-    [[ -n "${dotfiles_profile}" ]] && profile_json="\"${dotfiles_profile}\""
-    [[ -n "${git_name}" ]]        && git_name_json="\"${git_name}\""
-    [[ -n "${git_email}" ]]       && git_email_json="\"${git_email}\""
-    [[ -n "${keepass_db}" ]]      && keepass_db_json="\"${keepass_db}\""
-    override_data="{\"profile\":${profile_json},\"git_name\":${git_name_json},\"git_email\":${git_email_json},\"keepass_db\":${keepass_db_json}}"
+    override_data="$(jq -cn \
+      --arg profile "${dotfiles_profile}" \
+      --arg git_name "${git_name}" \
+      --arg git_email "${git_email}" \
+      --arg keepass_db "${keepass_db}" \
+      '{profile: $profile, git_name: $git_name, git_email: $git_email, keepass_db: $keepass_db} | with_entries(select(.value != ""))')"
     chezmoi_global_args+=(--override-data "${override_data}")
   fi
 

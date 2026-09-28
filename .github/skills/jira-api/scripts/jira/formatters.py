@@ -106,9 +106,8 @@ def process_issue(issue, requested_expands, full_issue=False, status_map=None):
                     })
                 result["changelog"] = {"histories": processed_histories}
             elif expand_key == "transitions":
-                transitions = []
-                for t in val:
-                    transitions.append({
+                result["transitions"] = [
+                    {
                         "transitionId": t.get("id"),
                         "transitionname": t.get("name"),
                         "statusId": t.get("to", {}).get("id"),
@@ -119,8 +118,9 @@ def process_issue(issue, requested_expands, full_issue=False, status_map=None):
                         "isAvailable": t.get("isAvailable"),
                         "isConditional": t.get("isConditional"),
                         "isLooped": t.get("isLooped")
-                    })
-                result["transitions"] = transitions
+                    }
+                    for t in val
+                ]
             else:
                 result[expand_key] = val
 
