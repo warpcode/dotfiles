@@ -81,6 +81,7 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
   - `APPROVE`: Submit with empty body, no inline comments.
   - `REQUEST_CHANGES`: Neutral one-liner body + inline file-level `comments` with findings. Bots only act on inline comments.
 - **Verify before submit**: Confirm event matches findings — *no blocking issues → APPROVE; blocking issues exist → REQUEST_CHANGES*.
+- **Self-Authored PR Review Constraint**: GitHub rejects `REQUEST_CHANGES` and `APPROVE` on PRs authored by the authenticated user with HTTP 422 (`Review Can not request changes on your own pull request`). When reviewing a PR where the author login matches the authenticated user, always set `event: "COMMENT"`.
 - **NEVER validate a payload with a mutating `gh api` call.** There is no dry-run for `POST /repos/{o}/{r}/pulls/{n}/reviews` — a probe intended to "check" the payload *creates a real PENDING review* (observed 2026-09-25 on warpcode/cloakenv#180, where `POST ... --input /dev/null` produced review `5321342555`). Validate **locally** instead, which is sufficient:
   ```bash
   jq -e '.event' scratch/review_payload.json          # parses, confirms event
@@ -103,6 +104,7 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
   > ⚠️ Note: `create_pull_request_review.sh` in `github-cli` only supports top-level review bodies. For structured reviews with inline line/file comments, use `submit_pull_request_review_payload.sh` as shown above.
 - **REST payload gotchas** (all verified 2026-08-29):
   - `subject_type` is GraphQL-only — OMIT it from REST review comments or the API returns 422 (`Field is not defined on DraftPullRequestReviewThread`).
+  - **Self-authored PRs reject `REQUEST_CHANGES` and `APPROVE`**: GitHub returns HTTP 422 (`Review Can not request changes on your own pull request`). When reviewing a PR authored by the authenticated account, always use `event: "COMMENT"`.
   - Inline comment `line` must be an **added line in the diff** for `side: RIGHT`, measured as the 1-indexed line number in the **target file** in its post-change state (never the line offset within a saved `.diff` patch file). Anchoring to a context/unchanged line or using a `.diff` line number fails with `Line could not be resolved`. For new files any line in the file works; for modified files only `+` lines.
   - `path` must match the PR's diff path exactly.
   - **Pre-submit anchor verification** (mandatory before `REQUEST_CHANGES`/`COMMENT` with inline comments): run the bundled script — it validates every `path`/`line` pair in the payload against the saved diff and exits non-zero if any anchor is not a `+` line.
