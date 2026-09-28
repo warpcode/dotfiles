@@ -13,11 +13,13 @@ def _flatten_adf_node(node, parts):
         parts.append(node.get("attrs", {}).get("text", ""))
     elif node_type in ("paragraph", "heading", "listItem", "tableCell"):
         content = node.get("content")
-        _flatten_adf_list(content, parts)
+        if content:
+            _flatten_adf_list(content, parts)
         parts.append("\n")
     elif "content" in node:
         content = node.get("content")
-        _flatten_adf_list(content, parts)
+        if content:
+            _flatten_adf_list(content, parts)
 
 def _flatten_adf_list(node, parts):
     """Helper function to append ADF content to a list of parts."""
@@ -27,6 +29,8 @@ def _flatten_adf_list(node, parts):
         for item in node:
             if isinstance(item, dict):
                 _flatten_adf_node(item, parts)
+            elif isinstance(item, list):
+                _flatten_adf_list(item, parts)
         return
     if isinstance(node, dict):
         _flatten_adf_node(node, parts)
