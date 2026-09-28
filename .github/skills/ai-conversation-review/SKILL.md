@@ -61,6 +61,7 @@ The review system accepts conversation transcripts from any AI platform:
 - **Claude Code**: JSON/JSONL session logs (`~/.claude/projects/...`)
 - **OpenCode**: Session JSON history
 - **OpenAI / ChatGPT**: JSON conversation exports
+- **VS Code Copilot Chat**: workspace-storage transcript JSONL, including `runSubagent` calls
 - **Plain Markdown / Text**: Exported chat text (`User:` / `Assistant:`)
 
 ### Ingestion Helper
@@ -73,6 +74,26 @@ python3 <skill-dir>/scripts/parse_conversation.py /path/to/transcript.jsonl
 # Ingest only errors and tool calls
 python3 <skill-dir>/scripts/parse_conversation.py /path/to/transcript.jsonl --errors-only
 ```
+
+For VS Code Copilot sessions, run the audit wrapper first. It inspects all tool
+starts and completions plus delegated-agent launches without printing raw prompts
+or tool arguments. VS Code serializes branch parent IDs, so report total tool
+usage and subagent-launch counts rather than inferring per-agent tool ownership.
+For the active session, derive the transcript filename from the session ID in
+`VSCODE_TARGET_SESSION_LOG`; the transcript is under the sibling `transcripts/`
+directory, while the target session log may itself be a directory. Do not reuse
+a transcript path from terminal history without confirming its session ID.
+
+```bash
+python3 <skill-dir>/scripts/audit_vscode_session.py /path/to/transcript.jsonl
+python3 <skill-dir>/scripts/parse_conversation.py /path/to/transcript.jsonl --stats
+```
+
+Treat the audit wrapper's potential-correction count as a heuristic, not a complete detector. Manually review user turns for explicit corrections to commands, assumptions, or tool choices; a zero count does not establish that no corrections occurred. Use `parse_conversation.py --user-only` with a bounded turn range when needed.
+
+Use `audit_vscode_session.py <transcript> --details` to inspect bounded examples of long pipelines, repeated commands, and failed file paths before proposing fixes. The optional `--max-details N` limits examples per category (default: 5). This opt-in mode prints command arguments; do not use it on transcripts with secrets unless the output can be handled securely.
+Bound `--errors-only` and `--tools-only` parser output with `--max-turns` during
+triage; use an unbounded dump only when the full transcript is required.
 
 ---
 
