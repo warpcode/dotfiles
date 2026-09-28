@@ -24,6 +24,7 @@ if (( $+functions[ai.providers.test_provider.api] )); then
     ai.providers.test_provider.api "/test/path"
 else
     echo "Function definition failed."
+    exit 1
 fi
 
 # Test 2: Malicious ID with spaces/semi-colons
@@ -33,6 +34,7 @@ if [[ $? -eq 1 ]]; then
     echo "Malicious ID correctly rejected."
 else
     echo "Malicious ID was not rejected!"
+    exit 1
 fi
 
 # Test 3: Test Models Free Dispatch
