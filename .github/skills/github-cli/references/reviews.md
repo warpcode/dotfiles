@@ -38,6 +38,7 @@ Execution commands and scripts for review discovery, inspection, and thread reso
   ```
 
 - **Submit Review Comment (Default / Auto-detected Repo)**:
+  *(Note: When reviewing a PR authored by the authenticated user, GitHub rejects `REQUEST_CHANGES` and `APPROVE` with HTTP 422; submissions must use `COMMENT`.)*
   ```bash
   bash @scripts/create_pull_request_review.sh --pull-number 42 --body "LGTM with minor suggestions."
   ```
