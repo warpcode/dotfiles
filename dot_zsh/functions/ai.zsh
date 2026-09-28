@@ -15,7 +15,8 @@ _ai.provider.models_executor() {
     local cached=$(df.cache get "ai" "models_${pid}")
     [[ -n "$cached" ]] && { echo "$cached"; return 0; }
 
-    local result=$(ai.providers.${pid}.api "/models" | jq -c -M '.data')
+    local api_func="ai.providers.${pid}.api"
+    local result=$("$api_func" "/models" | jq -c -M '.data')
     if [[ -n "$result" && "$result" != "null" ]]; then
         df.cache set "ai" "models_${pid}" "$result"
     fi
@@ -28,21 +29,22 @@ ai.provider.define() {
     
     local pid="${1//-/_}"
     if (( ! $+functions[ai.providers.${pid}.enabled] )); then
-        eval "ai.providers.${pid}.enabled() { return 0 }"
+        functions[ai.providers.${pid}.enabled]="return 0"
     fi
     local is_openai=$(registry.get "ai_provider" "$pid" "openai_compatible")
     
     if [[ "$is_openai" == "true" || "$is_openai" == "1" ]]; then
         if (( ! $+functions[ai.providers.${pid}.api] )); then
-            eval "ai.providers.${pid}.api() { _ai.provider.api_executor '$pid' \"\$1\"; }"
+            functions[ai.providers.${pid}.api]="_ai.provider.api_executor ${(q)pid} \"\$1\""
         fi
         
         if (( ! $+functions[ai.providers.${pid}.models] )); then
-            eval "ai.providers.${pid}.models() { _ai.provider.models_executor '$pid'; }"
+            functions[ai.providers.${pid}.models]="_ai.provider.models_executor ${(q)pid}"
         fi
 
         if (( ! $+functions[ai.providers.${pid}.models.free] )); then
-            eval "ai.providers.${pid}.models.free() { ai.providers.${pid}.models; }"
+            local target="ai.providers.${pid}.models"
+            functions[ai.providers.${pid}.models.free]="${(q)target}"
         fi
     fi
 }
