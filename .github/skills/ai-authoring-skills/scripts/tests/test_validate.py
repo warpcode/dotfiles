@@ -27,9 +27,54 @@ This is the body.
         self.skill_md_path.write_text(content, encoding="utf-8")
         meta, body_lines = validate.split_skill_md(self.skill_md_path)
 
-        self.assertEqual(meta.get("name"), "my-skill")
-        self.assertEqual(meta.get("description"), "Does something")
+        self.assertEqual(meta, {
+            "name": "my-skill",
+            "description": "Does something",
+        })
         self.assertEqual(body_lines, ["# Body", "This is the body."])
+
+    def test_invalid_yaml_frontmatter(self):
+        content = """---
+name: [invalid yaml
+---
+# Body
+"""
+        self.skill_md_path.write_text(content, encoding="utf-8")
+        with self.assertRaises(ValueError):
+            validate.split_skill_md(self.skill_md_path)
+
+    def test_standard_markdown_without_frontmatter(self):
+        content = """# Header
+This is a standard markdown document without any frontmatter.
+"""
+        self.skill_md_path.write_text(content, encoding="utf-8")
+        with self.assertRaises(ValueError) as context:
+            validate.split_skill_md(self.skill_md_path)
+        self.assertIn("missing '---' frontmatter opener on line 1", str(context.exception))
+
+    def test_horizontal_rule_in_body(self):
+        content = """---
+name: my-skill
+description: Does something
+---
+# Section 1
+---
+# Section 2
+"""
+        self.skill_md_path.write_text(content, encoding="utf-8")
+        meta, body_lines = validate.split_skill_md(self.skill_md_path)
+        self.assertEqual(meta, {"name": "my-skill", "description": "Does something"})
+        self.assertEqual(body_lines, ["# Section 1", "---", "# Section 2"])
+
+    def test_empty_frontmatter(self):
+        content = """---
+---
+# Body
+"""
+        self.skill_md_path.write_text(content, encoding="utf-8")
+        meta, body_lines = validate.split_skill_md(self.skill_md_path)
+        self.assertEqual(meta, {})
+        self.assertEqual(body_lines, ["# Body"])
 
     def test_missing_frontmatter_opener(self):
         content = """name: my-skill
