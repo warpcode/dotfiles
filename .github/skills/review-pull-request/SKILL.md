@@ -48,7 +48,11 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
 2. For each **unresolved + outdated** thread:
    - **Completed & Verified**: Resolve directly via GraphQL without adding noise comments:
      ```bash
+     # Single thread:
      bash <skills-dir>/github-cli/scripts/update_pull_request_review_thread_resolution.sh --thread-id "<thread_id>"
+
+     # Batch resolution (recommended for multiple threads):
+     bash <skills-dir>/github-cli/scripts/batch_resolve_review_threads.sh --thread-ids "<id1>,<id2>,..."
      ```
    - **Uncompleted or Broken**: Bump the thread with a contextual reply using the initial comment's REST integer `databaseId`:
      ```bash
@@ -120,7 +124,40 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
   - Write payload files directly with file-writing tools into the agent scratch directory (`scratch/review_payload.json`) instead of spawning Python scripts, avoiding execution gate blocks and quoting errors.
   - Redirect `gh api` output to a scratch file (e.g. `> scratch/out.json 2>&1`) — piping to `--jq`/`cat` can hang the terminal in the alternate buffer and the POST never completes. Avoid redirecting to root `/tmp/` to adhere to security hooks.
 
-### 5. Memory Extraction (Automatic)
+### 5. Non-Destructive PR Branch Conflict Resolution
+When an approved PR has textual or semantic merge conflicts with the default branch (`origin/main` or `origin/master`) following a prior merge, and user approval is granted to resolve conflicts:
+1. Create an isolated scratch worktree to preserve the main workspace:
+   ```bash
+   git worktree add scratch/worktree-<pr> -b fix/pr-<pr> origin/<branch>
+   ```
+2. Merge the default branch into the PR branch non-interactively:
+   ```bash
+   git -c core.editor=true merge origin/<default-branch>
+   ```
+3. Resolve conflicting files, run local regression tests in the worktree, and commit the merge:
+   ```bash
+   git commit -m "Merge branch '<default-branch>' into <branch>"
+   ```
+4. Push using a standard push (NEVER `--force` or `--force-with-lease`):
+   ```bash
+   git push origin fix/pr-<pr>:<branch>
+   ```
+5. Clean up the isolated worktree and branch:
+   ```bash
+   git worktree remove scratch/worktree-<pr> && git branch -D fix/pr-<pr>
+   ```
+> ⚠️ **Key Invariant**: Never use `git rebase` or force push to update PR branches. A merge commit pushed to the PR branch is fully supported by GitHub, passes CI, and will be cleanly squashed into a single commit upon squash-merging into `master`.
+
+### 6. Ruleset-Gated PR Merges
+On repositories using active GitHub branch rulesets (e.g. enforcing CodeQL or code quality gates) where the user has bypass privileges (`current_user_can_bypass: "always"`), `gh pr merge --squash --delete-branch` will fail with:
+> `Pull request is not mergeable: the base branch policy prohibits the merge.`
+
+Once all required CI checks and approving reviews have passed, supply `--admin` to bypass the ruleset gate:
+```bash
+gh pr merge <pr> --squash --delete-branch --admin
+```
+
+### 7. Memory Extraction (Automatic)
 - **Immediately** after a review is submitted, activate the `ai-conversation-review` skill.
 - Review the transcript to extract durable technical context, user corrections, or decisions made during the review into `~/.agents/AGENTS.md` and relevant skills.
 
