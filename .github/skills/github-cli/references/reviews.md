@@ -17,6 +17,7 @@ Execution commands and scripts for review discovery, inspection, and thread reso
   # Explicit repo overrides
   bash @scripts/list_pull_request_review_threads.sh --owner octocat --repo hello-world --pull-number 42
   ```
+  The script's GraphQL query requests only the first 100 threads and first 100 comments per thread. For a complete review or resolution inventory, check `totalCount` against the returned node counts; when pagination is needed, use a paginated GitHub MCP read. Never report first-page counts as exhaustive.
 
 ## 2. Inspection
 
@@ -37,6 +38,7 @@ Execution commands and scripts for review discovery, inspection, and thread reso
   ```
 
 - **Submit Review Comment (Default / Auto-detected Repo)**:
+  *(Note: When reviewing a PR authored by the authenticated user, GitHub rejects `REQUEST_CHANGES` and `APPROVE` with HTTP 422; submissions must use `COMMENT`.)*
   ```bash
   bash @scripts/create_pull_request_review.sh --pull-number 42 --body "LGTM with minor suggestions."
   ```
@@ -76,6 +78,7 @@ Use the following script to resolve a PR review thread via GraphQL:
 # Resolve a review thread
 bash @scripts/update_pull_request_review_thread_resolution.sh --thread-id "<thread_id>"
 ```
+After resolving threads, fetch a fresh complete thread inventory before reporting remaining counts. Verify the requested thread IDs changed state, and distinguish unresolved current threads from unresolved outdated threads.
 
 ## 5. Atomically Submit Mixed-Type Reviews (GraphQL)
 

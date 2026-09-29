@@ -15,7 +15,8 @@ _ai.provider.models_executor() {
     local cached=$(df.cache get "ai" "models_${pid}")
     [[ -n "$cached" ]] && { echo "$cached"; return 0; }
 
-    local result=$(ai.providers.${pid}.api "/models" | jq -c -M '.data')
+    local api_func="ai.providers.${pid}.api"
+    local result=$("$api_func" "/models" | jq -c -M '.data')
     if [[ -n "$result" && "$result" != "null" ]]; then
         df.cache set "ai" "models_${pid}" "$result"
     fi
@@ -49,7 +50,8 @@ ai.provider.define() {
         fi
 
         if (( ! $+functions[ai.providers.${pid}.models.free] )); then
-            functions[ai.providers.${pid}.models.free]="ai.providers.${pid}.models"
+            local target="ai.providers.${pid}.models"
+            functions[ai.providers.${pid}.models.free]="${(q)target}"
         fi
     fi
 }
