@@ -33,6 +33,10 @@ These instructions capture persistent memories, behavioral guardrails, and techn
    - Never pass unnecessary escaped literal quotes in tool arguments (e.g., use `"/path"`, not `"\"/path\""`).
    - **No Inline Python Scripts**: NEVER execute `python3 -c "..."` or heredoc Python scripts in `run_command`. Rely on skill subcommands or dedicated scripts.
    - **No Shell Sleep**: Never run background or chained `sleep` commands in shell strings (`sleep <n> && ...`). Rely on reactive event notifications, background task completion, or the timer tool.
+   - **Non-Interactive Git Execution**: Never run `git rebase` or interactive commands without `-c core.editor=true` or `GIT_EDITOR=true` to prevent interactive terminal hangs.
+   - **Subagent Reactive Wakeups**: Never poll `manage_subagents` in loops; allow background task notifications and reactive wakeups to resume execution.
+   - **Background Task Completion**: When a command is sent to the background via `run_command`, do NOT schedule redundant one-shot timers on its task ID or poll `manage_task status`. The system automatically notifies you with a high-priority message upon task completion; simply stop calling tools to await completion.
+   - **PR Branch Synchronization Invariant**: NEVER force-push or rebase PR branches to resolve merge conflicts. Update PR branches by merging `origin/master` (`git merge origin/master`), running regression tests in an isolated worktree, and pushing via standard push. Squash-merging on GitHub produces a single clean commit.
 
 7. **Conflict Resolution Order**: Safety > User Intent > Simplicity > Local Convention.
 
@@ -40,6 +44,7 @@ These instructions capture persistent memories, behavioral guardrails, and techn
 
 - **Source of Truth Hierarchy**: `~/.agents/AGENTS.md` is the authoritative source for durable memory. Keep workspace-only notes ephemeral.
 - **Git & PR Workflows**: Delegated to `git-expert`, `github`, `github-cli`, and `review-pull-request` skills. Always use a rebase strategy when pulling or syncing remote changes. During PR reviews, never ask to update or sync the pull request branch with the main branch.
+- **Ruleset-Gated PR Merges**: On repositories with active branch rulesets where the authenticated user has bypass privileges (`current_user_can_bypass: "always"`), `gh pr merge` requires `--admin` to complete the squash-merge once CI and reviews are green.
 - **Non-invasive PR audits**: Use remote PR metadata, diffs, and CI logs; never checkout the PR branch or run workspace tests/builds during the audit, and never request base-branch synchronization.
 - **PR CI verification**: For pull-request checks, compare branch-filtered workflow runs with commit check-suites/check-runs; PR-ref runs may be absent from `gh run list --branch` while CodeQL and other app checks still exist.
 - **Provider-wrapper review invariant**: For authorization or filtering wrappers, resolve the exact underlying result and canonical key/path before access decisions; apply projection before value resolution, preserve provider-specific parsing, and honor optional-interface contracts by interface presence.
@@ -50,3 +55,4 @@ These instructions capture persistent memories, behavioral guardrails, and techn
 - **Package Management Architecture**: The legacy `zinstall` logic is deprecated; use the `pkg.zsh` recipe system (`pkg.recipe.define` + `registry.zsh`).
 - **Profile Configuration Hierarchy**: Base configuration is loaded first, layered with `fs.profile.load` (`df.fs profile list`) overrides via `jq` recursive merge.
 - **Service Logging**: macOS `launchd` agents use shell redirection (`>`) in `ProgramArguments` for log truncation on each run; Linux `systemd` services delegate to `journald` via `StandardOutput=journal`.
+- **Conversation Reviews**: Conversation reviews must be compact and lean, containing strictly actionable suggestions, advice, and improvements (concrete diffs). Omit metadata headers, event stats, and compliance audit sections. Emphasize evaluating workflow scriptability: common procedures and recurring command chains should be scripted end-to-end to eliminate tool call sprawl and drastically cut context token usage.
