@@ -68,7 +68,11 @@ def cmd_check_sessions(client: JulesClient, args: argparse.Namespace) -> None:
 
     if session_id:
         sess = client.get_session(session_id)
-        audits = [client.audit_session(sess, stale_threshold_mins=stale_threshold, max_age_days=max_age_days)]
+        audits = [
+            client.audit_session(
+                sess, stale_threshold_mins=stale_threshold, max_age_days=max_age_days
+            )
+        ]
     else:
         audits = client.audit_sessions(
             page_size=getattr(args, "page_size", 10),
@@ -78,10 +82,18 @@ def cmd_check_sessions(client: JulesClient, args: argparse.Namespace) -> None:
         )
 
     show_history = getattr(args, "history", False) or bool(session_id)
-    print(format_session_check(audits, show_history=show_history, flag_unmerged=flag_unmerged))
+    print(
+        format_session_check(
+            audits, show_history=show_history, flag_unmerged=flag_unmerged
+        )
+    )
 
     if getattr(args, "nudge", False):
-        nudge_targets = [a for a in audits if a["assessment"] in ("STALLED", "AWAITING_USER_FEEDBACK")]
+        nudge_targets = [
+            a
+            for a in audits
+            if a["assessment"] in ("STALLED", "AWAITING_USER_FEEDBACK")
+        ]
         if nudge_targets:
             print("\n### Auto-Nudge Progress Updates")
             for a in nudge_targets:
@@ -112,7 +124,9 @@ def cmd_create_session(client: JulesClient, args: argparse.Namespace) -> None:
 
 def cmd_approve_plan(client: JulesClient, args: argparse.Namespace) -> None:
     data = client.approve_plan(args.session_id, args.plan_id)
-    print(f"Plan `{args.plan_id}` approved successfully for session `{args.session_id}`.")
+    print(
+        f"Plan `{args.plan_id}` approved successfully for session `{args.session_id}`."
+    )
     if data:
         print(json.dumps(data, indent=2))
 
@@ -142,7 +156,9 @@ NUDGE_TEMPLATES = {
 def cmd_nudge(client: JulesClient, args: argparse.Namespace) -> None:
     template = args.template
     if template not in NUDGE_TEMPLATES:
-        die(f"Unknown nudge template: {template}. Available: {', '.join(NUDGE_TEMPLATES.keys())}")
+        die(
+            f"Unknown nudge template: {template}. Available: {', '.join(NUDGE_TEMPLATES.keys())}"
+        )
 
     message = NUDGE_TEMPLATES[template]
     data = client.send_message(args.session_id, message)
@@ -176,7 +192,7 @@ def cmd_call(client: JulesClient, args: argparse.Namespace) -> None:
     print(json.dumps(data, indent=2))
 
 
-def main() -> None:
+def setup_parser() -> argparse.ArgumentParser:
     # Common flags inherited across root and subparsers with suppress default
     common_parser = argparse.ArgumentParser(add_help=False)
     common_parser.add_argument(
@@ -468,6 +484,11 @@ Authentication:
         help="Nudge template to use",
     )
 
+    return parser
+
+
+def main() -> None:
+    parser = setup_parser()
     args = parser.parse_args()
 
     token_val = getattr(args, "token", None)
@@ -475,7 +496,9 @@ Authentication:
 
     api_key = resolve_jules_api_key(token_val)
     if not api_key:
-        die("Jules API key not found. Set JULES_API_KEY environment variable or pass --token.")
+        die(
+            "Jules API key not found. Set JULES_API_KEY environment variable or pass --token."
+        )
 
     client = JulesClient(api_key=api_key, verbose=verbose_val)
 
