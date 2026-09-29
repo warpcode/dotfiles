@@ -5,15 +5,15 @@ description: >
   audit session health and status, review and approve plans, detect stalled runners,
   submit coding tasks, review activity timelines, and extract diff patches. Use
   when:
-  - Querying/managing Google Jules async coding sessions
-  - Checking session health, status, and conversation history
+  - Querying or managing Google Jules async coding sessions
+  - Checking session health, status, stalled runners, or conversation history
   - Approving or reviewing generated implementation plans
-  - Nudging stalled sessions or providing feedback
-  - Creating new coding tasks with plan-approval requirement
+  - Nudging stalled sessions, sending steering feedback, or handling empty commit loops
+  - Recovering from stale branches or Jules stuck in repeated push loops
+  - Creating new coding tasks or sourceless exploratory sessions
   - Extracting git diff patches from completed sessions
-  **Built-in workflows:** comprehensive audit with unmerged work detection (`--flag-unmerged`),
-  standardized nudge templates (`nudge` command), plan assessment checklist,
-  and duplicate work detection.
+  **Built-in workflows:** comprehensive health audits with deliverable detection (`--flag-unmerged`),
+  standardized nudge templates, plan assessment gate, duplicate work prevention, and stale branch recovery.
 ---
 
 # Google Jules REST API
@@ -40,16 +40,21 @@ sequenceDiagram
 
 ## Execution Protocol
 
-### 1. Authentication & Secret Resolution
+### 1. Operational Persona & Privileges
+You operate as a **Jules Session Manager**. Read-only operations (`sources`, `sessions`, `activities`, `check-sessions`) are permitted autonomously during research and triage. Any write or mutating action (`create-session`, `approve-plan`, modifying repo files) MUST be confirmed with explicit parameters before execution.
+
+### 2. Authentication & Secret Resolution
 - All requests require a valid Google Jules API key passed in the `X-Goog-Api-Key` header.
 - The bundled CLI (`scripts/main.py`) and client (`jules.client.JulesClient`) automatically resolve the secret via `JULES_API_KEY` in the environment.
 - You can override or explicitly pass a token using the `--token <KEY>` flag.
 - If credentials cannot be resolved, stop and prompt the user to provide or set `JULES_API_KEY`.
 
-### 2. Progressive Disclosure & Documentation
+### 3. Progressive Disclosure & Documentation
 - For session health assessment and stalled runner remediation, consult `@references/session-audit-workflow.md`.
 - For execution lifecycle stages and VM state transitions, consult `@references/session-lifecycle.md`.
+- For sandbox isolation, git commit mechanics, and empty commit loops, consult `@references/jules-git-architecture.md`.
 - For exhaustive endpoint parameters, request bodies, and schema specifications, consult `@references/api-reference.md`.
+- For custom programmatic automation pipelines, consult `@references/python-client.md`.
 - Reusable report templates live under `templates/session-audit.md` and `templates/session-summary.md`.
 
 ---
@@ -82,7 +87,7 @@ python3 <skill-dir>/scripts/main.py sessions --page-size 10
 # Fetch full summary and outputs for a specific session
 python3 <skill-dir>/scripts/main.py session 4475409647262242777
 
-# Create a new coding session
+# Create a new coding session attached to a repository
 python3 <skill-dir>/scripts/main.py create-session \
   "Refactor sensitive memory buffers to use ZeroBytes" \
   --source github/warpcode/cloakenv \
@@ -94,42 +99,39 @@ python3 <skill-dir>/scripts/main.py create-session \
   "Upgrade Go dependencies and verify test suite" \
   --source github/warpcode/cloakpkg \
   --require-approval
-```
 
-#### Creating a Sourceless Session (No Repository)
-For exploratory or non-code sessions without a connected repository, use the direct REST escape hatch (the `create-session` CLI enforces `--source` but the Jules API accepts sessions without `sourceContext`):
-
-```bash
-# Create a sourceless session (no repository attached)
-python3 <skill-dir>/scripts/main.py call POST sessions \
-  '{"prompt":"Your exploratory prompt","title":"Session Title"}'
+# Create a sourceless exploratory session (no repository attached)
+python3 <skill-dir>/scripts/main.py create-session \
+  "Explain trade-offs between zero-copy buffers and memory scrubbing" \
+  --title "Architecture Exploration"
 ```
 
 ### 3. Session Health Audit & Triage (`check-sessions`)
 Audit the health, elapsed inactivity duration, latest activity, and plan status for recent sessions. Sessions over 30 days old are considered inactive and automatically ignored by default (`--max-age-days 30`).
 
 ```bash
-# Audit recent sessions (identifies stalled runs, plan gates, and inactive tasks)
+# Standard audit scan (identifies stalled runs, plan gates, and inactive tasks)
 python3 <skill-dir>/scripts/main.py check-sessions --page-size 10
 
 # Audit a specific session (shows full conversation transcript)
 python3 <skill-dir>/scripts/main.py check-sessions 4475409647262242777
 
-# Audit and automatically nudge stalled sessions (>60m without status updates)
-python3 <skill-dir>/scripts/main.py check-sessions --nudge --stale-threshold-mins 60
-
-# Audit sessions with custom age cutoff in days (0 to disable filtering)
+# Audit with custom age cutoff in days (0 to disable filtering)
 python3 <skill-dir>/scripts/main.py check-sessions --max-age-days 14
 
-# Full audit with history + detect CLOSED_NO_PR sessions that have deliverables
+# Comprehensive audit: full history + detect CLOSED_NO_PR sessions with deliverables
 python3 <skill-dir>/scripts/main.py check-sessions --page-size 20 --history --flag-unmerged
+
+# Audit and automatically nudge stalled sessions (>60m without status updates)
+python3 <skill-dir>/scripts/main.py check-sessions --nudge --stale-threshold-mins 60
 ```
 
 **Options:**
-- `--flag-unmerged` — Scan conversation history of CLOSED_NO_PR sessions for completion markers (e.g., "Completed pre-commit steps", "Code review: Code reviewed") and flag sessions that did work but didn't create a PR
-- `--history` — Include full conversation transcript in output
+- `--flag-unmerged` — Scan conversation history of CLOSED_NO_PR sessions for completion markers and flag sessions that produced deliverables without opening a PR
+- `--history` (`-H`) — Include full chronological conversation transcript in output
 - `--nudge` — Auto-send progress check messages to STALLED sessions
 - `--stale-threshold-mins N` — Minutes before session considered stale (default: 60)
+- `--max-age-days N` — Filter out sessions older than N days (default: 30, set 0 to disable)
 
 ### 4. Session Activities & Timelines (`activities`, `activity`)
 Inspect the chronological audit log of events, agent messages, plans, and diffs emitted during execution.
@@ -149,7 +151,7 @@ Approve pending implementation plans or send steering instructions to a running 
 # Approve a generated plan (CLI wrapper - preferred)
 python3 <skill-dir>/scripts/main.py approve-plan 4475409647262242777 <PLAN_ID>
 
-# Or direct REST API (empty payload)
+# Direct REST API approval fallback (empty payload)
 python3 <skill-dir>/scripts/main.py call POST "sessions/4475409647262242777:approvePlan" '{}'
 
 # Send clarifying message / guidance
@@ -183,151 +185,114 @@ python3 <skill-dir>/scripts/main.py call POST sessions '{"prompt":"Fix typo","so
 
 ---
 
-## Session Monitoring & Triage Workflows
+## Session Triage & Operational Workflows
 
-### Workflow 1: Status Scan & Conversation Review
-1. Run `python3 <skill-dir>/scripts/main.py check-sessions --page-size 10`. Sessions over 30 days old are considered inactive and ignored by default (`--max-age-days 30`). To view full dialogue threads across all turns, append `--history` or pass a specific session ID.
-2. Review the complete conversation history, not just the latest message:
-   - Check the `Dialogue` metric for unresponded user messages (`⚠️ N unreplied`) or pending agent questions (`❓ agent asked`).
-   - Review prior user steering comments to ensure the agent complied with earlier guidance.
-   - Verify intermediate testing and automated code review ratings (`#Correct#`, `#NeedsWork#`).
-3. Evaluate the assessment status:
-   - `⚠️ PLAN_GATE`: Jules is waiting for plan approval (including idle sessions with pending unapproved plans).
-   - `💬 FEEDBACK_GATE`: Jules is awaiting user guidance or clarification.
-   - `🚨 STALLED`: Runner has had no activity for $\ge 60$ minutes or failed to answer user inquiries.
-   - `⚪ CLOSED_NO_PR`: Session completed without producing a PR and verified to have no pending plans, unanswered questions, or deliverables.
+```mermaid
+flowchart TD
+    Scan["1. Status Scan<br/><code>check-sessions</code>"] --> Triage{"Evaluate State"}
+    
+    Triage -->|"PLAN_GATE"| W_Plan["Workflow 2: Plan Review & Approval"]
+    Triage -->|"STALLED / FEEDBACK_GATE"| W_Stuck["Workflow 3: Stuck Runner Remediation"]
+    Triage -->|"CLOSED_NO_PR + Deliverables"| W_Deliverables["Workflow 1: PR Reminder (Full Audit)"]
+    Triage -->|"Empty Commit Loop / Stale Base"| W_Stale["Workflow 5: Stale Branch Recovery"]
+    Triage -->|"New Task Request"| W_Dup["Workflow 4: Duplicate Detection"]
+```
+
+### Workflow 1: Status Scan & Comprehensive Audit
+1. Run standard scan:
+   `python3 <skill-dir>/scripts/main.py check-sessions --page-size 10`
+   Sessions over 30 days old are considered inactive and ignored by default (`--max-age-days 30`).
+2. For comprehensive audits (or detecting unmerged deliverables), run full audit mode:
+   `python3 <skill-dir>/scripts/main.py check-sessions --page-size 20 --history --flag-unmerged --max-age-days 14`
+3. Review conversation history across turns:
+   - Check `Dialogue` metric for unresponded user messages (`⚠️ N unreplied`) or pending agent questions (`❓ agent asked`).
+   - Review prior user steering comments to ensure the agent complied.
+   - Verify testing ratings and completion markers (`Completed pre-commit steps`, `Code review: Code reviewed`).
+4. Evaluate assessment status:
+   - `⚠️ PLAN_GATE`: Jules is waiting for plan approval (route to Workflow 2).
+   - `💬 FEEDBACK_GATE`: Jules is awaiting user guidance (route to Workflow 3).
+   - `🚨 STALLED`: Runner has had no activity for $\ge 60$ minutes (route to Workflow 3).
+   - `⚪ CLOSED_NO_PR`: Session completed without PR. If deliverables found via `--flag-unmerged`, request PR: `python3 <skill-dir>/scripts/main.py nudge <session_id> pr_reminder`.
    - `🔵 ACTIVE`: Task is progressing normally.
    - `✅ COMPLETED`: Task finished with an attached pull request.
-   - `💤 INACTIVE`: Session is over 30 days old and considered inactive (ignored by default).
+   - `💤 INACTIVE`: Session is over 30 days old; no action needed.
 
-### Workflow 2: Plan Review Gate & Approval
-1. When a session is in `PLAN_GATE` / `AWAITING_PLAN_APPROVAL`, fetch the generated plan steps:
-   `python3 <skill-dir>/scripts/main.py activity <session_id> <activity_id>` or review via `check-sessions`.
-2. Evaluate plan against repository standards:
-   - Scope is surgical and matches prompt.
-   - Unit tests and verification commands (`go test`, `pytest`) are included.
-   - Cross-platform considerations and security invariants are preserved.
-3. If approved, execute:
-   `python3 <skill-dir>/scripts/main.py approve-plan <session_id> <plan_id>`
-   Follow up with a confirmation message via `send-message`.
-4. If changes are needed, send revision feedback via `send-message`.
-
-### Workflow 3: Stuck Runner & Premature Closure Remediation
-1. For sessions marked `STALLED` ($\ge 60$ minutes without updates) or closed prematurely without PR:
-2. Send a progress inquiry to prompt the cloud runner:
-   `python3 <skill-dir>/scripts/main.py send-message <session_id> "What is your progress? Please provide a status update on this task."`
-   Alternatively, pass `--nudge` to `check-sessions` to auto-nudge all stalled sessions.
-   Or use the built-in nudge templates:
-   `python3 <skill-dir>/scripts/main.py nudge <session_id> plan_stalled`
-
-### Workflow 4: Comprehensive Audit & Unmerged Work Detection
-1. Run full audit with deliverable detection:
-   `python3 <skill-dir>/scripts/main.py check-sessions --page-size 20 --history --flag-unmerged`
-2. Review output for:
-   - `⚠️ PLAN_GATE` — Sessions awaiting plan approval (review with Workflow 2)
-   - `🚨 STALLED` — Sessions inactive ≥60min (remediate with Workflow 3)
-   - `⚪ CLOSED_NO_PR` with **DELIVERABLES FOUND** — Sessions that completed work but didn't create PR
-   - `🔵 ACTIVE` with **unreplied messages** — Sessions where user steering was ignored
-3. For each `CLOSED_NO_PR` with deliverables:
-   - Fetch full history: `python3 <skill-dir>/scripts/main.py check-sessions <session_id> --history`
-   - Verify completion markers: "Completed pre-commit steps", "Code review: Code reviewed", "Code review: Completed"
-   - Request PR creation: `python3 <skill-dir>/scripts/main.py nudge <session_id> pr_reminder`
-   - Or create PR manually from session outputs
-
-### Workflow 5: Plan Assessment & Review
+### Workflow 2: Plan Review & Approval Gate
 When a session is in `PLAN_GATE` / `AWAITING_PLAN_APPROVAL`:
 
 1. **Fetch the plan**:
-   `python3 <skill-dir>/scripts/main.py check-sessions <session_id> --history`
-   Or: `python3 <skill-dir>/scripts/main.py activities <session_id> --page-size 20`
-   Find the `plan_generated` activity ID, then:
    `python3 <skill-dir>/scripts/main.py activity <session_id> <plan_activity_id>`
-
-2. **Evaluate against repository standards** (from AGENTS.md):
+   (Or inspect via `check-sessions <session_id> --history`).
+2. **Evaluate against repository standards**:
    - [ ] Scope is surgical and matches prompt (no unrequested refactors)
-   - [ ] Unit tests and verification commands included (`go test -race ./...`, `go vet ./...`, `make fmt`)
+   - [ ] Unit tests and verification commands included (`go test -race ./...`, `pytest`, `npm test`)
    - [ ] Cross-platform considerations addressed (Linux, macOS, Windows)
    - [ ] Security invariants preserved (no secret logging, no plaintext disk writes)
-   - [ ] No new dependencies without approval
-   - [ ] Provider Development Checklist followed (if adding new provider)
-
+   - [ ] No unapproved external dependencies
 3. **Decision**:
-   - **Approve**: `python3 <skill-dir>/scripts/main.py approve-plan <session_id> <plan_id>` + `nudge <session_id> "Plan approved. Proceed with implementation."`
+   - **Approve**: `python3 <skill-dir>/scripts/main.py approve-plan <session_id> <plan_id>` + `nudge <session_id> plan_stalled`
    - **Request changes**: `python3 <skill-dir>/scripts/main.py send-message <session_id> "Plan needs revision: [specific feedback]"`
 
-### Workflow 6: Duplicate Work Detection
-Before creating a new session:
-1. Search recent sessions for similar titles:
-   `python3 <skill-dir>/scripts/main.py check-sessions --page-size 30 --history`
-2. Look for sessions with matching keywords in title/activity
-3. If found, prefer nudging existing session over creating duplicate:
-   `python3 <skill-dir>/scripts/main.py nudge <session_id> progress_check`
-4. If existing session is `CLOSED_NO_PR` with deliverables, request PR instead of spawning new work
+### Workflow 3: Stuck Runner & Premature Closure Remediation
+For sessions marked `STALLED` ($\ge 60$ minutes without updates) or closed prematurely:
 
-### Workflow 7: Stale Branch & Empty Commit Loop Remediation
-When Jules pushes empty commits or the base branch has advanced since session creation (see `@references/jules-git-architecture.md`):
+1. Send a progress check to prompt the cloud runner:
+   `python3 <skill-dir>/scripts/main.py nudge <session_id> progress_check`
+   (Or auto-nudge all stalled runs via `check-sessions --nudge`).
+2. If the runner was awaiting guidance, send targeted feedback:
+   `python3 <skill-dir>/scripts/main.py send-message <session_id> "Continue with the implementation per the plan."`
+3. Approving a plan or sending a message immediately revives an idle `COMPLETED` session back to `IN_PROGRESS`.
+
+### Workflow 4: Duplicate Work Detection
+Before creating a new session:
+1. Search recent sessions for matching keywords:
+   `python3 <skill-dir>/scripts/main.py check-sessions --page-size 30 --history`
+2. If an active or stalled session exists for the same goal, prefer nudging it over spawning duplicate cloud VMs:
+   `python3 <skill-dir>/scripts/main.py nudge <session_id> progress_check`
+3. If an existing session is `CLOSED_NO_PR` with deliverables, request a PR instead of restarting from scratch.
+
+### Workflow 5: Stale Branch & Empty Commit Loop Remediation
+When Jules pushes empty commits or the remote branch has advanced since session creation (see `@references/jules-git-architecture.md`):
 1. **Stop the loop immediately**:
    `python3 <skill-dir>/scripts/main.py send-message <session_id> "Stop pushing. The remote branch has been updated since your session started. Your local /app is stale. Please stop all further push attempts."`
-2. **Close the stale session and create a new one** pointing at the updated branch:
+2. **Close the stale session and create a new one** pointing at the updated base branch:
    `python3 <skill-dir>/scripts/main.py create-session "<original task prompt>" --source github/<owner>/<repo> --branch <updated-branch>`
 3. **Prevention**: Treat a Jules session as an exclusive lock on its target branch — avoid concurrent pushes to branches Jules is actively working on.
-
----
-
-## Python Programmatic Client
-
-For custom automation pipelines, import `JulesClient` directly:
-
-```python
-from jules.client import JulesClient
-from jules.auth import resolve_jules_api_key
-
-api_key = resolve_jules_api_key()
-client = JulesClient(api_key=api_key)
-
-# Query sources and sessions
-sources = client.list_sources()
-sessions = client.list_sessions(page_size=5)
-
-# Inspect a completed session
-session = client.get_session("4475409647262242777")
-print(session.get("outputs"))
-```
 
 ---
 
 ## Constraints & Guardrails
 
 1. **Pre-Action Safety Gate**:
-   - Creating a new session (`create-session`) or approving a plan (`approve-plan`) triggers cloud VM resources and GitHub repository changes. ALWAYS confirm parameters with the user when performing write actions.
+   - Creating a new session (`create-session`) or approving a plan (`approve-plan`) triggers cloud VM resources and GitHub repository changes. The agent MUST confirm parameters with the user before performing write actions.
 2. **Secrets Blindness**:
-   - NEVER print, log, or hardcode API keys. Rely exclusively on `JULES_API_KEY` or `--token`.
+   - The agent MUST NEVER print, log, or hardcode API keys. Rely exclusively on `JULES_API_KEY` or `--token`.
 3. **No Unrequested Refactoring**:
-   - Do NOT modify existing scripts or templates unless explicitly tasked.
+   - The agent MUST NOT modify existing scripts or templates unless explicitly tasked.
 4. **Token Efficiency**:
-   - Limit list queries with `--page-size` (default 5–10 items) to prevent context overflow.
+   - The agent MUST limit list queries with `--page-size` (default 5–10 items) to prevent context overflow.
 5. **Follow Documented Workflows**:
-   - Always execute Workflow 1 (Status Scan) → Workflow 2 (Plan Review) → Workflow 5 (Plan Assessment) before approving plans. The `check-sessions --flag-unmerged --history` command detects sessions with deliverables awaiting PR.
+   - The agent MUST follow Workflow 1 (Status Scan) $\rightarrow$ Workflow 2 (Plan Review) before approving plans.
 6. **Stale State Warning**:
-   - The `check-sessions` summary table can show outdated state. Always verify with direct session API call (`call GET sessions/{id}`) before assessing session health.
+   - The `check-sessions` summary table can show cached state. When diagnosing ambiguous states, verify with a direct session call (`call GET sessions/{id}`).
 7. **Session Timeout & Idle Invariant (Idle != Terminal)**:
-   - **Idle != Terminal**: Just because a session has `state: COMPLETED` does NOT mean it is finished. Jules automatically sets `state` to `COMPLETED` when the runner goes idle (~20-30 min waiting for plan approval or feedback).
-   - When a session has a status of `COMPLETED`, you must **ALWAYS** inspect session messages and activities for:
-     1. Approvals still yet to be approved (e.g. pending unapproved plan ID)
-     2. Questions or steering unanswered (agent asked or user asked)
-     3. Solid confirmation that the agent should halt immediately or finished with a PR
-   - Approving the plan (`approve-plan`) or sending guidance (`send-message`) immediately resumes the session back to `IN_PROGRESS`. Never assume a completed session cannot be resumed.
+   - **Idle != Terminal**: Jules sets `state: COMPLETED` when a runner goes idle (~20-30 min waiting for plan approval or feedback).
+   - When a session reports `COMPLETED`, the agent MUST inspect messages and activities for:
+     1. Approvals still pending (unapproved plan ID) $\rightarrow$ evaluate as `PLAN_GATE` and approve via `approve-plan`.
+     2. Questions or steering unanswered $\rightarrow$ reply via `send-message`.
+     3. Solid confirmation that the agent finished with a PR or was halted.
+   - Approving a plan (`approve-plan`) or sending guidance (`send-message`) immediately revives the session back to `IN_PROGRESS`. Never assume a completed session cannot be resumed.
 
 ---
 
 ## Validation Checklist
 
 - [ ] `JULES_API_KEY` is present in the environment or passed via `--token`.
-- [ ] Read-only operations (`sources`, `sessions`, `activities`) are used during research and triage.
-- [ ] Session creation targets a verified source discovered via `sources`.
+- [ ] Read-only operations (`sources`, `sessions`, `activities`, `check-sessions`) are used during research and triage.
+- [ ] Session creation targets a verified source discovered via `sources` (or explicitly sourceless).
 - [ ] Task prompts provided to `create-session` are self-contained and specify clear acceptance criteria.
 - [ ] Output is synthesized into concise markdown tables or summaries.
-- [ ] `--flag-unmerged` used during audits to detect CLOSED_NO_PR sessions with deliverables
-- [ ] Plan assessment follows Workflow 5 checklist before approve-plan
-- [ ] Duplicate work check (Workflow 6) performed before create-session
-- [ ] Standardized nudge templates used for consistent communication
+- [ ] `--flag-unmerged` used during audits to detect CLOSED_NO_PR sessions with deliverables.
+- [ ] Plan assessment follows Workflow 2 checklist before `approve-plan`.
+- [ ] Duplicate work check (Workflow 4) performed before `create-session`.
+- [ ] Standardized nudge templates used for consistent communication.
