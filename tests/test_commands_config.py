@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
 import unittest
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -528,9 +529,10 @@ class TestRegistrySecurity(unittest.TestCase):
         if not zsh_bin:
             self.skipTest("zsh executable not found on PATH")
 
-        marker_file = "/tmp/sentinel_registry_eval_test"
-        if os.path.exists(marker_file):
-            os.remove(marker_file)
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            marker_file = tmp.name
+        os.remove(marker_file)
+        self.addCleanup(lambda: os.path.exists(marker_file) and os.remove(marker_file))
 
         test_zsh_script = f"""
         source "{script_path}"
