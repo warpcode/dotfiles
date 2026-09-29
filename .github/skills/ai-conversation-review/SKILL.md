@@ -2,8 +2,9 @@
 name: ai-conversation-review
 description: >
   Audit human-AI chat transcripts to extract improvements for instructions/AGENTS.md,
-  audit tool and command usage efficiency, enforce simpler commands, identify missed
-  skills, and consolidate command patterns into reusable skill scripts. Use when
+  audit tool and command usage efficiency, evaluate workflow scriptability to drastically
+  reduce context and token usage, enforce simpler commands, identify missed skills, and
+  consolidate repeated workflows and command chains into reusable skill scripts. Use when
   reviewing conversations or updating instructions.
 ---
 
@@ -16,6 +17,7 @@ Comprehensive system for auditing human-AI conversations: reviewing tool and com
 ## When to Use
 
 - The user says "review this conversation", "audit our session", "analyze chat history", or "run conversation review".
+- You need to evaluate how much of the conducted workflow could be automated into scripts to eliminate repeated tool calls, speed up procedures, and drastically reduce context token usage.
 - You need to audit tool and command usage to eliminate complex inline Python scripts (`python3 -c "..."` / heredocs) or opaque bash pipelines in favor of simpler commands.
 - You need to identify command patterns from trial-and-error shell sequences and consolidate them into reusable scripts inside skills.
 - You want to discover which skills **should have been loaded but were missed**, diagnosing why the agent failed to trigger them.
@@ -38,7 +40,7 @@ flowchart TD
     end
 
     subgraph Commands["Stage 3: Tool & Command Efficiency Audit"]
-        B --> E["Audit ALL Commands & Tool Invocations"]
+        B --> E["Audit ALL Commands & Tool Invocations<br/>Evaluate Workflow Scriptability & Token Optimization"]
         E --> F["Flag Inefficiencies: Inline Python, Multi-Pipe Bash, Wasted Context"]
         F --> G["Identify Patterns & Synthesize Skill Scripts<br/>(@references/script-consolidation-guide.md)"]
     end
@@ -139,7 +141,13 @@ See [@references/prompt-and-skill-audit-rubric.md](@references/prompt-and-skill-
 
 Thoroughly inspect **all** terminal commands and tool invocations executed during the session:
 
-### 1. Efficiency & Simplicity Assessment
+### 1. Workflow Scriptability & Token Optimization (Mandatory Check)
+When reviewing conversation history, **it is critical to evaluate how much of the conducted workflow could be automated into scripts to eliminate tool call sprawl and drastically cut token and context usage**:
+- **Script Common Procedures & Command Chains**: Common procedures and recurring chains of commands **should be scripted end-to-end**. Do NOT force the agent to call a million individual tools across a million turns when a single cohesive script can execute the entire procedure deterministically (e.g. end-to-end PR triage, worktree merge conflict resolution + regression test + push pipelines, or multi-check status rollups).
+- **Eliminate Tool Call Proliferation**: Every discrete tool invocation consumes substantial token overhead (tool schemas, model thinking turns, argument serialization, and raw output). Chained sequences of exploratory commands or multi-turn status checks must be consolidated into parameterized scripts within the appropriate skill package (`<skill-dir>/scripts/`).
+- **Drastic Context & Token Reduction**: Encapsulating complete multi-step procedures into scripts collapses multiple round-trips into a single tool call, guarantees adherence to project safety invariants, and keeps the conversation context lean by having the script emit only a concise, high-signal Markdown summary.
+
+### 2. Efficiency & Simplicity Assessment (Simpler Commands Mandate)
 - **Was tool and command usage efficient?** Did the agent run exploratory trial-and-error loops, guessing flags or syntax across multiple turns?
 - **Can commands be made simpler?** Enforce simpler, readable, declarative commands.
 - **Flag Anti-Patterns**:
@@ -147,7 +155,7 @@ Thoroughly inspect **all** terminal commands and tool invocations executed durin
   - **Complex Bash Pipelines**: Flag commands with >2 pipes (`grep | awk | sed | jq`) or fragile regex acrobatics.
   - **Context Window Flooding**: Flag commands that emit large, unformatted stdout dumps into the conversation context.
 
-### 2. Pattern Detection & Skill Script Synthesis
+### 3. Pattern Detection & Skill Script Synthesis
 - Identify recurring command patterns across turns or common workflows.
 - Consolidate ad-hoc sequences into a deterministic, reusable script located **exclusively within the appropriate skill package** (`<skill-dir>/scripts/`).
 - Ensure every synthesized script satisfies:
@@ -180,13 +188,11 @@ When addressing issues, route fixes according to Scope (Project vs. Global) and 
 
 ## Output Contract & Review Report
 
-All conversation reviews MUST generate a lean, issue-focused Markdown report using [templates/conversation-review-report.md](templates/conversation-review-report.md).
+All conversation reviews MUST generate a compact, lean report focused strictly on actionable feedback using [templates/conversation-review-report.md](templates/conversation-review-report.md).
 
 ### Lean Reporting Rules
-- **No Congratulatory Bloat**: Do not summarize what worked well or provide congratulatory commentary.
-- **Focus on Issues & Solutions**: Strictly report problems discovered, root cause analysis, and concrete fixes/diffs.
-- **Mandatory Sections**:
-  1. **Skill & Workflow Trigger Issues**: Missed skills that should have loaded, trigger fixes, and skill gaps.
-  2. **Tool & Command Usage Inefficiencies**: Flagged complex commands (inline Python, multi-pipe bash), wasted context, and synthesized skill scripts.
-  3. **Downstream Updates**: Concrete diffs for project-specific and/or global skills, workflows, subagents, rules, or `AGENTS.md`.
-  4. **Compliance & Guardrails Deviations**: Violations or near-misses of safety guardrails and proposed preventative rules.
+- **No Congratulatory Bloat or Filler**: Omit summaries of what worked well, event stats, and compliance audit passes.
+- **Strictly Actionable Sections**:
+  1. **Suggestions**: Workflow and tooling recommendations (e.g. automating common procedures and command chains into scripts to eliminate tool sprawl and save tokens, batch operations, simpler commands, alternative tools).
+  2. **Advice**: Behavioral guidance, habit adjustments, or procedural improvements.
+  3. **Improvements**: Concrete diffs or updates targeting skills, rules, or instructions.
