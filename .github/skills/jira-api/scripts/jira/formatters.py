@@ -17,18 +17,24 @@ def _flatten_adf_list(node, parts):
 
     node_type = node.get("type")
     if node_type == "text":
-        parts.append(node.get("text", ""))
+        text = node.get("text")
+        if text:
+            parts.append(text)
     elif node_type == "hardBreak":
         parts.append("\n")
     elif node_type == "inlineCard":
         # Check attrs explicitly to avoid allocating default dicts on missing keys
         attrs = node.get("attrs")
-        if attrs:
-            parts.append(attrs.get("url", ""))
+        if isinstance(attrs, dict):
+            url = attrs.get("url")
+            if url:
+                parts.append(url)
     elif node_type == "mention":
         attrs = node.get("attrs")
-        if attrs:
-            parts.append(attrs.get("text", ""))
+        if isinstance(attrs, dict):
+            text = attrs.get("text")
+            if text:
+                parts.append(text)
     elif node_type in ("paragraph", "heading", "listItem", "tableCell"):
         # Check content explicitly to avoid allocating default lists on missing keys
         content = node.get("content")
