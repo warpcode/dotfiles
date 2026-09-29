@@ -59,10 +59,28 @@ flowchart TD
 The review system accepts conversation transcripts from any AI platform:
 - **Antigravity / Gemini CLI**: `transcript.jsonl` or `transcript_full.jsonl`
 - **Claude Code**: JSON/JSONL session logs (`~/.claude/projects/...`)
-- **OpenCode**: Session JSON history
+- **OpenCode**: SQLite store at `~/.local/share/opencode/opencode.db` (export with `export_opencode_session.py`)
 - **OpenAI / ChatGPT**: JSON conversation exports
 - **VS Code Copilot Chat**: workspace-storage transcript JSONL, including `runSubagent` calls
 - **Plain Markdown / Text**: Exported chat text (`User:` / `Assistant:`)
+
+### OpenCode Ingestion (SQLite)
+OpenCode persists sessions in SQLite, not JSONL. **Never query the database with an inline
+`python3 -c` script** — use the bundled exporter, which joins `part` to `message` to recover
+each turn's role (OpenCode `part` rows carry no role on their own):
+
+```bash
+# List recent sessions to pick one
+python3 <skill-dir>/scripts/export_opencode_session.py --list
+
+# Export to parser-compatible JSONL
+python3 <skill-dir>/scripts/export_opencode_session.py <session_id> > /tmp/session.jsonl
+python3 <skill-dir>/scripts/export_opencode_session.py --latest         > /tmp/session.jsonl
+
+# Then audit as usual
+python3 <skill-dir>/scripts/parse_conversation.py /tmp/session.jsonl --stats
+python3 <skill-dir>/scripts/parse_conversation.py /tmp/session.jsonl --tools-only
+```
 
 ### Ingestion Helper
 To extract turns and tool invocations without consuming excessive tokens, run the parser relative to this skill's root directory (`<skill-dir>/scripts/...` e.g. `.github/skills/ai-conversation-review/scripts/...`):
