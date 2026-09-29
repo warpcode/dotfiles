@@ -30,7 +30,7 @@ _registry.aa_get() {
 
 # Write associative array value: _registry.aa_set <varname> <key> <value>
 _registry.aa_set() {
-    eval "${1}[${2}]=${(q)3}"
+    typeset -g "${1}[${2}]"="$3"
 }
 
 # Read array elements: _registry.arr_get <varname> → prints elements one per line
@@ -74,7 +74,8 @@ registry.define() {
     _registry.aa_set "$exists_var" "$id" "1"
 
     if (( add_to_list )); then
-        eval "${list_var}+=(\"\${id}\")"
+        typeset -ga "$list_var"
+        set -A "$list_var" "${(@P)list_var}" "$id"
     fi
 }
 
