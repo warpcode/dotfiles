@@ -75,6 +75,36 @@ def parse_antigravity_gemini_jsonl(lines: List[str]) -> List[Dict[str, Any]]:
     return events
 
 
+def parse_opencode_jsonl(lines: List[str]) -> List[Dict[str, Any]]:
+    """Parses normalized OpenCode session JSONL (see export_opencode_session.py)."""
+    events = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        role = obj.get("role", "assistant")
+        tool_calls = obj.get("tool_calls") or []
+        if role in ("user", "human"):
+            events.append({
+                "role": "user",
+                "content": obj.get("content", ""),
+                "tool_calls": [],
+                "error": obj.get("error")
+            })
+        else:
+            events.append({
+                "role": "assistant",
+                "content": obj.get("content", ""),
+                "tool_calls": tool_calls,
+                "error": obj.get("error")
+            })
+    return events
+
+
 def parse_claude_code_session(data: Any) -> List[Dict[str, Any]]:
     """Parses Claude Code JSON / JSONL transcripts."""
     events = []
@@ -253,6 +283,8 @@ def ingest_transcript(raw_text: str) -> List[Dict[str, Any]]:
                 first_obj = json.loads(lines[0])
                 if "type" in first_obj and "data" in first_obj and "timestamp" in first_obj:
                     return parse_vscode_copilot_jsonl(lines)
+                if "role" in first_obj and "tool_calls" in first_obj:
+                    return parse_opencode_jsonl(lines)
                 if "step_index" in first_obj or "source" in first_obj or "tool_calls" in first_obj:
                     return parse_antigravity_gemini_jsonl(lines)
             except Exception:
