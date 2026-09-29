@@ -16,7 +16,7 @@ def _flatten_adf_node(node, parts):
         if content:
             _flatten_adf_list(content, parts)
         parts.append("\n")
-    elif "content" in node:
+    else:
         content = node.get("content")
         if content:
             _flatten_adf_list(content, parts)
