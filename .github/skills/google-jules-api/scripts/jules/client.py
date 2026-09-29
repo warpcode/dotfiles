@@ -189,6 +189,41 @@ class JulesClient:
         payload = {"prompt": message.strip()}
         return self.call("POST", f"sessions/{sid}:sendMessage", payload=payload)
 
+    # --- Session Lifecycle Operations ---
+
+    def archive_session(self, session_id: str) -> dict[str, Any]:
+        """Archive a Jules session (reversible).
+
+        Sets the session's `archived` flag and hides it from default listings.
+        This is the CORRECT operation for "archive", "close out", "hide", "tidy",
+        and "clean up" requests. Use delete_session() only for permanent removal.
+        """
+        sid = session_id.strip().removeprefix("sessions/")
+        return self.call("POST", f"sessions/{sid}:archive", payload={})
+
+    def unarchive_session(self, session_id: str) -> dict[str, Any]:
+        """Restore a previously archived Jules session to the active listing."""
+        sid = session_id.strip().removeprefix("sessions/")
+        return self.call("POST", f"sessions/{sid}:unarchive", payload={})
+
+    def delete_session(self, session_id: str, confirm: bool = False) -> dict[str, Any]:
+        """Permanently delete a Jules session.
+
+        IRREVERSIBLE. This bypasses archiving entirely -- the session cannot be
+        restored. To 'archive' or 'close out' a session, use archive_session()
+        instead, which is reversible. Requires confirm=True.
+        """
+        sid = session_id.strip().removeprefix("sessions/")
+        if not confirm:
+            from jules.utils import die
+            die(
+                f"Refusing to permanently delete session {sid}. Deletion is IRREVERSIBLE. "
+                "To archive or close out a session, use the reversible 'archive-session' "
+                "command instead. Re-run with --confirm only if the user has explicitly "
+                "asked for permanent removal."
+            )
+        return self.call("DELETE", f"sessions/{sid}")
+
     # --- Session Activities Operations ---
 
     def list_activities(
@@ -245,7 +280,10 @@ class JulesClient:
     ) -> dict[str, Any]:
         """Audit the status, timeline events, and health of a single session."""
         sid = session_data.get("id") or session_data.get("name", "").removeprefix("sessions/")
-        title = session_data.get("title") or session_data.get("prompt", "")[:60].replace("\n", " ")
+        # Collapse all whitespace to a single line, then truncate. Session titles are often
+        # the entire original task prompt, which floods summary tables with multi-paragraph text.
+        raw_title = session_data.get("title") or session_data.get("prompt", "")
+        title = " ".join(raw_title.split())[:60]
         state = session_data.get("state", "UNKNOWN")
         source_ctx = session_data.get("sourceContext", {})
         source_name = source_ctx.get("source", "").removeprefix("sources/")

@@ -182,6 +182,14 @@ def cmd_activity(client: JulesClient, args: argparse.Namespace) -> None:
 
 
 def cmd_call(client: JulesClient, args: argparse.Namespace) -> None:
+    destructive = {"DELETE", "PUT", "PATCH"}
+    if args.method.upper() in destructive:
+        die(
+            f"Refusing to issue {args.method.upper()} via the 'call' escape hatch. "
+            "Permanent deletion is irreversible. Use 'archive-session' to archive or "
+            "close out a session (reversible), or 'delete-session <id> --confirm' if "
+            "the user has explicitly asked for permanent removal."
+        )
     payload = None
     if args.payload:
         try:
@@ -190,6 +198,80 @@ def cmd_call(client: JulesClient, args: argparse.Namespace) -> None:
             die(f"Invalid JSON payload: {e}")
     data = client.call(args.method, args.endpoint, payload=payload)
     print(json.dumps(data, indent=2))
+
+
+def cmd_delete_session(client: JulesClient, args: argparse.Namespace) -> None:
+    if args.list_archived_candidates:
+        _print_archive_candidates(client, args)
+        return
+
+    if not args.session_id:
+        die("Provide a session_id, or use --list-archived-candidates.")
+
+    data = client.delete_session(args.session_id, confirm=args.confirm)
+    sid = args.session_id.strip().removeprefix("sessions/")
+    print(f"Permanently deleted session {sid}. This is irreversible and cannot be recovered.")
+    if data:
+        print(json.dumps(data, indent=2))
+
+
+def _archive_candidates(client: JulesClient, args: argparse.Namespace) -> list[dict]:
+    audits = client.audit_sessions(
+        page_size=getattr(args, "page_size", None) or 20,
+        max_age_days=getattr(args, "max_age_days", None),
+    )
+    return [
+        a
+        for a in audits
+        if not a.get("pull_request_url")
+        and not a.get("is_inactive")
+        and a.get("assessment")
+        in (
+            "AWAITING_PLAN_APPROVAL",
+            "AWAITING_USER_FEEDBACK",
+            "STALLED",
+            "COMPLETED_NO_OUTPUT",
+        )
+    ]
+
+
+def _print_archive_candidates(client: JulesClient, args: argparse.Namespace) -> None:
+    candidates = _archive_candidates(client, args)
+    if not candidates:
+        print("No gated/stalled sessions without a PR. Nothing to archive.")
+        return
+    print("## Archive Candidates (dry run - nothing was mutated)\n")
+    print("| Session ID | Assessment | State | Title |")
+    print("|---|---|---|---|")
+    for a in candidates:
+        title = " ".join(str(a.get("title") or "").split())[:70]
+        print(
+            f"| `{a.get('id')}` | {a.get('assessment')} | "
+            f"{a.get('state')} | {title} |"
+        )
+    print(
+        "\nArchiving is REVERSIBLE. Apply with: "
+        "`archive-session <id> [<id> ...]`"
+    )
+
+
+def cmd_archive_session(client: JulesClient, args: argparse.Namespace) -> None:
+    if args.list_candidates:
+        _print_archive_candidates(client, args)
+        return
+
+    if not args.session_ids:
+        die("Provide one or more session IDs, or use --list-candidates.")
+
+    verb = "Unarchived" if args.unarchive else "Archived"
+    for sid in args.session_ids:
+        if args.unarchive:
+            client.unarchive_session(sid)
+        else:
+            client.archive_session(sid)
+        clean = sid.strip().removeprefix("sessions/")
+        suffix = " (restored to active listing)" if args.unarchive else " (reversible)"
+        print(f"{verb} session {clean}{suffix}")
 
 
 def setup_parser() -> argparse.ArgumentParser:
@@ -452,8 +534,8 @@ Authentication:
     )
     p_call.add_argument(
         "method",
-        choices=["GET", "POST", "PUT", "DELETE"],
-        help="HTTP method to execute",
+        choices=["GET", "POST"],
+        help="HTTP method to execute. Destructive verbs (DELETE/PUT/PATCH) are blocked; use the delete-session subcommand instead.",
     )
     p_call.add_argument(
         "endpoint",
@@ -462,7 +544,63 @@ Authentication:
     p_call.add_argument(
         "payload",
         nargs="?",
-        help="Optional JSON payload string for POST/PUT requests",
+        help="Optional JSON payload string for POST requests",
+    )
+
+    # delete-session (destructive, irreversible)
+    p_del = subparsers.add_parser(
+        "delete-session",
+        parents=[common_parser],
+        help="Permanently delete a Jules session (IRREVERSIBLE)",
+        description=(
+            "Permanently delete a Jules session, bypassing archiving. This cannot be undone. "
+            "To archive, close out, hide, or tidy a session, use the reversible "
+            "'archive-session' command instead. Requires --confirm."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p_del.add_argument(
+        "session_id",
+        nargs="?",
+        help="Jules session ID to permanently delete (omit when using --list-archived-candidates)",
+    )
+    p_del.add_argument(
+        "--confirm",
+        action="store_true",
+        help="Required. Confirms permanent, irreversible deletion of the session.",
+    )
+    p_del.add_argument(
+        "--list-archived-candidates",
+        action="store_true",
+        help="Dry-run: list sessions that are gated/stalled with no PR. Mutates nothing.",
+    )
+
+    # archive-session (reversible)
+    p_arch = subparsers.add_parser(
+        "archive-session",
+        parents=[common_parser],
+        help="Archive a Jules session (reversible) - use for 'archive'/'close out'/'tidy'",
+        description=(
+            "Archive one or more Jules sessions. Archiving sets the session's 'archived' "
+            "flag and removes it from default listings. This is REVERSIBLE: restore with "
+            "'archive-session --unarchive'. Use 'delete-session' only for permanent removal."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p_arch.add_argument(
+        "session_ids",
+        nargs="*",
+        help="One or more Jules session IDs to archive (omit when using --list-candidates)",
+    )
+    p_arch.add_argument(
+        "--unarchive",
+        action="store_true",
+        help="Restore the given sessions to the active listing instead of archiving them.",
+    )
+    p_arch.add_argument(
+        "--list-candidates",
+        action="store_true",
+        help="Dry-run: list gated/stalled sessions without a PR that are safe to archive.",
     )
 
     # nudge
@@ -514,6 +652,8 @@ def main() -> None:
         "activities": cmd_activities,
         "activity": cmd_activity,
         "call": cmd_call,
+        "delete-session": cmd_delete_session,
+        "archive-session": cmd_archive_session,
     }
 
     commands[args.subcommand](client, args)
