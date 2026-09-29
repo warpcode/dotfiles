@@ -360,8 +360,7 @@ Authentication:
     p_create.add_argument(
         "--source",
         "-s",
-        required=True,
-        help="Target repository source (e.g. github/owner/repo or sources/github/owner/repo) [REQUIRED]",
+        help="Target repository source (e.g. github/owner/repo or sources/github/owner/repo) [Optional: omit for sourceless session]",
     )
     p_create.add_argument(
         "--branch",

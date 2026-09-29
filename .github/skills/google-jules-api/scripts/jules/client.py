@@ -146,26 +146,28 @@ class JulesClient:
     def create_session(
         self,
         prompt: str,
-        source: str,
+        source: str | None = None,
         starting_branch: str = "main",
         title: str | None = None,
         require_plan_approval: bool | None = None,
         env_vars: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """Create and initiate a new Jules coding task session."""
-        clean_source = source.strip()
-        if not clean_source.startswith("sources/"):
-            clean_source = f"sources/{clean_source}"
-
         payload: dict[str, Any] = {
             "prompt": prompt,
-            "sourceContext": {
+        }
+
+        if source:
+            clean_source = source.strip()
+            if not clean_source.startswith("sources/"):
+                clean_source = f"sources/{clean_source}"
+            payload["sourceContext"] = {
                 "source": clean_source,
                 "githubRepoContext": {
                     "startingBranch": starting_branch,
                 },
-            },
-        }
+            }
+
         if title:
             payload["title"] = title
         if require_plan_approval is not None:
