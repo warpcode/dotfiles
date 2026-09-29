@@ -41,4 +41,7 @@ fi
 echo "--- Test 3: Free Models ---"
 if (( $+functions[ai.providers.test_provider.models.free] )); then
     ai.providers.test_provider.models.free
+else
+    echo "Free models alias not defined!"
+    exit 1
 fi
