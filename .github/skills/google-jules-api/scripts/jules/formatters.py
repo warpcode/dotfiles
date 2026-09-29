@@ -71,10 +71,12 @@ def format_sessions(data: dict[str, Any]) -> str:
         branch = source_ctx.get("githubRepoContext", {}).get("startingBranch", "")
         repo_display = f"`{source_name}` (`{branch}`)" if branch else f"`{source_name}`"
 
-        title = s.get("title") or s.get("prompt", "")
+        # Collapse all whitespace first: session titles are frequently the entire
+        # original task prompt, which floods the table with multi-paragraph text.
+        title = " ".join((s.get("title") or s.get("prompt", "")).split())
         if len(title) > 60:
             title = title[:57] + "..."
-        title = title.replace("\n", " ").replace("|", "\\|")
+        title = title.replace("|", "\\|")
 
         pr_info = ""
         for out in s.get("outputs", []):
@@ -200,7 +202,10 @@ def format_activities(data: dict[str, Any], session_id: str = "") -> str:
             summary = f"{len(artifacts)} patch/artifact(s)"
 
         summary_clean = summary.replace("|", "\\|")
-        lines.append(f"| `{aid[:8]}` | {time_str} | **{originator}** | {event_type} | {summary_clean} |")
+        # Full ID: the table output is copy-pasted into `activity <session_id> <activity_id>`,
+        # and the prefix resolver in JulesClient.get_activity cannot resolve 8-char IDs
+        # sourced from paginated pages.
+        lines.append(f"| `{aid}` | {time_str} | **{originator}** | {event_type} | {summary_clean} |")
 
     next_token = data.get("nextPageToken")
     if next_token:
@@ -298,7 +303,7 @@ def format_session_check(audits: list[dict[str, Any]], show_history: bool = Fals
         else:
             inactive = "<1m"
 
-        title = a["title"]
+        title = " ".join(str(a["title"]).split())
         if len(title) > 36:
             title = title[:33] + "..."
         detail = a["latest_detail"]

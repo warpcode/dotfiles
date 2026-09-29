@@ -172,8 +172,30 @@ python3 <skill-dir>/scripts/main.py nudge 10786198163003828698 pr_reminder
 | `pr_reminder` | "This session appears to have completed work. Please create a pull request with the changes or provide a status update." |
 | `custom` | Use `send-message` with your own text |
 
-### 6. Direct REST Escape Hatch (`call`)
+### 7. Session Lifecycle Operations (`archive-session`, `delete-session`)
+
+> **Archive is reversible; delete is not.** `POST sessions/{id}:archive` sets the session's `archived` flag and hides it from default listings. `POST sessions/{id}:unarchive` restores it. `DELETE sessions/{id}` is permanent with no trash, no restore, and no soft-delete.
+
+```bash
+# Dry-run: list gated/stalled sessions without a PR that are safe to archive. Mutates nothing.
+python3 <skill-dir>/scripts/main.py archive-session --list-candidates --page-size 20
+
+# Archive (reversible) - the correct action for "archive", "close out", "hide", "tidy"
+python3 <skill-dir>/scripts/main.py archive-session <session_id> [<session_id> ...]
+
+# Restore an archived session to the active listing
+python3 <skill-dir>/scripts/main.py archive-session <session_id> --unarchive
+
+# Permanent, irreversible deletion. Refuses to run without --confirm.
+python3 <skill-dir>/scripts/main.py delete-session <session_id> --confirm
+```
+
+**Default to `archive-session`.** Only reach for `delete-session` when the user has explicitly asked for permanent removal.
+
+### 8. Direct REST Escape Hatch (`call`)
 Execute arbitrary REST requests against any endpoint under `/v1alpha`.
+
+**Allowed verbs: `GET` and `POST` only.** The agent MUST NOT issue `DELETE`, `PUT`, or `PATCH` through `call`. Removal operations are exclusively handled by the `delete-session` subcommand, which enforces the `--confirm` gate described in Constraint 8.
 
 ```bash
 # Direct GET call
@@ -282,6 +304,12 @@ When Jules pushes empty commits or the remote branch has advanced since session 
      2. Questions or steering unanswered $\rightarrow$ reply via `send-message`.
      3. Solid confirmation that the agent finished with a PR or was halted.
    - Approving a plan (`approve-plan`) or sending guidance (`send-message`) immediately revives the session back to `IN_PROGRESS`. Never assume a completed session cannot be resumed.
+8. **Session Lifecycle: Archive is Reversible, Delete is Not**:
+   - The v1alpha API **does** support reversible archival via `POST sessions/{id}:archive` and `POST sessions/{id}:unarchive`. Archived sessions are hidden from default listings and can be restored.
+   - **Archiving is the correct operation** for any user request to *archive*, *close out*, *hide*, *tidy*, or *clean up* sessions. Use the `archive-session` subcommand.
+   - `DELETE sessions/{id}` is **irreversible and permanent**. There is no trash, no restore, and no soft-delete. The agent MUST NOT substitute `DELETE` for an archival request.
+   - `DELETE` requires **both**: (a) the user explicitly names deletion or permanent removal, and (b) confirmation immediately before execution. `delete-session` refuses to run without `--confirm`.
+   - The `call` escape hatch is limited to `GET` and `POST`. The agent MUST NOT issue `DELETE`, `PUT`, or `PATCH` through `call`.
 
 ---
 
@@ -296,3 +324,4 @@ When Jules pushes empty commits or the remote branch has advanced since session 
 - [ ] Plan assessment follows Workflow 2 checklist before `approve-plan`.
 - [ ] Duplicate work check (Workflow 4) performed before `create-session`.
 - [ ] Standardized nudge templates used for consistent communication.
+- [ ] `DELETE` was never used to satisfy an "archive" / "close out" / "tidy" request — `archive-session` was used instead.
