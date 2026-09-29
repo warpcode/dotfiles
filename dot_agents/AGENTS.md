@@ -15,6 +15,10 @@ These instructions capture persistent memories, behavioral guardrails, and techn
    - **Always request explicit user approval** before destructive actions (`rm`, `reset`, `git push --force`, network-impacting changes, or merging PRs).
    - **Symlink Safety**: NEVER perform bulk deletion (`rm -rf`) on directories without first checking if the target is a symlink (`readlink` or `ls -l`). Delete the symlink itself, not the target contents.
    - Verify state before mutating and verify file edits are persisted to disk. Temporary session scratch files can be cleaned up without prompting.
+   - **Verb Substitution Ban**: When a user requests a reversible or descriptive operation (archive, hide, close, tidy, move, stash, revert) and the available tooling offers a destructive equivalent (delete, drop, destroy, purge, reset), you MUST NOT substitute. Stop and ask. A missing capability is a question, not a licence for the strongest available verb.
+   - **Capability Check Before Destructive Substitution**: Before using a destructive operation to satisfy a request, first verify (read-only) whether a non-destructive equivalent exists. If the only way to check is itself a mutating call, abort and ask.
+   - **Irreversibility Asymmetry**: Irreversible operations REQUIRE (a) the user explicitly naming the irreversible action ("delete", "permanently remove", "destroy"), and (b) an immediate pre-flight confirmation. A clearly inferable *intent* is NOT a substitute for the user naming the action.
+   - **Batch Safety**: Never batch irreversible operations in a shell loop. Dry-run first, verify the target set, then execute one at a time.
 
 4. **UI Stability**:
    - **Never call `update_topic` and `ask_user` in the same turn.** Set topic first, then call `ask_user` in the subsequent turn to avoid raw JSON rendering in CLI.
