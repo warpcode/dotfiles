@@ -1,10 +1,10 @@
 import json
+import os
 import sys
 import unittest
 from unittest.mock import patch, MagicMock
 from io import StringIO
 import importlib.util
-
 from pathlib import Path
 
 # Load the module dynamically due to dashes in name
@@ -18,6 +18,54 @@ spec.loader.exec_module(ai_guard_wrapper)
 
 class SystemExitException(Exception):
     pass
+
+
+class TestAiGuardWrapperHelper(unittest.TestCase):
+    def test_extract_command_first_hit(self):
+        mapping = {"CommandLine": "  echo first  ", "cmd": "ignore"}
+        result = ai_guard_wrapper.extract_command(mapping)
+        self.assertEqual(result, "echo first")
+
+    def test_extract_command_fallthrough_key(self):
+        mapping = {"ignore": "this", "cmd": " echo fallback "}
+        result = ai_guard_wrapper.extract_command(mapping)
+        self.assertEqual(result, "echo fallback")
+
+    def test_extract_command_skips_non_string(self):
+        # Even if CommandLine is present, if it's not a string, it should fall through to cmd
+        mapping = {"CommandLine": {"complex": "object"}, "cmd": " echo real "}
+        result = ai_guard_wrapper.extract_command(mapping)
+        self.assertEqual(result, "echo real")
+
+    def test_extract_command_empty_string_triggers_payload_fallthrough(self):
+        # We test the logic in main by calling extract_command.
+        # If tool_args has an empty string command, extract_command returns an empty string.
+        # This tests that the function behaves correctly for empty string,
+        # the fallthrough to payload is tested separately or implicit from main's `if not cmd` logic.
+        tool_args = {"CommandLine": "   "}
+        cmd = ai_guard_wrapper.extract_command(tool_args)
+        self.assertEqual(cmd, "")
+
+        # Test the exact `not cmd` logic as in main
+        payload = {"cmd": " payload_cmd "}
+        if not cmd and isinstance(payload, dict):
+            cmd = ai_guard_wrapper.extract_command(payload)
+
+        self.assertEqual(cmd, "payload_cmd")
+
+    def test_extract_command_multi_quote_strip(self):
+        # CRITICAL BEHAVIOR: strips all leading and trailing quote characters
+        # "\"quoted\"" -> "quoted"
+        mapping = {"CommandLine": "'\"\"echo multi\"'\""}
+        result = ai_guard_wrapper.extract_command(mapping)
+        self.assertEqual(result, "echo multi")
+
+    def test_extract_command_guards_against_non_dict(self):
+        # We explicitly test that if mapping is None or not a dict, it returns empty string
+        # without crashing
+        self.assertEqual(ai_guard_wrapper.extract_command(None), "")
+        self.assertEqual(ai_guard_wrapper.extract_command(["list", "of", "items"]), "")
+        self.assertEqual(ai_guard_wrapper.extract_command("CommandLine string"), "")
 
 
 class TestAIGuardWrapper(unittest.TestCase):
@@ -145,7 +193,6 @@ class TestAIGuardWrapper(unittest.TestCase):
                     with self.assertRaises(SystemExitException):
                         ai_guard_wrapper.main()
                     mock_handle_prompt.assert_called_once_with({})
-
 
     @patch('sys.stdout', new_callable=StringIO)
     def test_malformed_json(self, mock_stdout):

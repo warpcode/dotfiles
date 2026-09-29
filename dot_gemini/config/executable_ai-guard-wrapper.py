@@ -52,6 +52,15 @@ def run_guard(subcmd: str, args: list[str] = None, stdin_str: str = None) -> tup
         return 2, {"decision": "deny", "reason": f"Security guard execution failed: {e}"}
 
 
+def extract_command(mapping):
+    if not isinstance(mapping, dict):
+        return ""
+    for k in ("CommandLine", "commandLine", "command", "cmd"):
+        if k in mapping and isinstance(mapping[k], str):
+            return mapping[k].strip().strip("'\"")
+    return ""
+
+
 def handle_prompt_route(payload):
     prompt_text = payload.get("prompt") or payload.get("text") or ""
     tp = payload.get("transcriptPath")
@@ -148,16 +157,9 @@ def handle_output_route(payload):
 
 
 def handle_command_route(payload, tool_args):
-    cmd = ""
-    for k in ("CommandLine", "commandLine", "command", "cmd"):
-        if k in tool_args and isinstance(tool_args[k], str):
-            cmd = tool_args[k].strip().strip("'\"")
-            break
+    cmd = extract_command(tool_args)
     if not cmd and isinstance(payload, dict):
-        for k in ("CommandLine", "commandLine", "command", "cmd"):
-            if k in payload and isinstance(payload[k], str):
-                cmd = payload[k].strip().strip("'\"")
-                break
+        cmd = extract_command(payload)
 
     if not cmd:
         print(json.dumps({"decision": "allow"}))
@@ -287,6 +289,7 @@ def main():
     else:
         print(json.dumps({"decision": "allow"}))
         sys.exit(0)
+
 
 if __name__ == "__main__":
     main()
