@@ -2,11 +2,7 @@
   "$schema": "https://opencode.ai/config.json",
   {{ template "commands/opencode.tmpl" . }},
   "instructions": [
-    "CRUSH.md",
-    "GEMINI.md",
-    "docs/guidelines.md",
-    ".cursor/rules/*.md",
-    "AI.md",
+    "AGENTS.md",
     ".github/copilot-instructions.md"
   ],
   "mcp": {{ template "mcp/filter.tmpl" (dict "mcp" .mcp "profile" .profile "group" "global") }},
