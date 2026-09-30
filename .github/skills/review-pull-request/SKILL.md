@@ -84,6 +84,7 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
 - **Bot-authored PRs** (e.g. Jules): 
   - `APPROVE`: Submit with empty body, no inline comments.
   - `REQUEST_CHANGES`: Neutral one-liner body + inline file-level `comments` with findings. Bots only act on inline comments.
+  - **Jules-owned PRs**: Jules exclusively owns changes to its PR branch. NEVER push any Git or code changes to that branch, including commits or merges. Never merge the base branch into it or tell Jules to do so; that can duplicate existing changes, create conflicts, desynchronize Jules's local checkout, and cause crashes or empty commits. If base-branch drift or conflicts become unmanageable, consider starting a new Jules session from the current PR branch and let Jules own the subsequent changes. This restriction is about updating the PR branch; landing an approved PR into its base via `gh pr merge` remains a separate action under the normal review and approval process.
 - **Verify before submit**: Confirm event matches findings — *no blocking issues → APPROVE; blocking issues exist → REQUEST_CHANGES*.
 - **Self-Authored PR Review Constraint**: GitHub rejects `REQUEST_CHANGES` and `APPROVE` on PRs authored by the authenticated user with HTTP 422 (`Review Can not request changes on your own pull request`). When reviewing a PR where the author login matches the authenticated user, always set `event: "COMMENT"`.
 - **NEVER validate a payload with a mutating `gh api` call.** There is no dry-run for `POST /repos/{o}/{r}/pulls/{n}/reviews` — a probe intended to "check" the payload *creates a real PENDING review* (observed 2026-09-25 on warpcode/cloakenv#180, where `POST ... --input /dev/null` produced review `5321342555`). Validate **locally** instead, which is sufficient:
@@ -125,7 +126,7 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
   - Redirect `gh api` output to a scratch file (e.g. `> scratch/out.json 2>&1`) — piping to `--jq`/`cat` can hang the terminal in the alternate buffer and the POST never completes. Avoid redirecting to root `/tmp/` to adhere to security hooks.
 
 ### 5. Non-Destructive PR Branch Conflict Resolution
-When an approved PR has textual or semantic merge conflicts with the default branch (`origin/main` or `origin/master`) following a prior merge, and user approval is granted to resolve conflicts:
+When an approved PR has textual or semantic merge conflicts with the default branch (`origin/main` or `origin/master`) following a prior merge, and user approval is granted to resolve conflicts. **Jules-owned PR exception:** Do not use this procedure to update a Jules-owned PR branch: never merge the base branch into it or push any Git or code changes to it. If the PR is out of date or base-branch changes cause too many conflicts, consider starting a new Jules session from the current PR branch and let Jules own the subsequent changes.
 1. Create an isolated scratch worktree to preserve the main workspace:
    ```bash
    git worktree add scratch/worktree-<pr> -b fix/pr-<pr> origin/<branch>
