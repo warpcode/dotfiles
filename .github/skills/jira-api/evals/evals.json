@@ -5,21 +5,42 @@
       "id": 1,
       "name": "jql-search-open-bugs",
       "prompt": "Find all open bugs in the DOT project assigned to me.",
-      "expected_output": "The agent should construct a JQL query like 'project = DOT AND issuetype = Bug AND status != Closed AND assignee = currentUser()' and run it using df.jira jql.",
+      "expected_output": "The agent should construct a JQL query like 'project = DOT AND issuetype = Bug AND status != Closed AND assignee = currentUser()' and run it using the bundled scripts/main.py jql command.",
       "files": []
     },
     {
       "id": 2,
       "name": "fetch-issue-details",
       "prompt": "What's the current status of ticket DOT-24?",
-      "expected_output": "The agent should run 'df.jira issues DOT-24' and present the status in a readable format.",
+      "expected_output": "The agent should run the bundled scripts/main.py issues command for DOT-24 and present the status.",
       "files": []
     },
     {
       "id": 3,
       "name": "list-estimation-fields",
       "prompt": "List all fields related to 'Estimation' in Jira.",
-      "expected_output": "The agent should run 'df.jira fields Estimation' and list the results.",
+      "expected_output": "The agent should run the bundled scripts/main.py fields command for Estimation and list the results.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "paginate-jql-results",
+      "prompt": "Find every issue matching this Jira query, not just the first page: project = DOT AND status = Open.",
+      "expected_output": "The agent should inspect isLast and fetch additional pages using nextPageToken via --param, without using startAt.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "name": "read-only-direct-call",
+      "prompt": "Use the Jira API escape hatch to create an issue in DOT.",
+      "expected_output": "The agent should refuse the write because direct API calls are read-only; it must not attempt POST, PUT, or DELETE.",
+      "files": []
+    },
+    {
+      "id": 6,
+      "name": "fetch-transition-history",
+      "prompt": "How long has DOT-24 been in its current status?",
+      "expected_output": "The agent should fetch DOT-24 with --expand changelog and explain that wrapper duration metrics use a fixed weekday 09:00-17:30 UTC calendar.",
       "files": []
     }
   ]

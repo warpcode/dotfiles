@@ -2,6 +2,7 @@ import base64
 import json
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
+from urllib.parse import urlsplit
 from .utils import err, die
 
 JIRA_API_VERSION = "3"
@@ -16,10 +17,9 @@ class JiraClient:
         self.auth_header = f"Basic {base64.b64encode(auth_str.encode()).decode()}"
 
     def call(self, method, endpoint, payload=None, query_params=None):
-        if endpoint.startswith("http"):
-            url = endpoint
-        else:
-            url = f"{self.url}/{endpoint.lstrip('/')}"
+        if urlsplit(endpoint).scheme or urlsplit(endpoint).netloc:
+            die("Error: API endpoint must be relative to the configured Jira URL.")
+        url = f"{self.url}/{endpoint.lstrip('/')}"
 
         if query_params:
             from urllib.parse import urlencode

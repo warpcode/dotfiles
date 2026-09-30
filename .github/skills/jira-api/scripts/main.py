@@ -77,7 +77,7 @@ def main():
 
     # Call
     p_call = subparsers.add_parser("call", help="Direct API call")
-    p_call.add_argument("method", choices=["GET", "POST", "PUT", "DELETE"])
+    p_call.add_argument("method", choices=["GET"])
     p_call.add_argument("endpoint")
     p_call.add_argument("payload", nargs="?", help="JSON payload string")
 

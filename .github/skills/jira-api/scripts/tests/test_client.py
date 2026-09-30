@@ -1,10 +1,11 @@
 import unittest
 import sys
 import os
+from unittest.mock import patch
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from jira.client import get_status_map
+from jira.client import JiraClient, get_status_map
 
 class DummyClient:
     def __init__(self, responses=None, raise_on=None):
@@ -95,6 +96,16 @@ class TestGetStatusMap(unittest.TestCase):
             "Draft": None,
             "Review": None
         })
+
+class TestJiraClient(unittest.TestCase):
+    def test_rejects_absolute_endpoint_before_sending_credentials(self):
+        client = JiraClient("https://jira.example", "user", "token")
+
+        with patch("jira.client.urlopen") as urlopen:
+            with self.assertRaises(SystemExit):
+                client.call("GET", "https://attacker.example/collect")
+
+        urlopen.assert_not_called()
 
 if __name__ == "__main__":
     unittest.main()
