@@ -1,25 +1,24 @@
 ---
 name: commit
-description: Prepare and verify git commit messages following Conventional Commits, diff inspection, and explicit approval.
+description: Prepare and execute a git commit after reviewing staged changes and receiving explicit approval. Use when the user asks to commit changes, draft a commit message, or review staged changes for commit.
 user-invocable: true
 ---
 
 # Git Commit
 
-Workflow for preparing and committing changes:
+Use the canonical workflow and format rules in:
 
-1. **Determine what to commit** — Inspect the repository state. If the user named specific files, use those. Otherwise, if the user gave no direction and there are staged changes, use staged changes only. Otherwise use unstaged changes. If there is nothing to commit, halt and inform the user.
+- `../git-expert/references/commit-workflow.md`
+- `../git-expert/references/commit-message-format.md`
 
-2. **Review the changes** — Read the diffs of the files to be committed. Note any filename issues or concerns.
+The commit workflow is staged-only. If there are no staged changes, stop and
+ask the user to stage the intended files; do not silently include unstaged
+changes or stage files on the user's behalf.
 
-3. **Generate the commit message** — Write a Conventional Commit message (imperative mood, subject under 50 chars, body lines under 72 chars) that accurately summarises the changes. Never invent details not present in the diff.
-
-4. **Present for approval** — Show the user:
-   - the proposed commit message, and
-   - a summary of the files to be committed.
-   Wait for explicit approval before proceeding.
-
-5. **Commit on approval** — Once the user approves, commit the changes using the approved commit message. If the user requested changes, revise and re-present before committing.
+Review the staged diff, draft the message from that diff, and present both the
+message and the exact commit command for explicit approval. Run `git commit`
+only after the user approves that exact command. If the user requests changes,
+revise and present the command again.
 
 ## Hard Constraints
 
