@@ -33,22 +33,17 @@ class TestGenericCommand(unittest.TestCase):
         self.assertEqual(output, mock_response)
 
     @patch('sys.stdout', new_callable=io.StringIO)
-    def test_cmd_call_post_with_payload(self, mock_stdout):
-        mock_response = {"id": "10001", "key": "TEST-2"}
-        self.client.call.return_value = mock_response
+    def test_cmd_call_rejects_mutating_methods(self, mock_stdout):
+        args = DummyArgs(method="POST", endpoint="rest/api/3/issue", payload='{"fields": {}}')
 
-        payload_str = '{"fields": {"summary": "New Issue"}}'
-        args = DummyArgs(method="POST", endpoint="rest/api/3/issue", payload=payload_str)
-        cmd_call(self.client, args)
+        with self.assertRaises(SystemExit):
+            cmd_call(self.client, args)
 
-        self.client.call.assert_called_once_with(
-            "POST", "rest/api/3/issue", payload={"fields": {"summary": "New Issue"}}
-        )
-        output = json.loads(mock_stdout.getvalue().strip())
-        self.assertEqual(output, mock_response)
+        self.client.call.assert_not_called()
+        self.assertEqual(mock_stdout.getvalue(), "")
 
     def test_cmd_call_invalid_json_payload(self):
-        args = DummyArgs(method="POST", endpoint="rest/api/3/issue", payload="{invalid json}")
+        args = DummyArgs(method="GET", endpoint="rest/api/3/issue", payload="{invalid json}")
         with self.assertRaises(json.JSONDecodeError):
             cmd_call(self.client, args)
         self.client.call.assert_not_called()
