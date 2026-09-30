@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Focused code review for a Jira issue, GitHub issue, pull request, or branch against master/main. Prioritizes bugs, security, style, efficiency, readability, and unresolved review feedback.
+description: Use when reviewing a Jira issue, GitHub issue, pull request, or branch against master/main. Prioritizes bugs, security, style, efficiency, readability, and unresolved review feedback.
 ---
 
 # Code Review
@@ -30,6 +30,7 @@ Review code only. Use issue/PR context to validate requirements and surface defe
 - Never make local changes unless explicitly asked.
 - Do not proceed without a pull request when one is required for context.
 - Use origin refs and remote diff context when needed.
+- For security-scanner comment triage, load `code-security-audit` and assess each claim against the changed code and actual response contract. Keep the review limited to the reported findings.
 - Prioritize:
   - bugs and functional correctness
   - security issues

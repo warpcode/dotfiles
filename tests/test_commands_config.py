@@ -89,47 +89,16 @@ class TestCommandsCatalog(unittest.TestCase):
                 self.assertIsInstance(item, str, f"Entry must be string: {item}")
                 self.assertTrue(item.strip(), f"Entry must not be empty: {item}")
 
-    def test_commands_json_glob_syntax(self):
-        """Assert that commands in .chezmoidata/commands.json define valid glob patterns."""
+    def test_commands_json_clean_syntax(self):
+        """Assert that commands in .chezmoidata/commands.json are clean command names without wildcards."""
         with open(COMMANDS_JSON_PATH, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        has_wildcard = False
         for group in ["allow", "ask", "deny"]:
             for item in data["commands"][group]:
                 self.assertIsInstance(item, str)
                 self.assertTrue(item.strip())
-                if "*" in item:
-                    has_wildcard = True
-        self.assertTrue(has_wildcard, "Expected glob patterns with wildcards in commands.json")
-
-    def test_all_commands_convert_to_valid_regex(self):
-        """Assert that every command in commands.json compiles to a valid regular expression."""
-        def glob_to_vscode_regex(raw: str) -> str:
-            raw = raw.strip()
-            for ch in ['\\', '.', '+', '?', '^', '$', '(', ')', '[', ']', '{', '}']:
-                raw = raw.replace(ch, '\\' + ch)
-            raw = raw.replace('*', '.*')
-            return f"/^{raw}$/"
-
-        with open(COMMANDS_JSON_PATH, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        for group in ["allow", "ask", "deny"]:
-            for item in data["commands"][group]:
-                reg_wrapper = glob_to_vscode_regex(item)
-                self.assertTrue(reg_wrapper.startswith("/^") and reg_wrapper.endswith("$/"))
-                raw_regex = reg_wrapper[1:-1]
-                try:
-                    compiled = re.compile(raw_regex)
-                except re.error as e:
-                    self.fail(f"Invalid regex for command '{item}': {raw_regex} (error: {e})")
-
-                if "*" in item:
-                    sample = item.replace("*", "test_arg")
-                    self.assertIsNotNone(compiled.match(sample), f"Regex {raw_regex} did not match {sample}")
-                else:
-                    self.assertIsNotNone(compiled.match(item), f"Regex {raw_regex} did not match {item}")
+                self.assertNotIn("*", item, f"Command should not contain wildcard asterisk: {item}")
 
     def test_paths_json_exists_and_valid(self):
         """Assert that .chezmoidata/paths.json exists and defines valid read/write/deny lists."""
@@ -207,27 +176,23 @@ class TestRenderedOutputs(unittest.TestCase):
         gemini_config = os.path.expanduser("~/.gemini/config/config.json")
         out = chezmoi_cat(gemini_config)
         data = json.loads(out)
-        assert "permissions" in data
-        perms = data["permissions"]
+        assert "userSettings" in data
+        assert "globalPermissionGrants" in data["userSettings"]
+        perms = data["userSettings"]["globalPermissionGrants"]
         assert "allow" in perms
-        assert "command(git status *)" in perms["allow"]
-        assert "unsandboxed(git status *)" in perms["allow"]
-        assert "command(git diff *)" in perms["allow"]
-        assert "unsandboxed(git diff *)" in perms["allow"]
-        assert "command(ls *)" in perms["allow"]
-        assert "unsandboxed(ls *)" in perms["allow"]
-        assert "command(git push origin HEAD *)" in perms["allow"]
-        assert "unsandboxed(git push origin HEAD *)" in perms["allow"]
-        assert "command(chezmoi status *)" in perms["allow"]
-        assert "unsandboxed(chezmoi status *)" in perms["allow"]
-        assert "command(chezmoi diff *)" in perms["allow"]
-        assert "unsandboxed(chezmoi diff *)" in perms["allow"]
-        assert "command(chezmoi apply *)" not in perms["allow"]
-        assert "unsandboxed(chezmoi apply *)" not in perms["allow"]
+        assert "command(git status)" in perms["allow"]
+        assert "command(git diff)" in perms["allow"]
+        assert "command(ls)" in perms["allow"]
+        assert "command(git push origin HEAD)" in perms["allow"]
+        assert "command(chezmoi status)" in perms["allow"]
+        assert "command(chezmoi diff)" in perms["allow"]
+        assert "command(chezmoi apply)" not in perms["allow"]
         assert any("read_file(" in p and "skills" in p for p in perms["allow"])
         assert "deny" in perms
-        assert "command(git push --force*)" in perms["deny"]
-        assert "unsandboxed(git push --force*)" in perms["deny"]
+        assert "command(git push --force)" in perms["deny"]
+        for group in ["allow", "ask", "deny"]:
+            for item in perms.get(group, []):
+                self.assertFalse(item.startswith("unsandboxed("), f"Found unsandboxed item: {item}")
         for item in perms["allow"] + perms.get("deny", []):
             self.assertNotIn("internal/*", item)
             self.assertNotIn("/home/", item, f"Found /home/ in permission item: {item}")
@@ -238,18 +203,18 @@ class TestRenderedOutputs(unittest.TestCase):
         assert "permission" in data
         bash = data["permission"]["bash"]
         assert bash["*"] == "ask"
-        assert bash["git status *"] == "allow"
-        assert bash["ls *"] == "allow"
-        assert bash["git checkout *"] == "allow"
-        assert bash["chezmoi status *"] == "allow"
-        assert bash["chezmoi diff *"] == "allow"
-        assert bash["chezmoi apply *"] == "ask"
-        assert bash["rm *"] == "ask"
-        assert bash["sudo *"] == "ask"
-        assert bash["git push *"] == "ask"
-        assert bash["dd *"] == "deny"
-        assert bash["rm -rf $HOME*"] == "deny"
-        assert bash["git push --force*"] == "deny"
+        assert bash["git status"] == "allow"
+        assert bash["ls"] == "allow"
+        assert bash["git checkout"] == "allow"
+        assert bash["chezmoi status"] == "allow"
+        assert bash["chezmoi diff"] == "allow"
+        assert bash["chezmoi apply"] == "ask"
+        assert bash["rm"] == "ask"
+        assert bash["sudo"] == "ask"
+        assert bash["git push"] == "ask"
+        assert bash["dd"] == "deny"
+        assert bash["rm -rf $HOME"] == "deny"
+        assert bash["git push --force"] == "deny"
         self.assertNotIn("git checkout * -- internal/*", bash)
         self.assertNotIn("git push *--force*", bash)
         for key in bash:
@@ -280,18 +245,18 @@ class TestRenderedOutputs(unittest.TestCase):
         data = json.loads(out)
         assert "permissions" in data
         perms = data["permissions"]
-        assert "Bash(git status *)" in perms["allow"]
-        assert "Bash(git diff *)" in perms["allow"]
-        assert "Bash(git checkout *)" in perms["allow"]
-        assert "Bash(chezmoi status *)" in perms["allow"]
-        assert "Bash(chezmoi diff *)" in perms["allow"]
-        assert "Bash(chezmoi apply *)" in perms["ask"]
-        assert "Bash(sudo *)" in perms["ask"]
-        assert "Bash(rm *)" in perms["ask"]
-        assert "Bash(git push *)" in perms["ask"]
-        assert "Bash(dd *)" in perms["deny"]
-        assert "Bash(rm -rf $HOME*)" in perms["deny"]
-        assert "Bash(git push --force*)" in perms["deny"]
+        assert "Bash(git status)" in perms["allow"]
+        assert "Bash(git diff)" in perms["allow"]
+        assert "Bash(git checkout)" in perms["allow"]
+        assert "Bash(chezmoi status)" in perms["allow"]
+        assert "Bash(chezmoi diff)" in perms["allow"]
+        assert "Bash(chezmoi apply)" in perms["ask"]
+        assert "Bash(sudo)" in perms["ask"]
+        assert "Bash(rm)" in perms["ask"]
+        assert "Bash(git push)" in perms["ask"]
+        assert "Bash(dd)" in perms["deny"]
+        assert "Bash(rm -rf $HOME)" in perms["deny"]
+        assert "Bash(git push --force)" in perms["deny"]
         assert any("Read(" in p and "skills" in p for p in perms["allow"])
         assert "Read(~/.ssh)" in perms["deny"]
         self.assertNotIn("Bash(git checkout * -- internal/*)", perms["allow"])
@@ -304,12 +269,12 @@ class TestRenderedOutputs(unittest.TestCase):
         data = json.loads(out)
         assert "permissions" in data
         perms = data["permissions"]
-        assert "Shell(git status *)" in perms["allow"]
-        assert "Shell(chezmoi status *)" in perms["allow"]
-        assert "Shell(chezmoi diff *)" in perms["allow"]
+        assert "Shell(git status)" in perms["allow"]
+        assert "Shell(chezmoi status)" in perms["allow"]
+        assert "Shell(chezmoi diff)" in perms["allow"]
         assert any("Read(" in p and "skills" in p for p in perms["allow"])
-        assert "Shell(chezmoi apply *)" in perms["ask"]
-        assert "Shell(git push --force*)" in perms["deny"]
+        assert "Shell(chezmoi apply)" in perms["ask"]
+        assert "Shell(git push --force)" in perms["deny"]
         assert "Read(~/.ssh)" in perms["deny"]
         for item in perms["allow"] + perms.get("ask", []) + perms.get("deny", []):
             self.assertNotIn("/home/", item, f"Found /home/ in copilot permission item: {item}")
@@ -393,9 +358,9 @@ class TestPartialAndPatternOnlyRendering(unittest.TestCase):
             cwd=REPO_ROOT,
             text=True,
         )
-        cli_perms = json.loads("{" + out + "}")["permissions"]
+        cli_perms = json.loads("{" + out + "}")["globalPermissionGrants"]
         self.assertIn("command(rm)", cli_perms["deny"])
-        self.assertIn("unsandboxed(rm)", cli_perms["deny"])
+        self.assertNotIn("unsandboxed(rm)", cli_perms["deny"])
 
     def test_whitespace_handling(self):
         """Verify leading and trailing whitespace are sanitized."""
@@ -407,7 +372,7 @@ class TestPartialAndPatternOnlyRendering(unittest.TestCase):
             cwd=REPO_ROOT,
             text=True,
         )
-        cli_perms = json.loads("{" + out + "}")["permissions"]["allow"]
+        cli_perms = json.loads("{" + out + "}")["globalPermissionGrants"]["allow"]
         self.assertIn("command(echo)", cli_perms)
         self.assertIn("command(git status)", cli_perms)
         self.assertNotIn("command(  git status  )", cli_perms)
@@ -465,9 +430,9 @@ class TestCanonicalCommandsGenerator(unittest.TestCase):
             cwd=REPO_ROOT,
             text=True,
         )
-        agy_allow = json.loads("{" + out_agy + "}")["permissions"]["allow"]
+        agy_allow = json.loads("{" + out_agy + "}")["globalPermissionGrants"]["allow"]
         self.assertIn(f"command({sample_script})", agy_allow)
-        self.assertIn(f"unsandboxed({sample_script})", agy_allow)
+        self.assertNotIn(f"unsandboxed({sample_script})", agy_allow)
         self.assertIn(f"command({sample_variant})", agy_allow)
 
         # 3. Claude Code provider template

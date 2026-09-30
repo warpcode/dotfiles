@@ -5,26 +5,23 @@
 {{- $termApprove := dict -}}
 
 {{- range $c := $commands.allow -}}
-  {{- $raw := trim $c -}}
-  {{- if $raw -}}
-    {{- $esc := $raw | replace `\` `\\` | replace `.` `\.` | replace `+` `\+` | replace `?` `\?` | replace `^` `\^` | replace `$` `\$` | replace `(` `\(` | replace `)` `\)` | replace `[` `\[` | replace `]` `\]` | replace `{` `\{` | replace `}` `\}` | replace `*` `.*` -}}
-    {{- $_ := set $termApprove (printf "/^%s$/" $esc) true -}}
+  {{- $cmd := $c | trimSuffix "*" | trim -}}
+  {{- if $cmd -}}
+    {{- $_ := set $termApprove $cmd true -}}
   {{- end -}}
 {{- end -}}
 
 {{- range $c := $commands.ask -}}
-  {{- $raw := trim $c -}}
-  {{- if $raw -}}
-    {{- $esc := $raw | replace `\` `\\` | replace `.` `\.` | replace `+` `\+` | replace `?` `\?` | replace `^` `\^` | replace `$` `\$` | replace `(` `\(` | replace `)` `\)` | replace `[` `\[` | replace `]` `\]` | replace `{` `\{` | replace `}` `\}` | replace `*` `.*` -}}
-    {{- $_ := set $termApprove (printf "/^%s$/" $esc) false -}}
+  {{- $cmd := $c | trimSuffix "*" | trim -}}
+  {{- if $cmd -}}
+    {{- $_ := set $termApprove $cmd false -}}
   {{- end -}}
 {{- end -}}
 
 {{- range $c := $commands.deny -}}
-  {{- $raw := trim $c -}}
-  {{- if $raw -}}
-    {{- $esc := $raw | replace `\` `\\` | replace `.` `\.` | replace `+` `\+` | replace `?` `\?` | replace `^` `\^` | replace `$` `\$` | replace `(` `\(` | replace `)` `\)` | replace `[` `\[` | replace `]` `\]` | replace `{` `\{` | replace `}` `\}` | replace `*` `.*` -}}
-    {{- $_ := set $termApprove (printf "/^%s$/" $esc) false -}}
+  {{- $cmd := $c | trimSuffix "*" | trim -}}
+  {{- if $cmd -}}
+    {{- $_ := set $termApprove $cmd false -}}
   {{- end -}}
 {{- end -}}
 
