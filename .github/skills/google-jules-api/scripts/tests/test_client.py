@@ -162,6 +162,22 @@ class TestJulesClient(unittest.TestCase):
         self.assertEqual(json.loads(req.data.decode("utf-8")), {})
 
     @patch("jules.client.urlopen")
+    def test_approve_plan_without_plan_id(self, mock_urlopen):
+        mock_response = MagicMock()
+        mock_response.getcode.return_value = 200
+        mock_response.read.return_value = json.dumps({}).encode("utf-8")
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        res = self.client.approve_plan("4475409647262242777")
+        self.assertEqual(res, {})
+
+        mock_urlopen.assert_called_once()
+        req = mock_urlopen.call_args[0][0]
+        self.assertEqual(req.get_full_url(), "https://jules.googleapis.com/v1alpha/sessions/4475409647262242777:approvePlan")
+        self.assertEqual(req.get_method(), "POST")
+        self.assertEqual(json.loads(req.data.decode("utf-8")), {})
+
+    @patch("jules.client.urlopen")
     def test_get_activity_full_id(self, mock_urlopen):
         mock_response = MagicMock()
         mock_response.getcode.return_value = 200

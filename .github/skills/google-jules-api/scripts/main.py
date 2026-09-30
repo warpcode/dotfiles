@@ -124,9 +124,12 @@ def cmd_create_session(client: JulesClient, args: argparse.Namespace) -> None:
 
 def cmd_approve_plan(client: JulesClient, args: argparse.Namespace) -> None:
     data = client.approve_plan(args.session_id, args.plan_id)
-    print(
-        f"Plan `{args.plan_id}` approved successfully for session `{args.session_id}`."
-    )
+    if args.plan_id:
+        print(
+            f"Plan `{args.plan_id}` approved successfully for session `{args.session_id}`."
+        )
+    else:
+        print(f"Plan approved successfully for session `{args.session_id}`.")
     if data:
         print(json.dumps(data, indent=2))
 
@@ -474,7 +477,9 @@ Authentication:
     )
     p_approve.add_argument(
         "plan_id",
-        help="Plan ID to approve (extracted from 'activities' or 'activity' output)",
+        nargs="?",
+        default=None,
+        help="Optional plan ID to approve (extracted from 'activities' or 'activity' output)",
     )
 
     # send-message
