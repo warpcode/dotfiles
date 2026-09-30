@@ -44,6 +44,7 @@ These instructions capture persistent memories, behavioral guardrails, and techn
 
 - **Source of Truth Hierarchy**: `~/.agents/AGENTS.md` is the authoritative source for durable memory. Keep workspace-only notes ephemeral.
 - **Git & PR Workflows**: Delegated to `git-expert`, `github`, `github-cli`, and `review-pull-request` skills. Always use a rebase strategy when pulling or syncing remote changes. During PR reviews, never ask to update or sync the pull request branch with the main branch.
+- **Bot PR Merges**: NEVER instruct or ask Jules to merge PRs (it breaks the Jules runner). Always execute PR merges directly via `gh pr merge` once reviews and checks are complete.
 - **Ruleset-Gated PR Merges**: On repositories with active branch rulesets where the authenticated user has bypass privileges (`current_user_can_bypass: "always"`), `gh pr merge` requires `--admin` to complete the squash-merge once CI and reviews are green.
 - **Non-invasive PR audits**: Use remote PR metadata, diffs, and CI logs; never checkout the PR branch or run workspace tests/builds during the audit, and never request base-branch synchronization.
 - **PR CI verification**: For pull-request checks, compare branch-filtered workflow runs with commit check-suites/check-runs; PR-ref runs may be absent from `gh run list --branch` while CodeQL and other app checks still exist.
