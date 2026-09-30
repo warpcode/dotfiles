@@ -4,8 +4,10 @@
 
 {{- $allow := list -}}
 {{- range $c := $commands.allow -}}
-  {{- $allow = append $allow (printf "command(%s)" $c) -}}
-  {{- $allow = append $allow (printf "unsandboxed(%s)" $c) -}}
+  {{- $cmd := $c | trimSuffix "*" | trim -}}
+  {{- if $cmd -}}
+    {{- $allow = append $allow (printf "command(%s)" $cmd) -}}
+  {{- end -}}
 {{- end -}}
 {{- range $p := $paths.read -}}
   {{- $allow = append $allow (printf "read_file(%s)" $p) -}}
@@ -16,14 +18,18 @@
 
 {{- $ask := list -}}
 {{- range $c := $commands.ask -}}
-  {{- $ask = append $ask (printf "command(%s)" $c) -}}
-  {{- $ask = append $ask (printf "unsandboxed(%s)" $c) -}}
+  {{- $cmd := $c | trimSuffix "*" | trim -}}
+  {{- if $cmd -}}
+    {{- $ask = append $ask (printf "command(%s)" $cmd) -}}
+  {{- end -}}
 {{- end -}}
 
 {{- $deny := list -}}
 {{- range $c := $commands.deny -}}
-  {{- $deny = append $deny (printf "command(%s)" $c) -}}
-  {{- $deny = append $deny (printf "unsandboxed(%s)" $c) -}}
+  {{- $cmd := $c | trimSuffix "*" | trim -}}
+  {{- if $cmd -}}
+    {{- $deny = append $deny (printf "command(%s)" $cmd) -}}
+  {{- end -}}
 {{- end -}}
 {{- range $p := $paths.deny -}}
   {{- $deny = append $deny (printf "read_file(%s)" $p) -}}
