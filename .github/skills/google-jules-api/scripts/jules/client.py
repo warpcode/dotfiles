@@ -20,7 +20,7 @@ class JulesClient:
         verbose: bool = False,
     ) -> None:
         if not api_key:
-            die("Jules API key is required. Set JULES_API_KEY or provide --token.")
+            die("Jules API key is required. Set JULES_API_KEY in the protected environment.")
         self.api_key = api_key.strip()
         self.base_url = base_url.rstrip("/")
         self.verbose = verbose
@@ -33,11 +33,10 @@ class JulesClient:
         query_params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Execute a raw HTTP call to the Jules API."""
-        if endpoint.startswith("http://") or endpoint.startswith("https://"):
-            url = endpoint
-        else:
-            clean_endpoint = endpoint.lstrip("/")
-            url = f"{self.base_url}/{clean_endpoint}"
+        if endpoint.startswith(("http://", "https://")):
+            die("API endpoint must be relative to the configured Jules URL.")
+        clean_endpoint = endpoint.lstrip("/")
+        url = f"{self.base_url}/{clean_endpoint}"
 
         if query_params:
             filtered_params = {
