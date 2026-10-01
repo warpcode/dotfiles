@@ -61,6 +61,22 @@ class TestUtils(unittest.TestCase):
         end = datetime(2023, 5, 15, 10, 0, tzinfo=timezone.utc)
         self.assertEqual(get_work_seconds(start, end), 5400)
 
+        # Edge case: start after end
+        self.assertEqual(get_work_seconds(end, start), 0)
+
+        # Edge case: weekend to weekend spanning 2 full weeks
+        # Sat 2023-05-06 to Sun 2023-05-21 (2 full work weeks = 10 work days)
+        # 10 days * 30600s = 306000s
+        sat_start = datetime(2023, 5, 6, 12, 0, tzinfo=timezone.utc)
+        sun_end = datetime(2023, 5, 21, 12, 0, tzinfo=timezone.utc)
+        self.assertEqual(get_work_seconds(sat_start, sun_end), 10 * SECONDS_PER_WORK_DAY)
+
+        # Multi-month span: Mon 2023-01-02 09:00 to Mon 2023-04-03 09:00
+        # Exactly 13 weeks = 65 work days
+        q1_start = datetime(2023, 1, 2, 9, 0, tzinfo=timezone.utc)
+        q1_end = datetime(2023, 4, 3, 9, 0, tzinfo=timezone.utc)
+        self.assertEqual(get_work_seconds(q1_start, q1_end), 65 * SECONDS_PER_WORK_DAY)
+
     def test_format_duration(self):
         self.assertEqual(format_duration(3600), "1h")
         self.assertEqual(format_duration(60), "1m")
