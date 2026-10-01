@@ -46,18 +46,21 @@ Write against the target platform directory; subfolders automatically namespace 
 
 ---
 
-## 3. Frontmatter Configuration Superset
+## 3. Platform-Specific Configuration
 
-Every platform reads YAML frontmatter between `---` fences. Build from this superset schema:
+Command metadata is not portable: several platforms use YAML frontmatter, while
+Gemini CLI commands use TOML. Do not copy this conceptual field list as a
+literal universal schema; consult the target platform reference before writing
+configuration.
 
 ```yaml
 ---
-description: string                 # Single-line summary shown in command autocomplete picker
-argument-hint: string               # Autocomplete usage hint (e.g. "[pr-number] [--strict]")
-allowed-tools: string[]             # Whitelist of allowed tool names
-model: string                       # Model override (e.g. sonnet, gpt-4o, gemini-3.5-pro)
-subtask: boolean                    # Isolate execution in a child subagent thread
-agent: string                       # Target agent profile for command execution
+description: string                 # Use only on platforms supporting YAML command frontmatter
+argument-hint: string               # Platform-specific autocomplete hint
+allowed-tools: string[]             # Platform-specific tool allowlist
+model: string                       # Platform-specific model override
+subtask: boolean                    # Supported only by some platforms
+agent: string                       # Supported only by some platforms
 ---
 ```
 
