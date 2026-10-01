@@ -1,6 +1,6 @@
 ---
 name: review-pull-request
-description: Master orchestrator for end-to-end GitHub pull request reviews (discovery, audit, submission, and post-review memory extraction).
+description: Master orchestrator for end-to-end GitHub pull request reviews (discovery, audit, and submission). Use when managing a formal PR review from candidate selection through findings and submission.
 ---
 
 # PR Review Orchestrator
@@ -51,9 +51,8 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
      # Single thread:
      bash <skills-dir>/github-cli/scripts/update_pull_request_review_thread_resolution.sh --thread-id "<thread_id>"
 
-     # Batch resolution (recommended for multiple threads):
-     bash <skills-dir>/github-cli/scripts/batch_resolve_review_threads.sh --thread-ids "<id1>,<id2>,..."
      ```
+      For multiple threads, invoke the single-thread script once per thread ID and re-query the thread list to verify each result.
    - **Uncompleted or Broken**: Bump the thread with a contextual reply using the initial comment's REST integer `databaseId`:
      ```bash
      bash <skills-dir>/github-cli/scripts/add_reply_to_pull_request_comment.sh --owner <owner> --repo <repo> --pull-number <pr> --comment-id <databaseId> --body "..."
@@ -85,7 +84,7 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
   - `APPROVE`: Submit with empty body, no inline comments.
   - `REQUEST_CHANGES`: Neutral one-liner body + inline file-level `comments` with findings. Bots only act on inline comments.
   - **Jules-owned PRs**: Jules exclusively owns changes to its PR branch. NEVER push any Git or code changes to that branch, including commits or merges. Never merge the base branch into it or tell Jules to do so; that can duplicate existing changes, create conflicts, desynchronize Jules's local checkout, and cause crashes or empty commits. If base-branch drift or conflicts become unmanageable, consider starting a new Jules session from the current PR branch and let Jules own the subsequent changes. This restriction is about updating the PR branch; landing an approved PR into its base via `gh pr merge` remains a separate action under the normal review and approval process.
-- **Verify before submit**: Confirm event matches findings — *no blocking issues → APPROVE; blocking issues exist → REQUEST_CHANGES*.
+- **Review decision**: For this user's reviews, submit `REQUEST_CHANGES` for any finding, including low-severity findings; do not substitute `COMMENT` based on severity. Use `APPROVE` only when there are no findings. GitHub's self-authored-PR restriction is the platform-required exception: use `COMMENT` because GitHub rejects both `REQUEST_CHANGES` and `APPROVE` on one's own PR.
 - **Self-Authored PR Review Constraint**: GitHub rejects `REQUEST_CHANGES` and `APPROVE` on PRs authored by the authenticated user with HTTP 422 (`Review Can not request changes on your own pull request`). When reviewing a PR where the author login matches the authenticated user, always set `event: "COMMENT"`.
 - **NEVER validate a payload with a mutating `gh api` call.** There is no dry-run for `POST /repos/{o}/{r}/pulls/{n}/reviews` — a probe intended to "check" the payload *creates a real PENDING review* (observed 2026-09-25 on warpcode/cloakenv#180, where `POST ... --input /dev/null` produced review `5321342555`). Validate **locally** instead, which is sufficient:
   ```bash
@@ -109,7 +108,7 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
   > ⚠️ Note: `create_pull_request_review.sh` in `github-cli` only supports top-level review bodies. For structured reviews with inline line/file comments, use `submit_pull_request_review_payload.sh` as shown above.
 - **REST payload gotchas** (all verified 2026-08-29):
   - `subject_type` is GraphQL-only — OMIT it from REST review comments or the API returns 422 (`Field is not defined on DraftPullRequestReviewThread`).
-  - **Self-authored PRs reject `REQUEST_CHANGES` and `APPROVE`**: GitHub returns HTTP 422 (`Review Can not request changes on your own pull request`). When reviewing a PR authored by the authenticated account, always use `event: "COMMENT"`.
+  - **Self-authored PRs reject `REQUEST_CHANGES` and `APPROVE`**: GitHub returns HTTP 422 (`Review Can not request changes on your own pull request`). This is the only platform-required `COMMENT` exception to the user's review preference.
   - Inline comment `line` must be an **added line in the diff** for `side: RIGHT`, measured as the 1-indexed line number in the **target file** in its post-change state (never the line offset within a saved `.diff` patch file). Anchoring to a context/unchanged line or using a `.diff` line number fails with `Line could not be resolved`. For new files any line in the file works; for modified files only `+` lines.
   - `path` must match the PR's diff path exactly.
   - **Pre-submit anchor verification** (mandatory before `REQUEST_CHANGES`/`COMMENT` with inline comments): run the bundled script — it validates every `path`/`line` pair in the payload against the saved diff and exits non-zero if any anchor is not a `+` line.
@@ -150,17 +149,20 @@ When an approved PR has textual or semantic merge conflicts with the default bra
 > ⚠️ **Key Invariant**: Never use `git rebase` or force push to update PR branches. A merge commit pushed to the PR branch is fully supported by GitHub, passes CI, and will be cleanly squashed into a single commit upon squash-merging into `master`.
 
 ### 6. Ruleset-Gated PR Merges
-On repositories using active GitHub branch rulesets (e.g. enforcing CodeQL or code quality gates) where the user has bypass privileges (`current_user_can_bypass: "always"`), `gh pr merge --squash --delete-branch` will fail with:
+On repositories using active GitHub branch rulesets (e.g. enforcing CodeQL or code quality gates) where the user has bypass privileges (`current_user_can_bypass: "always"`), `gh pr merge --squash` may fail with:
 > `Pull request is not mergeable: the base branch policy prohibits the merge.`
 
 Once all required CI checks and approving reviews have passed, supply `--admin` to bypass the ruleset gate:
 ```bash
-gh pr merge <pr> --squash --delete-branch --admin
+gh pr merge <pr> --squash --admin
 ```
 
-### 7. Memory Extraction (Automatic)
-- **Immediately** after a review is submitted, activate the `ai-conversation-review` skill.
-- Review the transcript to extract durable technical context, user corrections, or decisions made during the review into `~/.agents/AGENTS.md` and relevant skills.
+Deleting the remote branch is a separate action. Do not request branch deletion
+as part of the merge unless the user explicitly approves that deletion.
+
+### 7. Memory Extraction (Optional)
+- After a review, identify durable technical context, user corrections, or decisions that may merit recording.
+- Present proposed changes to `~/.agents/AGENTS.md` or relevant skills and obtain user approval before writing them.
 
 ## 🧠 Constraints
 - **Strict Boundaries**: Do not audit PRs the user did not select.

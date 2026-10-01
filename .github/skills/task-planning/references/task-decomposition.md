@@ -6,7 +6,8 @@ Guidelines for breaking down user stories and technical requirements into decoup
 
 ## 1. 3-Factor Estimation Matrix
 
-Story point estimation is a deterministic function of three core dimensions:
+Use the matrix below as a rough planning heuristic based on three dimensions,
+not as a deterministic formula or a universal industry standard:
 
 $$\text{Estimate} = f(\text{Complexity}, \text{Effort}, \text{Uncertainty})$$
 
@@ -29,7 +30,11 @@ $$\text{Estimate} = f(\text{Complexity}, \text{Effort}, \text{Uncertainty})$$
 | Low | Large | Low | **2.0 pt** | 1 day | High boilerplate / repetitive changes with low risk. |
 | Medium | Medium | Medium | **3.0 pt** | 2–3 days | Multi-system integration or complex state orchestration. |
 | High | Medium | Low | **3.0 pt** | 2–3 days | Deep algorithmic or architectural change with known scope. |
-| Any | Large | High | **5.0+ pt** | > 1 week | **VIOLATION**: Exceeds threshold. Must be split or spiked. |
+| Any | Large | High | **5.0+ pt** | > 1 week | Heuristic signal to split the work or run a timeboxed research spike. |
+
+Point-to-duration mappings are approximate planning aids, not delivery
+commitments. Prefer the team's historical calibration when available; otherwise
+label estimates as rough and revisit them as uncertainty changes.
 
 ---
 
@@ -39,13 +44,13 @@ To prevent administrative bloat and delivery bottlenecks, enforce strict point b
 
 ### Consolidation Threshold ($\le 0.5\text{ pt}$)
 - Tasks estimated at **$\le 0.5\text{ pt}$** create disproportionate ticket overhead.
-- **Rule**: Merge micro-tasks into the primary implementation subtask.
+- **Heuristic**: Consider merging micro-tasks into the primary implementation subtask.
   - *Example*: Combine a minor migration seeder edit with the `[DB]` schema migration.
   - *Example*: Combine copy changes or minor style tweaks with the `[FE]` component task.
 
 ### Splitting Threshold ($> 3.0\text{ pt}$)
 - Tasks estimated at **$> 3.0\text{ pt}$** carry elevated failure and delay risks and cannot fit cleanly in a standard pull request.
-- **Rule**: Mandatory decomposition before work begins. Apply one of the following splitting strategies:
+- **Heuristic**: Consider decomposition before work begins. Apply one of the following splitting strategies:
   1. **Vertical Slicing**: Split by user capability (e.g., Read/Query view vs. Write/Mutation workflow).
   2. **Layer Decoupling**: Split into standalone `[DB]`, `[BE]`, and `[FE]` issues linked by a shared API schema contract.
   3. **Research Spike Precursor**: If Uncertainty is **High**, extract a timeboxed Research Spike (Archetype 4) to eliminate unknowns before sizing the implementation.
