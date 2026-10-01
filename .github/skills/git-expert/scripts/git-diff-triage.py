@@ -162,7 +162,7 @@ def count_body_lines(chunk: str):
 
 
 def header_only(chunk: str) -> str:
-    kept = [line for line in chunk.splitlines(keepends=True) if HEADER_PATTERN.match(line)]
+    kept = (line for line in chunk.splitlines(keepends=True) if HEADER_PATTERN.match(line))
     return "".join(kept)
 
 
