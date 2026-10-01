@@ -61,9 +61,9 @@ Use the PR template (repo-specific or fallback `@templates/pull_request.md`). En
 - **Format**: For each finding use the structure: 1. Severity (High/Medium/Low), 2. Description, 3. Impact, 4. Proposed Solution. Refer to `@templates/pull_request_review_comment.md` for formatting details.
 
 ### Review Events
-- **REQUEST_CHANGES**: Use when there is one or more findings at Low/Medium/High severity, or if unresolved merge conflicts exist.
-- **COMMENT**: Use for replying to existing threads or if no changes are requested.
-- **APPROVE**: Use when there are no findings, or all previously raised issues are fully resolved. When approving, NEVER add NEW comments to files. Provide no summary if there is nothing new to add.
+- **REQUEST_CHANGES**: For this user's reviews, use whenever any finding exists, including low-severity findings or unresolved merge conflicts.
+- **COMMENT**: Do not use as a substitute for `REQUEST_CHANGES` based on severity. Use only for the self-authored-PR restriction described in `review-pull-request`, or when the user explicitly requests a non-decision comment.
+- **APPROVE**: Use when there are no findings or all previously raised issues are fully resolved. When approving, NEVER add NEW comments to files. Provide no summary if there is nothing new to add.
 
 ### Review Orchestration & Phase Separation
 - **Formal Review Harness**: Formal pull request reviews SHOULD be performed where available to ensure end-to-end audit, specialized subagents, and memory extraction.
@@ -110,5 +110,5 @@ If you are reviewing a PR with conflicts instead of resolving them yourself, sub
 - Always obtain explicit user confirmation before merging a pull request.
 - All GitHub Actions / CI checks MUST pass before merging.
 - Prefer squash-and-merge for pull requests.
-- Remote branches MUST be deleted immediately after merging.
+- Remote branch deletion is optional and separate from merging. Delete a remote branch only after explicit user approval for that deletion.
 - Before approving or merging any PR, always check if there are pre-merge checks to run.
