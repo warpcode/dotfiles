@@ -22,6 +22,7 @@ from jules.formatters import (
     format_source,
     format_sources,
 )
+from main import cmd_call, setup_parser
 
 
 class TestJulesAuth(unittest.TestCase):
@@ -40,9 +41,35 @@ class TestJulesAuth(unittest.TestCase):
             self.assertIsNone(token)
 
 
+class TestJulesCliSafety(unittest.TestCase):
+    def test_call_rejects_post(self):
+        parser = setup_parser()
+        with self.assertRaises(SystemExit):
+            parser.parse_args(["call", "POST", "sessions"])
+
+    def test_cli_does_not_accept_token_argument(self):
+        parser = setup_parser()
+        with self.assertRaises(SystemExit):
+            parser.parse_args(["--token", "secret", "sources"])
+
+    def test_call_rejects_absolute_url(self):
+        parser = setup_parser()
+        args = parser.parse_args(["call", "GET", "https://example.invalid/steal"])
+        client = MagicMock()
+        with self.assertRaises(SystemExit):
+            cmd_call(client, args)
+        client.call.assert_not_called()
+
+
 class TestJulesClient(unittest.TestCase):
     def setUp(self):
         self.client = JulesClient(api_key="test_api_key_123")
+
+    @patch("jules.client.urlopen")
+    def test_call_rejects_absolute_url(self, mock_urlopen):
+        with self.assertRaises(SystemExit):
+            self.client.call("GET", "https://example.invalid/steal")
+        mock_urlopen.assert_not_called()
 
     @patch("jules.client.urlopen")
     def test_list_sources(self, mock_urlopen):

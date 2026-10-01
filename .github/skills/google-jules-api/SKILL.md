@@ -44,8 +44,8 @@ You operate as a **Jules Tool Operator**. Read-only operations (`sources`, `sess
 ### 2. Authentication & Secret Resolution
 - All requests require a valid Google Jules API key passed in the `X-Goog-Api-Key` header.
 - The bundled CLI (`scripts/main.py`) and client (`jules.client.JulesClient`) automatically resolve the secret via `JULES_API_KEY` in the environment.
-- Override or explicitly pass a token using the `--token <KEY>` flag.
-- If credentials cannot be resolved, stop and prompt the user to provide or set `JULES_API_KEY`.
+- The CLI reads credentials from `JULES_API_KEY`; never pass API keys as command-line arguments.
+- If credentials are unavailable, tell the user to configure `JULES_API_KEY` through their secret manager or protected environment and stop. Never ask them to paste the key into chat.
 
 ### 3. Progressive Disclosure & Documentation
 - For full endpoint parameters, request bodies, and schema specs, consult `@references/api-reference.md`.
@@ -124,9 +124,6 @@ python3 <skill-dir>/scripts/main.py approve-plan 4475409647262242777
 # Or provide plan ID for explicit confirmation logging
 python3 <skill-dir>/scripts/main.py approve-plan 4475409647262242777 <PLAN_ID>
 
-# Direct REST API approval fallback (empty payload)
-python3 <skill-dir>/scripts/main.py call POST "sessions/4475409647262242777:approvePlan" '{}'
-
 # Send clarifying message / guidance
 python3 <skill-dir>/scripts/main.py send-message 4475409647262242777 \
   "Please preserve existing test assertions in internal/utils/zero_test.go"
@@ -175,16 +172,16 @@ python3 <skill-dir>/scripts/main.py delete-session <session_id> --confirm
 **Default to `archive-session`.** Only reach for `delete-session` when the user has explicitly asked for permanent removal.
 
 ### 7. Direct REST Escape Hatch (`call`)
-Execute arbitrary REST requests against any endpoint under `/v1alpha`.
+Execute a read-only REST request against a relative endpoint under `/v1alpha`.
 
-**Allowed verbs: `GET` and `POST` only.** The agent MUST NOT issue `DELETE`, `PUT`, or `PATCH` through `call`. Removal operations are exclusively handled by `delete-session`, which enforces the `--confirm` gate.
+**Only `GET` is allowed.** Use the dedicated commands for writes; each requires
+explicit user approval. Absolute URLs are rejected so the Jules API key cannot
+be sent to another host.
 
 ```bash
 # Direct GET call
 python3 <skill-dir>/scripts/main.py call GET sources
 
-# Direct POST call with payload
-python3 <skill-dir>/scripts/main.py call POST sessions '{"prompt":"Fix typo","sourceContext":{"source":"sources/github/owner/repo"}}'
 ```
 
 ---
@@ -194,19 +191,19 @@ python3 <skill-dir>/scripts/main.py call POST sessions '{"prompt":"Fix typo","so
 1. **Pre-Action Safety Gate**:
    - Creating a new session (`create-session`) or approving a plan (`approve-plan`) triggers cloud VM resources and repository actions. The agent MUST confirm parameters before performing write actions.
 2. **Secrets Blindness**:
-   - Never print, log, or hardcode API keys. Rely exclusively on `JULES_API_KEY` or `--token`.
+  - Never print, log, hardcode, or pass API keys as command-line arguments. Rely on `JULES_API_KEY` provided through a protected environment.
 3. **Token Efficiency**:
    - Always limit list queries with `--page-size` (default 5–10 items) to prevent context overflow.
 4. **Session Lifecycle Invariants**:
    - `archive-session` is reversible and must be used for any request to *archive*, *tidy*, *hide*, or *close out* sessions.
    - `delete-session` is permanent and requires both: explicit user request naming deletion, and explicit confirmation (`--confirm`).
-   - The `call` escape hatch is strictly restricted to `GET` and `POST`.
+  - The `call` escape hatch is strictly restricted to relative-endpoint `GET` requests.
 
 ---
 
 ## Validation Checklist
 
-- [ ] `JULES_API_KEY` is present in the environment or passed via `--token`.
+- [ ] `JULES_API_KEY` is present in the protected environment; it is not included in command arguments.
 - [ ] Read-only operations (`sources`, `sessions`, `activities`, `check-sessions`) are used during research.
 - [ ] Session creation targets a verified source discovered via `sources` (or explicitly sourceless).
 - [ ] Output is synthesized into concise markdown tables or summaries.

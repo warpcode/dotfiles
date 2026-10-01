@@ -185,21 +185,14 @@ def cmd_activity(client: JulesClient, args: argparse.Namespace) -> None:
 
 
 def cmd_call(client: JulesClient, args: argparse.Namespace) -> None:
-    destructive = {"DELETE", "PUT", "PATCH"}
-    if args.method.upper() in destructive:
+    if args.method.upper() != "GET":
         die(
-            f"Refusing to issue {args.method.upper()} via the 'call' escape hatch. "
-            "Permanent deletion is irreversible. Use 'archive-session' to archive or "
-            "close out a session (reversible), or 'delete-session <id> --confirm' if "
-            "the user has explicitly asked for permanent removal."
+            f"Refusing to issue {args.method.upper()} via the read-only 'call' command. "
+            "Use the dedicated Jules command for this operation after explicit user approval."
         )
-    payload = None
-    if args.payload:
-        try:
-            payload = json.loads(args.payload)
-        except json.JSONDecodeError as e:
-            die(f"Invalid JSON payload: {e}")
-    data = client.call(args.method, args.endpoint, payload=payload)
+    if args.endpoint.startswith(("http://", "https://")):
+        die("API endpoint must be relative to the configured Jules URL.")
+    data = client.call("GET", args.endpoint)
     print(json.dumps(data, indent=2))
 
 
@@ -281,12 +274,6 @@ def setup_parser() -> argparse.ArgumentParser:
     # Common flags inherited across root and subparsers with suppress default
     common_parser = argparse.ArgumentParser(add_help=False)
     common_parser.add_argument(
-        "--token",
-        "-t",
-        default=argparse.SUPPRESS,
-        help="Google Jules API key (overrides JULES_API_KEY environment variable)",
-    )
-    common_parser.add_argument(
         "--verbose",
         "-v",
         action="store_true",
@@ -313,7 +300,7 @@ Interact with Google Jules to manage connected repositories, list sessions,
 track activity timelines, approve plans, send messages, and fetch diff patches.
 
 Authentication:
-  Resolves API key from JULES_API_KEY environment variable or --token flag."""
+    Resolves API key from the JULES_API_KEY environment variable."""
 
     parser = argparse.ArgumentParser(
         prog="main.py",
@@ -534,24 +521,18 @@ Authentication:
         "call",
         parents=[common_parser],
         help="Direct API call escape hatch",
-        description="Direct REST API call escape hatch for querying or mutating any endpoint under https://jules.googleapis.com/v1alpha.",
+        description="Read-only REST API call for a relative endpoint under https://jules.googleapis.com/v1alpha.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     p_call.add_argument(
         "method",
-        choices=["GET", "POST"],
-        help="HTTP method to execute. Destructive verbs (DELETE/PUT/PATCH) are blocked; use the delete-session subcommand instead.",
+        choices=["GET"],
+        help="Only GET is allowed; use dedicated commands for approved writes.",
     )
     p_call.add_argument(
         "endpoint",
         help="API endpoint path relative to /v1alpha (e.g. sources, sessions/4475409647262242777/activities)",
     )
-    p_call.add_argument(
-        "payload",
-        nargs="?",
-        help="Optional JSON payload string for POST requests",
-    )
-
     # delete-session (destructive, irreversible)
     p_del = subparsers.add_parser(
         "delete-session",
@@ -633,14 +614,11 @@ def main() -> None:
     parser = setup_parser()
     args = parser.parse_args()
 
-    token_val = getattr(args, "token", None)
     verbose_val = getattr(args, "verbose", False)
 
-    api_key = resolve_jules_api_key(token_val)
+    api_key = resolve_jules_api_key()
     if not api_key:
-        die(
-            "Jules API key not found. Set JULES_API_KEY environment variable or pass --token."
-        )
+        die("Jules API key not found. Configure JULES_API_KEY in the protected environment.")
 
     client = JulesClient(api_key=api_key, verbose=verbose_val)
 
