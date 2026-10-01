@@ -52,8 +52,10 @@ class TestMergePullRequestScript(unittest.TestCase):
         self.assertIn("Usage: ./merge_pull_request.sh [OPTIONS]", res.stdout)
         self.assertIn("--merge-method, --type <squash|merge|rebase>", res.stdout)
         self.assertIn("--admin", res.stdout)
+        self.assertIn("--delete-branch", res.stdout)
 
     def test_missing_required_args(self):
+        self._create_fake_gh("exit 0\n")
         res = self._run_script([])
         self.assertEqual(res.returncode, 1)
         self.assertIn("Error: --owner is required", res.stderr)
@@ -86,7 +88,8 @@ exit 0
         res = self._run_script(["--owner", "owner", "--repo", "repo", "--pull-number", "10"])
         self.assertEqual(res.returncode, 0)
         logs = self._read_log()
-        self.assertTrue(any("pr merge 10 --repo owner/repo --rebase --delete-branch" in l for l in logs))
+        self.assertTrue(any("pr merge 10 --repo owner/repo --rebase" in l for l in logs))
+        self.assertFalse(any("--delete-branch" in l for l in logs))
 
     def test_auto_detect_repo_fallback(self):
         fake_gh = """
@@ -112,7 +115,8 @@ exit 0
         res = self._run_script(["--owner", "owner", "--repo", "repo", "--pull-number", "10"])
         self.assertEqual(res.returncode, 0)
         logs = self._read_log()
-        self.assertTrue(any("pr merge 10 --repo owner/repo --merge --delete-branch" in l for l in logs))
+        self.assertTrue(any("pr merge 10 --repo owner/repo --merge" in l for l in logs))
+        self.assertFalse(any("--delete-branch" in l for l in logs))
 
     def test_valid_requested_merge_method_and_admin(self):
         fake_gh = """
@@ -135,10 +139,10 @@ fi
 exit 0
 """
         self._create_fake_gh(fake_gh)
-        res = self._run_script(["--owner", "owner", "--repo", "repo", "--pull-number", "10", "--type", "rebase", "--admin"])
+        res = self._run_script(["--owner", "owner", "--repo", "repo", "--pull-number", "10", "--type", "rebase", "--admin", "--delete-branch"])
         self.assertEqual(res.returncode, 0)
         logs = self._read_log()
-        self.assertTrue(any("pr merge 10 --repo owner/repo --rebase --delete-branch --admin" in l for l in logs))
+        self.assertTrue(any("pr merge 10 --repo owner/repo --rebase --admin --delete-branch" in l for l in logs))
 
     def test_invalid_requested_merge_method_error_format(self):
         fake_gh = """

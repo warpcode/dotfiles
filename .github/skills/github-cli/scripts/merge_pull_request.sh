@@ -7,6 +7,7 @@ owner="$(gh repo view --json owner -q '.owner.login' 2>/dev/null || echo '')"
 repo="$(gh repo view --json name -q '.name' 2>/dev/null || echo '')"
 pull_number=""
 admin=""
+delete_branch=""
 requested_method=""
 
 while [[ $# -gt 0 ]]; do
@@ -23,6 +24,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --merge-method, --type <squash|merge|rebase>"
       echo "                                    Merge strategy (defaults to auto-detected allowed method, preferring squash)"
       echo "  --admin                           Use administrator privileges to immediately merge"
+      echo "  --delete-branch                   Delete the remote branch after merge (separate approval required)"
       echo "  -h, --help                        Show this help message"
       exit 0
       ;;
@@ -44,6 +46,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --admin)
       admin="--admin"
+      shift
+      ;;
+    --delete-branch)
+      delete_branch="--delete-branch"
       shift
       ;;
     *)
@@ -148,4 +154,11 @@ else
   fi
 fi
 
-gh pr merge "$pull_number" --repo "$owner"/"$repo" "--$selected_method" --delete-branch ${admin:+"$admin"}
+merge_args=(pr merge "$pull_number" --repo "$owner"/"$repo" "--$selected_method")
+if [[ -n "$admin" ]]; then
+  merge_args+=("$admin")
+fi
+if [[ -n "$delete_branch" ]]; then
+  merge_args+=("$delete_branch")
+fi
+gh "${merge_args[@]}"
