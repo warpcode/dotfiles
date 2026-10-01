@@ -67,7 +67,7 @@ Execute prompts non-interactively using target models, reasoning effort levels, 
 # Basic single-shot execution
 agy --model "<model-alias>" --effort <low|medium|high> -p "<prompt>"
 
-# Unattended automation (CI/CD, scripts, tool-enabled pipelines)
+# Only for explicitly approved automation in an isolated, trusted workspace.
 agy --model "<model-alias>" \
     --effort <low|medium|high> \
     --dangerously-skip-permissions \
@@ -82,8 +82,8 @@ agy --model "<model-alias>" \
 | `-p`, `--print` | Run non-interactively and print response to stdout. | **Mandatory** for all automated executions. |
 | `--model <alias>` | Target model (e.g. `gemini-3.7-flash-high`, `gemini-3.5-flash-low`, `claude-sonnet-4-6`). | Always specify explicitly to avoid default drift. |
 | `--effort <level>` | Reasoning/thinking effort: `low`, `medium`, `high`. | Use `low` for grepping/parsing; `high` for complex architecture. |
-| `--dangerously-skip-permissions` | Auto-approves all tool permission prompts. | Required when tools/commands are executed unattended. |
-| `--mode accept-edits` | Automatically applies file modifications without approval pauses. | Required for unattended code refactors and edits. |
+| `--dangerously-skip-permissions` | Auto-approves all tool permission prompts. | Use only when explicitly requested for trusted, isolated automation; never treat as a default. |
+| `--mode accept-edits` | Automatically applies file modifications without approval pauses. | Use only when edits are explicitly authorized and the workspace is isolated. |
 | `--add-dir <path>` | Mounts an additional workspace directory into context. | Repeatable for multi-repo or multi-folder contexts. |
 | `--disable-slash-commands` | Disables slash command and skill expansion in prompt text. | Recommended when prompts contain raw code with slashes. |
 
@@ -133,6 +133,7 @@ agy --model "gemini-3.5-flash-low" --effort low \
 ## 4. Subagent Routing & Session Resumption
 
 ### Routing to a Specific Custom Agent
+Only bypass tool permissions when explicitly authorized for trusted, isolated automation:
 ```bash
 agy --agent <agent-name> --dangerously-skip-permissions -p "<prompt>"
 ```
@@ -158,11 +159,8 @@ agy mcp list
 # Add stdio server
 agy mcp add <name> <command> [args...]
 
-# Add stdio server with environment variables
-agy mcp add --env GITHUB_TOKEN=xxx gh npx -y @modelcontextprotocol/server-github
-
-# Add HTTP server with headers
-agy mcp add --header "Authorization: Bearer <token>" context7 https://mcp.context7.com/mcp
+# Add an unauthenticated HTTP server
+agy mcp add context7 https://mcp.context7.com/mcp
 
 # Enable / Disable server
 agy mcp enable <name>
@@ -171,6 +169,10 @@ agy mcp disable <name>
 # ⚠ WRITE: Permanently remove server configuration
 agy mcp remove <name>
 ```
+
+For authenticated servers, configure credentials through a secure secret
+mechanism supported by the environment. Do not pass bearer values as command-line
+arguments or store them in plain-text configuration.
 
 For advanced containerized configurations and auth details, read [@references/mcp-and-plugins.md](@references/mcp-and-plugins.md).
 
@@ -198,6 +200,7 @@ agy plugin uninstall <name>
 ## 6. Multi-Turn Streaming Protocol
 
 For real-time event processing and multi-turn piping over standard I/O:
+Use permission bypass only when the user explicitly authorizes it for trusted, isolated automation.
 ```bash
 agy --input-format stream-json --output-format stream-json --dangerously-skip-permissions
 ```
@@ -210,7 +213,8 @@ Read [@references/stream-json.md](@references/stream-json.md) for NDJSON message
 - **MUST NOT invoke bare `agy`**; use `agy -p "<prompt>"` or dedicated subcommands instead to prevent terminal freezes.
 - **MUST NOT guess model aliases**; run `agy models` first to verify valid model identifiers.
 - **MUST NOT remove MCP servers or uninstall plugins without explicit user confirmation**; these are destructive mutations marked `⚠ WRITE`.
-- **MUST NOT omit `--dangerously-skip-permissions` in unattended tool workflows**; tool execution will halt waiting for interactive confirmation prompts.
+- **MUST NOT use `--dangerously-skip-permissions` or `--mode accept-edits` by default.** Use either only when the user explicitly authorizes unattended execution in a trusted, isolated workspace.
+- **MUST NOT pass credentials as command-line arguments or embed them in MCP configuration examples.** Configure secrets through a secure runtime secret mechanism supported by the deployment environment.
 
 ---
 
