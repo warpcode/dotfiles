@@ -53,50 +53,27 @@ context remains clean and focused.
 | Cursor | `.cursor/agents/` | `~/.cursor/agents/` | `<name>.md` | [Cursor Custom Agents](https://cursor.com/docs/agent-customization) |
 | Hermes Agent | `.hermes/agents/` | `~/.hermes/agents/` | `<name>.yaml` | [Hermes Agent Blueprints](https://hermes-agent.nousresearch.com/docs/developer-guide/creating-agents) |
 
-## Universal Superset Schema
+## Portable Concepts, Platform Schemas
 
-Write definitions against this unified schema concept, then map or trim fields
-per platform target.
+Keep the agent's purpose portable, but author and validate each platform's
+configuration independently.
 
-**Portable core — compatible with every platform**, including strict parsers:
+Agent concepts such as role and description transfer across platforms, but
+frontmatter fields, file locations, tool names, and permission models do not.
+Do not copy one platform's frontmatter into another platform's agent file.
+Use the corresponding platform reference below and validate against that
+platform's actual schema.
 
 ```yaml
 ---
 name: code-auditor
 description: Performs read-only analysis of pull requests, diffs, and security patterns.
-model: anthropic/claude-3-5-sonnet # or fallback array on Copilot
 ---
 ```
 
-**Extended superset — every platform except Google Antigravity.** Claude Code,
-Copilot/VS Code, OpenCode, ChatGPT/Codex, Cursor, and Hermes tolerate these
-additional keys:
-
-```yaml
----
-mode: subagent                  # OpenCode: primary | subagent | all
-temperature: 0.1
-maxTurns: 20                    # Antigravity equivalent: max_turns (snake_case); OpenCode: steps
-tools:                          # Claude Code / Copilot allowlist
-  - FileRead
-  - GlobTool
-permissions:                    # OpenCode fine-grained permissions
-  read: allow
-  edit: deny
-  bash:
-    "git diff*": allow
-    "*": deny
-user-invocable: true            # Copilot / Claude UI autocomplete visibility
-isolation: worktree             # Claude Code worktree sandboxing
----
-```
-
-> **Warning**: Google Antigravity rejects undocumented frontmatter keys, and a
-> misspelled `tools` entry can hang the subagent (known issue). Never ship either
-> block above to `.agents/agents/` — emit only the keys documented in the
-> [Antigravity Reference](@references/platforms/antigravity.md): `name`,
-> `description`, `tools`, `mainAgent`, `subagent`, `model` (`inherit`/`flash`/`pro`),
-> `commandExecutionPolicy`, `mcpServers`, `skills`/`plugins`.
+> **Warning**: Google Antigravity can hang on an unmapped or misspelled tool
+> name. Use only documented keys and exact tool names from the
+> [Antigravity Reference](@references/platforms/antigravity.md).
 
 ### Platform Reference Guides
 
@@ -104,7 +81,7 @@ For exhaustive options, see platform references in `@references/platforms/`:
 
 - [Claude Code Reference](@references/platforms/claude-code.md): `tools`, `disallowedTools`, `effort`, `maxTurns`, `isolation: worktree`, `background`. ([Source](https://code.claude.com/docs/en/sub-agents))
 - [Copilot / VS Code Reference](@references/platforms/copilot-vscode.md): `name`, `description`, fallback `model` arrays, `tools` allowlists, `user-invocable`, `handoffs`. ([Source](https://code.visualstudio.com/docs/agent-customization/custom-agents))
-- [OpenCode Reference](@references/platforms/opencode.md): `mode`, `model`, `temperature`, `permissions` object (`allow`/`ask`/`deny`), `steps`, `hidden`. ([Source](https://opencode.ai/docs/agents/))
+- [OpenCode Reference](@references/platforms/opencode.md): `mode`, `model`, `temperature`, `permission` object (`allow`/`ask`/`deny`), `steps`, `hidden`. ([Source](https://opencode.ai/docs/agents/))
 - [Antigravity Reference](@references/platforms/antigravity.md): `name`, `description`, `tools`, `mainAgent`, `subagent`, `model` (`inherit`/`flash`/`pro`), `commandExecutionPolicy`, `mcpServers`, `skills`/`plugins`. Undocumented keys break config; misspelled tool names hang execution. ([Source](https://antigravity.google/docs/subagents/))
 - [ChatGPT / Codex Reference](@references/platforms/codex.md): `.codex/config.toml` `[agents]` section, `AGENTS.md` subagent routing. ([Source](https://learn.chatgpt.com/docs/agent-configuration/subagents))
 - [Cursor Reference](@references/platforms/cursor.md): `paths` scoping, custom agent models. ([Source](https://cursor.com/docs/agent-customization))
