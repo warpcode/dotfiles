@@ -1,7 +1,6 @@
 #!/bin/zsh
 #
 # df.obsidian - Obsidian CLI integration.
-# Replaces src/zsh/apps/obsidian.zsh
 
 emulate -LR zsh
 setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL EXTENDED_GLOB

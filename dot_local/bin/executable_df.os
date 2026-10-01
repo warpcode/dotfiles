@@ -1,7 +1,6 @@
 #!/usr/bin/env zsh
 #
 # df.os - OS and architecture detection utility (standalone).
-# Extracted from src/zsh/functions/os.zsh for portability.
 
 emulate -LR zsh
 setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL EXTENDED_GLOB
