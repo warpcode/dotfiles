@@ -14,18 +14,4 @@
     executable = true
 {{- end }}
 
-# ==============================================================================
-# ANTIGRAVITY IDE (Tarball) - Install once if missing, then let app self-update
-# ==============================================================================
-{{- if not (stat (joinPath .chezmoi.homeDir ".local/opt/antigravity-ide")) }}
-{{- $ide_json := output "curl" "-fsSL" "https://antigravity-ide-auto-updater-974169037036.us-central1.run.app/releases" }}
-{{- $ide_payload := fromJson $ide_json }}
-{{- $ide := index $ide_payload 0 }}
-
-[".local/opt/antigravity-ide"]
-    type = "archive"
-    url = {{ printf "https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/%s-%s/linux-x64/Antigravity%%20IDE.tar.gz" $ide.version $ide.execution_id | quote }}
-    stripComponents = 1
-{{- end }}
-
 {{- end }}
