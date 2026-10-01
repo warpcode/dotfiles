@@ -32,3 +32,13 @@ jobs:
           else
             echo "All Zsh files passed syntax check"
           fi
+
+      - name: Run Zsh unit tests
+        run: |
+          if [ -d "dot_zsh/tests" ]; then
+            for test_script in dot_zsh/tests/*.zsh; do
+              [ -f "$test_script" ] || continue
+              echo "Executing $test_script..."
+              zsh "$test_script"
+            done
+          fi

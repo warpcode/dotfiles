@@ -12,12 +12,14 @@ print -r "Running registry.zsh unit tests..."
 
 # Test 1: Define and get standard key-value pairs
 registry.define test_app provider1 name="Ollama" endpoint="http://localhost:11434"
-if [[ "$(registry.get test_app provider1 name)" != "Ollama" ]]; then
-    print -r "Test 1 Failed: name is not Ollama" >&2
+v1="$(registry.get test_app provider1 name)"
+if [[ "$v1" != "Ollama" ]]; then
+    print -r "Test 1 Failed: name is not Ollama, got '$v1'" >&2
     exit 1
 fi
-if [[ "$(registry.get test_app provider1 endpoint)" != "http://localhost:11434" ]]; then
-    print -r "Test 1 Failed: endpoint incorrect" >&2
+v2="$(registry.get test_app provider1 endpoint)"
+if [[ "$v2" != "http://localhost:11434" ]]; then
+    print -r "Test 1 Failed: endpoint incorrect, got '$v2'" >&2
     exit 1
 fi
 
@@ -26,23 +28,47 @@ if ! registry.exists test_app provider1; then
     print -r "Test 2 Failed: provider1 should exist" >&2
     exit 1
 fi
-if [[ "$(registry.list test_app)" != "provider1" ]]; then
-    print -r "Test 2 Failed: list output incorrect" >&2
+v_list="$(registry.list test_app)"
+if [[ "$v_list" != "provider1" ]]; then
+    print -r "Test 2 Failed: list output incorrect, got '$v_list'" >&2
     exit 1
 fi
 
-# Test 3: Security test with shell metacharacters and single/double quotes
-# Unsafe eval previously would execute commands or fail on quotes
+# Test 3: Security test with shell metacharacters and single/double quotes in values
 malicious_val='"; echo "HACKED"; $(whoami); `'
-registry.define test_app provider2 secret="$malicious_val" note='single '\'' quote and $VAR'
+single_quote_val="single ' quote and \$VAR"
+registry.define test_app provider2 secret="$malicious_val" note="$single_quote_val"
 
-if [[ "$(registry.get test_app provider2 secret)" != "$malicious_val" ]]; then
-    print -r "Test 3 Failed: secret value modified or mis-handled" >&2
+v_sec="$(registry.get test_app provider2 secret)"
+if [[ "$v_sec" != "$malicious_val" ]]; then
+    print -r "Test 3 Failed: secret value modified or mis-handled, got '$v_sec'" >&2
     exit 1
 fi
 
-if [[ "$(registry.get test_app provider2 note)" != 'single '\'' quote and $VAR' ]]; then
-    print -r "Test 3 Failed: single quote value mis-handled" >&2
+v_note="$(registry.get test_app provider2 note)"
+if [[ "$v_note" != "$single_quote_val" ]]; then
+    print -r "Test 3 Failed: single quote value mis-handled, got '$v_note'" >&2
+    exit 1
+fi
+
+# Test 3b: Security test with malicious IDs and keys
+# Ensure command injection via $(...) in ID or key is blocked and not evaluated
+bad_id='id$(touch /tmp/hacked_id)'
+bad_key='key$(touch /tmp/hacked_key)'
+
+if registry.define test_app "$bad_id" "$bad_key=val" 2>/dev/null; then
+    print -r "Test 3b Failed: registry.define should have rejected malicious ID/key" >&2
+    exit 1
+fi
+
+if registry.exists test_app "$bad_id" 2>/dev/null; then
+    print -r "Test 3b Failed: registry.exists should have rejected malicious ID" >&2
+    exit 1
+fi
+
+if [[ -f /tmp/hacked_id || -f /tmp/hacked_key ]]; then
+    print -r "Test 3b Failed: command injection executed during ID or key handling!" >&2
+    rm -f /tmp/hacked_id /tmp/hacked_key
     exit 1
 fi
 
@@ -53,8 +79,9 @@ if [[ "$list_count" != "2" ]]; then
     print -r "Test 4 Failed: provider count in list should be 2, got $list_count" >&2
     exit 1
 fi
-if [[ "$(registry.get test_app provider1 name)" != "Ollama Updated" ]]; then
-    print -r "Test 4 Failed: provider1 name not updated" >&2
+v_upd="$(registry.get test_app provider1 name)"
+if [[ "$v_upd" != "Ollama Updated" ]]; then
+    print -r "Test 4 Failed: provider1 name not updated, got '$v_upd'" >&2
     exit 1
 fi
 
