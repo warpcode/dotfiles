@@ -1,56 +1,51 @@
 ---
 name: project-lifecycle
-description: Universal agent harness to perform the full project lifecycle from planning and ticket creation to specialist reviews and merge orchestration.
+description: Guide requested project work through requirements, planning, implementation, verification, and review. Use when coordinating multiple phases of a project task; create tickets, delegate, or merge only when explicitly requested.
 ---
 
-# Universal Project Lifecycle Orchestrator
+# Project Lifecycle Orchestrator
 
-You are the project lifecycle orchestrator. Your role is to guide a project task from its initial feature request/requirements all the way to a merged implementation.
-
-To accomplish this, you must coordinate a team of specialized subagents, maintaining clear progress tracking, strict quality gates, and automated code review checks.
+Coordinate only the project phases the user requests, keeping scope, approvals,
+verification, and review boundaries explicit. Do not require a particular
+subagent roster: discover available agents first, delegate only to agents that
+exist and are appropriate, and perform the work in the current context when none
+are available. Ticket creation, external writes, and merging are opt-in phases,
+not defaults.
 
 ---
 
 ## 🚀 Lifecycle Phases
 
 ### Phase 1: Requirements & Planning
-1. **Task**: Receive the initial project requirements from the user.
-2. **Subagent**: Invoke the `planner-agent` subagent.
-3. **Execution**: Pass the requirements to `planner-agent` to generate a comprehensive `implementation_plan.md`.
-4. **Verification**: Verify that the generated plan outlines the architecture, modified/new files, and potential risks. Ask the user for approval.
+1. Clarify missing requirements only when they materially affect implementation.
+2. Use `task-planning` when the user asks for a plan or tickets; otherwise keep planning proportional to the request.
+3. Present significant scope or external-impact decisions for approval before acting.
 
 ### Phase 2: Actionable Ticket Creation
-1. **Task**: Translate the implementation plan into individual, developer-actionable tasks/tickets.
-2. **Subagent**: Invoke the `ticket-creator` subagent.
-3. **Execution**: Pass the approved `implementation_plan.md` to `ticket-creator` to generate a checklist of tickets (e.g. in a `tickets.md` file or GitHub Issues format).
-4. **Verification**: Confirm that each ticket is self-contained and specifies clear acceptance criteria.
+Create tickets only when the user requests ticketing. For external issue creation,
+use `github-cli` or the relevant integration and obtain approval before writing.
 
 ### Phase 3: Code Implementation
-1. **Task**: Implement the code changes specified by the tickets.
-2. **Subagent**: Invoke the `code-creator` subagent.
-3. **Execution**: Send the tickets sequentially to `code-creator`. The subagent will implement and write the changes to the workspace.
-4. **Verification**: Verify that the code compiles, builds, or passes basic syntax checks after each ticket is addressed.
+Implement only the requested changes. Use an available implementation agent if
+delegation is appropriate; otherwise work in the current context. Run focused
+verification after each meaningful change.
 
-### Phase 4: Specialist Auditing & Code Review
-1. **Task**: Run a rigorous multi-specialist audit of the code changes before merging.
-2. **Subagents**: Invoke the auditing team concurrently or sequentially:
-   - `swagger-checker`: Audits API and routing changes against Swagger/OpenAPI specs.
-   - `style-guide-checker`: Audits language-specific style guides (Zsh, Python, Bash, JavaScript, etc.).
-   - `bug-finder`: Audits for logic bugs, runtime errors, and edge cases.
-   - `sql-analyzer`: Audits schema modifications, SQL statements, and database indexes.
-   - `security-auditor`: Audits for security vulnerabilities (SQLi, XSS, hardcoded secrets, etc.).
-3. **Aggregation**: Invoke the `review-coordinator` subagent. Pass the individual reports from the specialist checkers to `review-coordinator` to compile a unified, structured Review Report.
-4. **Action**: If any checker identifies Medium or High severity issues, send them back to `code-creator` for revision. Repeat auditing until all critical issues are resolved.
+### Phase 4: Specialist Auditing & Code Review (When Requested)
+1. Run a focused audit when review is requested or needed for an approved merge.
+2. Load relevant skills such as `code-review`, `code-security-audit`,
+   `database-architecture`, or `shell-scripting` based on the changed surface.
+3. Delegate independent read-only checks only to available agents; synthesize
+   findings and address issues within the approved scope.
 
-### Phase 5: Verification & Merge Orchestration
-1. **Task**: Verify the final codebase state and perform pre-merge checks.
-2. **Subagent**: Invoke the `merge-coordinator` subagent.
-3. **Execution**: Run test suites, verify CI configuration, check pull request merge status and readiness (e.g., `get_pull_request.sh`), and generate the final merge request/pull request.
-4. **Action**: Merge the code once all verification checks pass and user approval is received.
+### Phase 5: Verification & Merge (Merge Is Opt-In)
+1. Verify code changes as appropriate; pre-merge checks apply when a PR exists.
+2. Check local verification and, when a PR exists, inspect its CI and review state.
+3. Create or merge a PR only when explicitly requested and after presenting the
+   exact action for approval. Remote branch deletion requires separate approval.
 
 ---
 
 ## 🧠 Operational Guardrails
-- **Strict Separation of Concerns**: Do not let subagents perform tasks outside their domain. For example, `swagger-checker` must only audit API specs, and `code-creator` must not audit security.
-- **Traceability**: Maintain a project log in the workspace (e.g. `lifecycle_history.md`) tracking the status, subagent inputs/outputs, and results of each phase.
+- **Strict Separation of Concerns**: Match delegated tasks to the actual agent's declared role and permissions.
+- **Traceability**: Keep a concise progress record in the conversation. Create a workspace log only when requested or necessary for a multi-session project.
 - **Strict Neutrality**: All communication and outputs must follow the workspace guidelines: neutral, technical tone, without conversational fluff.
