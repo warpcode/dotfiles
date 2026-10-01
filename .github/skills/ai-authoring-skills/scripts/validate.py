@@ -82,7 +82,36 @@ def _parse_flat_yaml(text):
             joiner = " " if rest[0] == ">" else "\n"
             data[key] = joiner.join(c for c in chunk if c)
         else:
-            data[key] = rest.strip("\"'")
+            if rest.startswith('"') and rest.rfind('"') > 0:
+                tail = rest[rest.rfind('"') + 1 :]
+                if re.search(r"^\s*#", tail):
+                    rest = rest[: rest.rfind('"') + 1]
+            elif rest.startswith("'") and rest.rfind("'") > 0:
+                tail = rest[rest.rfind("'") + 1 :]
+                if re.search(r"^\s*#", tail):
+                    rest = rest[: rest.rfind("'") + 1]
+            elif rest.startswith("[") and rest.rfind("]") > 0:
+                tail = rest[rest.rfind("]") + 1 :]
+                if re.search(r"^\s*#", tail):
+                    rest = rest[: rest.rfind("]") + 1]
+            elif rest.startswith("{") and rest.rfind("}") > 0:
+                tail = rest[rest.rfind("}") + 1 :]
+                if re.search(r"^\s*#", tail):
+                    rest = rest[: rest.rfind("}") + 1]
+            else:
+                rest = re.sub(r"\s+#.*$", "", rest).strip()
+
+            if (
+                (rest.startswith("[") and not rest.endswith("]"))
+                or (rest.startswith("{") and not rest.endswith("}"))
+                or (rest.startswith('"') and rest.count('"') % 2 != 0)
+                or (rest.startswith("'") and rest.count("'") % 2 != 0)
+            ):
+                raise ValueError(f"invalid YAML value in line: {line!r}")
+            if (rest.startswith('"') and rest.endswith('"')) or (rest.startswith("'") and rest.endswith("'")):
+                data[key] = rest[1:-1]
+            else:
+                data[key] = rest
     return data
 
 
@@ -285,6 +314,14 @@ def _self_test():
             ("strip-fenced-blocks",
              lambda: _expect(strip_fenced_blocks(
                  ["```", "templates/x.md", "```", "ok"]) == ["ok"])),
+            ("flat-yaml-invalid-brackets",
+             lambda: _expect_raises(ValueError, lambda: _parse_flat_yaml("name: [invalid yaml"))),
+            ("flat-yaml-invalid-braces",
+             lambda: _expect_raises(ValueError, lambda: _parse_flat_yaml("name: {unclosed"))),
+            ("flat-yaml-trailing-comment",
+             lambda: _expect(_parse_flat_yaml('metadata: {"a": 1} # note') == {"metadata": '{"a": 1}'})),
+            ("flat-yaml-unquoted-trailing-info",
+             lambda: _expect(_parse_flat_yaml('name: "quoted" (important)') == {"name": '"quoted" (important)'})),
         ]
 
         results = []
@@ -306,6 +343,16 @@ def _self_test():
 
 def _expect(cond, msg="assertion failed"):
     assert cond, msg
+
+
+def _expect_raises(exc_type, fn):
+    try:
+        fn()
+    except exc_type:
+        return
+    except Exception as e:
+        raise AssertionError(f"expected {exc_type.__name__}, got {type(e).__name__}") from e
+    raise AssertionError(f"expected {exc_type.__name__} to be raised")
 
 
 def main(argv=None):

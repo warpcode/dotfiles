@@ -43,6 +43,18 @@ name: [invalid yaml
         with self.assertRaises(ValueError):
             validate.split_skill_md(self.skill_md_path)
 
+    def test_valid_yaml_with_trailing_comment_and_unquoted_tail(self):
+        content = """---
+metadata: {"a": 1} # note
+name: "quoted" (important)
+---
+# Body
+"""
+        self.skill_md_path.write_text(content, encoding="utf-8")
+        meta, body_lines = validate.split_skill_md(self.skill_md_path)
+        self.assertEqual(meta["metadata"], '{"a": 1}')
+        self.assertEqual(meta["name"], '"quoted" (important)')
+
     def test_standard_markdown_without_frontmatter(self):
         content = """# Header
 This is a standard markdown document without any frontmatter.
