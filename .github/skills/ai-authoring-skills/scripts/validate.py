@@ -82,6 +82,13 @@ def _parse_flat_yaml(text):
             joiner = " " if rest[0] == ">" else "\n"
             data[key] = joiner.join(c for c in chunk if c)
         else:
+            if (
+                (rest.startswith("[") and not rest.endswith("]"))
+                or (rest.startswith("{") and not rest.endswith("}"))
+                or (rest.startswith('"') and (len(rest) < 2 or not rest.endswith('"')))
+                or (rest.startswith("'") and (len(rest) < 2 or not rest.endswith("'")))
+            ):
+                raise ValueError(f"invalid YAML value in line: {line!r}")
             data[key] = rest.strip("\"'")
     return data
 
