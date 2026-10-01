@@ -57,7 +57,7 @@ Document all findings citing exact file paths, line ranges, and reproduction sni
 
 ````markdown
 ### Security Review Summary
-- **Overall Posture**: `SECURE` | `ACTION_REQUIRED` | `CRITICAL_RISK`
+- **Review Result**: `NO_FINDINGS_IN_SCOPE` | `ACTION_REQUIRED` | `CRITICAL_RISK` (a clean review is not proof that the system is secure)
 - **Critical Vulnerabilities**: [Count]
 - **High/Medium Warnings**: [Count]
 - **Hardening Suggestions**: [Count]

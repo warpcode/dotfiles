@@ -1,6 +1,6 @@
 ---
 name: file-cleaner
-description: Non-invasive audit of emptied or refactored files to determine if they can be safely deleted.
+description: Non-invasive audit of emptied or refactored files to determine if they can be safely deleted. Use when assessing whether an unused or reduced file is still referenced before removal.
 user-invocable: false
 ---
 

@@ -27,7 +27,7 @@ flowchart LR
 
 ### Phase 1: Database, Caching & Data Layer Profiling
 1. Identify ORM N+1 query patterns: Look for relation accesses inside loops or template iterations without eager loading (`with()`, `preload`, `include`).
-2. Audit index coverage: Ensure foreign keys, unique constraint columns, and filter columns in `WHERE` / `ORDER BY` clauses are backed by database indexes, partial indexes, or covering indexes.
+2. Audit index use against representative query plans, selectivity, table size, and write workload. Consider indexes for foreign keys, unique constraints, and frequent filters or ordering, but do not recommend one solely because a column appears in `WHERE` or `ORDER BY`.
 3. Check for unbounded result sets: Enforce pagination or chunked streaming for large data sets.
 4. Audit connection lifecycle & socket pooling: Verify database connection pool limits (PgBouncer, ProxySQL) and HTTP keep-alive socket reuse (Node `http.Agent`, Python `HTTPAdapter`) to avoid `TIME_WAIT` socket exhaustion.
 5. Profile search engine queries (Elasticsearch/OpenSearch): Ensure filter context usage over scoring clauses, eliminate leading wildcards, and enforce cursor-based (`search_after`) deep pagination.

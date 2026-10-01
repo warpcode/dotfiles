@@ -1,6 +1,6 @@
 ---
 name: coding
-description: Coding guidelines and disciplined editing principles (think first, simplicity first, surgical changes, goal-driven execution) for dotfiles and development.
+description: Coding guidelines and disciplined editing principles (think first, simplicity first, surgical changes, goal-driven execution) for dotfiles and development. Use when implementing, debugging, refactoring, or reviewing code changes.
 ---
 
 # Coding
