@@ -73,8 +73,8 @@ If you prefer to install manually:
 Helper functions in [`dot_zsh/functions/github.zsh`](dot_zsh/functions/github.zsh) fetch and install GitHub release artifacts:
 
 - `github.get_latest_release <owner>/<repo>` — returns the latest tag.
-- `github.get_asset_url <owner>/<repo> <pattern>` — resolves a matching release asset URL (auto-detects OS/arch suffixes).
-- `github.install_release <owner>/<repo> <pattern> [dest_dir]` — downloads the matching asset, extracts `.tar.gz`/`.zip`, flattens top-level `bin/`, `sbin/`, `usr/`, or `lib/` dirs, and symlinks executables into `bin/`.
+- `github.get_asset_url <owner>/<repo> <version> [pattern...]` — resolves a matching release asset URL (auto-detects OS/arch suffixes).
+- `github.install_release <app> <owner>/<repo> <version>` — downloads the matching asset, extracts `.tar.gz`/`.zip`, flattens top-level `bin/`, `sbin/`, `usr/`, or `lib/` dirs, and symlinks executables into `bin/`.
 
 Extraction lands in `$GITHUB_RELEASES_INSTALL_DIR` (default `~/.local/opt`). Set the variable to override.
 

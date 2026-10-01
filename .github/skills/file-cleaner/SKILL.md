@@ -18,7 +18,7 @@ Verify if a specific file path is still referenced or sourced by the system usin
 
 - Use `grep_search` to find static occurrences of the filename or path in the workspace.
 - Use `read_file` on known entry points and sourcing logic to identify dynamic references.
-  - **Zsh**: Check `src/zsh/init.zsh` and any profile-specific init scripts for glob-based sourcing (e.g., `functions/**/*.zsh`).
+  - **Zsh**: Check `dot_zsh/init.zsh` and any profile-specific init scripts for glob-based sourcing (e.g., `functions/**/*.zsh`).
   - **GitHub Actions**: Check `.github/workflows/` for hardcoded script paths.
   - **Standard Tools**: Check `bin/` or `scripts/` for wrappers that might expect the file.
 
