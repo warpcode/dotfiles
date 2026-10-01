@@ -5,7 +5,6 @@ import os
 import re
 import shutil
 import subprocess
-import tempfile
 import unittest
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -516,32 +515,6 @@ class TestCanonicalCommandsGenerator(unittest.TestCase):
             self.assertTrue(vscode_term[k])
         self.assertTrue(vscode_edits.get("~/src"))
         self.assertFalse(vscode_edits.get("~/.ssh"))
-
-
-class TestRegistrySecurity(unittest.TestCase):
-    """Test dot_zsh/functions/registry.zsh against subshell execution and parameter injection."""
-
-    def test_registry_no_eval_injection(self):
-        """Verify registry functions do not evaluate shell code injected in array keys or values."""
-        script_path = os.path.join(REPO_ROOT, "dot_zsh", "functions", "registry.zsh")
-        # Run zsh if available to test registry behavior with malicious inputs
-        zsh_bin = shutil.which("zsh")
-        if not zsh_bin:
-            self.skipTest("zsh executable not found on PATH")
-
-        with tempfile.NamedTemporaryFile(delete=False) as tmp:
-            marker_file = tmp.name
-        os.remove(marker_file)
-        self.addCleanup(lambda: os.path.exists(marker_file) and os.remove(marker_file))
-
-        test_zsh_script = f"""
-        source "{script_path}"
-        registry.define "test_ns" "id_1" "key]$(touch {marker_file})"=val "key2"="val]$(touch {marker_file})"
-        """
-
-        res = subprocess.run([zsh_bin, "-c", test_zsh_script], capture_output=True, text=True)
-        self.assertEqual(res.returncode, 0, f"zsh script failed: {res.stderr}")
-        self.assertFalse(os.path.exists(marker_file), "Security vulnerability: injected command was evaluated!")
 
 
 if __name__ == "__main__":

@@ -8,7 +8,8 @@ _registry.ns_var() {
 }
 
 _registry.norm() {
-    print -r -- "${1//-/_}"
+    local sanitized="${1//-/_}"
+    print -r -- "${sanitized//[^A-Za-z0-9_.:]/}"
 }
 
 _registry.validate_name() {
@@ -22,15 +23,22 @@ _registry.validate_exists() {
     typeset -p "$list_var" >/dev/null 2>&1 || { print "Unknown namespace: $1" >&2; return 1; }
 }
 
+# Sanitize key for associative array lookup/storage: strip characters that trigger shell expansion or subscript errors
+_registry.clean_key() {
+    print -r -- "${1//[^A-Za-z0-9_.:]/}"
+}
+
 # Read associative array value: _registry.aa_get <varname> <key>
 _registry.aa_get() {
-    local ref="${1}[${2}]"
+    local safe_key="$(_registry.clean_key "$2")"
+    local ref="${1}[${safe_key}]"
     print -r -- "${(P)ref}"
 }
 
 # Write associative array value: _registry.aa_set <varname> <key> <value>
 _registry.aa_set() {
-    typeset -g "${1}[${2}]"="$3"
+    local safe_key="$(_registry.clean_key "$2")"
+    typeset -g "${1}[${safe_key}]"="$3"
 }
 
 # Read array elements: _registry.arr_get <varname> → prints elements one per line
