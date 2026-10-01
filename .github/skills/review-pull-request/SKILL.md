@@ -18,6 +18,16 @@ Master orchestrator for pull request reviews. You are responsible for the entire
 ### 2. Contextual Audit
 - **Resolve owner/repo first**: never assume the owner from the local directory or from a remembered `user/repo`. Run `git remote -v` (or `gh repo view --json nameWithOwner`) and use that `<owner>/<repo>` for every subsequent `gh` call. Verified 2026-09-26: a guessed owner (`exampleuser/cloakenv`) failed with `Could not resolve to a Repository` while the real remote was `warpcode/cloakenv`.
 - Use `gh pr view <pr> --repo <owner>/<repo> --json <fields>` and `gh pr diff <pr> --repo <owner>/<repo>` to retrieve the PR state without checking out the branch.
+- **Isolate the real diff with a blob-hash sweep (do this first)**: `gh pr diff` is merge-base-relative, so a branch cut before several merges reports files that `main` already contains verbatim. Comparing blob hashes per file collapses the diff to what actually changed, and a `SAME` production file is immediate evidence of a self-reverting refactor or an already-merged change:
+  ```bash
+  git fetch origin pull/<pr>/head:refs/remotes/origin/pr-<pr> --force
+  for f in $(git diff --name-only $(git merge-base origin/main origin/pr-<pr>) origin/pr-<pr>); do
+    a=$(git show origin/main:$f 2>/dev/null | git hash-object --stdin)
+    b=$(git show origin/pr-<pr>:$f | git hash-object --stdin)
+    [ "$a" = "$b" ] && echo "SAME    $f" || echo "DIFFERS $f"
+  done
+  ```
+  Verified 2026-10-01: on warpcode/cloakenv#193 this shrank a reported 7-file / +215/-13 diff to **3 genuinely changed files** (`keepass.go`, `keepass_test.go`, `keepass_benchmark_test.go`); the other four, including a whole `AGENTS.md` rewrite, were byte-identical to `main` because they had already landed via #189/#192. On #191 the same sweep showed the *only* non-test file was a filler `dummy.txt`. Read `AGENTS.md` in the reported diff with this in mind — bot-added memory sections are often already on `main`.
 - **Requirements Tracing**: If the PR mentions or is linked to a parent issue:
     - Retrieve the parent issue's context, description, and acceptance criteria (AC).
     - Verify if the PR implementation aligns with the stated AC.
