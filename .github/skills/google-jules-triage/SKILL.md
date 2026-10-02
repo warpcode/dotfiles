@@ -42,6 +42,7 @@ This triage procedure is independent of any specific tooling or transport. It op
 | `approve_plan` | Authorize proposed plan | Session ID, Plan ID | Session transitions from plan gate to implementation |
 | `send_message` | Send steering guidance | Session ID, Message text | Injects direction or answers into the runner |
 | `archive_session` | Reversibly hide session | Session ID | Hides inactive session from default listings |
+| `create_session` | Spawn replacement session | Prompt, source repo, branch, title | New session rooted on a rebuilt `tidy/` branch |
 
 ---
 
@@ -56,17 +57,21 @@ This triage procedure is independent of any specific tooling or transport. It op
    - `⚪ CLOSED_NO_PR`: Session closed without PR. If deliverables or test completion markers exist, send `pr_reminder` nudge.
    - `🔵 ACTIVE`: Normal execution in progress. Monitor without interrupting.
    - `✅ COMPLETED`: Task finished with an attached pull request. Review the PR.
+   - `🗑️ JUNK`: Degenerate session — **archive immediately without nudging**. See signature below.
 3. Synthesize findings using the report template at `templates/session-audit.md`.
+
+**Junk Session Signature**: Sessions where all agent turns consist of single-character strings (`a`), garbled CJK fragments (`体`, `轻`, `部件`, `皮肤`), or non-sequitur language output followed by a rubber-stamped `Code review rating is #Correct#` are degenerate — the runner produced no real work. Archive immediately: `archive-session <id>`. Do not nudge.
 
 ### Workflow 2: Plan Review & Approval Gate
 When a session is awaiting plan approval (`PLAN_GATE`):
 1. Retrieve the plan activity details via `get_activities` or `get_session`.
 2. Evaluate against the criteria in `@references/plan-review-gate.md`:
+   - [ ] **Validity, Relevance & Utility**: Verify the problem/bug actually exists in the code (not a false premise or hallucination); verify the change is relevant and provides genuine utility rather than code churn or unneeded abstractions.
    - [ ] Surgical scope aligned strictly with prompt (no unrequested refactors)
    - [ ] Verification test suite commands included (`go test`, `pytest`, `npm test`)
    - [ ] Cross-platform compatibility and security invariants preserved
 3. If acceptable, execute `approve_plan`. If idle, follow with the `plan_stalled` nudge template from `@references/nudge-catalog.md`.
-4. If revisions are required, send structured rejection feedback via `send_message`. Format evaluation with `templates/plan-assessment.md`.
+4. If invalid, unnecessary, or revisions are required, send structured rejection feedback via `send_message`. Format evaluation with `templates/plan-assessment.md`.
 
 ### Workflow 3: Stuck Runner & Idle Invariant Remediation
 When a session is marked `STALLED` ($\ge 60$ minutes without updates) or closed prematurely:
@@ -85,6 +90,55 @@ When Jules pushes empty commits or the remote repository has advanced past the s
 1. Halt the runner immediately using the `stale_branch_halt` nudge from `@references/nudge-catalog.md`.
 2. Follow the detailed recovery steps in `@references/stale-branch-remediation.md`: reversibly archive the stale session, and spawn a fresh session rooted on the updated base branch.
 
+### Workflow 6: Wedged PR Recovery (empty-commit / reverted-refactor loops)
+Nudging or re-prompting the **same** session will not clear these. The runner keeps appending
+commits, and an appended commit can never remove an existing one — so an empty-commit loop never
+terminates on its own. Escalate to rebuilding the branch yourself, then hand off to a **new**
+session.
+
+**Do not push anything to the session's own branch.** Not a merge, not a rebase, not a fix-up
+commit. Write to a fresh `tidy/` branch and start the replacement session there.
+
+1. **Confirm it is genuinely wedged** — count empty commits above the merge base:
+   ```bash
+   git fetch origin pull/<n>/head:refs/remotes/origin/pr-<n> --force
+   mb=$(git merge-base origin/main origin/pr-<n>)
+   for c in $(git rev-list origin/main..origin/pr-<n>); do
+     s=$(git show --shortstat --format='' $c | tr -d ' \n')
+     printf '%s [%s]\n' "$c" "${s:-EMPTY}"
+   done
+   ```
+   Two or more `EMPTY` entries, or one that survives a claimed squash, means escalate.
+
+2. **Isolate the real diff** — blob-hash each reported file against `origin/main`. Files that are
+   already on `main` are merge-base noise, not this session's work. A production file identical to
+   `main` while an earlier commit differs proves a **self-reverting refactor** (the refactor was
+   written, then reverted by a later commit in the same branch — the PR title still promises it).
+
+3. **Rebuild** in a throwaway worktree:
+   ```bash
+   git worktree add --detach /tmp/tidy-<n> origin/main
+   cd /tmp/tidy-<n> && git merge --squash origin/pr-<n>
+   ```
+   Resolve conflicts by **keeping both sides' tests** — if `main` independently added tests to the
+   same file, concatenate rather than choose. Then verify before committing:
+   `go build ./...`, `go vet ./...`, `gofmt -l .`, `go test -race ./...`.
+
+4. **Commit once, push to `tidy/pr-<n>-<slug>`.** One non-empty commit above `main` permanently
+   eliminates the empty-commit failure.
+
+5. **Start the replacement session** on the tidy branch. The prompt must state: the original goal,
+   what is already complete (do not redo it), what remains, an explicit acceptance-criteria
+   checklist, and — critically — that a previous attempt claimed to deliver work it did not. For a
+   self-reverted refactor, tell the new session explicitly that the helpers it is asked to create
+   **do not exist yet anywhere in the repo**.
+
+6. **Close the wedged PR only after the replacement PR exists**, so review coverage is never gapped.
+
+Watch for CI-gate bypass artifacts in the rebuilt diff — filler files (`dummy.txt` containing
+`Trigger rebuild`), `.diff`/`.sh` helper scripts, and placeholder comments added purely to satisfy
+the `Reject empty commit` gate. All are symptoms of the same loop and must be removed before merge.
+
 ---
 
 ## Constraints & Guardrails
@@ -97,3 +151,5 @@ When Jules pushes empty commits or the remote repository has advanced past the s
    - Reversibly archive sessions to hide them from triage sweeps. Never perform hard deletion unless explicitly requested and confirmed.
 4. **Secrets Blindness**:
    - Never log, display, or commit authentication tokens or secrets during triage or reports.
+5. **Scrutinize Proposed Changes for Validity & Utility**:
+   - Never assume changes proposed or requested by Jules are correct, relevant, or useful. Always scrutinize whether the underlying premise is valid and whether the change provides genuine utility before granting approval or merging work.

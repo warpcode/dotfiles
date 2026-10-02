@@ -78,6 +78,7 @@ When auditing any session:
 When Jules generates a plan requiring approval:
 1. **Fetch Plan Steps**: Inspect the step breakdown via `python3 <skill-dir>/scripts/main.py activity <session_id> <activity_id>` or `check-sessions`.
 2. **Review Checklist**:
+   - **Validity & Utility Gate**: Does the problem genuinely exist? Verify that the premise is factually correct and not a hallucinated bug. Is the change relevant and genuinely useful rather than pointless churn or unneeded refactoring?
    - **Scope Check**: Does the plan make targeted changes matching the prompt without unrequested refactors?
    - **Testing Gate**: Does the plan include unit tests, test verification (`go test`, `pytest`), and pre-commit checks?
    - **Cross-Platform Compatibility**: Does the plan address OS-specific boundaries where appropriate?
