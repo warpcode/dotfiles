@@ -31,7 +31,11 @@ Review code only. Use issue/PR context to validate requirements and surface defe
 - Do not proceed without a pull request when one is required for context.
 - Use origin refs and remote diff context when needed.
 - For security-scanner comment triage, load `code-security-audit` and assess each claim against the changed code and actual response contract. Keep the review limited to the reported findings.
+- **Scrutinize Validity & Utility**: Never assume proposed changes are correct, necessary, or useful. Verify whether the underlying bug or requirement is genuine or based on a false premise/hallucination, and whether the modification provides real utility rather than code churn or unneeded complexity.
+- **Source Issue Requirements Verification**: When the PR or branch originates from or references an issue/ticket (Jira or GitHub), always review the source issue to verify that the implementation completely and accurately fulfills the stated requirements and acceptance criteria.
 - Prioritize:
+  - requirement fulfillment against source issue/ticket
+  - validity of premise and genuine utility
   - bugs and functional correctness
   - security issues
   - style guideline violations (load the relevant style guideline skill if available)
@@ -39,7 +43,6 @@ Review code only. Use issue/PR context to validate requirements and surface defe
   - readability and maintainability
   - anti-patterns and duplication
   - consistency with project conventions
-  - whether the changes meet the original issue requirements
   - unresolved PR comments and review questions
 
 ## When to Choose This Skill

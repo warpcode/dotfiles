@@ -138,17 +138,17 @@ python3 <skill-dir>/scripts/main.py nudge 10786198163003828698 pr_reminder
 Convenience scanning command that evaluates inactivity duration and flags potential gates.
 
 ```bash
-# Standard audit scan (identifies stalled runs, plan gates, and inactive tasks)
-python3 <skill-dir>/scripts/main.py check-sessions --page-size 10
+# Full health sweep — always use --max-age-days 0 for audits (7-day default is daily triage only)
+python3 <skill-dir>/scripts/main.py check-sessions --page-size 50 --max-age-days 0 --flag-unmerged
+
+# Full sweep with per-session conversation history
+python3 <skill-dir>/scripts/main.py check-sessions --page-size 50 --max-age-days 0 --history --flag-unmerged
 
 # Audit a specific session (shows full conversation transcript)
 python3 <skill-dir>/scripts/main.py check-sessions 4475409647262242777
 
-# Audit with custom age cutoff in days (0 to disable filtering)
-python3 <skill-dir>/scripts/main.py check-sessions --max-age-days 14
-
-# Comprehensive audit: full history + detect CLOSED_NO_PR sessions with deliverables
-python3 <skill-dir>/scripts/main.py check-sessions --page-size 20 --history --flag-unmerged
+# Daily triage (recent sessions only — noise-reduced)
+python3 <skill-dir>/scripts/main.py check-sessions --page-size 10 --max-age-days 7
 ```
 
 ### 6. Session Lifecycle Operations (`archive-session`, `delete-session`)
@@ -208,3 +208,4 @@ python3 <skill-dir>/scripts/main.py call GET sources
 - [ ] Session creation targets a verified source discovered via `sources` (or explicitly sourceless).
 - [ ] Output is synthesized into concise markdown tables or summaries.
 - [ ] `DELETE` was never used to satisfy an "archive" / "tidy" request — `archive-session` was used instead.
+- [ ] Full audit sweeps use `--max-age-days 0`; the 7-day default is for daily triage only, not health checks.

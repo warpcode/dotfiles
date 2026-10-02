@@ -14,28 +14,34 @@ Before approving any plan, review the steps and file targets against these repos
 
 ## 2. Assessment Checklist
 
-Evaluate the plan across five core dimensions:
+Evaluate the plan across six core dimensions:
 
-### 1. Scope & Surgical Editing
+### 1. Validity, Relevance & Utility (Scrutiny Gate)
+- [ ] **Valid Premise**: The underlying bug or requirement actually exists in the codebase. Verify that Jules is not acting on a false premise, hallucinated bug, or misinterpretation of existing behavior.
+- [ ] **Relevance**: The change is directly relevant to the repository's architecture and task goals.
+- [ ] **Genuine Utility**: The proposed change provides tangible value (e.g., fixing a reproducible defect, measurable performance gain, or requested feature), rather than cosmetic churn, unnecessary abstraction, or a solution looking for a problem.
+- [ ] **Soundness & Correctness**: The proposed solution is technically correct, sound, and free of regression risks.
+
+### 2. Scope & Surgical Editing
 - [ ] **Prompt Alignment**: The plan addresses precisely what was requested and nothing more.
 - [ ] **No Unprompted Refactors**: No unsolicited architectural changes, helper abstractions, or file moves.
 - [ ] **Targeted Files**: Only files directly related to the task are scheduled for modification.
 
-### 2. Verification & Testing
+### 3. Verification & Testing
 - [ ] **Pre-Commit Tests**: The plan includes explicit commands to run tests before committing (`go test -race ./...`, `pytest`, `npm test`, etc.).
 - [ ] **Regression Coverage**: New features or bug fixes add or update corresponding test assertions.
 - [ ] **Non-Interactive Execution**: Test invocations do not require interactive input or launch graphical tools.
 
-### 3. Cross-Platform Compatibility
+### 4. Cross-Platform Compatibility
 - [ ] **OS Invariants**: Linux and macOS path conventions, line endings, and file permission boundaries are respected.
 - [ ] **Binary Availability**: No reliance on non-standard tools not installed in the target sandbox environment.
 
-### 4. Security & Sensitive Invariants
+### 5. Security & Sensitive Invariants
 - [ ] **No Hardcoded Secrets**: Plan does not print, log, or commit tokens, keys, or passwords.
 - [ ] **Safe File Operations**: No unanchored `rm -rf` operations or operations near symlinks without verification.
 - [ ] **Memory & Cache Scrubbing**: Sensitive buffers are sanitized if touching cryptographic or auth code.
 
-### 5. Dependency Management
+### 6. Dependency Management
 - [ ] **No Unapproved Packages**: No new external dependencies introduced unless explicitly requested in the task prompt.
 
 ---

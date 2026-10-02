@@ -5,6 +5,7 @@
 - **Assessment Result**: `APPROVED` | `REVISION_REQUESTED`
 
 ### Checklist Audit
+- [ ] **Validity & Utility**: Change is factually correct, genuinely needed, relevant, and not based on a false premise or hallucinated bug.
 - [ ] **Surgical Scope**: Matches prompt precisely without unprompted refactoring.
 - [ ] **Verification**: Tests and pre-commit checks included.
 - [ ] **Platform Invariants**: Path and environment boundaries respected.
