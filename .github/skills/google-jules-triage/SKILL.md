@@ -139,6 +139,39 @@ Watch for CI-gate bypass artifacts in the rebuilt diff — filler files (`dummy.
 `Trigger rebuild`), `.diff`/`.sh` helper scripts, and placeholder comments added purely to satisfy
 the `Reject empty commit` gate. All are symptoms of the same loop and must be removed before merge.
 
+### Workflow 7: COMPLETED Without Delivery
+A session can reach `COMPLETED` having written code, run the full test suite, and passed its own
+code review — and still never push and never open a PR. The activity log ends with "All plan steps
+completed" + an `Artifacts` event ("1 patch/artifact(s)"), while the source branch still points at
+the commit it had before the session started.
+
+**The session state is not evidence of delivery.** Verify with the remote, not the API:
+
+```bash
+git fetch origin <source-branch>
+git log --format='%h %s' origin/main..origin/<source-branch>   # unchanged? nothing was pushed
+gh pr list --state open --json number,headRefName              # no PR for this branch?
+```
+
+**The artifact is not recoverable via the API.** Both of these fail for a completed session:
+- `activity <session> <artifact-id>` → 404 Not Found
+- `call GET sessions/<id>` → returns only metadata (title, state, prompt, source context); there is
+  no diff field and no artifact URL
+
+The patch must be downloaded manually from the Jules web UI. So when a session finishes, check
+`gh pr list` for a branch matching its source branch **before** treating the work as saved.
+
+**Remediation.** Do not attempt to recover via the API. Respawn on the same source branch with an
+explicit, unmissable delivery instruction in the prompt:
+
+> You MUST `git push -u origin HEAD` and `gh pr create`. Do not finish without both. If the harness
+> offers to submit a patch artifact INSTEAD of pushing, decline it and push to the remote. A PR that
+> exists only inside the session is not a deliverable.
+
+Also state which attempts already failed and how, so the runner does not repeat them. Observed
+twice in a row on warpcode/cloakenv: sessions `940024975768340826` and `10856745711762183052` both
+reported success and pushed nothing.
+
 ---
 
 ## Constraints & Guardrails
