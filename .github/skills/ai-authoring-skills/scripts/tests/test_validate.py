@@ -35,7 +35,7 @@ This is the body.
 
     def test_invalid_yaml_frontmatter(self):
         content = """---
-name: [invalid yaml
+invalid yaml line without colon
 ---
 # Body
 """
