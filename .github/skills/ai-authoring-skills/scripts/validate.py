@@ -31,6 +31,7 @@ check fails.
 
 import argparse
 import os
+import py_compile
 import re
 import subprocess
 import sys
@@ -202,14 +203,22 @@ def validate_skill(skill_dir):
         dirs[:] = [d for d in dirs if not d.startswith(".")]
         for f in files:
             p = Path(root) / f
-            checker = SCRIPT_CHECKS.get(p.suffix)
-            if not checker:
-                continue
-            proc = subprocess.run(checker + [str(p)], capture_output=True, text=True)
-            if proc.returncode != 0:
-                detail = (proc.stderr or proc.stdout).strip().splitlines()
-                msg = detail[-1] if detail else "see stderr"
-                broken.append(f"{p.relative_to(skill_dir)}: {msg}")
+            if p.suffix == ".py":
+                # In-process compilation for Python files avoids ~60ms subprocess overhead per file
+                try:
+                    py_compile.compile(str(p), doraise=True)
+                except py_compile.PyCompileError as e:
+                    msg = str(e.msg) if hasattr(e, "msg") else str(e)
+                    broken.append(f"{p.relative_to(skill_dir)}: {msg}")
+            else:
+                checker = SCRIPT_CHECKS.get(p.suffix)
+                if not checker:
+                    continue
+                proc = subprocess.run(checker + [str(p)], capture_output=True, text=True)
+                if proc.returncode != 0:
+                    detail = (proc.stderr or proc.stdout).strip().splitlines()
+                    msg = detail[-1] if detail else "see stderr"
+                    broken.append(f"{p.relative_to(skill_dir)}: {msg}")
     if broken:
         add("scripts-compile", "FAIL", "; ".join(broken))
     else:
