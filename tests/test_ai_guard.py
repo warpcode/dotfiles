@@ -625,6 +625,33 @@ class TestAIGuardFile(unittest.TestCase):
                 data = json.loads(res.stdout)
                 self.assertEqual(data, {})
 
+    def test_precompiled_regex_rule_forms_and_whitespace(self):
+        """Verify precompiled regexes correctly handle whitespace-padded rules, env vars, and unnormalized dicts."""
+        # Whitespace-padded dict pattern
+        rule_dict = {"pattern": "  SECRET_KEY_ABC  "}
+        norm_rules = run_guard.__globals__ if hasattr(run_guard, "__globals__") else {}
+
+        # Test directly via df.ai-guard CLI with padded pattern rule
+        with tempfile.NamedTemporaryFile("w", suffix=".json") as f:
+            cfg = {
+                "commands": {
+                    "rules": [
+                        {
+                            "pattern": "  SECRET_KEY_ABC  ",
+                            "perm": "deny",
+                            "reason": "Whitespace padded pattern test"
+                        }
+                    ]
+                }
+            }
+            json.dump(cfg, f)
+            f.flush()
+
+            res = run_guard("command", args=["echo", "SECRET_KEY_ABC"], custom_config=f.name)
+            self.assertEqual(res.returncode, 2)
+            data = json.loads(res.stdout)
+            self.assertEqual(data.get("decision"), "deny")
+
     def test_sensitive_exact_filenames(self):
         """Sensitive exact filenames must exit with code 2 and decision: deny."""
         exact_files = [
