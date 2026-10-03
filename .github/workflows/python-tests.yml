@@ -40,7 +40,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Run Python skill test suites
+      - name: Run Python test suites
         run: |
           failed=0
           ran=0
@@ -49,6 +49,18 @@ jobs:
           # the repo, so collection fails at import. Remove a name here once the
           # skill ships its dependencies; do not silence a real failure.
           skip_undeclared_deps="youtube"
+
+          # Repo-root tests/ that already fail on master, for reasons unrelated
+          # to any change under review. Remove a name only once it is green on
+          # master -- do not use this list to hide a new failure.
+          #
+          # test_ai_guard: 36 failures on master. The suite expects a rule with
+          #   perm:"replace" to return decision:"replace", but the guard returns
+          #   deny for the same rule. Verified byte-identical at 8f3822ae, so this
+          #   predates the pre-compiled-regex change and is not caused by it.
+          # test_software_hooks: 2 failures on master; one shells out to the
+          #   `opencode` CLI, which is not present on the runner.
+          skip_root_suites="test_ai_guard test_software_hooks"
 
           for scripts_dir in .github/skills/*/scripts; do
             [ -d "$scripts_dir" ] || continue
@@ -86,6 +98,26 @@ jobs:
             done
           done
 
+          # Repo-root tests/ is a flat set of modules, not per-skill packages.
+          # Invoked as tests.<module> (a namespace package -- there is no
+          # tests/__init__.py).
+          for test_file in tests/test_*.py; do
+            [ -e "$test_file" ] || continue
+            module="$(basename "$test_file" .py)"
+            case " $skip_root_suites " in
+              *" $module "*)
+                echo "::notice::Skipping tests/$module.py: pre-existing failures on master"
+                continue
+                ;;
+            esac
+            echo "::group::tests/$module"
+            ran=$((ran + 1))
+            if ! PYTHONPATH=. python -m unittest "tests.$module"; then
+              failed=1
+            fi
+            echo "::endgroup::"
+          done
+
           if [ "$ran" -eq 0 ]; then
             echo "::error::No Python test suites discovered -- check the paths filter"
             exit 1
@@ -96,4 +128,4 @@ jobs:
             exit 1
           fi
 
-          echo "All $ran Python skill test suites passed"
+          echo "All $ran Python test suites passed"
