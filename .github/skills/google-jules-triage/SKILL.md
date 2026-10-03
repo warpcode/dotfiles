@@ -87,7 +87,7 @@ Before creating a new coding session:
 
 ### Workflow 5: Stale Branch & Empty Commit Loop Remediation
 When Jules pushes empty commits or the remote repository has advanced past the session's base snapshot:
-1. **Count the empty commits first** (Workflow 6, step 1). If there are two or more, the session is wedged — go straight to Workflow 6 and do **not** nudge it. A nudge to an already-looping session was itself the trigger for the next empty push on warpcode/cloakenv#210.
+1. **Count the empty commits first** (Workflow 6, step 1, or run `bash <skills-dir>/google-jules-triage/scripts/detect_empty_commits.sh <base-ref> <head-ref>`). If there are two or more, the session is wedged — go straight to Workflow 6 and do **not** nudge it. A nudge to an already-looping session was itself the trigger for the next empty push on warpcode/cloakenv#210.
 2. Follow the detailed recovery steps in `@references/stale-branch-remediation.md`: reversibly archive the stale session, and spawn a fresh session rooted on the updated base branch.
 
 ### Workflow 6: Wedged PR Recovery (empty-commit / reverted-refactor loops)
@@ -102,7 +102,10 @@ commit. Write to a fresh `tidy/` branch and start the replacement session there.
 1. **Confirm it is genuinely wedged** — count empty commits above the merge base:
    ```bash
    git fetch origin pull/<n>/head:refs/remotes/origin/pr-<n> --force
-   mb=$(git merge-base origin/main origin/pr-<n>)
+   bash <skills-dir>/google-jules-triage/scripts/detect_empty_commits.sh origin/main origin/pr-<n>
+   ```
+   Or inline:
+   ```bash
    for c in $(git rev-list origin/main..origin/pr-<n>); do
      s=$(git show --shortstat --format='' $c | tr -d ' \n')
      printf '%s [%s]\n' "$c" "${s:-EMPTY}"
@@ -122,7 +125,7 @@ commit. Write to a fresh `tidy/` branch and start the replacement session there.
    ```
    Resolve conflicts by **keeping both sides' tests** — if `main` independently added tests to the
    same file, concatenate rather than choose. Then verify before committing:
-   `go build ./...`, `go vet ./...`, `gofmt -l .`, `go test -race ./...`.
+   `go build ./...`, `go vet ./...`, `gofmt -l .`, `go test -race ./...` (or repository test/build equivalent).
 
 4. **Commit once, push to `tidy/pr-<n>-<slug>`.** One non-empty commit above `main` permanently
    eliminates the empty-commit failure.
@@ -141,17 +144,20 @@ commit. Write to a fresh `tidy/` branch and start the replacement session there.
    yet anywhere in the repo**. Keep the template's Delivery section intact — every clause
    in it maps to an observed failure, and the table in the template records which.
 
-7. **Clean up the superseded history now**, not later: close the wedged PR, `archive-session`
-   the stuck session. Keep the wedged remote branch until the replacement PR is confirmed
-   merged, so the real work is never unrecoverable.
+7. **Historical Cleanup Is Per-Stage, Not Deferred**: Clean up as soon as each stage succeeds — never batch it for later:
+   - Close the superseded PR the moment its replacement PR exists (reference the new PR).
+   - `archive-session` the stuck session the moment its successor is spawned.
+   - Deleting the wedged remote branch is optional — keep it until the replacement PR is confirmed merged, so the real work is never unrecoverable.
+   - Delete the temporary `tidy/*` branch once the replacement PR is merged or closed, so `tidy/*` never accumulates stale layers from successive escalations.
 
 8. **Escalate further only on a demonstrated failure of this stage.** If the replacement session
    *also* loops empty, or completes without opening a PR, then take over directly: build another
    tidy branch off current `main`, squash the salvageable diff yourself, and open the PR.
 
 Watch for CI-gate bypass artifacts in the rebuilt diff — filler files (`dummy.txt` containing
-`Trigger rebuild`), `.diff`/`.sh` helper scripts, and placeholder comments added purely to satisfy
-the `Reject empty commit` gate. All are symptoms of the same loop and must be removed before merge.
+`Trigger rebuild`, justified in replies by their effect on CI gates rather than content), `.diff`/`.sh`
+helper scripts, and placeholder comments added purely to satisfy the `Reject empty commit` gate.
+All are symptoms of the same loop and must be removed before merge.
 
 ### Workflow 7: COMPLETED Without Delivery
 A session can reach `COMPLETED` having written code, run the full test suite, and passed its own

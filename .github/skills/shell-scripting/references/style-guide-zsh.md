@@ -417,6 +417,16 @@ unset 'config[host]'
 
 # Check if the assoc array itself is defined
 (( ${+config} )) && print "config is defined"
+
+### Security Gotcha: ${(P)name} with Associative Subscripts
+`${(P)name}` is **not** a safe indirection for associative subscripts:
+`local ref="arr[$key]"; print -r -- "${(P)ref}"` makes Zsh re-parse `key` as an expression,
+so `$( )` and backticks in the key execute arbitrary commands. Stripping `eval` from assignment
+does not close this injection vector. Always sanitize keys to an explicit allowlist charset
+(such as `[A-Za-z0-9_.:]`) before building or expanding the subscript reference.
+Furthermore, note that `zsh -c "<script containing $( )>"` executes substitutions during *parse*,
+so any injection test payloads must be passed as data (env var / temp file), never interpolated
+into the `-c` string.
 ```
 
 ## 10. Globbing & Glob Qualifiers
