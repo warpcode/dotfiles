@@ -6,7 +6,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from unittest.mock import patch
-from jira.formatters import _flatten_adf_list, flatten_adf, process_issue
+from jira.formatters import _flatten_adf_list, flatten_adf, process_issue, _flatten_adf_node
 
 class TestFormatters(unittest.TestCase):
     def test_flatten_adf_none(self):
@@ -275,8 +275,6 @@ class TestFormatters(unittest.TestCase):
         self.assertEqual(result["metrics"], {"time_in_status": {"Open": 3600}})
         mock_calculate_metrics.assert_called_once_with(issue, {})
 
-if __name__ == "__main__":
-    unittest.main()
 
     def test_flatten_adf_node_non_dict(self):
         parts = []
@@ -291,3 +289,6 @@ if __name__ == "__main__":
         # PR added logic specifically for `content: [[...]]`
         node = {"type": "paragraph", "content": [[{"type": "text", "text": "nested"}]]}
         self.assertEqual(flatten_adf(node), "nested\n")
+
+if __name__ == "__main__":
+    unittest.main()

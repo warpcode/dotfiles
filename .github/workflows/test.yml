@@ -54,8 +54,19 @@ jobs:
           export DOTFILES_SKIP_CHSHELL=1
           ./install.sh --profile default --git-name "CI Test" --git-email "ci@example.com"
 
+
+
       - name: Run Jira API Skill Tests
-        run: python3 -m unittest discover -s .github/skills/jira-api/scripts/tests/
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          if command -v mise >/dev/null; then
+            mise install python@3.12 || true
+            mise exec python@3.12 -- python -m unittest discover -s .github/skills/jira-api/scripts/tests/
+          else
+            python3 -m unittest discover -s .github/skills/jira-api/scripts/tests/
+          fi
+        env:
+          PYTHONPATH: .github/skills/jira-api/scripts
 
   test-macos:
     runs-on: macos-latest
@@ -80,5 +91,16 @@ jobs:
           export DOTFILES_SKIP_CHSHELL=1
           ./install.sh --profile default --git-name "CI Test" --git-email "ci@example.com"
 
+
+
       - name: Run Jira API Skill Tests
-        run: python3 -m unittest discover -s .github/skills/jira-api/scripts/tests/
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          if command -v mise >/dev/null; then
+            mise install python@3.12 || true
+            mise exec python@3.12 -- python -m unittest discover -s .github/skills/jira-api/scripts/tests/
+          else
+            python3 -m unittest discover -s .github/skills/jira-api/scripts/tests/
+          fi
+        env:
+          PYTHONPATH: .github/skills/jira-api/scripts
