@@ -87,7 +87,7 @@ Before creating a new coding session:
 
 ### Workflow 5: Stale Branch & Empty Commit Loop Remediation
 When Jules pushes empty commits or the remote repository has advanced past the session's base snapshot:
-1. Halt the runner immediately using the `stale_branch_halt` nudge from `@references/nudge-catalog.md`.
+1. **Count the empty commits first** (Workflow 6, step 1). If there are two or more, the session is wedged — go straight to Workflow 6 and do **not** nudge it. A nudge to an already-looping session was itself the trigger for the next empty push on warpcode/cloakenv#210.
 2. Follow the detailed recovery steps in `@references/stale-branch-remediation.md`: reversibly archive the stale session, and spawn a fresh session rooted on the updated base branch.
 
 ### Workflow 6: Wedged PR Recovery (empty-commit / reverted-refactor loops)
@@ -127,13 +127,27 @@ commit. Write to a fresh `tidy/` branch and start the replacement session there.
 4. **Commit once, push to `tidy/pr-<n>-<slug>`.** One non-empty commit above `main` permanently
    eliminates the empty-commit failure.
 
-5. **Start the replacement session** on the tidy branch. The prompt must state: the original goal,
-   what is already complete (do not redo it), what remains, an explicit acceptance-criteria
-   checklist, and — critically — that a previous attempt claimed to deliver work it did not. For a
-   self-reverted refactor, tell the new session explicitly that the helpers it is asked to create
-   **do not exist yet anywhere in the repo**.
+5. **Do NOT open a PR for the tidy branch.** It is handoff scaffolding, not a deliverable.
+   Opening one pre-empts the replacement agent and exposes unreviewed code — including any
+   unresolved High findings — as mergeable. Carry every review finding into the new session's
+   **prompt** instead; the replacement agent never sees the old thread.
 
-6. **Close the wedged PR only after the replacement PR exists**, so review coverage is never gapped.
+6. **Start the replacement session** on the tidy branch, building its prompt from
+   `templates/replacement-session-prompt.md`. The prompt must state: the original goal,
+   what is already complete (do not redo it), what remains as numbered findings by
+   file:line, an explicit acceptance-criteria checklist, and — critically — that a
+   previous attempt claimed to deliver work it did not. For a self-reverted refactor,
+   tell the new session explicitly that the helpers it is asked to create **do not exist
+   yet anywhere in the repo**. Keep the template's Delivery section intact — every clause
+   in it maps to an observed failure, and the table in the template records which.
+
+7. **Clean up the superseded history now**, not later: close the wedged PR, `archive-session`
+   the stuck session. Keep the wedged remote branch until the replacement PR is confirmed
+   merged, so the real work is never unrecoverable.
+
+8. **Escalate further only on a demonstrated failure of this stage.** If the replacement session
+   *also* loops empty, or completes without opening a PR, then take over directly: build another
+   tidy branch off current `main`, squash the salvageable diff yourself, and open the PR.
 
 Watch for CI-gate bypass artifacts in the rebuilt diff — filler files (`dummy.txt` containing
 `Trigger rebuild`), `.diff`/`.sh` helper scripts, and placeholder comments added purely to satisfy
@@ -162,7 +176,8 @@ The patch must be downloaded manually from the Jules web UI. So when a session f
 `gh pr list` for a branch matching its source branch **before** treating the work as saved.
 
 **Remediation.** Do not attempt to recover via the API. Respawn on the same source branch with an
-explicit, unmissable delivery instruction in the prompt:
+explicit, unmissable delivery instruction in the prompt — see the Delivery section of
+`templates/replacement-session-prompt.md`, and keep its wording intact:
 
 > You MUST `git push -u origin HEAD` and `gh pr create`. Do not finish without both. If the harness
 > offers to submit a patch artifact INSTEAD of pushing, decline it and push to the remote. A PR that
