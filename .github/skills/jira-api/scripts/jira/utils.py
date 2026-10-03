@@ -7,7 +7,23 @@ from datetime import datetime, timezone, timedelta
 
 WORK_DAY_START = 9  # 9 AM
 WORK_DAY_END = 17.5 # 5:30 PM (8.5 hours)
-SECONDS_PER_WORK_DAY = int((WORK_DAY_END - WORK_DAY_START) * 3600)
+
+# Calculate SECONDS_PER_WORK_DAY using the exact minute-truncated day window
+# to guarantee full intermediate days always agree with partial day calculations.
+_probe_dt = datetime(2020, 1, 1)
+_day_start_probe = _probe_dt.replace(
+    hour=int(WORK_DAY_START),
+    minute=int((WORK_DAY_START % 1) * 60),
+    second=0,
+    microsecond=0,
+)
+_day_end_probe = _probe_dt.replace(
+    hour=int(WORK_DAY_END),
+    minute=int((WORK_DAY_END % 1) * 60),
+    second=0,
+    microsecond=0,
+)
+SECONDS_PER_WORK_DAY = int((_day_end_probe - _day_start_probe).total_seconds())
 
 # ---------------------------------------------------------------------------
 # Helpers
