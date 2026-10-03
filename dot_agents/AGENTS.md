@@ -20,8 +20,9 @@ These instructions capture persistent memories, behavioral guardrails, and techn
    - **Irreversibility Asymmetry**: Irreversible operations REQUIRE (a) the user explicitly naming the irreversible action ("delete", "permanently remove", "destroy"), and (b) an immediate pre-flight confirmation. A clearly inferable *intent* is NOT a substitute for the user naming the action.
    - **Batch Safety**: Never batch irreversible operations in a shell loop. Dry-run first, verify the target set, then execute one at a time.
 
-4. **UI Stability**:
+4. **UI Stability & Decision Presentation**:
    - **Never call `update_topic` and `ask_user` in the same turn.** Set topic first, then call `ask_user` in the subsequent turn to avoid raw JSON rendering in CLI.
+   - **Recommendation Invariant**: Whenever presenting choices, options, or next steps to the user, ALWAYS explicitly state the recommended choice along with the underlying rationale.
 
 5. **Resource Selection & Delegation**:
    - Check whether an existing skill applies before executing and follow its guidelines.
