@@ -118,6 +118,80 @@ except ImportError:
     _yaml = None
 
 
+def _scan_scalar(rest):
+    """Walk a scalar string, tracking quote states and bracket/brace depths.
+    Returns (cleaned_val, rest_tail). Raises ValueError if quotes or depth
+    are unbalanced."""
+    i = 0
+    n = len(rest)
+    in_quote = None
+    stack = []
+    end_idx = None
+    is_quoted_scalar = rest.startswith('"') or rest.startswith("'")
+
+    while i < n:
+        ch = rest[i]
+
+        if in_quote:
+            if ch == "\\" and i + 1 < n and rest[i + 1] in ('"', "'", "\\"):
+                i += 2
+                continue
+            if ch == in_quote:
+                in_quote = None
+                i += 1
+                if is_quoted_scalar and end_idx is None:
+                    end_idx = i
+                continue
+            i += 1
+            continue
+
+        if ch in ('"', "'"):
+            in_quote = ch
+            i += 1
+            continue
+
+        if ch == "#" and not stack:
+            # Found unquoted, top-level comment start
+            if end_idx is None:
+                end_idx = i
+            break
+
+        if ch in ("[", "{"):
+            stack.append(ch)
+            i += 1
+            continue
+
+        if ch in ("]", "}"):
+            if not stack:
+                raise ValueError("unexpected closing delimiter")
+            top = stack.pop()
+            if (ch == "]" and top != "[") or (ch == "}" and top != "{"):
+                raise ValueError("mismatched closing delimiter")
+            i += 1
+            if not stack and end_idx is None:
+                # Top level collection ended; record candidate end_idx
+                end_idx = i
+            continue
+
+        i += 1
+
+    if in_quote:
+        raise ValueError("unclosed quote")
+    if stack:
+        raise ValueError("unclosed bracket/brace depth")
+
+    if end_idx is None:
+        end_idx = n
+
+    val_part = rest[:end_idx].strip()
+    tail_part = rest[end_idx:].strip()
+
+    if tail_part and not tail_part.startswith("#"):
+        raise ValueError(f"invalid trailing content after delimiter: {tail_part!r}")
+
+    return val_part, tail_part
+
+
 def _parse_flat_yaml(text):
     """Minimal YAML subset parser: flat keys, quoted/plain scalars and
     > / | block scalars - enough for SKILL.md frontmatter."""
@@ -129,50 +203,39 @@ def _parse_flat_yaml(text):
         i += 1
         if not line.strip() or line.lstrip().startswith("#"):
             continue
-        m = re.match(r"^([A-Za-z][\w-]*):\s*(.*)$", line)
+        m = re.match(r"^([A-Za-z][\w-]*):[ \t]*(.*)$", line)
         if not m:
             raise ValueError(f"cannot parse frontmatter line: {line!r}")
         key, rest = m.group(1), m.group(2).strip()
-        if rest and rest[0] in ">|":
+
+        # Reject tab after key separator
+        if line.find(":") + 1 < len(line) and line[line.find(":") + 1] == "\t":
+            raise ValueError(f"invalid tab separator after key: {line!r}")
+
+        if rest in (">", "|", ">-", "|-"):
             chunk = []
             while i < len(lines) and (
                 not lines[i].strip() or lines[i][:1] in (" ", "\t")
             ):
                 chunk.append(lines[i].strip())
                 i += 1
-            joiner = " " if rest[0] == ">" else "\n"
+            joiner = " " if rest.startswith(">") else "\n"
             data[key] = joiner.join(c for c in chunk if c)
         else:
-            if rest.startswith('"') and rest.rfind('"') > 0:
-                tail = rest[rest.rfind('"') + 1 :]
-                if re.search(r"^\s*#", tail):
-                    rest = rest[: rest.rfind('"') + 1]
-            elif rest.startswith("'") and rest.rfind("'") > 0:
-                tail = rest[rest.rfind("'") + 1 :]
-                if re.search(r"^\s*#", tail):
-                    rest = rest[: rest.rfind("'") + 1]
-            elif rest.startswith("[") and rest.rfind("]") > 0:
-                tail = rest[rest.rfind("]") + 1 :]
-                if re.search(r"^\s*#", tail):
-                    rest = rest[: rest.rfind("]") + 1]
-            elif rest.startswith("{") and rest.rfind("}") > 0:
-                tail = rest[rest.rfind("}") + 1 :]
-                if re.search(r"^\s*#", tail):
-                    rest = rest[: rest.rfind("}") + 1]
-            else:
-                rest = re.sub(r"\s+#.*$", "", rest).strip()
+            if rest.startswith(">") or rest.startswith("|"):
+                raise ValueError(f"invalid block scalar indicator: {line!r}")
 
-            if (
-                (rest.startswith("[") and not rest.endswith("]"))
-                or (rest.startswith("{") and not rest.endswith("}"))
-                or (rest.startswith('"') and rest.count('"') % 2 != 0)
-                or (rest.startswith("'") and rest.count("'") % 2 != 0)
+            try:
+                val, _ = _scan_scalar(rest)
+            except ValueError as e:
+                raise ValueError(f"invalid YAML value in line {line!r}: {e}") from e
+
+            if (val.startswith('"') and val.endswith('"')) or (
+                val.startswith("'") and val.endswith("'")
             ):
-                raise ValueError(f"invalid YAML value in line: {line!r}")
-            if (rest.startswith('"') and rest.endswith('"')) or (rest.startswith("'") and rest.endswith("'")):
-                data[key] = rest[1:-1]
+                data[key] = val[1:-1]
             else:
-                data[key] = rest
+                data[key] = val
     return data
 
 
@@ -598,8 +661,12 @@ def _self_test():
              lambda: _expect_raises(ValueError, lambda: _parse_flat_yaml("name: {unclosed"))),
             ("flat-yaml-trailing-comment",
              lambda: _expect(_parse_flat_yaml('metadata: {"a": 1} # note') == {"metadata": '{"a": 1}'})),
-            ("flat-yaml-unquoted-trailing-info",
-             lambda: _expect(_parse_flat_yaml('name: "quoted" (important)') == {"name": '"quoted" (important)'})),
+            ("flat-yaml-nested-brackets-error",
+             lambda: _expect_raises(ValueError, lambda: _parse_flat_yaml("metadata: [a, [b, c]"))),
+            ("flat-yaml-overclosed-braces-error",
+             lambda: _expect_raises(ValueError, lambda: _parse_flat_yaml("metadata: {a: b}}"))),
+            ("flat-yaml-quoted-comment-with-delimiter",
+             lambda: _expect(_parse_flat_yaml('name: "x" # he said "hi"') == {"name": "x"})),
         ]
 
         results = []
