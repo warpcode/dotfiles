@@ -37,3 +37,4 @@ Repository-specific guidance for Zsh work:
   local expanded="${input//(#b)\$(([a-zA-Z_][a-zA-Z0-9_]#)|\{([a-zA-Z_][a-zA-Z0-9_]#)\})/${(P)match[2]:-${(P)match[3]}}}"
   # If $HOME is /home/user, expanded becomes /home/user/test
   ```
+- **Associative Subscript Indirection Security**: `${(P)name}` is not a safe indirection for associative subscripts: `local ref="arr[$key]"; print -r -- "${(P)ref}"` makes Zsh re-parse `key` as an expression, executing `$( )` and backticks. Sanitize keys to an allowlist such as `[A-Za-z0-9_.:]` before building the subscript. Pass injection test payloads as data (env var / temp file), never in `-c` text.
