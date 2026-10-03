@@ -2,6 +2,8 @@ from .metrics import calculate_metrics
 
 def _flatten_adf_node(node, parts):
     """Helper function to process a single ADF node dict."""
+    if not isinstance(node, dict):
+        return
     node_type = node.get("type")
     if node_type == "text":
         parts.append(node.get("text", ""))

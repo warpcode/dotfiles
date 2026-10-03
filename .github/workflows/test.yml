@@ -11,6 +11,7 @@ on:
       - '.gitmodules'
       - 'assets/configs/**/*'
       - 'generic/**/*'
+      - '.github/skills/jira-api/scripts/**'
   pull_request:
     branches:
       - master
@@ -20,6 +21,7 @@ on:
       - '.gitmodules'
       - 'assets/configs/**/*'
       - 'generic/**/*'
+      - '.github/skills/jira-api/scripts/**'
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -52,6 +54,9 @@ jobs:
           export DOTFILES_SKIP_CHSHELL=1
           ./install.sh --profile default --git-name "CI Test" --git-email "ci@example.com"
 
+      - name: Run Jira API Skill Tests
+        run: python3 -m unittest discover -s .github/skills/jira-api/scripts/tests/
+
   test-macos:
     runs-on: macos-latest
     defaults:
@@ -74,3 +79,6 @@ jobs:
           export DOTFILES="$(pwd)"
           export DOTFILES_SKIP_CHSHELL=1
           ./install.sh --profile default --git-name "CI Test" --git-email "ci@example.com"
+
+      - name: Run Jira API Skill Tests
+        run: python3 -m unittest discover -s .github/skills/jira-api/scripts/tests/

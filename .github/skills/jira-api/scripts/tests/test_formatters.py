@@ -277,3 +277,17 @@ class TestFormatters(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_flatten_adf_node_non_dict(self):
+        parts = []
+        _flatten_adf_node(None, parts)
+        self.assertEqual(parts, [])
+        _flatten_adf_node("string", parts)
+        self.assertEqual(parts, [])
+        _flatten_adf_node([], parts)
+        self.assertEqual(parts, [])
+
+    def test_flatten_adf_nested_list_content(self):
+        # PR added logic specifically for `content: [[...]]`
+        node = {"type": "paragraph", "content": [[{"type": "text", "text": "nested"}]]}
+        self.assertEqual(flatten_adf(node), "nested\n")

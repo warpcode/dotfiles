@@ -12,9 +12,26 @@ def create_nested_adf(depth):
         ]
     }
 
-adf = {
+# Wider generator to hit all branches
+adf_mix = {
     "type": "doc",
-    "content": [create_nested_adf(10) for _ in range(100)]
+    "content": [
+        # Standard recursive case
+        create_nested_adf(5),
+        # Empty/missing content
+        {"type": "paragraph"},
+        {"type": "paragraph", "content": []},
+        {"type": "paragraph", "content": None},
+        # Non-container specific paths
+        {"type": "hardBreak"},
+        {"type": "inlineCard", "attrs": {"url": "https://example.com"}},
+        {"type": "mention", "attrs": {"text": "@someone"}},
+        # Nested list branch added in PR feedback
+        {"type": "paragraph", "content": [[{"type": "text", "text": "nested"}]]},
+        # else: fallback container paths
+        {"type": "bulletList", "content": [{"type": "listItem", "content": [{"type": "text", "text": "bullet"}]}]},
+        {"type": "panel", "content": [{"type": "text", "text": "panel text"}]}
+    ] * 10
 }
 
 def _flatten_adf_list_old(node, parts):
@@ -49,23 +66,38 @@ def flatten_adf_old(node):
     return "".join(parts)
 
 # verify correctness first
-assert flatten_adf(adf) == flatten_adf_old(adf)
+assert flatten_adf(adf_mix) == flatten_adf_old(adf_mix)
+
+ITERATIONS = 5000
 
 print("Running benchmarks...")
-start = time.time()
-for _ in range(1000):
-    res = flatten_adf_old(adf)
-end = time.time()
-old_time = end - start
 
-start = time.time()
-for _ in range(1000):
-    res = flatten_adf(adf)
-end = time.time()
-new_time = end - start
+# Warmup
+for _ in range(100):
+    flatten_adf_old(adf_mix)
+    flatten_adf(adf_mix)
 
-print(f"Iterations: 1000")
-print(f"Input shape: depth-10 nested dict in a list of 100 items")
+import statistics
+
+old_times = []
+new_times = []
+
+for _ in range(5):
+    start = time.perf_counter()
+    for _ in range(ITERATIONS):
+        flatten_adf_old(adf_mix)
+    old_times.append(time.perf_counter() - start)
+
+    start = time.perf_counter()
+    for _ in range(ITERATIONS):
+        flatten_adf(adf_mix)
+    new_times.append(time.perf_counter() - start)
+
+old_time = min(old_times)
+new_time = min(new_times)
+
+print(f"Iterations: {ITERATIONS}")
+print("Input shape: Mixed ADF payload including nested lists, missing contents, and various elements (multiplied 10x)")
 print(f"Old time (frozen baseline): {old_time:.4f}s")
 print(f"New time (imported flatten_adf): {new_time:.4f}s")
 print(f"Improvement: {((old_time - new_time) / old_time) * 100:.2f}%")
