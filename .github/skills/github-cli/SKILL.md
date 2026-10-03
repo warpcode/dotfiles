@@ -53,6 +53,28 @@ Run bundled helper scripts relative to this skill's root directory (`<skill-dir>
 | PR status query | `@queries/find_prs.gql` | GraphQL query for PR status, review, and activity classification |
 | Review threads query | `@queries/review_threads.gql` | GraphQL query to list review threads |
 | Resolve thread query | `@queries/resolve_review_thread.gql` | GraphQL mutation to resolve review threads |
+| PR state rollup | `@scripts/pr_state_rollup.py` | `python3 <skill-dir>/scripts/pr_state_rollup.py --repo <owner/repo> [PR numbers…] [--all-states] [--wait] [--expect-sha N=SHA] [--json]` | One `gh pr list` call → dense table of state, draft, head SHA, review decision, mergeability, CI checks. `--wait` polls internally instead of sleep-looping in bash; `--expect-sha` flags a bot amending mid-audit. Exit 2 if any PR is conflicting, has failing checks, or drifted |
+| Repo alert audit | `@scripts/audit_repo_alerts.py` | `python3 <skill-dir>/scripts/audit_repo_alerts.py --repo <owner/repo> [--base master] [--json] [--fetch]` | Dependabot + code-scanning triage in one call. Classifies each alert against the default branch, separates **phantom** alerts (manifest deleted/moved) from real ones, flags `first_patched_version: NONE` (no upgrade exists — record, don't churn), summarises triplicated advisories, prints the exact dismiss commands and valid `dismissed_reason` values. Read-only |
+
+### Alert triage notes
+
+- **Phantom alerts are the norm without a `dependabot.yml`.** Dependabot auto-discovers
+  manifests repo-wide and keeps alerts for files that were later deleted or moved. Observed:
+  9 open alerts for 3 real ones — the same advisories triplicated across a live path, a
+  deleted tree, and a `.bk` backup directory. Dismissal does not fix the cause; pin
+  `directory:` in `.github/dependabot.yml`.
+- **`dismissed_comment` is capped at 280 characters** — the API returns HTTP 422 if you exceed
+  it. Valid code-scanning `dismissed_reason` values are exactly `false positive`, `won't fix`,
+  `used in tests`, `mitigated`.
+- **Never bind a shell loop variable to `path` in zsh.** `path` is tied to `PATH`, so the
+  assignment removes `git`/`gh` from `PATH` and every manifest-existence check silently
+  returns "absent" — producing a confident, complete-looking answer that marks real alerts as
+  phantoms. Observed classifying 10/10 as missing when 3 existed. Both scripts here are
+  Python for that reason; `audit_repo_alerts.py` also refuses to run outside a work tree,
+  where the same failure would mark *every* alert phantom.
+- A `py/command-line-injection` finding on `subprocess.run(cmd, ...)` is usually a false
+  positive when `cmd` is an argv **list**. Check for `shell=True`, `os.system`,
+  `subprocess.call` and `Popen` before treating it as real.
 
 ## Hard Rules
 

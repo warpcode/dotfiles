@@ -47,6 +47,29 @@ Run bundled helper scripts relative to this skill's root directory (`<skill-dir>
 | `@scripts/stash.sh` | Stash list with message, age, changed files (optional `--older-than N`, `--drop`) | "What's in my stash?", stash inspection/cleanup |
 | `@scripts/worktrees.sh` | List/detect active & stale worktrees, prune metadata (optional `--remove <path>`) | "What worktrees exist?", worktree inspection/cleanup |
 | `@scripts/repo_size.sh` | Object count & repo size report (optional `--aggressive` maintenance) | "How big is the repo?", git object statistics/cleanup |
+| `@scripts/audit_repo_branches.py` | Classify every remote branch as `KEEP`/`DELETE_MERGED`/`DELETE_STALE`/`SUPERSEDED`/`REVIEW`/`REVIEW_STALE`; detects sibling branches that conflict with each other; emits a ready-to-run `git push origin --delete` for only the safe ones (`--repo`, `--base`, `--json`, `--fetch`) | "Which branches are obsolete?", "which of these two PR branches wins?", pre-prune cleanup |
+
+### Classifying branches: use blob comparison, never `--is-ancestor` or `git cherry`
+
+Both misreport squash-merged work as **unmerged**, so a branch whose PR is already
+merged looks safe to keep and a branch with landed work looks live:
+
+- a squash merge creates a *new* commit, so the branch tip is never an ancestor of base;
+- `git cherry` compares patch-ids, and a squash of three commits matches none of the three
+  originals.
+
+Verified: a repo whose PR #71 was merged was reported unmerged by both. `audit_repo_branches.py`
+compares the blob hash of every changed file against the base branch instead.
+
+**Never bind a shell loop variable to `path` in zsh.** `path` is tied to `PATH`, so the
+assignment removes `git` from `PATH` and every existence check in the loop silently returns
+"absent" — which reads as a confident, complete answer. Observed classifying 10/10 manifests
+as missing when 3 existed. Use `audit_repo_branches.py`, or name the variable something else.
+
+**`REVIEW_STALE` must never be auto-deleted.** A closed branch that is far behind base but whose
+files still differ holds *unlanded work* — typically test coverage that never landed because
+the tree was restructured underneath it. Port the coverage forward, then delete. This is
+regression-tested in `scripts/tests/test_audit_repo_branches.py`.
 
 All bundled scripts support `--raw` (or `--raw-output`) for unformatted, machine-readable output suitable for parsing or piping.
 
