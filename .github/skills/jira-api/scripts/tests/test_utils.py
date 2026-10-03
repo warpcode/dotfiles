@@ -61,6 +61,30 @@ class TestUtils(unittest.TestCase):
         end = datetime(2023, 5, 15, 10, 0, tzinfo=timezone.utc)
         self.assertEqual(get_work_seconds(start, end), 5400)
 
+        # Invalid/empty ranges
+        self.assertEqual(get_work_seconds(None, end), 0)
+        self.assertEqual(get_work_seconds(start, None), 0)
+        self.assertEqual(get_work_seconds(end, start), 0)
+        self.assertEqual(get_work_seconds(start, start), 0)
+
+        # Weekend range (Sat 10:00 to Sun 18:00)
+        sat = datetime(2023, 5, 13, 10, 0, tzinfo=timezone.utc)
+        sun = datetime(2023, 5, 14, 18, 0, tzinfo=timezone.utc)
+        self.assertEqual(get_work_seconds(sat, sun), 0)
+
+        # Same-day weekend
+        self.assertEqual(get_work_seconds(sat, sat + timedelta(hours=2)), 0)
+
+        # Multi-week span (Mon 09:00 May 15 to Mon 09:00 May 29 = 2 full work weeks = 10 work days)
+        start_2w = datetime(2023, 5, 15, 9, 0, tzinfo=timezone.utc)
+        end_2w = datetime(2023, 5, 29, 9, 0, tzinfo=timezone.utc)
+        self.assertEqual(get_work_seconds(start_2w, end_2w), 10 * SECONDS_PER_WORK_DAY)
+
+        # Outside work hours (Mon 06:00 to Mon 08:00)
+        early1 = datetime(2023, 5, 15, 6, 0, tzinfo=timezone.utc)
+        early2 = datetime(2023, 5, 15, 8, 0, tzinfo=timezone.utc)
+        self.assertEqual(get_work_seconds(early1, early2), 0)
+
     def test_format_duration(self):
         self.assertEqual(format_duration(3600), "1h")
         self.assertEqual(format_duration(60), "1m")

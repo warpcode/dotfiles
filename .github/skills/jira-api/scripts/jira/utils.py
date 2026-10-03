@@ -42,32 +42,67 @@ def parse_jira_time(time_str):
         # Fallback for formats that still might fail
         return None
 
+def _count_weekdays(d1, d2):
+    """Count the number of weekdays between d1 and d2 inclusive in O(1) time."""
+    if d1 > d2:
+        return 0
+    days = (d2 - d1).days + 1
+    weeks = days // 7
+    rem = days % 7
+    w = weeks * 5
+    start_wd = d1.weekday()
+    for i in range(rem):
+        if (start_wd + i) % 7 < 5:
+            w += 1
+    return w
+
 def get_work_seconds(start_dt, end_dt):
     """
     Calculate work seconds between two datetimes, skipping weekends.
     Based on a WORK_DAY_START to WORK_DAY_END schedule.
+    Optimized to compute work duration in O(1) time instead of looping daily.
     """
     if not start_dt or not end_dt or start_dt >= end_dt:
         return 0
 
-    total_seconds = 0
-    current = start_dt
+    d1 = start_dt.date()
+    d2 = end_dt.date()
 
-    while current.date() <= end_dt.date():
-        # Skip weekends (5=Saturday, 6=Sunday)
-        if current.weekday() < 5:
-            # Define work window for this day
-            day_start = current.replace(hour=int(WORK_DAY_START), minute=int((WORK_DAY_START % 1) * 60), second=0, microsecond=0)
-            day_end = current.replace(hour=int(WORK_DAY_END), minute=int((WORK_DAY_END % 1) * 60), second=0, microsecond=0)
+    if d1 == d2:
+        if start_dt.weekday() >= 5:
+            return 0
+        day_start = start_dt.replace(hour=int(WORK_DAY_START), minute=int((WORK_DAY_START % 1) * 60), second=0, microsecond=0)
+        day_end = start_dt.replace(hour=int(WORK_DAY_END), minute=int((WORK_DAY_END % 1) * 60), second=0, microsecond=0)
+        overlap_start = max(start_dt, day_start)
+        overlap_end = min(end_dt, day_end)
+        if overlap_end > overlap_start:
+            return int((overlap_end - overlap_start).total_seconds())
+        return 0
 
-            # Find intersection of [start_dt, end_dt] and [day_start, day_end]
-            overlap_start = max(current if current.date() == start_dt.date() else day_start, day_start)
-            overlap_end = min(end_dt if current.date() == end_dt.date() else day_end, day_end)
+    total_seconds = 0.0
 
-            if overlap_end > overlap_start:
-                total_seconds += (overlap_end - overlap_start).total_seconds()
+    # Overlap on first day if weekday
+    if start_dt.weekday() < 5:
+        day1_start = start_dt.replace(hour=int(WORK_DAY_START), minute=int((WORK_DAY_START % 1) * 60), second=0, microsecond=0)
+        day1_end = start_dt.replace(hour=int(WORK_DAY_END), minute=int((WORK_DAY_END % 1) * 60), second=0, microsecond=0)
+        overlap_start = max(start_dt, day1_start)
+        if day1_end > overlap_start:
+            total_seconds += (day1_end - overlap_start).total_seconds()
 
-        current = (current + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    # Overlap on last day if weekday
+    if end_dt.weekday() < 5:
+        day2_start = end_dt.replace(hour=int(WORK_DAY_START), minute=int((WORK_DAY_START % 1) * 60), second=0, microsecond=0)
+        day2_end = end_dt.replace(hour=int(WORK_DAY_END), minute=int((WORK_DAY_END % 1) * 60), second=0, microsecond=0)
+        overlap_end = min(end_dt, day2_end)
+        if overlap_end > day2_start:
+            total_seconds += (overlap_end - day2_start).total_seconds()
+
+    # Full intermediate weekdays
+    mid_start = d1 + timedelta(days=1)
+    mid_end = d2 - timedelta(days=1)
+    if mid_start <= mid_end:
+        weekdays = _count_weekdays(mid_start, mid_end)
+        total_seconds += weekdays * SECONDS_PER_WORK_DAY
 
     return int(total_seconds)
 
