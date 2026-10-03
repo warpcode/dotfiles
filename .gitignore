@@ -65,3 +65,4 @@ venv.bak/
 *.temp
 .DS_Store?
 .serena/
+.jules/
