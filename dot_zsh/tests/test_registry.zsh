@@ -53,9 +53,24 @@ fi
 
 # Test 3b: Security test with malicious IDs and keys
 # Ensure command injection via $(...) in ID or key is blocked and not evaluated
-bad_id='id$(touch /tmp/hacked_id)'
-bad_key='key$(touch /tmp/hacked_key)'
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
 
+bad_id="id\$(touch $tmpdir/hacked_id)"
+bad_key="key\$(touch $tmpdir/hacked_key)"
+
+# Run definitions/queries inside subshell to catch rejections without aborting script
+( registry.define test_app "$bad_id" "$bad_key=val" 2>/dev/null ) || true
+( registry.exists test_app "$bad_id" 2>/dev/null ) || true
+( registry.get test_app "$bad_id" "$bad_key" 2>/dev/null ) || true
+
+# Assert marker files DO NOT exist FIRST (verifies zero code execution occurred)
+if [[ -f "$tmpdir/hacked_id" || -f "$tmpdir/hacked_key" ]]; then
+    print -r "Test 3b Failed: command injection executed during ID or key handling!" >&2
+    exit 1
+fi
+
+# Secondary check: verify registry rejected the invalid inputs
 if registry.define test_app "$bad_id" "$bad_key=val" 2>/dev/null; then
     print -r "Test 3b Failed: registry.define should have rejected malicious ID/key" >&2
     exit 1
@@ -63,12 +78,6 @@ fi
 
 if registry.exists test_app "$bad_id" 2>/dev/null; then
     print -r "Test 3b Failed: registry.exists should have rejected malicious ID" >&2
-    exit 1
-fi
-
-if [[ -f /tmp/hacked_id || -f /tmp/hacked_key ]]; then
-    print -r "Test 3b Failed: command injection executed during ID or key handling!" >&2
-    rm -f /tmp/hacked_id /tmp/hacked_key
     exit 1
 fi
 

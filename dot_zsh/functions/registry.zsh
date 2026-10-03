@@ -8,7 +8,11 @@ _registry.ns_var() {
 }
 
 _registry.validate_key() {
-    [[ "$1" =~ ^[A-Za-z0-9_]+$ ]] || { print "Invalid identifier/key: $1" >&2; return 1; }
+    local norm="${1//-/_}"
+    if [[ ! "$norm" =~ ^[A-Za-z0-9_:]+$ ]]; then
+        print -r -- "Invalid identifier/key: ${1//[[:cntrl:]]/?}" >&2
+        return 1
+    fi
 }
 
 _registry.norm() {
@@ -30,12 +34,14 @@ _registry.validate_exists() {
 
 # Read associative array value: _registry.aa_get <varname> <key>
 _registry.aa_get() {
+    _registry.validate_key "$2" || return 1
     local ref="${1}[${2}]"
     print -r -- "${(P)ref}"
 }
 
 # Write associative array value: _registry.aa_set <varname> <key> <value>
 _registry.aa_set() {
+    _registry.validate_key "$2" || return 1
     typeset -g "${1}[${2}]"="$3"
 }
 
@@ -74,7 +80,7 @@ registry.define() {
     for pair in "$@"; do
         [[ "$pair" == *=* ]] || continue
         k="${pair%%=*}" v="${pair#*=}"
-        _registry.validate_key "$k" || return 1
+        k="$(_registry.norm "$k")" || return 1
         _registry.aa_set "$data_var" "${id}:${k}" "$v"
     done
 
