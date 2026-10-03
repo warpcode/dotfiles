@@ -44,6 +44,7 @@ Run bundled helper scripts relative to this skill's root directory (`<skill-dir>
 
 | Resource | Location | Invocation Syntax | Purpose |
 |----------|----------|-------------------|---------|
+| PR audit bundle script | `@scripts/pr_audit_bundle.sh` | `bash <skill-dir>/scripts/pr_audit_bundle.sh --repo <owner/repo> --pr <n> [--out <dir>]` | One-call non-invasive PR audit: metadata, diff file, head file copies, source issues + acceptance criteria, dependency shipped status |
 | List / Filter PRs script | `@scripts/list_pull_requests.sh` | `bash <skill-dir>/scripts/list_pull_requests.sh [OPTIONS]` | List and filter PRs (approved, commits after review, waiting on author, unresponded) |
 | List PR review threads script | `@scripts/list_pull_request_review_threads.sh` | `bash <skill-dir>/scripts/list_pull_request_review_threads.sh [OPTIONS]` | Retrieve review threads for a pull request via GraphQL |
 | Get PR script | `@scripts/get_pull_request.sh` | `bash <skill-dir>/scripts/get_pull_request.sh [OPTIONS]` | Fetch comprehensive PR state (summary table, merge readiness checks, comments, reviews, stats) |
