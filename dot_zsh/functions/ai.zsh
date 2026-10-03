@@ -26,12 +26,24 @@ _ai.provider.models_executor() {
 # --- Provider ---
 ai.provider.define() {
     local raw_pid="$1"
-    local pid="${raw_pid//-/_}"
-
-    if [[ ! "$pid" =~ ^[a-zA-Z0-9_]+$ ]]; then
-        print -u2 "Error: Invalid AI provider ID '${pid}'. Must contain only alphanumeric characters and underscores."
+    if [[ ! "$raw_pid" =~ ^[A-Za-z0-9_.:-]+$ ]]; then
+        print -u2 "Error: Invalid AI provider ID '${raw_pid}'. Must contain only alphanumeric characters, underscores, dashes, dots, and colons."
         return 1
     fi
+
+    # Normalize provider name for function lookups
+    local pid="${raw_pid//-/_}"
+    pid="${pid//./_}"
+    pid="${pid//:/_}"
+
+    local arg k
+    for arg in "${@:2}"; do
+        k="${arg%%=*}"
+        if [[ ! "$k" =~ ^[A-Za-z0-9_.:]+$ ]]; then
+            print -u2 "Error: Invalid AI provider key '${k}'. Must contain only alphanumeric characters, underscores, dots, and colons."
+            return 1
+        fi
+    done
 
     registry.define "ai_provider" "$@"
 
@@ -99,6 +111,7 @@ ai.models() {
     local pid
     local -a enabled_pids=()
     for pid in $(registry.list ai_provider); do
+        [[ "$pid" =~ ^[A-Za-z0-9_.:]+$ ]] || continue
         ai.provider.is_enabled "$pid" && enabled_pids+=($pid)
     done
 
@@ -141,6 +154,7 @@ ai.models.free() {
     local pid
     local -a enabled_pids=()
     for pid in $(registry.list ai_provider); do
+        [[ "$pid" =~ ^[A-Za-z0-9_.:]+$ ]] || continue
         ai.provider.is_enabled "$pid" && enabled_pids+=($pid)
     done
 
@@ -204,8 +218,15 @@ ai.chat() {
     local model="${target#*/}"
     local prompt="$*"
 
+    if [[ ! "$provider" =~ ^[A-Za-z0-9_.:-]+$ ]]; then
+        print -u2 "Error: Invalid AI provider ID '${provider}'."
+        return 1
+    fi
+
     # Normalize provider name for registry/function lookups
     local pid="${provider//-/_}"
+    pid="${pid//./_}"
+    pid="${pid//:/_}"
 
     # 1. Get Provider Details
     local base_url=$(registry.get "ai_provider" "$pid" "base_url")

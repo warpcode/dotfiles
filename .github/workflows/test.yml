@@ -55,6 +55,9 @@ jobs:
           export DOTFILES_SKIP_CHSHELL=1
           ./install.sh --profile default --git-name "CI Test" --git-email "ci@example.com"
 
+      - name: Run Zsh tests
+        run: zsh dot_zsh/tests/*.test.zsh
+
   test-macos:
     runs-on: macos-latest
     defaults:
@@ -77,3 +80,6 @@ jobs:
           export DOTFILES="$(pwd)"
           export DOTFILES_SKIP_CHSHELL=1
           ./install.sh --profile default --git-name "CI Test" --git-email "ci@example.com"
+
+      - name: Run Zsh tests
+        run: zsh dot_zsh/tests/*.test.zsh
