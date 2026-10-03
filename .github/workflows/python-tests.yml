@@ -40,15 +40,14 @@ jobs:
         with:
           python-version: '3.12'
 
+      # Skills that pin third-party dependencies in a uv.lock are run through
+      # uv below, so their declared dependencies are actually installed.
+      - uses: astral-sh/setup-uv@v6
+
       - name: Run Python test suites
         run: |
           failed=0
           ran=0
-
-          # Suites whose third-party dependencies are not declared anywhere in
-          # the repo, so collection fails at import. Remove a name here once the
-          # skill ships its dependencies; do not silence a real failure.
-          skip_undeclared_deps="youtube"
 
           # Repo-root tests/ that already fail on master, for reasons unrelated
           # to any change under review. Remove a name only once it is green on
@@ -66,13 +65,6 @@ jobs:
             [ -d "$scripts_dir" ] || continue
             skill="$(basename "$(dirname "$scripts_dir")")"
 
-            case " $skip_undeclared_deps " in
-              *" $skill "*)
-                echo "::notice::Skipping $skill: third-party deps not declared"
-                continue
-                ;;
-            esac
-
             # Suites use both layouts: a tests/ package, and test modules
             # sitting directly in scripts/. Discovery must run from inside
             # scripts/ -- most suites have no tests/__init__.py, so passing -t
@@ -80,7 +72,15 @@ jobs:
             if [ -d "$scripts_dir/tests" ]; then
               echo "::group::$skill tests/"
               ran=$((ran + 1))
-              if ! (cd "$scripts_dir" && PYTHONPATH=. python -m unittest discover -s tests); then
+              # A skill with a pyproject.toml pins its dependencies in uv.lock,
+              # so run through uv to install them. --locked makes a stale or
+              # hand-edited lockfile a hard failure rather than a silent
+              # re-resolve, which is the point of committing the lock.
+              if [ -f "$scripts_dir/pyproject.toml" ]; then
+                if ! (cd "$scripts_dir" && PYTHONPATH=. uv run --locked python -m unittest discover -s tests); then
+                  failed=1
+                fi
+              elif ! (cd "$scripts_dir" && PYTHONPATH=. python -m unittest discover -s tests); then
                 failed=1
               fi
               echo "::endgroup::"
@@ -91,7 +91,11 @@ jobs:
               module="$(basename "$test_file" .py)"
               echo "::group::$skill $module"
               ran=$((ran + 1))
-              if ! (cd "$scripts_dir" && PYTHONPATH=. python -m unittest "$module"); then
+              if [ -f "$scripts_dir/pyproject.toml" ]; then
+                if ! (cd "$scripts_dir" && PYTHONPATH=. uv run --locked python -m unittest "$module"); then
+                  failed=1
+                fi
+              elif ! (cd "$scripts_dir" && PYTHONPATH=. python -m unittest "$module"); then
                 failed=1
               fi
               echo "::endgroup::"
