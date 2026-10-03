@@ -1,16 +1,7 @@
 from .metrics import calculate_metrics
 
-def _flatten_adf_list(node, parts):
-    """Helper function to append ADF content to a list of parts."""
-    if node is None:
-        return
-    if isinstance(node, list):
-        for item in node:
-            _flatten_adf_list(item, parts)
-        return
-    if not isinstance(node, dict):
-        return
-
+def _flatten_adf_node(node, parts):
+    """Helper function to process a single ADF node dict."""
     node_type = node.get("type")
     if node_type == "text":
         parts.append(node.get("text", ""))
@@ -21,11 +12,28 @@ def _flatten_adf_list(node, parts):
     elif node_type == "mention":
         parts.append(node.get("attrs", {}).get("text", ""))
     elif node_type in ("paragraph", "heading", "listItem", "tableCell"):
-        content = node.get("content", [])
-        _flatten_adf_list(content, parts)
+        content = node.get("content")
+        if content:
+            _flatten_adf_list(content, parts)
         parts.append("\n")
-    elif "content" in node:
-        _flatten_adf_list(node["content"], parts)
+    else:
+        content = node.get("content")
+        if content:
+            _flatten_adf_list(content, parts)
+
+def _flatten_adf_list(node, parts):
+    """Helper function to append ADF content to a list of parts."""
+    if node is None:
+        return
+    if isinstance(node, list):
+        for item in node:
+            if isinstance(item, dict):
+                _flatten_adf_node(item, parts)
+            elif isinstance(item, list):
+                _flatten_adf_list(item, parts)
+        return
+    if isinstance(node, dict):
+        _flatten_adf_node(node, parts)
 
 def flatten_adf(node):
     """Recursive function to handle nested ADF (Atlassian Document Format) content."""
