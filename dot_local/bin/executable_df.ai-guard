@@ -101,20 +101,23 @@ def normalize_rules(data: dict | list) -> list[dict]:
 
     # Performance optimization: pre-compile regex patterns to avoid re-compiling in loops
     for entry in res:
-        pat = entry["pattern"]
+        pat = entry["pattern"].strip() if isinstance(entry.get("pattern"), str) else ""
         if pat:
             try:
                 entry["_regex"] = re.compile(pat)
             except Exception:
                 entry["_regex"] = None
 
-            try:
-                exp_pat = os.path.expandvars(os.path.expanduser(pat))
-                if exp_pat != pat:
-                    entry["_regex_exp"] = re.compile(exp_pat)
-                else:
-                    entry["_regex_exp"] = entry.get("_regex")
-            except Exception:
+            if entry["_regex"] is not None:
+                try:
+                    exp_pat = os.path.expandvars(os.path.expanduser(pat))
+                    if exp_pat != pat:
+                        entry["_regex_exp"] = re.compile(exp_pat)
+                    else:
+                        entry["_regex_exp"] = entry["_regex"]
+                except Exception:
+                    entry["_regex_exp"] = None
+            else:
                 entry["_regex_exp"] = None
     return res
 
@@ -133,29 +136,38 @@ def clean_path(raw: str) -> str:
     return val.strip("'\"()[]{} \t\n\r").lstrip("@<>").strip("'\"()[]{} \t\n\r")
 
 
+def get_rule_regexes(rule: dict | None, pat: str) -> tuple[re.Pattern | None, re.Pattern | None]:
+    pat = pat.strip()
+    if not pat:
+        return None, None
+    if rule and "_regex" in rule:
+        return rule.get("_regex"), rule.get("_regex_exp")
+    try:
+        rx = re.compile(pat)
+    except Exception:
+        return None, None
+    try:
+        exp_pat = os.path.expandvars(os.path.expanduser(pat))
+        rx_exp = re.compile(exp_pat) if exp_pat != pat else rx
+    except Exception:
+        rx_exp = None
+    return rx, rx_exp
+
+
 def match_str(cand: str, pat: str, rule: dict | None = None) -> bool:
     cand, pat = cand.strip(), pat.strip()
     if not cand or not pat:
         return False
-    rx = rule.get("_regex") if rule else None
-    rx_exp = rule.get("_regex_exp") if rule else None
-    if rx is None and pat:
-        try:
-            rx = re.compile(pat)
-        except Exception:
-            pass
+    rx, rx_exp = get_rule_regexes(rule, pat)
+    if not rx:
+        return False
 
     ce = os.path.expandvars(os.path.expanduser(cand))
     try:
-        if rx:
-            if rx.search(cand):
-                return True
-            if ce != cand and rx.search(ce):
-                return True
+        if rx.search(cand) or (ce != cand and rx.search(ce)):
+            return True
         if rx_exp and rx_exp is not rx:
-            if rx_exp.search(cand):
-                return True
-            if ce != cand and rx_exp.search(ce):
+            if rx_exp.search(cand) or (ce != cand and rx_exp.search(ce)):
                 return True
         return False
     except Exception:
@@ -174,18 +186,13 @@ def match_file(path_str: str, rule: dict, cwd: str | None = None) -> tuple[bool,
         exp = os.path.join(cwd, exp)
     norm = os.path.normpath(exp)
 
-    rx = rule.get("_regex")
-    rx_exp = rule.get("_regex_exp")
-    if rx is None and pat:
-        try:
-            rx = re.compile(pat)
-        except Exception:
-            pass
+    rx, rx_exp = get_rule_regexes(rule, pat)
+    if not rx:
+        return False, ""
 
     try:
-        if rx:
-            if rx.search(cand) or rx.search(norm):
-                return True, rsn
+        if rx.search(cand) or rx.search(norm):
+            return True, rsn
         if rx_exp and rx_exp is not rx:
             if rx_exp.search(cand) or rx_exp.search(norm):
                 return True, rsn
@@ -700,13 +707,11 @@ def handle_prompt(config: dict, ctx: PayloadContext) -> None:
         pat = r.get("pattern")
         if not pat:
             continue
-        rx = r.get("_regex")
+        rx, _ = get_rule_regexes(r, pat)
         if rx is None:
-            try:
-                rx = re.compile(pat)
-            except Exception:
-                rx = None
-        if rx and rx.search(text):
+            sys.stderr.write(f"SECURITY GUARD WARNING: Invalid regex pattern in prompt rule: {pat!r}\n")
+            continue
+        if rx.search(text):
             rsn = r.get("reason") or f"Matched pattern: {pat}"
             emit("deny", f"Prompt submission blocked ({rsn})")
 
