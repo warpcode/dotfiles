@@ -1,0 +1,33 @@
+version: 2
+
+# Scoped deliberately rather than left to default auto-discovery.
+#
+# With no config, Dependabot scanned every manifest it could find repo-wide and
+# adopted three uv.lock files for the same skill. Two of them no longer exist:
+#
+#   dot_agents/skills/youtube/scripts/uv.lock    removed in the skills restructure
+#   dot_agents/skills.bk/youtube/scripts/uv.lock  a backup directory that was
+#                                                 never meant to be tracked
+#
+# That produced 9 open alerts for 3 real ones -- the same 3 urllib3 advisories
+# triplicated across the live, deleted and backup paths. The 6 phantoms were
+# dismissed as `inaccurate`, but auto-discovery would re-adopt them, so the
+# paths are pinned explicitly instead.
+#
+# The youtube skill is currently the only manifest in the tree that declares
+# third-party dependencies. Add an entry per skill as more gain a lockfile --
+# an unpinned skill will silently stop being scanned.
+updates:
+  - package-ecosystem: pip
+    directory: "/.github/skills/youtube/scripts"
+    schedule:
+      interval: weekly
+    # urllib3 arrives transitively via requests, and all three open advisories
+    # are against it. Grouping keeps a single dependency bump from raising three
+    # separate PRs.
+    groups:
+      python-transitive:
+        patterns:
+          - urllib3
+          - requests
+          - certifi

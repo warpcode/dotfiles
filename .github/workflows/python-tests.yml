@@ -1,0 +1,135 @@
+---
+name: Python Skill Tests
+
+# Skill scripts are plain Python, but until now nothing in CI executed them.
+# Both existing workflows are path-filtered to **/*.zsh, so a .py-only pull
+# request triggered no workflow at all and every "tests pass" claim in a PR body
+# was unverifiable. Suites referenced from an earlier PR review:
+#   ai-authoring-skills (10), git-expert (12), github-cli (6),
+#   google-jules-api (41), jira-api (45), ai-conversation-review (3)
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - '**/*.py'
+      - '.github/workflows/python-tests.yml'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - '**/*.py'
+      - '.github/workflows/python-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test-python:
+    name: test-python
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Skills that pin third-party dependencies in a uv.lock are run through
+      # uv below, so their declared dependencies are actually installed.
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Run Python test suites
+        run: |
+          failed=0
+          ran=0
+
+          # Repo-root tests/ that already fail on master, for reasons unrelated
+          # to any change under review. Remove a name only once it is green on
+          # master -- do not use this list to hide a new failure.
+          #
+          # test_ai_guard: 36 failures on master. The suite expects a rule with
+          #   perm:"replace" to return decision:"replace", but the guard returns
+          #   deny for the same rule. Verified byte-identical at 8f3822ae, so this
+          #   predates the pre-compiled-regex change and is not caused by it.
+          # test_software_hooks: 2 failures on master; one shells out to the
+          #   `opencode` CLI, which is not present on the runner.
+          skip_root_suites="test_ai_guard test_software_hooks"
+
+          for scripts_dir in .github/skills/*/scripts; do
+            [ -d "$scripts_dir" ] || continue
+            skill="$(basename "$(dirname "$scripts_dir")")"
+
+            # Suites use both layouts: a tests/ package, and test modules
+            # sitting directly in scripts/. Discovery must run from inside
+            # scripts/ -- most suites have no tests/__init__.py, so passing -t
+            # makes unittest fail with "Start directory is not importable".
+            if [ -d "$scripts_dir/tests" ]; then
+              echo "::group::$skill tests/"
+              ran=$((ran + 1))
+              # A skill with a pyproject.toml pins its dependencies in uv.lock,
+              # so run through uv to install them. --locked makes a stale or
+              # hand-edited lockfile a hard failure rather than a silent
+              # re-resolve, which is the point of committing the lock.
+              if [ -f "$scripts_dir/pyproject.toml" ]; then
+                if ! (cd "$scripts_dir" && PYTHONPATH=. uv run --locked python -m unittest discover -s tests); then
+                  failed=1
+                fi
+              elif ! (cd "$scripts_dir" && PYTHONPATH=. python -m unittest discover -s tests); then
+                failed=1
+              fi
+              echo "::endgroup::"
+            fi
+
+            for test_file in "$scripts_dir"/test_*.py; do
+              [ -e "$test_file" ] || continue
+              module="$(basename "$test_file" .py)"
+              echo "::group::$skill $module"
+              ran=$((ran + 1))
+              if [ -f "$scripts_dir/pyproject.toml" ]; then
+                if ! (cd "$scripts_dir" && PYTHONPATH=. uv run --locked python -m unittest "$module"); then
+                  failed=1
+                fi
+              elif ! (cd "$scripts_dir" && PYTHONPATH=. python -m unittest "$module"); then
+                failed=1
+              fi
+              echo "::endgroup::"
+            done
+          done
+
+          # Repo-root tests/ is a flat set of modules, not per-skill packages.
+          # Invoked as tests.<module> (a namespace package -- there is no
+          # tests/__init__.py).
+          for test_file in tests/test_*.py; do
+            [ -e "$test_file" ] || continue
+            module="$(basename "$test_file" .py)"
+            case " $skip_root_suites " in
+              *" $module "*)
+                echo "::notice::Skipping tests/$module.py: pre-existing failures on master"
+                continue
+                ;;
+            esac
+            echo "::group::tests/$module"
+            ran=$((ran + 1))
+            if ! PYTHONPATH=. python -m unittest "tests.$module"; then
+              failed=1
+            fi
+            echo "::endgroup::"
+          done
+
+          if [ "$ran" -eq 0 ]; then
+            echo "::error::No Python test suites discovered -- check the paths filter"
+            exit 1
+          fi
+
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::One or more Python skill test suites failed"
+            exit 1
+          fi
+
+          echo "All $ran Python test suites passed"

@@ -14,7 +14,7 @@ against the key rules documented in ../SKILL.md:
   - every referenced resource path (references/, templates/, scripts/,
     assets/) exists relative to the skill folder; fenced code blocks are
     ignored so illustrative examples do not false-positive
-  - bundled scripts compile: *.py -> python3 -m py_compile,
+  - bundled scripts compile: *.py -> py_compile.compile (in-process),
     *.sh -> bash -n, *.zsh -> zsh -n
 
 YAML parsing uses PyYAML when installed; otherwise falls back to a
@@ -31,6 +31,7 @@ check fails.
 
 import argparse
 import os
+import py_compile
 import re
 import subprocess
 import sys
@@ -46,7 +47,6 @@ RESOURCE_RE = re.compile(
     r"(?<![\w/.])@?((?:references|templates|scripts|assets)/[\w][\w./-]*[.\w])"
 )
 SCRIPT_CHECKS = {
-    ".py": [sys.executable, "-m", "py_compile"],
     ".sh": ["bash", "-n"],
     ".zsh": ["zsh", "-n"],
 }
@@ -198,18 +198,35 @@ def validate_skill(skill_dir):
         add("resources-exist", "PASS")
 
     broken = []
+    pyc_dir = Path(tempfile.gettempdir()) / "skill_validate_pyc"
+    pyc_dir.mkdir(exist_ok=True)
+
     for root, dirs, files in os.walk(skill_dir):
         dirs[:] = [d for d in dirs if not d.startswith(".")]
         for f in files:
             p = Path(root) / f
-            checker = SCRIPT_CHECKS.get(p.suffix)
-            if not checker:
-                continue
-            proc = subprocess.run(checker + [str(p)], capture_output=True, text=True)
-            if proc.returncode != 0:
-                detail = (proc.stderr or proc.stdout).strip().splitlines()
-                msg = detail[-1] if detail else "see stderr"
-                broken.append(f"{p.relative_to(skill_dir)}: {msg}")
+            if p.suffix == ".py":
+                # In-process compilation for Python files avoids ~60ms subprocess overhead per file
+                try:
+                    cfile = pyc_dir / f"{p.stem}_{abs(hash(str(p)))}.pyc"
+                    py_compile.compile(str(p), cfile=str(cfile), doraise=True)
+                except py_compile.PyCompileError as e:
+                    detail = str(getattr(e, "msg", e)).strip().splitlines()
+                    msg = detail[-1] if detail else str(e)
+                    broken.append(f"{p.relative_to(skill_dir)}: {msg}")
+                except Exception as e:
+                    detail = str(e).strip().splitlines()
+                    msg = detail[-1] if detail else str(e)
+                    broken.append(f"{p.relative_to(skill_dir)}: {msg}")
+            else:
+                checker = SCRIPT_CHECKS.get(p.suffix)
+                if not checker:
+                    continue
+                proc = subprocess.run(checker + [str(p)], capture_output=True, text=True)
+                if proc.returncode != 0:
+                    detail = (proc.stderr or proc.stdout).strip().splitlines()
+                    msg = detail[-1] if detail else "see stderr"
+                    broken.append(f"{p.relative_to(skill_dir)}: {msg}")
     if broken:
         add("scripts-compile", "FAIL", "; ".join(broken))
     else:

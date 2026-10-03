@@ -21,6 +21,9 @@ on:
       - 'assets/configs/**/*'
       - 'generic/**/*'
 
+permissions:
+  contents: read
+
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
