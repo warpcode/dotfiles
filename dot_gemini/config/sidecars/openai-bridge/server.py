@@ -15,7 +15,7 @@ cache_lock = threading.Lock()
 history_to_conv_id = {}
 
 # Allowed models for Antigravity bridge mapping
-ALLOWED_MODELS = {"flash_lite", "flash", "pro"}
+ALLOWED_MODELS = frozenset({"flash_lite", "flash", "pro"})
 
 class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
     def log_message(self, format, *args):
@@ -109,7 +109,7 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
 
     def process_completions(self, messages, model, is_chat=True):
         # Map models to antigravity model options: flash_lite, flash, pro
-        if model not in ALLOWED_MODELS:
+        if not isinstance(model, str) or model not in ALLOWED_MODELS:
             logging.warning(f"Requested model '{model}' not recognized. Falling back to 'flash_lite'.")
             model = "flash_lite"
 
