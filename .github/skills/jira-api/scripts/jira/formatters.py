@@ -1,11 +1,7 @@
 from .metrics import calculate_metrics
 
 def _flatten_adf_list(node, parts):
-    """Helper function to append ADF content to a list of parts.
-
-    Performance optimization: Avoid allocating default fallback objects (like {} or [])
-    in .get() calls during deep AST traversal to eliminate transient object allocations.
-    """
+    """Helper function to append ADF content to a list of parts with type safety and null guards."""
     if node is None:
         return
     if isinstance(node, list):
@@ -18,25 +14,23 @@ def _flatten_adf_list(node, parts):
     node_type = node.get("type")
     if node_type == "text":
         text = node.get("text")
-        if text:
+        if isinstance(text, str) and text:
             parts.append(text)
     elif node_type == "hardBreak":
         parts.append("\n")
     elif node_type == "inlineCard":
-        # Check attrs explicitly to avoid allocating default dicts on missing keys
         attrs = node.get("attrs")
         if isinstance(attrs, dict):
             url = attrs.get("url")
-            if url:
+            if isinstance(url, str) and url:
                 parts.append(url)
     elif node_type == "mention":
         attrs = node.get("attrs")
         if isinstance(attrs, dict):
             text = attrs.get("text")
-            if text:
+            if isinstance(text, str) and text:
                 parts.append(text)
     elif node_type in ("paragraph", "heading", "listItem", "tableCell"):
-        # Check content explicitly to avoid allocating default lists on missing keys
         content = node.get("content")
         if content:
             _flatten_adf_list(content, parts)

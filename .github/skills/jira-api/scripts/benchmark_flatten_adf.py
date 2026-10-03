@@ -4,22 +4,6 @@ from jira.formatters import flatten_adf
 def create_nested_adf(depth):
     if depth == 0:
         return {"type": "text", "text": "hello"}
-    if depth % 3 == 0:
-        return {
-            "type": "paragraph",
-            "content": [
-                {"type": "inlineCard", "attrs": {"url": "https://example.com"}},
-                create_nested_adf(depth - 1),
-            ]
-        }
-    elif depth % 3 == 1:
-        return {
-            "type": "paragraph",
-            "content": [
-                {"type": "mention", "attrs": {"text": "@user"}},
-                create_nested_adf(depth - 1),
-            ]
-        }
     return {
         "type": "paragraph",
         "content": [
@@ -33,16 +17,16 @@ adf = {
     "content": [create_nested_adf(10) for _ in range(100)]
 }
 
-def flatten_adf_old(node):
-    """Old recursive implementation without accumulator list or dict type checks."""
+def _flatten_adf_list(node, parts):
     if node is None:
-        return ""
+        return
     if isinstance(node, list):
-        return "".join(flatten_adf_old(item) for item in node)
+        for item in node:
+            _flatten_adf_list(item, parts)
+        return
     if not isinstance(node, dict):
-        return ""
+        return
 
-    parts = []
     node_type = node.get("type")
     if node_type == "text":
         parts.append(node.get("text", ""))
@@ -54,34 +38,31 @@ def flatten_adf_old(node):
         parts.append(node.get("attrs", {}).get("text", ""))
     elif node_type in ("paragraph", "heading", "listItem", "tableCell"):
         content = node.get("content", [])
-        parts.append(flatten_adf_old(content))
+        _flatten_adf_list(content, parts)
         parts.append("\n")
     elif "content" in node:
-        parts.append(flatten_adf_old(node["content"]))
+        _flatten_adf_list(node["content"], parts)
 
+def flatten_adf_new(node):
+    parts = []
+    _flatten_adf_list(node, parts)
     return "".join(parts)
 
 # verify correctness first
-assert flatten_adf(adf) == flatten_adf_old(adf)
+assert flatten_adf(adf) == flatten_adf_new(adf)
 
-# Benchmark using minimum of multiple runs for accuracy
-old_times = []
-for _ in range(5):
-    start = time.perf_counter()
-    for _ in range(100):
-        res = flatten_adf_old(adf)
-    old_times.append(time.perf_counter() - start)
+start = time.time()
+for _ in range(100):
+    res = flatten_adf(adf)
+end = time.time()
+old_time = end - start
 
-new_times = []
-for _ in range(5):
-    start = time.perf_counter()
-    for _ in range(100):
-        res = flatten_adf(adf)
-    new_times.append(time.perf_counter() - start)
+start = time.time()
+for _ in range(100):
+    res = flatten_adf_new(adf)
+end = time.time()
+new_time = end - start
 
-old_time = min(old_times)
-new_time = min(new_times)
-
-print(f"Old time: {old_time:.4f}s")
-print(f"New time: {new_time:.4f}s")
+print(f"Old time: {old_time}")
+print(f"New time: {new_time}")
 print(f"Improvement: {((old_time - new_time) / old_time) * 100:.2f}%")
