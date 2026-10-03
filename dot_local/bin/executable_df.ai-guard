@@ -72,13 +72,15 @@ def normalize_rules(data: dict | list) -> list[dict]:
     res = []
     for r in raw:
         if isinstance(r, str):
-            res.append({
-                "pattern": r.strip(),
+            pat = r.strip()
+            entry = {
+                "pattern": pat,
                 "perm": "deny",
-                "reason": f"Matched pattern: {r.strip()}",
+                "reason": f"Matched pattern: {pat}",
                 "placeholder": "[SECRET_REDACTED]",
                 "replace": "[SECRET_REDACTED]"
-            })
+            }
+            res.append(entry)
         elif isinstance(r, dict):
             m = r.get("match")
             if m and m.lower() != "regex":
@@ -96,6 +98,24 @@ def normalize_rules(data: dict | list) -> list[dict]:
                 "perm": "deny"
             }
             res.append(entry)
+
+    # Performance optimization: pre-compile regex patterns to avoid re-compiling in loops
+    for entry in res:
+        pat = entry["pattern"]
+        if pat:
+            try:
+                entry["_regex"] = re.compile(pat)
+            except Exception:
+                entry["_regex"] = None
+
+            try:
+                exp_pat = os.path.expandvars(os.path.expanduser(pat))
+                if exp_pat != pat:
+                    entry["_regex_exp"] = re.compile(exp_pat)
+                else:
+                    entry["_regex_exp"] = entry.get("_regex")
+            except Exception:
+                entry["_regex_exp"] = None
     return res
 
 
@@ -113,13 +133,31 @@ def clean_path(raw: str) -> str:
     return val.strip("'\"()[]{} \t\n\r").lstrip("@<>").strip("'\"()[]{} \t\n\r")
 
 
-def match_str(cand: str, pat: str) -> bool:
+def match_str(cand: str, pat: str, rule: dict | None = None) -> bool:
     cand, pat = cand.strip(), pat.strip()
     if not cand or not pat:
         return False
-    ce, pe = os.path.expandvars(os.path.expanduser(cand)), os.path.expandvars(os.path.expanduser(pat))
+    rx = rule.get("_regex") if rule else None
+    rx_exp = rule.get("_regex_exp") if rule else None
+    if rx is None and pat:
+        try:
+            rx = re.compile(pat)
+        except Exception:
+            pass
+
+    ce = os.path.expandvars(os.path.expanduser(cand))
     try:
-        return bool(re.search(pat, cand) or re.search(pat, ce) or re.search(pe, cand) or re.search(pe, ce))
+        if rx:
+            if rx.search(cand):
+                return True
+            if ce != cand and rx.search(ce):
+                return True
+        if rx_exp and rx_exp is not rx:
+            if rx_exp.search(cand):
+                return True
+            if ce != cand and rx_exp.search(ce):
+                return True
+        return False
     except Exception:
         return False
 
@@ -136,11 +174,21 @@ def match_file(path_str: str, rule: dict, cwd: str | None = None) -> tuple[bool,
         exp = os.path.join(cwd, exp)
     norm = os.path.normpath(exp)
 
-    exp_pat = os.path.expandvars(os.path.expanduser(pat))
+    rx = rule.get("_regex")
+    rx_exp = rule.get("_regex_exp")
+    if rx is None and pat:
+        try:
+            rx = re.compile(pat)
+        except Exception:
+            pass
 
     try:
-        if re.search(pat, cand) or re.search(pat, norm) or re.search(exp_pat, cand) or re.search(exp_pat, norm):
-            return True, rsn
+        if rx:
+            if rx.search(cand) or rx.search(norm):
+                return True, rsn
+        if rx_exp and rx_exp is not rx:
+            if rx_exp.search(cand) or rx_exp.search(norm):
+                return True, rsn
     except Exception:
         pass
     return False, ""
@@ -150,7 +198,7 @@ def find_rule(cand: str | list[str], rules: list[dict], perm: str = "deny", d_rs
     cands = cand if isinstance(cand, list) else [cand]
     for c in cands:
         for r in rules:
-            if match_str(c, r.get("pattern", "")):
+            if match_str(c, r.get("pattern", ""), rule=r):
                 rsn = r.get("reason") or d_rsn
                 return r, c, f"{rsn} ({c})"
     return None
@@ -650,7 +698,15 @@ def handle_prompt(config: dict, ctx: PayloadContext) -> None:
     rules = normalize_rules(config.get("prompts", {}))
     for r in rules:
         pat = r.get("pattern")
-        if pat and re.search(pat, text):
+        if not pat:
+            continue
+        rx = r.get("_regex")
+        if rx is None:
+            try:
+                rx = re.compile(pat)
+            except Exception:
+                rx = None
+        if rx and rx.search(text):
             rsn = r.get("reason") or f"Matched pattern: {pat}"
             emit("deny", f"Prompt submission blocked ({rsn})")
 
@@ -667,13 +723,20 @@ def redact_text_and_report(text: str, rules: list[dict]) -> tuple[str, list[str]
         pat = r.get("pattern")
         if not pat:
             continue
-        try:
-            if re.search(pat, sanitized):
-                placeholder = r.get("placeholder") or r.get("replace") or "[SECRET_REDACTED]"
-                sanitized = re.sub(pat, placeholder, sanitized)
-                applied.append(r.get("reason") or "Sensitive data redacted")
-        except Exception:
-            pass
+        rx = r.get("_regex")
+        if rx is None:
+            try:
+                rx = re.compile(pat)
+            except Exception:
+                rx = None
+        if rx:
+            try:
+                if rx.search(sanitized):
+                    placeholder = r.get("placeholder") or r.get("replace") or "[SECRET_REDACTED]"
+                    sanitized = rx.sub(placeholder, sanitized)
+                    applied.append(r.get("reason") or "Sensitive data redacted")
+            except Exception:
+                pass
     return sanitized, applied
 
 
