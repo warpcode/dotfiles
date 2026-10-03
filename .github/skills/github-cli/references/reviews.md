@@ -43,15 +43,19 @@ Execution commands and scripts for review discovery, inspection, and thread reso
   bash @scripts/create_pull_request_review.sh --pull-number 42 --body "LGTM with minor suggestions."
   ```
 
-- **Submit Approval Review (with optional `--approve` flag)**:
+- **Submit Approval Review (Silent Approval Invariant)**:
+  *(Note: Never include "LGTM" or approval comments. Approvals must be silent with an empty body).*
   ```bash
-  bash @scripts/create_pull_request_review.sh --pull-number 42 --body "Approved! Verified locally." --approve true
+  bash @scripts/create_pull_request_review.sh --pull-number 42 --approve true --body ""
+  # Or via gh CLI directly:
+  gh pr review 42 --approve
   ```
 
 - **Submit Review on Cross-Repository (with optional `--owner` and `--repo` overrides)**:
   ```bash
-  bash @scripts/create_pull_request_review.sh --owner octocat --repo hello-world --pull-number 10 --body "Ready to merge" --approve true
+  bash @scripts/create_pull_request_review.sh --owner octocat --repo hello-world --pull-number 10 --approve true --body ""
   ```
+
 
 - **Add Comment to Pending Review**:
   ```bash
