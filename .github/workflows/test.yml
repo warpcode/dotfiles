@@ -7,6 +7,7 @@ on:
       - master
     paths:
       - '**/*.zsh'
+      - '**/*.py'
       - 'install.sh'
       - '.gitmodules'
       - 'assets/configs/**/*'
@@ -16,6 +17,7 @@ on:
       - master
     paths:
       - '**/*.zsh'
+      - '**/*.py'
       - 'install.sh'
       - '.gitmodules'
       - 'assets/configs/**/*'
@@ -51,6 +53,19 @@ jobs:
           export DOTFILES="$(pwd)"
           export DOTFILES_SKIP_CHSHELL=1
           ./install.sh --profile default --git-name "CI Test" --git-email "ci@example.com"
+
+  test-python:
+    name: test-python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run Python unit tests
+        run: |
+          python -m unittest discover -s .github/skills/jira-api/scripts/tests/
 
   test-macos:
     runs-on: macos-latest

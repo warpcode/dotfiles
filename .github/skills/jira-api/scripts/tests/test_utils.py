@@ -85,6 +85,35 @@ class TestUtils(unittest.TestCase):
         early2 = datetime(2023, 5, 15, 8, 0, tzinfo=timezone.utc)
         self.assertEqual(get_work_seconds(early1, early2), 0)
 
+        # Multi-day first-day and last-day work-window clamps
+        # Mon 07:00 May 15 -> Wed 19:00 May 17
+        # Mon: 09:00-17:30 (8.5h = 30600s)
+        # Tue: 09:00-17:30 (8.5h = 30600s)
+        # Wed: 09:00-17:30 (8.5h = 30600s)
+        # Total: 3 * 30600 = 91800s
+        m_start = datetime(2023, 5, 15, 7, 0, tzinfo=timezone.utc)
+        m_end = datetime(2023, 5, 17, 19, 0, tzinfo=timezone.utc)
+        self.assertEqual(get_work_seconds(m_start, m_end), 3 * SECONDS_PER_WORK_DAY)
+
+        # Mon 16:00 May 15 -> Wed 20:00 May 17
+        # Mon: 16:00-17:30 (1.5h = 5400s)
+        # Tue: 09:00-17:30 (8.5h = 30600s)
+        # Wed: 09:00-17:30 (8.5h = 30600s)
+        # Total: 5400 + 30600 + 30600 = 66600s
+        p_start = datetime(2023, 5, 15, 16, 0, tzinfo=timezone.utc)
+        p_end = datetime(2023, 5, 17, 20, 0, tzinfo=timezone.utc)
+        self.assertEqual(get_work_seconds(p_start, p_end), 5400 + 2 * SECONDS_PER_WORK_DAY)
+
+        # Non-week-multiple mid range ending on a weekday to pin _count_weekdays inclusive +1 boundary
+        # Mon 09:00 May 15 -> Sat 09:00 May 20
+        # First day (Mon): 8.5h = SECONDS_PER_WORK_DAY
+        # Mid range (Tue 05-16..Fri 05-19 = 4 weekdays) = 4 * SECONDS_PER_WORK_DAY
+        # Last day (Sat): 0 (weekend)
+        # Total: 5 * SECONDS_PER_WORK_DAY
+        mid_inc_start = datetime(2023, 5, 15, 9, 0, tzinfo=timezone.utc)
+        mid_inc_end = datetime(2023, 5, 20, 9, 0, tzinfo=timezone.utc)
+        self.assertEqual(get_work_seconds(mid_inc_start, mid_inc_end), 5 * SECONDS_PER_WORK_DAY)
+
     def test_format_duration(self):
         self.assertEqual(format_duration(3600), "1h")
         self.assertEqual(format_duration(60), "1m")
