@@ -35,7 +35,7 @@ This is the body.
 
     def test_invalid_yaml_frontmatter(self):
         content = """---
-name: [invalid yaml
+invalid yaml line without colon
 ---
 # Body
 """
@@ -103,6 +103,50 @@ description: Does something
         with self.assertRaises(ValueError) as context:
             validate.split_skill_md(self.skill_md_path)
         self.assertIn("frontmatter not closed with '---'", str(context.exception))
+
+
+class TestScriptsCompile(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp_dir.cleanup)
+        self.skill_dir = Path(self.temp_dir.name) / "test-skill"
+        self.skill_dir.mkdir()
+        (self.skill_dir / "SKILL.md").write_text(
+            "---\n"
+            "name: test-skill\n"
+            "description: >\n"
+            "  Test skill. Use when testing script compilation.\n"
+            "---\n"
+            "# Body\n"
+        )
+        self.scripts_dir = self.skill_dir / "scripts"
+        self.scripts_dir.mkdir()
+
+    def test_invalid_python_syntax(self):
+        bad_py = self.scripts_dir / "broken.py"
+        bad_py.write_text("def invalid_syntax(\n")
+
+        results = validate.validate_skill(self.skill_dir)
+        compile_fails = [detail for check, status, detail in results if check == "scripts-compile" and status == "FAIL"]
+        self.assertEqual(len(compile_fails), 1)
+        detail = compile_fails[0]
+        self.assertIn("scripts/broken.py", detail)
+        self.assertNotIn("\n", detail)
+
+    def test_dangling_python_symlink(self):
+        dangling_py = self.scripts_dir / "dangling.py"
+        try:
+            dangling_py.symlink_to(self.scripts_dir / "nonexistent.py")
+        except OSError:
+            self.skipTest("Symlinks not supported in this environment")
+
+        results = validate.validate_skill(self.skill_dir)
+        compile_fails = [detail for check, status, detail in results if check == "scripts-compile" and status == "FAIL"]
+        self.assertEqual(len(compile_fails), 1)
+        detail = compile_fails[0]
+        self.assertIn("scripts/dangling.py", detail)
+        self.assertNotIn("\n", detail)
+
 
 if __name__ == "__main__":
     unittest.main()

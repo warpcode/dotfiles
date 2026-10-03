@@ -72,13 +72,15 @@ def normalize_rules(data: dict | list) -> list[dict]:
     res = []
     for r in raw:
         if isinstance(r, str):
-            res.append({
-                "pattern": r.strip(),
+            pat = r.strip()
+            entry = {
+                "pattern": pat,
                 "perm": "deny",
-                "reason": f"Matched pattern: {r.strip()}",
+                "reason": f"Matched pattern: {pat}",
                 "placeholder": "[SECRET_REDACTED]",
                 "replace": "[SECRET_REDACTED]"
-            })
+            }
+            res.append(entry)
         elif isinstance(r, dict):
             m = r.get("match")
             if m and m.lower() != "regex":
@@ -96,6 +98,27 @@ def normalize_rules(data: dict | list) -> list[dict]:
                 "perm": "deny"
             }
             res.append(entry)
+
+    # Performance optimization: pre-compile regex patterns to avoid re-compiling in loops
+    for entry in res:
+        pat = entry["pattern"].strip() if isinstance(entry.get("pattern"), str) else ""
+        if pat:
+            try:
+                entry["_regex"] = re.compile(pat)
+            except Exception:
+                entry["_regex"] = None
+
+            if entry["_regex"] is not None:
+                try:
+                    exp_pat = os.path.expandvars(os.path.expanduser(pat))
+                    if exp_pat != pat:
+                        entry["_regex_exp"] = re.compile(exp_pat)
+                    else:
+                        entry["_regex_exp"] = entry["_regex"]
+                except Exception:
+                    entry["_regex_exp"] = None
+            else:
+                entry["_regex_exp"] = None
     return res
 
 
@@ -113,13 +136,40 @@ def clean_path(raw: str) -> str:
     return val.strip("'\"()[]{} \t\n\r").lstrip("@<>").strip("'\"()[]{} \t\n\r")
 
 
-def match_str(cand: str, pat: str) -> bool:
+def get_rule_regexes(rule: dict | None, pat: str) -> tuple[re.Pattern | None, re.Pattern | None]:
+    pat = pat.strip()
+    if not pat:
+        return None, None
+    if rule and "_regex" in rule:
+        return rule.get("_regex"), rule.get("_regex_exp")
+    try:
+        rx = re.compile(pat)
+    except Exception:
+        return None, None
+    try:
+        exp_pat = os.path.expandvars(os.path.expanduser(pat))
+        rx_exp = re.compile(exp_pat) if exp_pat != pat else rx
+    except Exception:
+        rx_exp = None
+    return rx, rx_exp
+
+
+def match_str(cand: str, pat: str, rule: dict | None = None) -> bool:
     cand, pat = cand.strip(), pat.strip()
     if not cand or not pat:
         return False
-    ce, pe = os.path.expandvars(os.path.expanduser(cand)), os.path.expandvars(os.path.expanduser(pat))
+    rx, rx_exp = get_rule_regexes(rule, pat)
+    if not rx:
+        return False
+
+    ce = os.path.expandvars(os.path.expanduser(cand))
     try:
-        return bool(re.search(pat, cand) or re.search(pat, ce) or re.search(pe, cand) or re.search(pe, ce))
+        if rx.search(cand) or (ce != cand and rx.search(ce)):
+            return True
+        if rx_exp and rx_exp is not rx:
+            if rx_exp.search(cand) or (ce != cand and rx_exp.search(ce)):
+                return True
+        return False
     except Exception:
         return False
 
@@ -136,11 +186,16 @@ def match_file(path_str: str, rule: dict, cwd: str | None = None) -> tuple[bool,
         exp = os.path.join(cwd, exp)
     norm = os.path.normpath(exp)
 
-    exp_pat = os.path.expandvars(os.path.expanduser(pat))
+    rx, rx_exp = get_rule_regexes(rule, pat)
+    if not rx:
+        return False, ""
 
     try:
-        if re.search(pat, cand) or re.search(pat, norm) or re.search(exp_pat, cand) or re.search(exp_pat, norm):
+        if rx.search(cand) or rx.search(norm):
             return True, rsn
+        if rx_exp and rx_exp is not rx:
+            if rx_exp.search(cand) or rx_exp.search(norm):
+                return True, rsn
     except Exception:
         pass
     return False, ""
@@ -150,7 +205,7 @@ def find_rule(cand: str | list[str], rules: list[dict], perm: str = "deny", d_rs
     cands = cand if isinstance(cand, list) else [cand]
     for c in cands:
         for r in rules:
-            if match_str(c, r.get("pattern", "")):
+            if match_str(c, r.get("pattern", ""), rule=r):
                 rsn = r.get("reason") or d_rsn
                 return r, c, f"{rsn} ({c})"
     return None
@@ -650,7 +705,13 @@ def handle_prompt(config: dict, ctx: PayloadContext) -> None:
     rules = normalize_rules(config.get("prompts", {}))
     for r in rules:
         pat = r.get("pattern")
-        if pat and re.search(pat, text):
+        if not pat:
+            continue
+        rx, _ = get_rule_regexes(r, pat)
+        if rx is None:
+            sys.stderr.write(f"SECURITY GUARD WARNING: Invalid regex pattern in prompt rule: {pat!r}\n")
+            continue
+        if rx.search(text):
             rsn = r.get("reason") or f"Matched pattern: {pat}"
             emit("deny", f"Prompt submission blocked ({rsn})")
 
@@ -667,13 +728,20 @@ def redact_text_and_report(text: str, rules: list[dict]) -> tuple[str, list[str]
         pat = r.get("pattern")
         if not pat:
             continue
-        try:
-            if re.search(pat, sanitized):
-                placeholder = r.get("placeholder") or r.get("replace") or "[SECRET_REDACTED]"
-                sanitized = re.sub(pat, placeholder, sanitized)
-                applied.append(r.get("reason") or "Sensitive data redacted")
-        except Exception:
-            pass
+        rx = r.get("_regex")
+        if rx is None:
+            try:
+                rx = re.compile(pat)
+            except Exception:
+                rx = None
+        if rx:
+            try:
+                if rx.search(sanitized):
+                    placeholder = r.get("placeholder") or r.get("replace") or "[SECRET_REDACTED]"
+                    sanitized = rx.sub(placeholder, sanitized)
+                    applied.append(r.get("reason") or "Sensitive data redacted")
+            except Exception:
+                pass
     return sanitized, applied
 
 

@@ -7,7 +7,23 @@ from datetime import datetime, timezone, timedelta
 
 WORK_DAY_START = 9  # 9 AM
 WORK_DAY_END = 17.5 # 5:30 PM (8.5 hours)
-SECONDS_PER_WORK_DAY = int((WORK_DAY_END - WORK_DAY_START) * 3600)
+
+# Calculate SECONDS_PER_WORK_DAY using the exact minute-truncated day window
+# to guarantee full intermediate days always agree with partial day calculations.
+_probe_dt = datetime(2020, 1, 1)
+_day_start_probe = _probe_dt.replace(
+    hour=int(WORK_DAY_START),
+    minute=int((WORK_DAY_START % 1) * 60),
+    second=0,
+    microsecond=0,
+)
+_day_end_probe = _probe_dt.replace(
+    hour=int(WORK_DAY_END),
+    minute=int((WORK_DAY_END % 1) * 60),
+    second=0,
+    microsecond=0,
+)
+SECONDS_PER_WORK_DAY = int((_day_end_probe - _day_start_probe).total_seconds())
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -46,30 +62,63 @@ def get_work_seconds(start_dt, end_dt):
     """
     Calculate work seconds between two datetimes, skipping weekends.
     Based on a WORK_DAY_START to WORK_DAY_END schedule.
+
+    Optimized O(1) time complexity by calculating full intermediate weeks
+    via integer arithmetic instead of iterating day-by-day in a loop.
     """
     if not start_dt or not end_dt or start_dt >= end_dt:
         return 0
 
-    total_seconds = 0
-    current = start_dt
+    start_date = start_dt.date()
+    end_date = end_dt.date()
 
-    while current.date() <= end_dt.date():
-        # Skip weekends (5=Saturday, 6=Sunday)
-        if current.weekday() < 5:
-            # Define work window for this day
-            day_start = current.replace(hour=int(WORK_DAY_START), minute=int((WORK_DAY_START % 1) * 60), second=0, microsecond=0)
-            day_end = current.replace(hour=int(WORK_DAY_END), minute=int((WORK_DAY_END % 1) * 60), second=0, microsecond=0)
+    # Helper to calculate work overlap for a single day
+    def _day_work_seconds(dt, is_start_day, is_end_day):
+        if dt.weekday() >= 5:  # Weekend
+            return 0
+        day_start = dt.replace(
+            hour=int(WORK_DAY_START),
+            minute=int((WORK_DAY_START % 1) * 60),
+            second=0,
+            microsecond=0,
+        )
+        day_end = dt.replace(
+            hour=int(WORK_DAY_END),
+            minute=int((WORK_DAY_END % 1) * 60),
+            second=0,
+            microsecond=0,
+        )
+        s = dt if is_start_day else day_start
+        e = end_dt if is_end_day else day_end
+        s = max(s, day_start)
+        e = min(e, day_end)
+        if e > s:
+            return (e - s).total_seconds()
+        return 0
 
-            # Find intersection of [start_dt, end_dt] and [day_start, day_end]
-            overlap_start = max(current if current.date() == start_dt.date() else day_start, day_start)
-            overlap_end = min(end_dt if current.date() == end_dt.date() else day_end, day_end)
+    # Same day case
+    if start_date == end_date:
+        return int(_day_work_seconds(start_dt, True, True))
 
-            if overlap_end > overlap_start:
-                total_seconds += (overlap_end - overlap_start).total_seconds()
+    # Calculate first partial/full day and last partial/full day
+    first_day_sec = _day_work_seconds(start_dt, True, False)
+    last_day_sec = _day_work_seconds(end_dt, False, True)
 
-        current = (current + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    # Calculate full intermediate days in O(1)
+    d1 = start_date + timedelta(days=1)
+    d2 = end_date - timedelta(days=1)
 
-    return int(total_seconds)
+    if d1 <= d2:
+        num_days = (d2 - d1).days + 1
+        full_weeks, rem_days = divmod(num_days, 7)
+        start_w = d1.weekday()
+        rem_weekdays = sum(1 for i in range(rem_days) if (start_w + i) % 7 < 5)
+        work_days = full_weeks * 5 + rem_weekdays
+        middle_sec = work_days * SECONDS_PER_WORK_DAY
+    else:
+        middle_sec = 0
+
+    return int(first_day_sec + last_day_sec + middle_sec)
 
 def format_duration(seconds):
     """Convert seconds into a human-readable Xd Yh Zm format based on work day length."""
