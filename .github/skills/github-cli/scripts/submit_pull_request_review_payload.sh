@@ -68,6 +68,9 @@ if [[ ! -f "$input_file" ]]; then
 fi
 
 tmp_out="$(mktemp /tmp/gh_review_out.XXXXXX.json)"
+# Security enhancement: ensure temporary output file is cleaned up on any exit path or error signal
+trap 'rm -f "$tmp_out"' EXIT
+
 gh api "repos/${owner}/${repo}/pulls/${pull_number}/reviews" \
   --method POST \
   --input "$input_file" > "$tmp_out" 2>&1
@@ -75,13 +78,11 @@ gh api "repos/${owner}/${repo}/pulls/${pull_number}/reviews" \
 status=$?
 if [[ $status -ne 0 ]]; then
   cat "$tmp_out" >&2
-  rm -f "$tmp_out"
   exit $status
 fi
 
 review_url="$(jq -r '.html_url // empty' "$tmp_out" 2>/dev/null || echo '')"
 review_state="$(jq -r '.state // empty' "$tmp_out" 2>/dev/null || echo '')"
-rm -f "$tmp_out"
 
 if [[ -n "$review_url" ]]; then
   echo "Review submitted successfully (${review_state}): ${review_url}"
