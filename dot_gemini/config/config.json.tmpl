@@ -34,7 +34,8 @@
   "statusLine": {
     "type": "",
     "command": "",
-    "enabled": true
+    "enabled": true,
+    "stack_with_default": true
   },
   "toolPermission": "proceed-in-sandbox",
   "trustedWorkspaces": [
@@ -47,5 +48,10 @@
     "remoteControlEnabled": {{ $remoteControlEnabled }},
     {{ template "commands/antigravity.tmpl" . }}
   },
-  "useAiCredits": false
+  "useG1Credits": false,
+  "useAiCredits": false,
+  "queuedMessages": "queue",
+  "verbosity": "medium",
+  "pickerGrouping": "workspace",
+  "copyOnSelect": true
 }
