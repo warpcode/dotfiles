@@ -129,11 +129,12 @@ def handle_prompt_route(payload):
             except Exception:
                 pass
 
-        try:
-            with open("/tmp/ai-guard-wrapper.log", "a") as lf:
-                lf.write(f"PROMPT SANITIZED: target_type={stype if 'stype' in locals() else 'unknown'} sanitized={sanitized[:100]!r}\n")
-        except Exception:
-            pass
+        if os.environ.get("AI_GUARD_DEBUG"):
+            try:
+                with open("/tmp/ai-guard-wrapper.log", "a") as lf:
+                    lf.write(f"PROMPT SANITIZED: target_type={stype if 'stype' in locals() else 'unknown'}\n")
+            except Exception:
+                pass
 
         print(json.dumps(proto_resp))
         sys.exit(0)

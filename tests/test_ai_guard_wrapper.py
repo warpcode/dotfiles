@@ -242,6 +242,26 @@ class TestAIGuardWrapper(unittest.TestCase):
         self.assertTrue("injectSteps" in json.loads(mock_stdout.getvalue()))
         self.mock_exit.assert_called_with(0)
 
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_handle_prompt_route_debug_logging_prevented_when_unset(self, mock_stderr, mock_stdout, mock_run_guard):
+        mock_run_guard.return_value = (0, {"decision": "replace", "sanitized": "sensitive_data_12345"})
+        payload = {"prompt": "my secret is sensitive_data_12345"}
+
+        log_file = Path("/tmp/ai-guard-wrapper.log")
+        if log_file.exists():
+            log_file.unlink()
+
+        with patch.dict(os.environ, {}, clear=True):
+            with self.assertRaises(SystemExitException):
+                ai_guard_wrapper.handle_prompt_route(payload)
+
+        if log_file.exists():
+            content = log_file.read_text()
+            self.assertNotIn("sensitive_data_12345", content)
+            self.assertNotIn("PROMPT SANITIZED", content)
+
 
 if __name__ == '__main__':
     unittest.main()
