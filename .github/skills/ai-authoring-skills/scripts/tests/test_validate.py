@@ -43,8 +43,13 @@ invalid yaml line without colon
         with self.assertRaises(ValueError):
             validate.split_skill_md(self.skill_md_path)
 
-    def test_valid_yaml_with_trailing_comment(self):
+    def test_valid_yaml_plain_scalars_and_comments(self):
         content = """---
+description: Don't do this
+url: https://example.com#section
+color: #ff0000
+issue: #147
+platform: Target [x86_64] platform
 metadata: {"a": 1} # note
 name: "x" # he said "hi"
 ---
@@ -52,6 +57,11 @@ name: "x" # he said "hi"
 """
         self.skill_md_path.write_text(content, encoding="utf-8")
         meta, body_lines = validate.split_skill_md(self.skill_md_path)
+        self.assertEqual(meta["description"], "Don't do this")
+        self.assertEqual(meta["url"], "https://example.com#section")
+        self.assertEqual(meta["color"], "#ff0000")
+        self.assertEqual(meta["issue"], "#147")
+        self.assertEqual(meta["platform"], "Target [x86_64] platform")
         self.assertEqual(meta["metadata"], '{"a": 1}')
         self.assertEqual(meta["name"], "x")
 

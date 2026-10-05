@@ -128,6 +128,7 @@ def _scan_scalar(rest):
     stack = []
     end_idx = None
     is_quoted_scalar = rest.startswith('"') or rest.startswith("'")
+    is_flow_collection = rest.startswith("[") or rest.startswith("{")
 
     while i < n:
         ch = rest[i]
@@ -146,22 +147,24 @@ def _scan_scalar(rest):
             continue
 
         if ch in ('"', "'"):
-            in_quote = ch
+            if is_quoted_scalar or is_flow_collection:
+                in_quote = ch
             i += 1
             continue
 
         if ch == "#" and not stack:
-            # Found unquoted, top-level comment start
-            if end_idx is None:
-                end_idx = i
-            break
+            # YAML 1.2 §6.6: A '#' begins a comment only when preceded by whitespace
+            if i > 0 and rest[i - 1] in (" ", "\t"):
+                if end_idx is None:
+                    end_idx = i
+                break
 
-        if ch in ("[", "{"):
+        if is_flow_collection and ch in ("[", "{"):
             stack.append(ch)
             i += 1
             continue
 
-        if ch in ("]", "}"):
+        if is_flow_collection and ch in ("]", "}"):
             if not stack:
                 raise ValueError("unexpected closing delimiter")
             top = stack.pop()
@@ -208,8 +211,9 @@ def _parse_flat_yaml(text):
             raise ValueError(f"cannot parse frontmatter line: {line!r}")
         key, rest = m.group(1), m.group(2).strip()
 
-        # Reject tab after key separator
-        if line.find(":") + 1 < len(line) and line[line.find(":") + 1] == "\t":
+        # Reject tab immediately following key colon
+        colon_idx = line.find(":")
+        if colon_idx != -1 and line[colon_idx + 1 :].startswith("\t"):
             raise ValueError(f"invalid tab separator after key: {line!r}")
 
         if rest in (">", "|", ">-", "|-"):
