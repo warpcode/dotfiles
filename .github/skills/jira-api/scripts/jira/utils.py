@@ -34,8 +34,14 @@ def parse_jira_time(time_str):
     if not time_str:
         return None
 
-    # Python < 3.11 fromisoformat doesn't like HHMM offsets without a colon.
-    # We normalize +HHMM or -HHMM to +HH:MM or -HH:MM.
+    # Python 3.11+ fromisoformat natively supports ISO 8601 with Z or +HHMM/-HHMM offsets.
+    # Fast path: try parsing directly without upfront string manipulation overhead.
+    try:
+        return datetime.fromisoformat(time_str).astimezone(timezone.utc)
+    except ValueError:
+        pass
+
+    # Fallback normalization for older or non-standard ISO 8601 strings
     if "+" in time_str:
         main, offset = time_str.rsplit("+", 1)
         if len(offset) == 4 and ":" not in offset:
