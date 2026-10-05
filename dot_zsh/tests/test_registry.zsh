@@ -11,7 +11,7 @@ set -e
 print -r "Running registry.zsh unit tests..."
 
 # Test 1: Define and get standard key-value pairs
-registry.define test_app provider1 name="Ollama" endpoint="http://localhost:11434"
+registry.define test_app provider1 name="Ollama" endpoint="http://localhost:11434" api-key="sk-test-key"
 v1="$(registry.get test_app provider1 name)"
 if [[ "$v1" != "Ollama" ]]; then
     print -r "Test 1 Failed: name is not Ollama, got '$v1'" >&2
@@ -20,6 +20,16 @@ fi
 v2="$(registry.get test_app provider1 endpoint)"
 if [[ "$v2" != "http://localhost:11434" ]]; then
     print -r "Test 1 Failed: endpoint incorrect, got '$v2'" >&2
+    exit 1
+fi
+v3="$(registry.get test_app provider1 api-key)"
+if [[ "$v3" != "sk-test-key" ]]; then
+    print -r "Test 1 Failed: hyphenated key lookup incorrect, got '$v3'" >&2
+    exit 1
+fi
+v3_norm="$(registry.get test_app provider1 api_key)"
+if [[ "$v3_norm" != "sk-test-key" ]]; then
+    print -r "Test 1 Failed: normalized key lookup incorrect, got '$v3_norm'" >&2
     exit 1
 fi
 

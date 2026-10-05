@@ -111,10 +111,10 @@ registry.list() {
 registry.get() {
     _registry.validate_exists "$1" || return 1
     local id; id="$(_registry.norm "$2")" || return 1
-    _registry.validate_key "$3" || return 1
+    local k; k="$(_registry.norm "$3")" || return 1
     local data_var
     data_var="$(_registry.ns_var "$1" "data")"
-    _registry.aa_get "$data_var" "${id}:${3}"
+    _registry.aa_get "$data_var" "${id}:${k}"
 }
 
 # registry.is_enabled <namespace> <id> <func_prefix>
