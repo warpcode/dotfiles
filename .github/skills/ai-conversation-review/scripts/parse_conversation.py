@@ -75,6 +75,33 @@ def parse_antigravity_gemini_jsonl(lines: List[str]) -> List[Dict[str, Any]]:
     return events
 
 
+def normalise_tool_calls(tool_calls: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Give every tool call the same argument key so downstream formatting cannot miss it.
+
+    export_opencode_session.py emits the payload under "arguments" (it is decoded to a real
+    dict, not a JSON string), while the VS Code path in ingest_transcript() already
+    normalises to "args". The renderer only ever read "args", so every OpenCode tool call
+    rendered as `{}` -- which silently blinded the command-efficiency audit to exactly the
+    commands it is supposed to audit. Accept either key and always emit "args".
+    """
+    out = []
+    for tc in tool_calls or []:
+        if not isinstance(tc, dict):
+            continue
+        tc = dict(tc)
+        # Track whether the SOURCE carried an argument key at all. That -- not whether the
+        # value is non-empty -- is what separates an upstream key mismatch (the bug worth
+        # warning about) from a tool genuinely invoked with no arguments, which also
+        # normalises to {} and must not trigger a false alarm.
+        had_key = "args" in tc or "arguments" in tc
+        if "args" not in tc:
+            tc["args"] = compact_tool_args(tc.get("arguments"))
+        tc["args_recovered"] = had_key
+        tc.pop("arguments", None)
+        out.append(tc)
+    return out
+
+
 def parse_opencode_jsonl(lines: List[str]) -> List[Dict[str, Any]]:
     """Parses normalized OpenCode session JSONL (see export_opencode_session.py)."""
     events = []
@@ -87,7 +114,7 @@ def parse_opencode_jsonl(lines: List[str]) -> List[Dict[str, Any]]:
         except json.JSONDecodeError:
             continue
         role = obj.get("role", "assistant")
-        tool_calls = obj.get("tool_calls") or []
+        tool_calls = normalise_tool_calls(obj.get("tool_calls"))
         if role in ("user", "human"):
             events.append({
                 "role": "user",
@@ -376,13 +403,23 @@ def generate_markdown_summary(events: List[Dict[str, Any]], max_turns: Optional[
             output.append("\n**Tools Executed:**")
             for tc in tool_calls:
                 tname = tc.get("name", "tool")
-                targs = tc.get("args", {})
+                # generate_markdown_summary() is public and callers may hand it raw platform
+                # rows, so accept either key instead of trusting upstream normalisation.
+                targs = tc.get("args")
+                if targs is None:
+                    targs = compact_tool_args(tc.get("arguments"))
                 args_str = json.dumps(targs, separators=(',', ':')) if isinstance(targs, (dict, list)) else str(targs)
                 if len(args_str) > 200:
-                    args_str = args_str[:180] + "...}"
+                    args_str = args_str[:180] + '" ...[truncated]"'
                 status = tc.get("status")
                 suffix = f" ({status})" if status else ""
                 output.append(f"- `{tname}`{suffix}: `{args_str}`")
+            # Never let a key mismatch make an efficiency audit look like a clean session.
+            if tool_calls and not any(tc.get("args_recovered") for tc in tool_calls):
+                output.append(
+                    "> [!WARNING]\n> **No tool arguments were recovered for any call in this "
+                    "turn.** Efficiency findings drawn from this transcript are NOT reliable: "
+                    "an upstream argument-key mismatch is the likely cause.")
 
         if error:
             output.append(f"\n> [!WARNING]\n> **Execution Error:** {error}")
