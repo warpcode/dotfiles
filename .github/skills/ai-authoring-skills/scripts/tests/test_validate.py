@@ -45,13 +45,14 @@ invalid yaml line without colon
 
     def test_valid_yaml_plain_scalars_and_comments(self):
         content = """---
-description: Don't do this
+description: Don't do this # comment
 url: https://example.com#section
-color: #ff0000
-issue: #147
+color: "#ff0000"
+issue: "#147"
 platform: Target [x86_64] platform
 metadata: {"a": 1} # note
 name: "x" # he said "hi"
+comment_only: # this is a comment
 ---
 # Body
 """
@@ -64,6 +65,7 @@ name: "x" # he said "hi"
         self.assertEqual(meta["platform"], "Target [x86_64] platform")
         self.assertEqual(meta["metadata"], '{"a": 1}')
         self.assertEqual(meta["name"], "x")
+        self.assertEqual(meta["comment_only"], "")
 
     def test_invalid_yaml_nested_or_overclosed_collections(self):
         for invalid_input in [

@@ -153,8 +153,8 @@ def _scan_scalar(rest):
             continue
 
         if ch == "#" and not stack:
-            # YAML 1.2 §6.6: A '#' begins a comment only when preceded by whitespace
-            if i > 0 and rest[i - 1] in (" ", "\t"):
+            # YAML 1.2 §6.6: A '#' begins a comment when preceded by whitespace or at start of unquoted scalar
+            if i == 0 or rest[i - 1] in (" ", "\t"):
                 if end_idx is None:
                     end_idx = i
                 break
@@ -206,14 +206,16 @@ def _parse_flat_yaml(text):
         i += 1
         if not line.strip() or line.lstrip().startswith("#"):
             continue
-        m = re.match(r"^([A-Za-z][\w-]*):[ \t]*(.*)$", line)
+        m = re.match(r"^([A-Za-z][\w-]*): *(.*)$", line)
         if not m:
+            if re.match(r"^([A-Za-z][\w-]*):[\t ]*", line):
+                raise ValueError(f"invalid tab separator after key: {line!r}")
             raise ValueError(f"cannot parse frontmatter line: {line!r}")
         key, rest = m.group(1), m.group(2).strip()
 
-        # Reject tab immediately following key colon
+        # Reject tab character anywhere in separator whitespace
         colon_idx = line.find(":")
-        if colon_idx != -1 and line[colon_idx + 1 :].startswith("\t"):
+        if colon_idx != -1 and "\t" in line[colon_idx + 1 : len(line) - len(line[colon_idx + 1 :].lstrip())]:
             raise ValueError(f"invalid tab separator after key: {line!r}")
 
         if rest in (">", "|", ">-", "|-"):
