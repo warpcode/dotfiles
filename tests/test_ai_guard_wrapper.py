@@ -2,7 +2,7 @@ import json
 import os
 import sys
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, mock_open
 from io import StringIO
 import importlib.util
 from pathlib import Path
@@ -241,6 +241,38 @@ class TestAIGuardWrapper(unittest.TestCase):
         # The logic expects a proto_resp printed before exit(0)
         self.assertTrue("injectSteps" in json.loads(mock_stdout.getvalue()))
         self.mock_exit.assert_called_with(0)
+
+    @patch('builtins.open', new_callable=mock_open)
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_handle_prompt_route_debug_logging_prevented_when_unset(self, mock_stderr, mock_stdout, mock_run_guard, m_open):
+        mock_run_guard.return_value = (0, {"decision": "replace", "sanitized": "sensitive_data_12345"})
+        payload = {"prompt": "my secret is sensitive_data_12345"}
+
+        with patch.dict(os.environ, {}, clear=True):
+            with self.assertRaises(SystemExitException):
+                ai_guard_wrapper.handle_prompt_route(payload)
+
+        m_open.assert_not_called()
+
+    @patch('builtins.open', new_callable=mock_open)
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_handle_prompt_route_debug_logging_when_enabled(self, mock_stderr, mock_stdout, mock_run_guard, m_open):
+        mock_run_guard.return_value = (0, {"decision": "replace", "sanitized": "sensitive_data_12345"})
+        payload = {"prompt": "my secret is sensitive_data_12345"}
+
+        with patch.dict(os.environ, {"AI_GUARD_DEBUG": "1"}, clear=True):
+            with self.assertRaises(SystemExitException):
+                ai_guard_wrapper.handle_prompt_route(payload)
+
+        m_open.assert_called_once_with("/tmp/ai-guard-wrapper.log", "a")
+        handle = m_open()
+        written_content = "".join(call.args[0] for call in handle.write.call_args_list)
+        self.assertIn("PROMPT SANITIZED", written_content)
+        self.assertNotIn("sensitive_data_12345", written_content)
 
 
 if __name__ == '__main__':
