@@ -34,7 +34,6 @@ ERR_FILE=$(mktemp)
 trap 'rm -f "$ERR_FILE"' EXIT
 RAW_OUTPUT=$(printf '%s' "$INPUT" | "$AI_GUARD_BIN" "${GUARD_ARGS[@]}" 2>"$ERR_FILE") || EXIT_CODE=$?
 STDERR_MSG=$(cat "$ERR_FILE")
-rm -f "$ERR_FILE"
 
 if [[ $EXIT_CODE -eq 2 ]]; then
   >&2 echo "${STDERR_MSG:-SECURITY GUARD: Operation denied.}"
