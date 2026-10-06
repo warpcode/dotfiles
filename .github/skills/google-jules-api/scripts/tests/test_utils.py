@@ -8,9 +8,23 @@ scripts_dir = Path(__file__).resolve().parent.parent
 if str(scripts_dir) not in sys.path:
     sys.path.insert(0, str(scripts_dir))
 
-from jules.utils import die, err, info, format_datetime
+from datetime import datetime, timezone
+from jules.utils import die, err, info, format_datetime, parse_iso_datetime
 
 class TestJulesUtils(unittest.TestCase):
+    def test_parse_iso_datetime(self):
+        # Test ISO 8601 with Z suffix
+        dt1 = parse_iso_datetime("2023-10-25T12:34:56Z")
+        self.assertEqual(dt1, datetime(2023, 10, 25, 12, 34, 56, tzinfo=timezone.utc))
+
+        # Test ISO 8601 without Z suffix
+        dt2 = parse_iso_datetime("2023-10-25T12:34:56")
+        self.assertEqual(dt2, datetime(2023, 10, 25, 12, 34, 56))
+
+        # Test ISO 8601 with explicit offset
+        dt3 = parse_iso_datetime("2023-10-25T12:34:56+00:00")
+        self.assertEqual(dt3, datetime(2023, 10, 25, 12, 34, 56, tzinfo=timezone.utc))
+
     def test_format_datetime_valid(self):
         # Test basic valid ISO 8601 string
         self.assertEqual(

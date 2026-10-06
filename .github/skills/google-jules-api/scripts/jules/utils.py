@@ -19,13 +19,24 @@ def info(message: str, verbose: bool = False) -> None:
         sys.stderr.write(f"[jules] {message}\n")
 
 
+def parse_iso_datetime(iso_str: str) -> datetime:
+    """Parse an ISO 8601 timestamp string into a datetime object.
+
+    Uses Python 3.11+ native fromisoformat parsing as a fast path to avoid
+    string allocation and replacement overhead for ISO strings with 'Z' or offsets.
+    """
+    try:
+        return datetime.fromisoformat(iso_str)
+    except ValueError:
+        return datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
+
+
 def format_datetime(iso_str: str | None) -> str:
     """Format an ISO 8601 timestamp into a readable date-time string."""
     if not iso_str:
         return "N/A"
     try:
-        clean_str = iso_str.replace("Z", "+00:00")
-        dt = datetime.fromisoformat(clean_str)
+        dt = parse_iso_datetime(iso_str)
         return dt.strftime("%Y-%m-%d %H:%M:%S UTC")
     except Exception:
         return iso_str
