@@ -48,6 +48,30 @@ USER_CORRECTION_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# Skill and system prompts are injected as user turns. Their boilerplate is dense with
+# correction-shaped words ("MUST", "missed", "instead", "not just"), so the keyword
+# heuristic above fires on them and reports a correction the user never made.
+# Observed 2026-10-07 on a cloakenv PR-review session: Turn 1 (a review-pull-request
+# skill prompt) and Turn 9 (an ai-conversation-review skill prompt) were both flagged,
+# while the session contained zero actual corrections.
+INJECTED_PROMPT_PREFIXES = (
+    "# PR Review Orchestrator",
+    "# AI Conversation Review",
+    "# Conversation Review",
+    "<system-reminder>",
+    "<command-name>",
+    "<local-command",
+    "Caveat: The messages below were generated",
+)
+
+
+def is_injected_prompt(content: str) -> bool:
+    """True when a user turn is injected skill/system content rather than human input."""
+    stripped = content.lstrip()
+    if not stripped:
+        return True
+    return stripped.startswith(INJECTED_PROMPT_PREFIXES)
+
 OPENCODE_DB_PATH = Path.home() / ".local/share/opencode/opencode.db"
 ANTIGRAVITY_BRAIN_PATHS = [
     Path.home() / ".gemini/antigravity/brain",
@@ -463,7 +487,7 @@ def _ingest_copilot_jsonl(path: Path, sess: IngestedSession) -> None:
             chain_broken = True
             content = rdata.get("content", "").strip()
             summary = content[:80]
-            corr = USER_CORRECTION_PATTERN.search(content)
+            corr = None if is_injected_prompt(content) else USER_CORRECTION_PATTERN.search(content)
             sess.user_turns.append({
                 "turn_num": len(sess.user_turns) + 1,
                 "event_idx": idx,
@@ -572,7 +596,7 @@ def _ingest_antigravity_jsonl(path: Path, sess: IngestedSession) -> None:
             segment += 1
             chain_broken = True
             summary = content[:80]
-            corr = USER_CORRECTION_PATTERN.search(content)
+            corr = None if is_injected_prompt(content) else USER_CORRECTION_PATTERN.search(content)
             sess.user_turns.append({
                 "turn_num": len(sess.user_turns) + 1,
                 "event_idx": idx,
@@ -680,7 +704,7 @@ def _ingest_opencode_db(sess: IngestedSession) -> None:
             if role == "user":
                 segment += 1
                 chain_broken = True
-                corr = USER_CORRECTION_PATTERN.search(text)
+                corr = None if is_injected_prompt(text) else USER_CORRECTION_PATTERN.search(text)
                 sess.user_turns.append({
                     "turn_num": len(sess.user_turns) + 1,
                     "event_idx": idx,

@@ -30,6 +30,12 @@ flowchart LR
 **Data-gathering budget: 3 or fewer tool calls per review.**
 Using `review_conversation.py` executes ingest, smells audit, offload analysis, timeline extraction, and history recording in **1 single tool call**, leaving 2 spare calls if targeted inspection of a rule file or git commit is required.
 
+> **Resolving the target is itself budgeted as 1 of those 3 calls.** Use `--current` (or an explicit
+> session ID), never `--latest`, when reviewing the conversation in progress — a wrong target means
+> re-deriving the session ID by querying the database by hand, which cost 4 calls and 10 total on
+> 2026-10-07. If you exceed the budget, say so explicitly in §1 of the report rather than quietly
+> absorbing it.
+
 ---
 
 ## Stage 1: Gather Audit Dossier (Single Command)
@@ -37,23 +43,55 @@ Using `review_conversation.py` executes ingest, smells audit, offload analysis, 
 Supported platforms (natively resolved without manual exports):
 - **VS Code Copilot Chat**: Pass session UUID or transcript path (searches `workspaceStorage`).
 - **Google Antigravity / Gemini CLI**: Pass conversation UUID (auto-resolves `~/.gemini/antigravity-cli/brain/<uuid>/.system_generated/logs/transcript.jsonl`).
-- **OpenCode**: Pass session ID (`ses_...`) or `--platform opencode --latest` (directly queries `~/.local/share/opencode/opencode.db` in read-only SQLite mode; zero temporary files needed).
+- **OpenCode**: Pass session ID (`ses_...`) or `--current` (directly queries `~/.local/share/opencode/opencode.db` in read-only SQLite mode; zero temporary files needed).
 - **Claude Code**: Pass UUID or path in `~/.claude/projects/`.
 - **Markdown / Plain text**: Pass file path.
 
+### ⚠️ `--latest` is NOT "the conversation we are in"
+
+`--latest` answers *"which transcript changed most recently, anywhere on this machine."* That is a
+different question from *"which conversation am I in right now."* It resolves wrongly whenever:
+
+- a **long-running** session is still being written to but a **shorter session started later** —
+  the later session wins on recency, so a conversation you have been in for hours loses to one that
+  ended ten minutes ago;
+- you work in **multiple workspaces** and another directory has a fresher session;
+- several agents are active concurrently.
+
+Verified 2026-10-07 on `warpcode/cloakenv`: `--latest --platform opencode` returned a `dotfiles`
+session (`ses_ee89234…`, 19:00:37) while the active cloakenv review session (`ses_eef919dd…`,
+19:56:02) was still running — a 56-minute gap that cost 4 extra tool calls to recover by hand.
+
+**Resolution order — use the first one available:**
+
+| Priority | Form | When |
+|---|---|---|
+| 1 | `<ses_id>` explicitly | You already know the session ID. Always correct. |
+| 2 | `--current` | Most recently updated session **scoped to the current working directory**. Fails loudly rather than guessing. |
+| 3 | `--latest` | Only when you genuinely want the newest transcript on the machine, regardless of workspace. |
+
+Unless the user names a specific conversation, the default is `--current`. If `--current` cannot
+resolve (no session for this directory), say so and ask for a session ID — do **not** silently fall
+back to `--latest`.
+
 ### Canonical Single-Step Execution
 
-Run the unified review script with `--record`. It auto-resolves file paths, session UUIDs, or `--latest`, computes all offload metrics, audits command smells, extracts user corrections with verified turn numbers, and updates review history in **one call**:
+Run the unified review script with `--record`. It auto-resolves file paths, session UUIDs, or
+`--current`, computes all offload metrics, audits command smells, extracts user corrections with
+verified turn numbers, and updates review history in **one call**:
 
 ```bash
 # Review by UUID or path across any platform (records baseline automatically):
 python3 <skill-dir>/scripts/review_conversation.py <uuid_or_path_or_ses_id> --record
 
-# Auto-resolve the active/most recent transcript across workspaces:
+# DEFAULT when reviewing the conversation in progress (scoped to $PWD):
+python3 <skill-dir>/scripts/review_conversation.py --current --record
+
+# Machine-wide newest transcript -- NOT the current conversation. Use with care:
 python3 <skill-dir>/scripts/review_conversation.py --latest --record
 
-# Filter --latest by platform if desired:
-python3 <skill-dir>/scripts/review_conversation.py --latest --platform [copilot|antigravity|opencode]
+# Filter by platform if desired:
+python3 <skill-dir>/scripts/review_conversation.py --current --platform [copilot|antigravity|opencode]
 ```
 
 ### Deep Statistics & Diagnostic Modes
