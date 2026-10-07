@@ -204,10 +204,14 @@ def main() -> None:
             break
         time.sleep(args.interval)
 
+    bad = False
     if args.json:
         payload = []
         for p in prs:
             overall, failing, pending = rollup_status(p)
+            flags = attention_reasons(p, expect, overall, failing)
+            if flags:
+                bad = True
             payload.append({
                 "number": p["number"], "state": p.get("state"),
                 "headRefName": p.get("headRefName"),
@@ -216,7 +220,7 @@ def main() -> None:
                 "mergeable": p.get("mergeable"),
                 "mergeStateStatus": p.get("mergeStateStatus"),
                 "checks": overall, "failing": failing, "pending": pending,
-                "flags": attention_reasons(p, expect),
+                "flags": flags,
             })
         print(json.dumps({"repo": repo, "prs": payload}, indent=2))
     else:
@@ -225,7 +229,7 @@ def main() -> None:
         if bad:
             print("attention needed: conflicting, failing checks, or head drift "
                   "(see Flags column)")
-    raise SystemExit(2 if any(attention_reasons(p, expect) for p in prs) else 0)
+    raise SystemExit(2 if bad else 0)
 
 
 if __name__ == "__main__":

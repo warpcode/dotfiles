@@ -70,6 +70,22 @@ class TestPRStateRollup(unittest.TestCase):
         self.assertIn("draft", reasons)
         self.assertTrue(any("HEAD DRIFT" in r for r in reasons))
 
+    def test_attention_reasons_precomputed(self):
+        pr = {
+            "number": 102,
+            "mergeable": "MERGEABLE",
+            "isDraft": False,
+            "headRefOid": "abcdef123456",
+        }
+        expect = {}
+        # Precomputed failure bypasses rollup_status(pr) lookup
+        reasons_fail = prs.attention_reasons(pr, expect, overall=prs.FAIL, failing="lint,test")
+        self.assertEqual(reasons_fail, ["checks failing: lint,test"])
+
+        # Precomputed ok bypasses rollup_status(pr) lookup
+        reasons_ok = prs.attention_reasons(pr, expect, overall=prs.OK, failing="")
+        self.assertEqual(reasons_ok, [])
+
     def test_render(self):
         prs_list = [
             {
