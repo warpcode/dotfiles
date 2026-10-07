@@ -18,6 +18,7 @@ Master orchestrator for pull request reviews. You are responsible for the entire
 ### 2. Contextual Audit
 - **Resolve owner/repo first**: never assume the owner from the local directory or from a remembered `user/repo`. Run `git remote -v` (or `gh repo view --json nameWithOwner`) and use that `<owner>/<repo>` for every subsequent `gh` call. Verified 2026-09-26: a guessed owner (`exampleuser/cloakenv`) failed with `Could not resolve to a Repository` while the real remote was `warpcode/cloakenv`.
 - Use `gh pr view <pr> --repo <owner>/<repo> --json <fields>` and `gh pr diff <pr> --repo <owner>/<repo>` to retrieve the PR state without checking out the branch.
+- **Scratch Directory Location**: NEVER create or write to `./scratch/` in the active workspace tree. Always write temporary diffs, review payloads, and scratch files to `/tmp/` or the conversation artifact directory (`<appDataDir>/brain/<conversation-id>/scratch/`).
 - **Isolate the real diff with a blob-hash sweep (do this first)**: `gh pr diff` is merge-base-relative, so a branch cut before several merges reports files that `main` already contains verbatim. Comparing blob hashes per file collapses the diff to what actually changed, and a `SAME` production file is immediate evidence of a self-reverting refactor or an already-merged change:
   ```bash
   git fetch origin pull/<pr>/head:refs/remotes/origin/pr-<pr> --force
