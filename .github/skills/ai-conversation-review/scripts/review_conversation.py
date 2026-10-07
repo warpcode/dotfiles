@@ -48,7 +48,10 @@ USER_CORRECTION_PATTERN = re.compile(
 )
 
 OPENCODE_DB_PATH = Path.home() / ".local/share/opencode/opencode.db"
-ANTIGRAVITY_BRAIN_PATH = Path.home() / ".gemini/antigravity-cli/brain"
+ANTIGRAVITY_BRAIN_PATHS = [
+    Path.home() / ".gemini/antigravity/brain",
+    Path.home() / ".gemini/antigravity-cli/brain",
+]
 VSCODE_STORAGE_PATH = Path.home() / "Library/Application Support/Code/User/workspaceStorage"
 CLAUDE_PROJECTS_PATH = Path.home() / ".claude/projects"
 
@@ -87,16 +90,17 @@ def resolve_target(target: Optional[str], latest: bool = False, platform_filter:
         plat = detect_platform_from_file(direct)
         return ResolvedTarget("file", direct, direct.stem, plat)
 
-    # 4. Check Antigravity UUID in ~/.gemini/antigravity-cli/brain/<uuid>
-    if ANTIGRAVITY_BRAIN_PATH.exists():
-        ag_transcript = ANTIGRAVITY_BRAIN_PATH / clean / ".system_generated/logs/transcript.jsonl"
-        if ag_transcript.is_file():
-            return ResolvedTarget("file", ag_transcript, clean, "antigravity")
-        # Try search for partial UUID in brain
-        for brain_dir in ANTIGRAVITY_BRAIN_PATH.glob(f"*{clean}*"):
-            cand = brain_dir / ".system_generated/logs/transcript.jsonl"
-            if cand.is_file():
-                return ResolvedTarget("file", cand, brain_dir.name, "antigravity")
+    # 4. Check Antigravity UUID across brain search paths
+    for brain_path in ANTIGRAVITY_BRAIN_PATHS:
+        if brain_path.exists():
+            ag_transcript = brain_path / clean / ".system_generated/logs/transcript.jsonl"
+            if ag_transcript.is_file():
+                return ResolvedTarget("file", ag_transcript, clean, "antigravity")
+            # Try search for partial UUID in brain
+            for brain_dir in brain_path.glob(f"*{clean}*"):
+                cand = brain_dir / ".system_generated/logs/transcript.jsonl"
+                if cand.is_file():
+                    return ResolvedTarget("file", cand, brain_dir.name, "antigravity")
 
     # 5. Check VS Code Copilot in workspaceStorage
     if VSCODE_STORAGE_PATH.exists():
@@ -124,10 +128,12 @@ def resolve_latest(platform_filter: Optional[str] = None) -> ResolvedTarget:
     candidates = []
 
     # Antigravity
-    if (not platform_filter or platform_filter == "antigravity") and ANTIGRAVITY_BRAIN_PATH.exists():
-        for p in ANTIGRAVITY_BRAIN_PATH.glob("*/.system_generated/logs/transcript.jsonl"):
-            if p.is_file():
-                candidates.append((p.stat().st_mtime, "file", p, p.parent.parent.parent.name, "antigravity"))
+    if not platform_filter or platform_filter == "antigravity":
+        for brain_path in ANTIGRAVITY_BRAIN_PATHS:
+            if brain_path.exists():
+                for p in brain_path.glob("*/.system_generated/logs/transcript.jsonl"):
+                    if p.is_file():
+                        candidates.append((p.stat().st_mtime, "file", p, p.parent.parent.parent.name, "antigravity"))
 
     # VS Code Copilot
     if (not platform_filter or platform_filter == "copilot") and VSCODE_STORAGE_PATH.exists():
@@ -948,7 +954,9 @@ def run_segment_analysis(sess: IngestedSession, spec: str) -> str:
 # ---------------------------------------------------------------------------
 
 def default_history_file() -> Path:
-    return Path(__file__).resolve().parent.parent / "review-history.jsonl"
+    temp_dir = Path(tempfile.gettempdir()) / "ai-conversation-review"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    return temp_dir / "review-history.jsonl"
 
 
 def load_history(path: Path) -> List[Dict[str, Any]]:
