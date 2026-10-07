@@ -104,4 +104,44 @@ if [[ "$v_upd" != "Ollama Updated" ]]; then
     exit 1
 fi
 
+# Test 5: Dynamic function-name construction is validated (prefix and method)
+# Assert on the *rejection message*, not just the exit code: a non-existent
+# function also yields a non-zero status, so rc alone cannot distinguish
+# "rejected by validation" from "no such function".
+function test_app.fn_ok.enabled { return 0; }
+
+if ! registry.is_enabled test_app provider1 fn_ok; then
+    print -r "Test 5 Failed: valid prefix should be accepted" >&2
+    exit 1
+fi
+
+check_rejected() {
+    local label="$1" expected="$2"; shift 2
+    local out
+    out="$("$@" 2>&1 || true)"
+    if [[ "$out" != *"$expected"* ]]; then
+        print -r "Test 5 Failed: $label not rejected (expected '$expected', got '${out:0,60}')" >&2
+        exit 1
+    fi
+}
+
+check_rejected "is_enabled prefix with semicolon" "Invalid function prefix" \
+    registry.is_enabled test_app provider1 'x;id'
+check_rejected "is_enabled prefix with space" "Invalid function prefix" \
+    registry.is_enabled test_app provider1 'a b'
+check_rejected "is_enabled prefix with command substitution" "Invalid function prefix" \
+    registry.is_enabled test_app provider1 '$(id -u)'
+check_rejected "dispatch prefix with semicolon" "Invalid function prefix" \
+    registry.call_all test_app 'x;id' enabled
+check_rejected "dispatch method with semicolon" "Invalid method" \
+    registry.call_all test_app fn_ok 'x;id'
+
+# Reflected error text must stay bounded so untrusted input cannot flood logs
+long_payload="$(printf 'z%.0s' {1..80})!bad"
+err_msg="$(registry.define test_app "$long_payload" "k=v" 2>&1 || true)"
+if (( ${#err_msg} > 80 )); then
+    print -r "Test 5 Failed: error message not bounded (${#err_msg} chars)" >&2
+    exit 1
+fi
+
 print -r "ALL REGISTRY TESTS PASSED SUCCESSFULLY!"

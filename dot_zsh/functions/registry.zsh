@@ -7,10 +7,17 @@ _registry.ns_var() {
     printf '%s_%s_%s' "registry" "$1" "$2"
 }
 
+_registry.validate_prefix() {
+    if [[ ! "$1" =~ ^[A-Za-z0-9_.]+$ ]]; then
+        print -r -- "Invalid function prefix: ${1[1,40]//[[:cntrl:]]/?}" >&2
+        return 1
+    fi
+}
+
 _registry.validate_key() {
     local norm="${1//-/_}"
     if [[ ! "$norm" =~ ^[A-Za-z0-9_:]+$ ]]; then
-        print -r -- "Invalid identifier/key: ${1//[[:cntrl:]]/?}" >&2
+        print -r -- "Invalid identifier/key: ${1[1,40]//[[:cntrl:]]/?}" >&2
         return 1
     fi
 }
@@ -121,6 +128,7 @@ registry.get() {
 registry.is_enabled() {
     _registry.validate_exists "$1" || return 1
     local id; id="$(_registry.norm "$2")" || return 1
+    _registry.validate_prefix "$3" || return 1
     local fn="$3.$id.enabled"
     if (( $+functions[$fn] )); then
         "$fn"
@@ -132,6 +140,11 @@ registry.is_enabled() {
 _registry.dispatch() {
     local ns="$1" prefix="$2" method="$3" mode="$4"; shift 4
     _registry.validate_exists "$ns" || return 1
+    _registry.validate_prefix "$prefix" || return 1
+    if [[ ! "$method" =~ ^[A-Za-z0-9_]+$ ]]; then
+        print -r -- "Invalid method: ${method[1,40]//[[:cntrl:]]/?}" >&2
+        return 1
+    fi
 
     local -a ids
     ids=($(_registry.arr_get "$(_registry.ns_var "$ns" "list")"))
