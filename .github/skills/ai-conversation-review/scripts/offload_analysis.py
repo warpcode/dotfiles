@@ -232,7 +232,10 @@ def main():
     result["transcript_path"] = tpath_str
 
     if a.record:
-        hist_path = Path(__file__).resolve().parent.parent / "review-history.jsonl"
+        import tempfile
+        hist_dir = Path(tempfile.gettempdir()) / "ai-conversation-review"
+        hist_dir.mkdir(parents=True, exist_ok=True)
+        hist_path = hist_dir / "review-history.jsonl"
         with hist_path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(result, separators=(",", ":")) + "\n")
 
