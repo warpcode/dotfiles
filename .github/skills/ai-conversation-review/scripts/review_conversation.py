@@ -73,14 +73,24 @@ class ResolvedTarget:
         self.platform = platform  # "copilot", "antigravity", "opencode", "claude", "generic"
 
 
-def resolve_target(target: Optional[str], latest: bool = False, platform_filter: Optional[str] = None) -> ResolvedTarget:
-    """Resolve a target identifier, file path, or --latest flag across platforms."""
-    # 1. Handle --latest
+def resolve_target(target: Optional[str], latest: bool = False, platform_filter: Optional[str] = None,
+                   current: bool = False) -> ResolvedTarget:
+    """Resolve a target identifier, file path, --latest, or --current across platforms."""
+    # 1. Handle --current before --latest: it is the more specific question.
+    if current:
+        return resolve_current(platform_filter)
+
+    # 2. Handle --latest
     if latest:
         return resolve_latest(platform_filter)
 
     if not target:
-        print("Error: Provide a transcript path, session ID/UUID, or --latest.", file=sys.stderr)
+        print(
+            "Error: Provide a transcript path, session ID/UUID, --current, or --latest.\n"
+            "       Prefer an explicit session ID, then --current; --latest is machine-wide\n"
+            "       and may resolve to a different conversation.",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     clean = target.strip()
@@ -1180,8 +1190,15 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("target", nargs="?", default=None, help="Transcript path, session UUID, or OpenCode ses_...")
-    parser.add_argument("--latest", action="store_true", help="Auto-resolve most recently modified transcript")
-    parser.add_argument("--platform", choices=["copilot", "antigravity", "opencode", "claude"], help="Platform filter for --latest")
+    parser.add_argument("--latest", action="store_true",
+                        help="Auto-resolve the most recently updated transcript ANYWHERE on this machine. "
+                             "This is NOT necessarily the conversation in progress - prefer --current or an "
+                             "explicit session ID when reviewing the session you are in.")
+    parser.add_argument("--current", action="store_true",
+                        help="Auto-resolve the most recently updated session for the CURRENT working directory. "
+                             "Use this (or an explicit session ID) to review the conversation in progress.")
+    parser.add_argument("--platform", choices=["copilot", "antigravity", "opencode", "claude"],
+                        help="Platform filter for --latest/--current")
 
     # Analysis modes
     parser.add_argument("--schema", action="store_true", help="Inspect event types, depth-3 keys, and field mappings")
@@ -1199,7 +1216,8 @@ def main() -> None:
     args = parser.parse_args()
 
     # 1. Resolve Target
-    resolved = resolve_target(args.target, latest=args.latest, platform_filter=args.platform)
+    resolved = resolve_target(args.target, latest=args.latest, platform_filter=args.platform,
+                              current=args.current)
 
     # 2. Ingest
     sess = ingest_session(resolved)
