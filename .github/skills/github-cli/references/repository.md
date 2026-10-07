@@ -3,7 +3,7 @@
 Manage remote repository content, files, branches, tags, commits, collaborators, and repository settings via the GitHub platform.
 
 > [!NOTE]
-> This reference covers **remote GitHub API** operations. For local git workspace actions (such as local staging, local rebases, git worktree manipulation, and local commit creation), refer to `git-expert`.
+> This reference covers **remote GitHub API** operations. For local git workspace actions (such as local staging, local rebases, and local commit creation), refer to `git-expert`. For git worktree manipulation and isolated workspace management, refer to `git-worktrees`.
 
 ---
 
