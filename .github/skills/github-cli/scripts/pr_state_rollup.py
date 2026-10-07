@@ -41,6 +41,11 @@ FIELDS = ",".join([
 
 OK, WARN, FAIL, PENDING, NONE = "pass", "warn", "fail", "pending", "-"
 
+# Pre-allocated sets for O(1) status check lookup
+SUCCESS_STATES = {"success", "neutral", "skipped"}
+FAIL_STATES = {"failure", "error", "timed_out", "cancelled", "action_required", "startup_failure"}
+PENDING_STATES = {"pending", "queued", "in_progress", "waiting", "requested"}
+
 
 def run(cmd: list[str], check: bool = False) -> tuple[int, str, str]:
     p = subprocess.run(cmd, capture_output=True, text=True)
@@ -83,13 +88,13 @@ def rollup_status(pr: dict) -> tuple[str, str, str]:
     failing, pending = [], []
     for c in checks:
         state = c.get("conclusion") or c.get("state") or c.get("status") or ""
-        name = c.get("name") or c.get("context") or "?"
         low = state.lower()
-        if low in ("success", "neutral", "skipped"):
+        if low in SUCCESS_STATES:
             continue
-        if low in ("failure", "error", "timed_out", "cancelled", "action_required", "startup_failure"):
+        name = c.get("name") or c.get("context") or "?"
+        if low in FAIL_STATES:
             failing.append(name)
-        elif low in ("pending", "queued", "in_progress", "waiting", "requested"):
+        elif low in PENDING_STATES:
             pending.append(name)
     if failing:
         return FAIL, ",".join(failing), ""
@@ -98,11 +103,12 @@ def rollup_status(pr: dict) -> tuple[str, str, str]:
     return OK, "", ""
 
 
-def attention_reasons(pr: dict, expect: dict[int, str]) -> list[str]:
+def attention_reasons(pr: dict, expect: dict[int, str], overall: str | None = None, failing: str | None = None) -> list[str]:
     reasons = []
     if (pr.get("mergeable") or "").upper() == "CONFLICTING":
         reasons.append("CONFLICTING")
-    overall, failing, pending = rollup_status(pr)
+    if overall is None or failing is None:
+        overall, failing, _ = rollup_status(pr)
     if overall == FAIL:
         reasons.append(f"checks failing: {failing}")
     if pr.get("isDraft"):
@@ -126,7 +132,7 @@ def render(prs: list[dict], expect: dict[int, str], repo: str) -> tuple[str, boo
             checks = f"pending {pending}"
         else:
             checks = "pass" if overall == OK else "-"
-        flags = attention_reasons(pr, expect)
+        flags = attention_reasons(pr, expect, overall, failing)
         if flags:
             bad = True
         sha = (pr.get("headRefOid") or "")[:7]
@@ -198,10 +204,14 @@ def main() -> None:
             break
         time.sleep(args.interval)
 
+    bad = False
     if args.json:
         payload = []
         for p in prs:
             overall, failing, pending = rollup_status(p)
+            flags = attention_reasons(p, expect, overall, failing)
+            if flags:
+                bad = True
             payload.append({
                 "number": p["number"], "state": p.get("state"),
                 "headRefName": p.get("headRefName"),
@@ -210,7 +220,7 @@ def main() -> None:
                 "mergeable": p.get("mergeable"),
                 "mergeStateStatus": p.get("mergeStateStatus"),
                 "checks": overall, "failing": failing, "pending": pending,
-                "flags": attention_reasons(p, expect),
+                "flags": flags,
             })
         print(json.dumps({"repo": repo, "prs": payload}, indent=2))
     else:
@@ -219,7 +229,7 @@ def main() -> None:
         if bad:
             print("attention needed: conflicting, failing checks, or head drift "
                   "(see Flags column)")
-    raise SystemExit(2 if any(attention_reasons(p, expect) for p in prs) else 0)
+    raise SystemExit(2 if bad else 0)
 
 
 if __name__ == "__main__":
