@@ -53,7 +53,11 @@ ANTIGRAVITY_BRAIN_PATHS = [
     Path.home() / ".gemini/antigravity/brain",
     Path.home() / ".gemini/antigravity-cli/brain",
 ]
-VSCODE_STORAGE_PATH = Path.home() / "Library/Application Support/Code/User/workspaceStorage"
+VSCODE_STORAGE_PATHS = [
+    Path.home() / "Library/Application Support/Code/User/workspaceStorage",
+    Path.home() / ".config/Code/User/workspaceStorage",
+    Path.home() / ".config/Code - Insiders/User/workspaceStorage",
+]
 CLAUDE_PROJECTS_PATH = Path.home() / ".claude/projects"
 
 
@@ -104,10 +108,11 @@ def resolve_target(target: Optional[str], latest: bool = False, platform_filter:
                     return ResolvedTarget("file", cand, brain_dir.name, "antigravity")
 
     # 5. Check VS Code Copilot in workspaceStorage
-    if VSCODE_STORAGE_PATH.exists():
-        for cand in VSCODE_STORAGE_PATH.glob(f"*/GitHub.copilot-chat/transcripts/*{clean}*.jsonl"):
-            if cand.is_file():
-                return ResolvedTarget("file", cand, cand.stem, "copilot")
+    for vspath in VSCODE_STORAGE_PATHS:
+        if vspath.exists():
+            for cand in vspath.glob(f"*/GitHub.copilot-chat/transcripts/*{clean}*.jsonl"):
+                if cand.is_file():
+                    return ResolvedTarget("file", cand, cand.stem, "copilot")
 
     # 6. Check Claude Code in ~/.claude/projects
     if CLAUDE_PROJECTS_PATH.exists():
@@ -137,10 +142,12 @@ def resolve_latest(platform_filter: Optional[str] = None) -> ResolvedTarget:
                         candidates.append((p.stat().st_mtime, "file", p, p.parent.parent.parent.name, "antigravity"))
 
     # VS Code Copilot
-    if (not platform_filter or platform_filter == "copilot") and VSCODE_STORAGE_PATH.exists():
-        for p in VSCODE_STORAGE_PATH.glob("*/GitHub.copilot-chat/transcripts/*.jsonl"):
-            if p.is_file():
-                candidates.append((p.stat().st_mtime, "file", p, p.stem, "copilot"))
+    if not platform_filter or platform_filter == "copilot":
+        for vspath in VSCODE_STORAGE_PATHS:
+            if vspath.exists():
+                for p in vspath.glob("*/GitHub.copilot-chat/transcripts/*.jsonl"):
+                    if p.is_file():
+                        candidates.append((p.stat().st_mtime, "file", p, p.stem, "copilot"))
 
     # OpenCode
     if (not platform_filter or platform_filter == "opencode") and OPENCODE_DB_PATH.exists():
