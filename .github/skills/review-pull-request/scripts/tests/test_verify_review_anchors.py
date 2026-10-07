@@ -302,9 +302,26 @@ class AnchorVerifierTests(unittest.TestCase):
             """,
         )
         res = run(["--diff", diff, "--path", "f.go", "--line", "2", "--quiet"], cwd=self.dir)
+    def test_list_anchors_prints_added_lines(self):
+        diff = self.write(
+            "l.diff",
+            """
+            diff --git a/f.go b/f.go
+            --- a/f.go
+            +++ b/f.go
+            @@ -1,2 +1,4 @@
+             l1
+            +added_line_2
+            +added_line_3
+             l4
+            """,
+        )
+        res = run(["--diff", diff, "--list"], cwd=self.dir)
         self.assertEqual(res.returncode, 0)
-        self.assertEqual(
-            len([ln for ln in res.stdout.strip().splitlines() if ln.strip()]), 1)
+        lines = res.stdout.strip().splitlines()
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(lines[0], "f.go:2: added_line_2")
+        self.assertEqual(lines[1], "f.go:3: added_line_3")
 
 
 if __name__ == "__main__":

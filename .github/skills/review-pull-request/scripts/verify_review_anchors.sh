@@ -10,6 +10,7 @@
 #
 # Options:
 #   --diff <path>     Required. Saved `gh pr diff` output.
+#   --list, -l        Print all valid added line anchors (`<path>:<line>: <text>`) and exit.
 #   --payload <path>  REST review payload JSON (reads .comments[].path/.line).
 #   --path <path>     Diff path to check against (repeat --line for each anchor).
 #   --line <n>        1-indexed line number in the POST-change target file.
@@ -26,6 +27,7 @@ diff_file=""
 payload_file=""
 head_ref=""
 quiet=0
+list_mode=0
 declare -a paths=()
 declare -a lines=()
 cur_path=""
@@ -34,6 +36,7 @@ while [[ $# -gt 0 ]]; do
   case $1 in
     -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
     --diff)    diff_file="$2"; shift 2 ;;
+    --list|-l) list_mode=1; shift ;;
     --payload) payload_file="$2"; shift 2 ;;
     --path)    cur_path="$2"; shift 2 ;;
     # Each --line pairs with the most recent --path, so
@@ -50,6 +53,16 @@ if [[ -z "$diff_file" ]]; then
 fi
 if [[ ! -f "$diff_file" ]]; then
   echo "Error: diff file '$diff_file' not found." >&2; exit 2
+fi
+if [[ $list_mode -eq 1 ]]; then
+  awk '
+    /^diff --git /   { p = $4; sub(/^b\//, "", p); next }
+    /^@@/           { split($3, r, ","); cur = substr(r[1], 2) + 0; next }
+    /^\+\+\+|^---/  { next }
+    /^\+/           { print p ":" cur ": " substr($0, 2); cur++; next }
+    /^ /            { cur++; next }
+  ' "$diff_file"
+  exit 0
 fi
 if [[ -n "$payload_file" ]]; then
   if [[ ! -f "$payload_file" ]]; then

@@ -222,6 +222,10 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
     bash <skills-dir>/review-pull-request/scripts/verify_review_anchors.sh \
       --diff <pr>.diff --payload <payload-file> --head origin/pr-<n>
     ```
+    To enumerate all valid added line numbers from the diff before drafting findings, run:
+    ```bash
+    bash <skills-dir>/review-pull-request/scripts/verify_review_anchors.sh --diff <pr>.diff --list
+    ```
     Use `--path <file> --line <n> [--line <n> ...]` to check anchors ad hoc, and `--quiet` for the verdict only. A `PASS` verdict is a hard prerequisite for submission.
     > ⚠️ **Never hand-transcribe the hunk-parsing awk.** Two failure modes were observed in practice (2026-09-26): (a) transcribing the one-liner from this file and dropping the `$3` field reference makes the script read the *pre*-change hunk start, so every anchor looks invalid; (b) inverting the diff-line ↔ file-line arithmetic when spot-checking. Both produce confident wrong answers. Let the script do it, and cross-check with `--head origin/pr-<n>` which prints the anchored line's actual text from the PR head blob — that output is the ground truth to eyeball before submitting.
     > The `+` branch must compare `cur` **before** incrementing: after the `@@` header and context lines, `cur` holds the line number of the line currently being read, so `cur++` first shifts the test one line late (off-by-one, verified 2026-09-24).
