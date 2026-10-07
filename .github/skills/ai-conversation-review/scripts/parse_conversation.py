@@ -283,6 +283,9 @@ def parse_vscode_copilot_jsonl(lines: List[str]) -> List[Dict[str, Any]]:
         elif record_type == "tool.execution_start":
             result = results.get(data.get("toolCallId"), {})
             success = result.get("success")
+            err_msg = result.get("error")
+            if success is False and not err_msg:
+                err_msg = "Tool execution failed"
             events.append({
                 "role": "tool",
                 "content": "",
@@ -291,7 +294,7 @@ def parse_vscode_copilot_jsonl(lines: List[str]) -> List[Dict[str, Any]]:
                     "args": compact_tool_args(data.get("arguments")),
                     "status": "ok" if success is True else "failed" if success is False else "unknown",
                 }],
-                "error": result.get("error") if success is False else None,
+                "error": err_msg,
             })
     return events
 
@@ -381,12 +384,13 @@ def generate_markdown_summary(events: List[Dict[str, Any]], max_turns: Optional[
         content = ev.get("content", "").strip()
         tool_calls = ev.get("tool_calls", [])
         error = ev.get("error")
+        has_failed_tool = any(tc.get("status") in ("failed", "error") for tc in tool_calls)
 
         if user_only and role.lower() != "user":
             continue
         if tools_only and not tool_calls:
             continue
-        if errors_only and not error and not ("error" in content.lower() or "fail" in content.lower()):
+        if errors_only and not error and not has_failed_tool and not ("error" in content.lower() or "fail" in content.lower()):
             continue
 
         output.append(f"\n### Turn {i} [{role}]")

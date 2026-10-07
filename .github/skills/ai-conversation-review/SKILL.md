@@ -1,198 +1,175 @@
 ---
 name: ai-conversation-review
 description: >
-  Audit human-AI chat transcripts to extract improvements for instructions/AGENTS.md,
-  audit tool and command usage efficiency, evaluate workflow scriptability to drastically
-  reduce context and token usage, enforce simpler commands, identify missed skills, and
-  consolidate repeated workflows and command chains into reusable skill scripts. Use when
-  reviewing conversations or updating instructions.
+  Audit a human-AI conversation transcript to progressively improve agents, skills and instructions.
+  Measures how much of the session's tool work could be offloaded into scripts, finds repeated tool
+  sequences, retry loops, context-heavy outputs, missed skills and guideline violations, then proposes
+  concrete diffs. Use when the user says "review this conversation", "audit our session", "analyse chat
+  history", "run conversation review", "why did the agent take so long" or "improve this skill/agent".
 ---
 
 # AI Conversation Review
 
-Comprehensive system for auditing human-AI conversations: reviewing tool and command efficiency, enforcing simpler commands, identifying missed skills, synthesizing command patterns into deterministic reusable skill scripts, and routing downstream improvements through a scope-aware, specificity-first hierarchy.
+Turn a finished session into measurable improvements for the skills, agents and instructions that ran in it.
+
+**Core principle:** scripts gather and count; the model only judges. If a review step can be done deterministically, it MUST be done by a script in `<skill-dir>/scripts/`.
+
+`<skill-dir>` = the directory containing this file. Always invoke scripts by that path; never assume the working directory.
 
 ---
 
-## When to Use
-
-- The user says "review this conversation", "audit our session", "analyze chat history", or "run conversation review".
-- You need to evaluate how much of the conducted workflow could be automated into scripts to eliminate repeated tool calls, speed up procedures, and drastically reduce context token usage.
-- You need to audit tool and command usage to eliminate complex inline Python scripts (`python3 -c "..."` / heredocs) or opaque bash pipelines in favor of simpler commands.
-- You need to identify command patterns from trial-and-error shell sequences and consolidate them into reusable scripts inside skills.
-- You want to discover which skills **should have been loaded but were missed**, diagnosing why the agent failed to trigger them.
-- You want to extract durable learnings, decisions, or user corrections into project or global memory.
-- You need to identify gaps in workspace instructions (`AGENTS.md`, `.github/copilot-instructions.md`, `CLAUDE.md`, `GEMINI.md`) or update skills/workflows/agents.
-
----
-
-## 4-Stage Review Pipeline
+## Pipeline
 
 ```mermaid
-flowchart TD
-    subgraph Ingestion["Stage 1: Multi-Format Ingestion"]
-        A["Raw Input<br/>(Inline, File, JSONL, URL)"] --> B["scripts/parse_conversation.py<br/>(Token-Efficient Ingestion)"]
-    end
-
-    subgraph Audit["Stage 2: Prompts, Skills & Missed Triggers Audit"]
-        B --> C["Extract Durable Facts & Deduplicate<br/>(@references/memory-and-instruction-hierarchy.md)"]
-        B --> D["Audit Prompts, Loaded Skills & Missed Skills<br/>(@references/prompt-and-skill-audit-rubric.md)"]
-    end
-
-    subgraph Commands["Stage 3: Tool & Command Efficiency Audit"]
-        B --> E["Audit ALL Commands & Tool Invocations<br/>Evaluate Workflow Scriptability & Token Optimization"]
-        E --> F["Flag Inefficiencies: Inline Python, Multi-Pipe Bash, Wasted Context"]
-        F --> G["Identify Patterns & Synthesize Skill Scripts<br/>(@references/script-consolidation-guide.md)"]
-    end
-
-    subgraph Routing["Stage 4: Downstream Updates & Issue-Focused Report"]
-        C --> H["Route Changes: Project vs. Global Scope"]
-        D --> H
-        G --> H
-        H --> I["Apply Specificity Hierarchy:<br/>Skill > Workflow > Subagent > Rule > AGENTS.md"]
-        I --> Out["Generate Lean Issue-Focused Report<br/>(templates/conversation-review-report.md)"]
-    end
+flowchart LR
+  A["1. Unified Audit Dossier<br/>(review_conversation.py --record)"] --> B["2. Guideline & Skill Audit<br/>(model judgement)"]
+  B --> C["3. Route Fixes<br/>(Scope x Specificity)"]
+  C --> D["4. Report<br/>(conversation-review-report.md)"]
 ```
+
+**Data-gathering budget: 3 or fewer tool calls per review.**
+Using `review_conversation.py` executes ingest, smells audit, offload analysis, timeline extraction, and history recording in **1 single tool call**, leaving 2 spare calls if targeted inspection of a rule file or git commit is required.
 
 ---
 
-## Stage 1: Multi-Format Ingestion & Normalization
+## Stage 1: Gather Audit Dossier (Single Command)
 
-The review system accepts conversation transcripts from any AI platform:
-- **Antigravity / Gemini CLI**: `transcript.jsonl` or `transcript_full.jsonl`
-- **Claude Code**: JSON/JSONL session logs (`~/.claude/projects/...`)
-- **OpenCode**: SQLite store at `~/.local/share/opencode/opencode.db` (export with `export_opencode_session.py`)
-- **OpenAI / ChatGPT**: JSON conversation exports
-- **VS Code Copilot Chat**: workspace-storage transcript JSONL, including `runSubagent` calls
-- **Plain Markdown / Text**: Exported chat text (`User:` / `Assistant:`)
+Supported platforms (natively resolved without manual exports):
+- **VS Code Copilot Chat**: Pass session UUID or transcript path (searches `workspaceStorage`).
+- **Google Antigravity / Gemini CLI**: Pass conversation UUID (auto-resolves `~/.gemini/antigravity-cli/brain/<uuid>/.system_generated/logs/transcript.jsonl`).
+- **OpenCode**: Pass session ID (`ses_...`) or `--platform opencode --latest` (directly queries `~/.local/share/opencode/opencode.db` in read-only SQLite mode; zero temporary files needed).
+- **Claude Code**: Pass UUID or path in `~/.claude/projects/`.
+- **Markdown / Plain text**: Pass file path.
 
-### OpenCode Ingestion (SQLite)
-OpenCode persists sessions in SQLite, not JSONL. **Never query the database with an inline
-`python3 -c` script** — use the bundled exporter, which joins `part` to `message` to recover
-each turn's role (OpenCode `part` rows carry no role on their own):
+### Canonical Single-Step Execution
+
+Run the unified review script with `--record`. It auto-resolves file paths, session UUIDs, or `--latest`, computes all offload metrics, audits command smells, extracts user corrections with verified turn numbers, and updates review history in **one call**:
 
 ```bash
-# List recent sessions to pick one
-python3 <skill-dir>/scripts/export_opencode_session.py --list
+# Review by UUID or path across any platform (records baseline automatically):
+python3 <skill-dir>/scripts/review_conversation.py <uuid_or_path_or_ses_id> --record
 
-# Export to parser-compatible JSONL
-python3 <skill-dir>/scripts/export_opencode_session.py <session_id> > /tmp/session.jsonl
-python3 <skill-dir>/scripts/export_opencode_session.py --latest         > /tmp/session.jsonl
+# Auto-resolve the active/most recent transcript across workspaces:
+python3 <skill-dir>/scripts/review_conversation.py --latest --record
 
-# Then audit as usual
-python3 <skill-dir>/scripts/parse_conversation.py /tmp/session.jsonl --stats
-python3 <skill-dir>/scripts/parse_conversation.py /tmp/session.jsonl --tools-only
+# Filter --latest by platform if desired:
+python3 <skill-dir>/scripts/review_conversation.py --latest --platform [copilot|antigravity|opencode]
 ```
 
-### Ingestion Helper
-To extract turns and tool invocations without consuming excessive tokens, run the parser relative to this skill's root directory (`<skill-dir>/scripts/...` e.g. `.github/skills/ai-conversation-review/scripts/...`):
+### Deep Statistics & Diagnostic Modes
+
+When diagnosing huge transcripts, exploring unfamiliar formats, or investigating specific turns, use the built-in deterministic inspection modes instead of writing ad-hoc scratch scripts:
 
 ```bash
-# Ingest from a log file
-python3 <skill-dir>/scripts/parse_conversation.py /path/to/transcript.jsonl
+# 1. Byte size breakdown & top context hogs (largest single events, tool costs):
+python3 <skill-dir>/scripts/review_conversation.py <target> --sizes
 
-# Ingest only errors and tool calls
-python3 <skill-dir>/scripts/parse_conversation.py /path/to/transcript.jsonl --errors-only
+# 2. Schema introspection, depth <= 3 nested keys, & universal field mapping:
+python3 <skill-dir>/scripts/review_conversation.py <target> --schema
+
+# 3. Slice a specific segment, turn, or final turn as a bounded table:
+python3 <skill-dir>/scripts/review_conversation.py <target> --segment final
+python3 <skill-dir>/scripts/review_conversation.py <target> --segment turn:17
+python3 <skill-dir>/scripts/review_conversation.py <target> --segment 2707:2787
+
+# 4. Chronological user prompts timeline with timestamps & correction flags:
+python3 <skill-dir>/scripts/review_conversation.py <target> --user-turns
 ```
 
-For VS Code Copilot sessions, run the audit wrapper first. It inspects all tool
-starts and completions plus delegated-agent launches without printing raw prompts
-or tool arguments. VS Code serializes branch parent IDs, so report total tool
-usage and subagent-launch counts rather than inferring per-agent tool ownership.
-For the active session, derive the transcript filename from the session ID in
-`VSCODE_TARGET_SESSION_LOG`; the transcript is under the sibling `transcripts/`
-directory, while the target session log may itself be a directory. Do not reuse
-a transcript path from terminal history without confirming its session ID.
+### Output of Stage 1 Dossier
 
-```bash
-python3 <skill-dir>/scripts/audit_vscode_session.py /path/to/transcript.jsonl
-python3 <skill-dir>/scripts/parse_conversation.py /path/to/transcript.jsonl --stats
-```
+The default command emits a token-efficient Markdown dossier (<120 lines, ~1.2k tokens) containing:
+1. **Metrics & History Baseline**: tool calls, failed calls, mechanical chains, repeated sequences, retry loops, offloadable share %, and baseline delta comparison against previous runs.
+2. **Top Script Candidates**: sequence, occurrences, calls saved, suggested class, recommended script name, and **sample argument context**.
+3. **Failed Tool Calls & Smells**: exact event line numbers, tool names, arguments, error details, inline code counts, deep pipelines (>2 pipes), and duplicate reads.
+4. **User Turns & Corrections Timeline**: exact User Turn # and Event # for all turns, with user corrections highlighted (`Wait`, `instead`, `please ensure`, etc.).
 
-Treat the audit wrapper's potential-correction count as a heuristic, not a complete detector. Manually review user turns for explicit corrections to commands, assumptions, or tool choices; a zero count does not establish that no corrections occurred. Use `parse_conversation.py --user-only` with a bounded turn range when needed.
-
-Use `audit_vscode_session.py <transcript> --details` to inspect bounded examples of long pipelines, repeated commands, and failed file paths before proposing fixes. The optional `--max-details N` limits examples per category (default: 5). This opt-in mode prints command arguments; do not use it on transcripts with secrets unless the output can be handled securely.
-Bound `--errors-only` and `--tools-only` parser output with `--max-turns` during
-triage; use an unbounded dump only when the full transcript is required.
+### Strict Prohibitions
+- **NEVER write ad-hoc Python scratch scripts or heredocs** (`python3 -c "..."`, `python3 << 'EOF'`).
+- **NEVER chain multi-command pipelines** (`cmd | grep | awk | sed | jq`).
+- **NEVER dump raw, unparsed transcripts into context**.
+- **NEVER run multiple manual script calls** when `review_conversation.py` collects everything deterministically in 1 call.
 
 ---
 
-## Stage 2: Prompts, Skills & Missed Triggers Audit
+## Stage 2: Offload Assessment & Script Classification
 
-### 1. Durable Memory & Instructions
-Extract durable facts following the Single Source of Truth Hierarchy and Scope Distinctions:
-- **Project Scope**: Repo-specific build recipes, testing flows, and architecture belong in project instructions (`<project>/AGENTS.md`, `.github/instructions/*.instructions.md`).
-- **Global Scope**: Universal developer context, user preferences, and cross-repo invariants belong in `~/.agents/AGENTS.md`.
+Every review MUST answer, with numbers: **how much of this session's work could a script have done instead of the model?**
 
-See [@references/memory-and-instruction-hierarchy.md](@references/memory-and-instruction-hierarchy.md) for qualification criteria and deduplication logic.
+All metrics are taken directly from the Section 1 & 2 outputs of `review_conversation.py`.
 
-### 2. Prompt & Skill Sharpness
-Audit all prompts and skills relevant to the conversation:
-- **Audit Loaded Skills**: Were loaded skills executed efficiently? Did the agent encounter gaps in the skill's instructions or scripts?
-- **Audit Missed Skills**: Identify tasks where an existing skill **should have been used but was never loaded**. Diagnose why: was the frontmatter `description` too narrow, missing trigger keywords, or failing to match user phrasing?
-- **Goal Scoping vs Micromanagement**: Strip manual "think step by step" scaffolding on reasoning models; declare clear output schemas and verifiable success criteria.
-- **Negative Constraints**: Pre-empt observed failure modes with strict RFC 2119 negative constraints.
+| Signal | Meaning | Why it is offloadable |
+|---|---|---|
+| Mechanical chain | 2+ tool calls with no reasoning between them | The model added nothing between steps |
+| Repeated sequence | Same tool order seen 2+ times | It is a procedure; make it one parameterised script |
+| Retry loop | Failed call followed by the same tool | The model was guessing syntax |
+| Command smells | Pipelines >2 pipes, duplicate file reads, inline scripts | Brittle, token-wasteful trial-and-error |
 
-See [@references/prompt-and-skill-audit-rubric.md](@references/prompt-and-skill-audit-rubric.md) for the evaluation rubric and symptom matrix.
+**Model Judgement:** Review each Script Candidate from the dossier and finalize its classification:
 
----
+| Class | Rule | Action |
+|---|---|---|
+| **Script** | Inputs known up front; steps never branch on meaning (e.g. Git workflows, build/test pipelines) | Write the script, document it in the owning skill |
+| **Script + flags** | Branches on simple conditions (exists, failed, regex matches) | Script with a flag per branch |
+| **Keep in model** | Depends on interpreting content (code semantics, tone, architectural decisions) | Leave in model; script only data gathering in front of it |
 
-## Stage 3: Tool & Command Usage Efficiency Audit
+You MUST NOT recommend scripting a "Keep in model" step.
 
-Thoroughly inspect **all** terminal commands and tool invocations executed during the session:
+### Standards for Every Proposed Script
+1. `--help` documents every flag, so agents never read source code to use it.
+2. Non-interactive (no prompts, pagers, or TUIs).
+3. Concise Markdown to stdout by default; `--json` for machine use.
+4. Fails loudly: `set -euo pipefail` (shell) or structured `try/except` (Python).
+5. Idempotent; mutating scripts require `--dry-run`.
 
-### 1. Workflow Scriptability & Token Optimization (Mandatory Check)
-When reviewing conversation history, **it is critical to evaluate how much of the conducted workflow could be automated into scripts to eliminate tool call sprawl and drastically cut token and context usage**:
-- **Script Common Procedures & Command Chains**: Common procedures and recurring chains of commands **should be scripted end-to-end**. Do NOT force the agent to call a million individual tools across a million turns when a single cohesive script can execute the entire procedure deterministically (e.g. end-to-end PR triage, worktree merge conflict resolution + regression test + push pipelines, or multi-check status rollups).
-- **Eliminate Tool Call Proliferation**: Every discrete tool invocation consumes substantial token overhead (tool schemas, model thinking turns, argument serialization, and raw output). Chained sequences of exploratory commands or multi-turn status checks must be consolidated into parameterized scripts within the appropriate skill package (`<skill-dir>/scripts/`).
-- **Drastic Context & Token Reduction**: Encapsulating complete multi-step procedures into scripts collapses multiple round-trips into a single tool call, guarantees adherence to project safety invariants, and keeps the conversation context lean by having the script emit only a concise, high-signal Markdown summary.
-
-### 2. Efficiency & Simplicity Assessment (Simpler Commands Mandate)
-- **Was tool and command usage efficient?** Did the agent run exploratory trial-and-error loops, guessing flags or syntax across multiple turns?
-- **Can commands be made simpler?** Enforce simpler, readable, declarative commands.
-- **Flag Anti-Patterns**:
-  - **Inline Python Scripts**: Flag any use of `python3 -c "..."` or heredocs (`python3 << 'EOF'`). These are hard to review in diffs/transcripts, prone to escaping bugs, and waste tokens.
-  - **Complex Bash Pipelines**: Flag commands with >2 pipes (`grep | awk | sed | jq`) or fragile regex acrobatics.
-  - **Context Window Flooding**: Flag commands that emit large, unformatted stdout dumps into the conversation context.
-
-### 3. Pattern Detection & Skill Script Synthesis
-- Identify recurring command patterns across turns or common workflows.
-- Consolidate ad-hoc sequences into a deterministic, reusable script located **exclusively within the appropriate skill package** (`<skill-dir>/scripts/`).
-- Ensure every synthesized script satisfies:
-  1. **Self-Documenting `--help`**: Documents parameters and options so future LLMs do not need to guess or inspect source code.
-  2. **Token-Efficient Output**: Emits concise Markdown summaries to stdout by default.
-  3. **Strict Error Trapping**: Uses `set -euo pipefail` in shell or structured `try/except` in Python.
-
-See [@references/script-consolidation-guide.md](@references/script-consolidation-guide.md) and [templates/script-wrapper-blueprint.sh](templates/script-wrapper-blueprint.sh).
+Start shell helpers from `<skill-dir>/templates/script-wrapper-blueprint.sh`. Detail: `references/script-consolidation-guide.md`.
 
 ---
 
-## Stage 4: Downstream Updates & Issue-Focused Reporting
+## Stage 3: Guideline & Skill Audit
 
-### Two-Dimensional Routing: Scope × Specificity
+### 3a. Guideline Compliance
+1. Identify the instruction files active in the session (`AGENTS.md`, `.github/copilot-instructions.md`, `CLAUDE.md`, `GEMINI.md`, `*.instructions.md`, loaded `SKILL.md` files).
+2. Extract only **checkable** rules (e.g. "use script X", "no inline Python", "provide file paths and line numbers").
+3. Mark each rule **Kept / Broken / N/A** using the exact **User Turn # (Event #)** from the timeline as evidence.
+4. For each Broken rule, diagnose: rule unclear, rule buried, rule contradicted elsewhere, or tooling made it hard to follow.
 
-When addressing issues, route fixes according to Scope (Project vs. Global) and Specificity:
+### 3b. Skills
+- **Loaded skills:** were their scripts used, or did the agent improvise around them? Any gaps in instructions?
+- **Missed skills:** a matching skill existed but was never loaded. Diagnose the cause: description too narrow, missing trigger phrases, or overlap with another skill. The fix is usually frontmatter `description`.
+- **Granularity:** recommend merging overlapping skills or splitting bloated skills.
 
-1. **Scope Selection**:
-   - **Project-Specific Scope**: Updates apply only to the repository where the task took place (e.g. project-specific skills, repo build instructions, project root `AGENTS.md`).
-   - **General Global Scope**: Updates apply universally across all workspaces in the user's dotfiles (e.g. global skills in dotfiles, universal agents, `~/.agents/AGENTS.md`).
-2. **Specificity Hierarchy**:
-   Always target the most granular artifact first:
-   $$\text{Skill} \longrightarrow \text{Workflow} \longrightarrow \text{Subagent} \longrightarrow \text{Path Rule / Instruction} \longrightarrow \text{Root AGENTS.md}$$
-   - If a command was ad-hoc: update or create a **Skill script** and document it in `SKILL.md`.
-   - If a multi-step sequence was fragile: update the **Workflow** or **Subagent**.
-   - If a file pattern had unstated rules: update the **Path Rule** (`.instructions.md`).
-   - **Root `AGENTS.md` (Project or Global) MUST ONLY be updated if the change represents a general behavior across that entire scope.**
+Rubric and symptom matrix: `references/prompt-and-skill-audit-rubric.md`.
+
+### 3c. Durable Learnings
+Extract only explicit user decisions, corrections and preferences that will recur. Cite the exact User Turn # and quote the user correction. Deduplicate against existing instructions. Detail: `references/memory-and-instruction-hierarchy.md`.
 
 ---
 
-## Output Contract & Review Report
+## Stage 4: Route Fixes
 
-All conversation reviews MUST generate a compact, lean report focused strictly on actionable feedback using [templates/conversation-review-report.md](templates/conversation-review-report.md).
+**Scope first:** project-specific fixes go in the project; universal fixes go in the user's global agent config. Never put project commands in global files, or universal tooling in project files.
 
-### Lean Reporting Rules
-- **No Congratulatory Bloat or Filler**: Omit summaries of what worked well, event stats, and compliance audit passes.
-- **Strictly Actionable Sections**:
-  1. **Suggestions**: Workflow and tooling recommendations (e.g. automating common procedures and command chains into scripts to eliminate tool sprawl and save tokens, batch operations, simpler commands, alternative tools).
-  2. **Advice**: Behavioral guidance, habit adjustments, or procedural improvements.
-  3. **Improvements**: Concrete diffs or updates targeting skills, rules, or instructions.
+**Then the most specific target:**
+1. **Skill** (`SKILL.md` or `scripts/`): ad-hoc commands, missing scripts, triggers.
+2. **Agent / subagent definition**: fragile multi-step behaviour or delegation.
+3. **Path-scoped instruction** (`*.instructions.md`): unstated rules for particular file types.
+4. **Root `AGENTS.md`** (project or global): ONLY for behaviour that applies across that entire scope.
+
+Note: `.github/workflows/` holds CI pipelines, not agent workflows. Do not route agent fixes there.
+
+**Precedence when rules conflict:** the more specific file wins for its own scope. Root `AGENTS.md` sets defaults; skills and path rules may narrow them but must not contradict universal safety rules.
+
+---
+
+## Stage 5: Report
+
+Use `templates/conversation-review-report.md`. The report MUST contain, in order:
+
+1. **Metrics**: tool calls, failed calls, offloadable share, projected calls after scripting, review data-gathering calls used, and history baseline comparison.
+2. **Script candidates**: sequence replaced, occurrences, calls saved, class, suggested script, target skill.
+3. **Guideline violations**: rule, source file, turn/event evidence, diagnosis.
+4. **Suggestions / Advice**: one line each, with a priority (High/Medium/Low) and evidence (turn number).
+5. **Improvements**: concrete diffs per target file.
+
+No praise, no narrative recap, no findings without evidence.
