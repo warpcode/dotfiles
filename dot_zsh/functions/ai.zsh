@@ -24,23 +24,35 @@ _ai.provider.models_executor() {
 }
 
 # --- Provider ---
+# Provider IDs become zsh function-name components, and provider keys become
+# registry subscripts, so both are restricted to characters that are safe in
+# either position. The registry (registry.zsh `_registry.validate_key`) folds
+# '-' to '_' and nothing else, so '-' is the only non-alphanumeric character
+# permitted here; folding it the same way keeps the registry key and the
+# generated function name identical.
+_ai.valid_id() {
+    [[ "$1" =~ ^[A-Za-z0-9_-]+$ ]]
+}
+_ai.valid_key() {
+    [[ "$1" =~ ^[A-Za-z0-9_-]+$ ]]
+}
+
 ai.provider.define() {
     local raw_pid="$1"
-    if [[ ! "$raw_pid" =~ ^[A-Za-z0-9_.:-]+$ ]]; then
-        print -u2 "Error: Invalid AI provider ID '${raw_pid}'. Must contain only alphanumeric characters, underscores, dashes, dots, and colons."
+    if ! _ai.valid_id "$raw_pid"; then
+        print -u2 "Error: Invalid AI provider ID '${raw_pid}'. Must contain only alphanumeric characters, underscores and dashes."
         return 1
     fi
 
-    # Normalize provider name for function lookups
+    # Normalise exactly as the registry does: '-' becomes '_' and nothing else.
     local pid="${raw_pid//-/_}"
-    pid="${pid//./_}"
-    pid="${pid//:/_}"
 
     local arg k
     for arg in "${@:2}"; do
+        [[ "$arg" == *=* ]] || continue
         k="${arg%%=*}"
-        if [[ ! "$k" =~ ^[A-Za-z0-9_.:]+$ ]]; then
-            print -u2 "Error: Invalid AI provider key '${k}'. Must contain only alphanumeric characters, underscores, dots, and colons."
+        if ! _ai.valid_key "$k"; then
+            print -u2 "Error: Invalid AI provider key '${k}'. Must contain only alphanumeric characters, underscores and dashes."
             return 1
         fi
     done
@@ -111,7 +123,7 @@ ai.models() {
     local pid
     local -a enabled_pids=()
     for pid in $(registry.list ai_provider); do
-        [[ "$pid" =~ ^[A-Za-z0-9_.:]+$ ]] || continue
+        _ai.valid_id "$pid" || continue
         ai.provider.is_enabled "$pid" && enabled_pids+=($pid)
     done
 
@@ -154,7 +166,7 @@ ai.models.free() {
     local pid
     local -a enabled_pids=()
     for pid in $(registry.list ai_provider); do
-        [[ "$pid" =~ ^[A-Za-z0-9_.:]+$ ]] || continue
+        _ai.valid_id "$pid" || continue
         ai.provider.is_enabled "$pid" && enabled_pids+=($pid)
     done
 
@@ -218,15 +230,13 @@ ai.chat() {
     local model="${target#*/}"
     local prompt="$*"
 
-    if [[ ! "$provider" =~ ^[A-Za-z0-9_.:-]+$ ]]; then
+    if ! _ai.valid_id "$provider"; then
         print -u2 "Error: Invalid AI provider ID '${provider}'."
         return 1
     fi
 
-    # Normalize provider name for registry/function lookups
+    # Normalise exactly as the registry does: '-' becomes '_' and nothing else.
     local pid="${provider//-/_}"
-    pid="${pid//./_}"
-    pid="${pid//:/_}"
 
     # 1. Get Provider Details
     local base_url=$(registry.get "ai_provider" "$pid" "base_url")

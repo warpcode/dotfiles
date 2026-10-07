@@ -56,7 +56,20 @@ jobs:
           ./install.sh --profile default --git-name "CI Test" --git-email "ci@example.com"
 
       - name: Run Zsh tests
-        run: zsh dot_zsh/tests/*.test.zsh
+        run: |
+          set -eu
+          found=0
+          for f in dot_zsh/tests/*.test.zsh; do
+            [ -f "$f" ] || continue
+            found=1
+            echo "::group::$f"
+            zsh "$f"
+            echo "::endgroup::"
+          done
+          if [ "$found" -eq 0 ]; then
+            echo "No zsh test files matched dot_zsh/tests/*.test.zsh" >&2
+            exit 1
+          fi
 
   test-macos:
     runs-on: macos-latest
@@ -82,4 +95,17 @@ jobs:
           ./install.sh --profile default --git-name "CI Test" --git-email "ci@example.com"
 
       - name: Run Zsh tests
-        run: zsh dot_zsh/tests/*.test.zsh
+        run: |
+          set -eu
+          found=0
+          for f in dot_zsh/tests/*.test.zsh; do
+            [ -f "$f" ] || continue
+            found=1
+            echo "::group::$f"
+            zsh "$f"
+            echo "::endgroup::"
+          done
+          if [ "$found" -eq 0 ]; then
+            echo "No zsh test files matched dot_zsh/tests/*.test.zsh" >&2
+            exit 1
+          fi
