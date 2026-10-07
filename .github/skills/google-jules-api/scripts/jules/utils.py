@@ -1,5 +1,5 @@
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def die(message: str, exit_code: int = 1) -> None:
@@ -37,6 +37,8 @@ def format_datetime(iso_str: str | None) -> str:
         return "N/A"
     try:
         dt = parse_iso_datetime(iso_str)
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(timezone.utc)
         return dt.strftime("%Y-%m-%d %H:%M:%S UTC")
     except Exception:
         return iso_str

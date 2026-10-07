@@ -25,6 +25,18 @@ class TestJulesUtils(unittest.TestCase):
         dt3 = parse_iso_datetime("2023-10-25T12:34:56+00:00")
         self.assertEqual(dt3, datetime(2023, 10, 25, 12, 34, 56, tzinfo=timezone.utc))
 
+        # Test ISO 8601 with fractional seconds and Z suffix
+        dt4 = parse_iso_datetime("2023-10-25T12:34:56.789Z")
+        self.assertEqual(dt4, datetime(2023, 10, 25, 12, 34, 56, 789000, tzinfo=timezone.utc))
+
+        # Test ISO 8601 with non-zero timezone offset (+02:00)
+        dt5 = parse_iso_datetime("2023-10-25T14:34:56+02:00")
+        self.assertEqual(dt5.astimezone(timezone.utc), datetime(2023, 10, 25, 12, 34, 56, tzinfo=timezone.utc))
+
+        # Test invalid string raises ValueError
+        with self.assertRaises(ValueError):
+            parse_iso_datetime("not-a-datetime")
+
     def test_format_datetime_valid(self):
         # Test basic valid ISO 8601 string
         self.assertEqual(
@@ -35,6 +47,12 @@ class TestJulesUtils(unittest.TestCase):
         # Test valid ISO 8601 string with 'Z'
         self.assertEqual(
             format_datetime("2023-10-25T12:34:56Z"),
+            "2023-10-25 12:34:56 UTC"
+        )
+
+        # Test non-zero timezone offset converts properly to UTC
+        self.assertEqual(
+            format_datetime("2023-10-25T14:34:56+02:00"),
             "2023-10-25 12:34:56 UTC"
         )
 
