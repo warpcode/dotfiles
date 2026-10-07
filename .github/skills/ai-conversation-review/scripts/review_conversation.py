@@ -153,7 +153,7 @@ def resolve_latest(platform_filter: Optional[str] = None) -> ResolvedTarget:
     if (not platform_filter or platform_filter == "opencode") and OPENCODE_DB_PATH.exists():
         try:
             conn = sqlite3.connect(f"file:{OPENCODE_DB_PATH}?mode=ro", uri=True)
-            row = conn.execute("SELECT id, time_created FROM session ORDER BY time_created DESC LIMIT 1").fetchone()
+            row = conn.execute("SELECT id, time_updated FROM session ORDER BY time_updated DESC LIMIT 1").fetchone()
             if row:
                 mtime = row[1] / 1000.0 if row[1] > 1e11 else float(row[1])
                 candidates.append((mtime, "opencode_db", str(OPENCODE_DB_PATH), row[0], "opencode"))
@@ -162,6 +162,85 @@ def resolve_latest(platform_filter: Optional[str] = None) -> ResolvedTarget:
 
     if not candidates:
         print("Error: No transcripts found in standard locations.", file=sys.stderr)
+        sys.exit(1)
+
+    candidates.sort(key=lambda x: x[0], reverse=True)
+    best = candidates[0]
+    return ResolvedTarget(best[1], best[2], best[3], best[4])
+
+
+def resolve_current(platform_filter: Optional[str] = None) -> ResolvedTarget:
+    """Resolve the session for the conversation currently in progress.
+
+    `--latest` answers "which transcript changed most recently, anywhere on this
+    machine" -- which is NOT the same question as "which conversation am I in
+    right now". A long-running session loses to any newer short session, and a
+    different workspace started afterwards wins outright. Both were observed
+    (2026-10-07: `--latest` returned a dotfiles session while the active
+    cloakenv review session was still being written to).
+
+    `--current` scopes the query to the session whose `directory` matches the
+    working directory, then takes the most recently updated. Prefer an explicit
+    session ID whenever you already know it; this is the fallback that removes
+    the guesswork.
+    """
+    cwd = str(Path.cwd().resolve())
+    candidates = []
+
+    # OpenCode: scope to the current working directory.
+    if (not platform_filter or platform_filter == "opencode") and OPENCODE_DB_PATH.exists():
+        try:
+            conn = sqlite3.connect(f"file:{OPENCODE_DB_PATH}?mode=ro", uri=True)
+            rows = conn.execute(
+                "SELECT id, directory, time_updated FROM session "
+                "WHERE directory = ? ORDER BY time_updated DESC",
+                (cwd,),
+            ).fetchall()
+            for sid, sdir, tupdated in rows:
+                if not tupdated:
+                    continue
+                mtime = tupdated / 1000.0 if tupdated > 1e11 else float(tupdated)
+                candidates.append((mtime, "opencode_db", str(OPENCODE_DB_PATH), sid, "opencode"))
+            if not candidates:
+                # Fall back to a prefix match so a symlinked or trailing-slash
+                # path still resolves rather than erroring out.
+                rows = conn.execute(
+                    "SELECT id, directory, time_updated FROM session "
+                    "WHERE directory LIKE ? ORDER BY time_updated DESC",
+                    (cwd + "%",),
+                ).fetchall()
+                for sid, sdir, tupdated in rows:
+                    if not tupdated:
+                        continue
+                    mtime = tupdated / 1000.0 if tupdated > 1e11 else float(tupdated)
+                    candidates.append((mtime, "opencode_db", str(OPENCODE_DB_PATH), sid, "opencode"))
+        except Exception:
+            pass
+
+    # File-based platforms: most recently modified transcript under this workspace.
+    if not candidates:
+        for base in list(VSCODE_STORAGE_PATHS) + list(ANTIGRAVITY_BRAIN_PATHS):
+            if not base.exists():
+                continue
+            for p in base.rglob("*.jsonl"):
+                if not p.is_file():
+                    continue
+                s = str(p)
+                if cwd not in s:
+                    continue
+                if platform_filter and platform_filter not in ("copilot", "antigravity"):
+                    continue
+                candidates.append(
+                    (p.stat().st_mtime, "file", p, p.stem, detect_platform_from_file(p))
+                )
+
+    if not candidates:
+        print(
+            f"Error: No transcript found for the current working directory ({cwd}).\n"
+            "       Pass an explicit session ID or transcript path instead:\n"
+            "         review_conversation.py <ses_id|path> --record",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     candidates.sort(key=lambda x: x[0], reverse=True)
