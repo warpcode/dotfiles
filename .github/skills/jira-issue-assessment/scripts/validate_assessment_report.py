@@ -27,6 +27,7 @@ REQUIRED_REQUIREMENT_SUBHEADINGS = [
 REQUIRED_REQUIREMENT_COLUMNS = [
     "Issue",
     "Requirement or acceptance criterion",
+    "Code visibility",
     "Implementation status",
     "Verification status",
     "Evidence type",
@@ -139,7 +140,7 @@ def main() -> None:
                 subsection_indexes.append(start)
                 header = table_header(
                     lines[start + 1:end],
-                    "| Issue | Requirement or acceptance criterion |",
+                    "| Issue | Requirement or acceptance criterion | Code visibility |",
                 )
                 if header is None:
                     errors.append(f"Missing requirement table header in ### {subsection}")
@@ -152,7 +153,7 @@ def main() -> None:
                 requirement_rows.extend(
                     table_rows(
                         lines[start + 1:end],
-                        header_prefix="| Issue | Requirement or acceptance criterion |",
+                        header_prefix="| Issue | Requirement or acceptance criterion | Code visibility |",
                     )
                 )
         if subsection_indexes != sorted(subsection_indexes):
