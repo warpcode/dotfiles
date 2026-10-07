@@ -141,6 +141,9 @@ Convenience scanning command that evaluates inactivity duration and flags potent
 # Full health sweep — always use --max-age-days 0 for audits (7-day default is daily triage only)
 python3 <skill-dir>/scripts/main.py check-sessions --page-size 50 --max-age-days 0 --flag-unmerged
 
+# Filter audit by repository (e.g., warpcode/cloakenv)
+python3 <skill-dir>/scripts/main.py check-sessions --repo warpcode/cloakenv --page-size 20
+
 # Full sweep with per-session conversation history
 python3 <skill-dir>/scripts/main.py check-sessions --page-size 50 --max-age-days 0 --history --flag-unmerged
 
@@ -159,7 +162,13 @@ python3 <skill-dir>/scripts/main.py check-sessions --page-size 10 --max-age-days
 # Dry-run: list gated/stalled sessions without a PR that are safe to archive. Mutates nothing.
 python3 <skill-dir>/scripts/main.py archive-session --list-candidates --page-size 20
 
-# Archive (reversible) - the correct action for "archive", "close out", "hide", "tidy"
+# Batch archive: archive ALL gated/stalled candidates without a PR in 1 single command
+python3 <skill-dir>/scripts/main.py archive-session --all-candidates
+
+# Batch archive filtered by repo
+python3 <skill-dir>/scripts/main.py archive-session --all-candidates --repo warpcode/cloakenv
+
+# Archive specific session(s) (reversible)
 python3 <skill-dir>/scripts/main.py archive-session <session_id> [<session_id> ...]
 
 # Restore an archived session to the active listing
