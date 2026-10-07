@@ -165,8 +165,13 @@ code review — and still never push and never open a PR. The activity log ends 
 completed" + an `Artifacts` event ("1 patch/artifact(s)"), while the source branch still points at
 the commit it had before the session started.
 
-**The session state is not evidence of delivery.** Verify with the remote, not the API:
+**The session state is not evidence of delivery.** Verify with the remote, not the API. Run the bundled verification script in 1 step:
 
+```bash
+bash <skills-dir>/google-jules-triage/scripts/verify_delivery.sh <owner/repo> <source-branch> [base-branch]
+```
+
+Or manually:
 ```bash
 git fetch origin <source-branch>
 git log --format='%h %s' origin/main..origin/<source-branch>   # unchanged? nothing was pushed
