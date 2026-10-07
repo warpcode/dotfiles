@@ -24,10 +24,41 @@ _ai.provider.models_executor() {
 }
 
 # --- Provider ---
+# Provider IDs become zsh function-name components, and provider keys become
+# registry subscripts, so both are restricted to characters that are safe in
+# either position. The registry (registry.zsh `_registry.validate_key`) folds
+# '-' to '_' and nothing else, so '-' is the only non-alphanumeric character
+# permitted here; folding it the same way keeps the registry key and the
+# generated function name identical.
+_ai.valid_id() {
+    [[ "$1" =~ ^[A-Za-z0-9_-]+$ ]]
+}
+_ai.valid_key() {
+    [[ "$1" =~ ^[A-Za-z0-9_-]+$ ]]
+}
+
 ai.provider.define() {
+    local raw_pid="$1"
+    if ! _ai.valid_id "$raw_pid"; then
+        print -u2 "Error: Invalid AI provider ID '${raw_pid}'. Must contain only alphanumeric characters, underscores and dashes."
+        return 1
+    fi
+
+    # Normalise exactly as the registry does: '-' becomes '_' and nothing else.
+    local pid="${raw_pid//-/_}"
+
+    local arg k
+    for arg in "${@:2}"; do
+        [[ "$arg" == *=* ]] || continue
+        k="${arg%%=*}"
+        if ! _ai.valid_key "$k"; then
+            print -u2 "Error: Invalid AI provider key '${k}'. Must contain only alphanumeric characters, underscores and dashes."
+            return 1
+        fi
+    done
+
     registry.define "ai_provider" "$@"
-    
-    local pid="${1//-/_}"
+
     if (( ! $+functions[ai.providers.${pid}.enabled] )); then
         functions[ai.providers.${pid}.enabled]="return 0"
     fi
@@ -92,6 +123,7 @@ ai.models() {
     local pid
     local -a enabled_pids=()
     for pid in $(registry.list ai_provider); do
+        _ai.valid_id "$pid" || continue
         ai.provider.is_enabled "$pid" && enabled_pids+=($pid)
     done
 
@@ -134,6 +166,7 @@ ai.models.free() {
     local pid
     local -a enabled_pids=()
     for pid in $(registry.list ai_provider); do
+        _ai.valid_id "$pid" || continue
         ai.provider.is_enabled "$pid" && enabled_pids+=($pid)
     done
 
@@ -197,7 +230,12 @@ ai.chat() {
     local model="${target#*/}"
     local prompt="$*"
 
-    # Normalize provider name for registry/function lookups
+    if ! _ai.valid_id "$provider"; then
+        print -u2 "Error: Invalid AI provider ID '${provider}'."
+        return 1
+    fi
+
+    # Normalise exactly as the registry does: '-' becomes '_' and nothing else.
     local pid="${provider//-/_}"
 
     # 1. Get Provider Details
