@@ -16,6 +16,8 @@ history_to_conv_id = {}
 
 # Allowed models for Antigravity bridge mapping
 ALLOWED_MODELS = frozenset({"flash_lite", "flash", "pro"})
+# Recognized standard OpenAI chat completion roles
+ALLOWED_ROLES = frozenset({"user", "assistant", "system", "developer", "tool", "function"})
 
 class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
     def log_message(self, format, *args):
@@ -117,6 +119,24 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
             self.send_error_response(400, "No messages provided")
             return
 
+        # Normalize message roles to standard allowed roles upfront so cache hashing and prompt construction are consistent
+        normalized_messages = []
+        for msg in messages:
+            if not isinstance(msg, dict):
+                continue
+            raw_role = msg.get("role")
+            role = raw_role if isinstance(raw_role, str) and raw_role.lower() in ALLOWED_ROLES else "user"
+            content = msg.get("content", "")
+            if not isinstance(content, str):
+                content = str(content) if content is not None else ""
+            normalized_messages.append({"role": role.lower(), "content": content})
+
+        if not normalized_messages:
+            self.send_error_response(400, "No valid messages provided")
+            return
+
+        messages = normalized_messages
+
         last_msg = messages[-1]
         current_prompt = last_msg.get("content", "")
 
@@ -142,12 +162,7 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
             if history:
                 context_str = "Context of previous conversation:\n"
                 for msg in history:
-                    raw_role = msg.get("role", "user")
-                    if not isinstance(raw_role, str):
-                        raw_role = "user"
-                    # Sanitize role: restrict to alphanumeric characters to prevent role header / prompt injection
-                    clean_role = "".join(c for c in raw_role if c.isalnum()) or "User"
-                    role = clean_role.capitalize()
+                    role = msg.get("role", "user").capitalize()
                     content = msg.get("content", "")
                     context_str += f"{role}: {content}\n"
                 context_str += "\nNow respond to the following prompt:\n"
