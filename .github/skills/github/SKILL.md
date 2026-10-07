@@ -58,11 +58,11 @@ Use the PR template (repo-specific or fallback `@templates/pull_request.md`). En
 
 ### Review Tone & Style
 - **Tone**: Strictly neutral, fact-based, and formal. Do not include encouraging adjectives, subjective evaluations, or conversational filler (e.g., "looks excellent", "successfully", "elegantly", "LGTM").
-- **Format**: For each finding use the structure: 1. Severity (High/Medium/Low), 2. Description, 3. Impact, 4. Proposed Solution. Refer to `@templates/pull_request_review_comment.md` for formatting details.
+- **Format**: For each finding use the structure: 1. Severity (High/Medium/Low), 2. Description, 3. Impact, 4. Proposed Solution. Refer to `github-pr-review` for comment formatting details.
 
 ### Review Events
 - **REQUEST_CHANGES**: For this user's reviews, use whenever any finding exists, including low-severity findings or unresolved merge conflicts.
-- **COMMENT**: Do not use as a substitute for `REQUEST_CHANGES` based on severity. Use only for the self-authored-PR restriction described in `review-pull-request`, or when the user explicitly requests a non-decision comment.
+- **COMMENT**: Do not use as a substitute for `REQUEST_CHANGES` based on severity. Use only for the self-authored-PR restriction described in `github-pr-review`, or when the user explicitly requests a non-decision comment.
 - **APPROVE**: Use when there are no findings or all previously raised issues are fully resolved. When approving, NEVER add NEW comments to files. Provide no summary if there is nothing new to add.
 
 ### Review Orchestration & Phase Separation

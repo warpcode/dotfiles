@@ -34,10 +34,10 @@ def main() -> int:
         if missing:
             print(f"finding {i}: missing {missing}", file=sys.stderr)
             return 1
-        body = (f"**{item['severity']} - {item['title']}**\n\n"
+        body = (f"**Severity:** {item['severity']} - {item['title']}\n\n"
                 f"**Description:** {item['description']}\n\n"
                 f"**Impact:** {item['impact']}\n\n"
-                f"**Solution:** {item['solution']}")
+                f"**Proposed Solution:** {item['solution']}")
         comments.append({"path": item["path"], "line": int(item["line"]), "side": "RIGHT", "body": body})
 
     with open(args.out, "w") as f:

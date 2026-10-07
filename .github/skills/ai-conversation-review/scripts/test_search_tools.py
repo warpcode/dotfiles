@@ -48,7 +48,7 @@ class TestSearchTools(unittest.TestCase):
     def test_match_tool_call_by_script(self):
         tc = {
             "name": "run_command",
-            "args": {"CommandLine": "python3 .github/skills/review-pull-request/scripts/verify_review_anchors.sh --list"},
+            "args": {"CommandLine": "python3 .github/skills/github-pr-review/scripts/verify_review_anchors.sh --list"},
         }
         matched, target = match_tool_call(tc, script_targets={"verify_review_anchors.sh", "other_script.py"})
         self.assertTrue(matched)

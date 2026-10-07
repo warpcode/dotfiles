@@ -1,5 +1,5 @@
 ---
-name: review-pull-request
+name: github-pr-review
 description: Master orchestrator for end-to-end GitHub pull request reviews (discovery, audit, and submission). Use when managing a formal PR review from candidate selection through findings and submission.
 ---
 
@@ -24,6 +24,12 @@ calls. `--help` documents each one. Paths are relative to this skill's directory
 | `scripts/submit_review.sh` | Builds → verifies → submits, in that order, capturing diff and ref in one fetch. The preferred submission path. |
 | `scripts/audit_ci_test_coverage.sh` | Reports whether CI actually runs the repo's tests, and which `paths:` filters gate it. |
 | `scripts/apply_mutation.py` | The mutation rewriter `mutation_check.sh` calls. Run it standalone with `--check` to confirm a pattern applies before committing to a finding. |
+
+## 📄 Templates
+
+| Template | Path | Usage |
+| --- | --- | --- |
+| Inline Review Comment | `@templates/pull_request_review_comment.md` | Required schema for `REQUEST_CHANGES` inline findings (`Severity`, `Description`, `Impact`, `Proposed Solution`). |
 
 ## 🚀 Lifecycle Procedure
 
@@ -104,7 +110,7 @@ calls. `--help` documents each one. Paths are relative to this skill's directory
     > **Do not hand-roll this.** `scripts/mutation_check.sh` already encodes all four rules below. Read its `--help`, write a `mutations.json` spec, run it. A hand-typed `run_mut` helper plus an inline `python3 - <<EOF` source rewriter is the exact pattern that script was written to replace — verified 2026-10-07, where four heredoc mutation rewriters were hand-rolled on #209 and the inline helper **silently miscounted** (`grep -c` against `go test`/`pprof` output returns 0 on "binary file matches"), reporting 0 failures for mutations that broke 7 tests. The whole harness then had to be rewritten before any number was trustworthy.
   - **Run `mutation_check.sh`, never a hand-written `run_mut` shell function.** Doing this by hand meant re-typing an inline `python3 - <<EOF` source rewriter plus a `cp .bak` / restore dance per mutation (four separate re-definitions in one review session alone). Write a mutation spec and call the script:
     ```bash
-    bash <skills-dir>/review-pull-request/scripts/mutation_check.sh \
+    bash <skills-dir>/github-pr-review/scripts/mutation_check.sh \
       --pr <n> --spec /tmp/opencode/pr<n>/mutations.json \
       --test-cmd "go test ./internal/engine/ -count=1"
     ```
@@ -181,13 +187,17 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
      Bot PRs routinely push sequences of empty commits after `CHANGES_REQUESTED`; do not credit them as fixes (observed on warpcode/dotfiles#122: 7 consecutive empty amendments, zero threads addressed).
 
 ### 4. Submission
-- Draft a JSON review payload according to the `github-cli` review standards (Severity, Description, Impact, Solution).
-- **One-call submit (preferred)**: `bash <skills-dir>/review-pull-request/scripts/submit_review.sh --spec <findings.json> --repo <owner/repo> --pr <n> [--event REQUEST_CHANGES|COMMENT|APPROVE] [--body TEXT] [--dry-run]`. It runs the three steps below in the only safe order — build the payload, **hard-gate** on `verify_review_anchors.sh`, submit only if the gate passed — and captures the diff and head ref in a *single* fetch so verification cannot compare against a stale blob. Exit codes: `2` = anchors failed, nothing submitted; `3` = submit failed. With zero inline comments the anchor gate is skipped rather than failing (it rejects an empty anchor list).
+- **Inline Comment Template**: When drafting inline findings for `REQUEST_CHANGES`, every comment body must strictly adhere to `@templates/pull_request_review_comment.md`:
+  - **Severity:** High / Medium / Low
+  - **Description:** Exact diagnosis of the defect or invariant breach.
+  - **Impact:** Functional failure, regression risk, or performance consequence.
+  - **Proposed Solution:** Concrete diff or specific remediation steps.
+- **One-call submit (preferred)**: `bash <skills-dir>/github-pr-review/scripts/submit_review.sh --spec <findings.json> --repo <owner/repo> --pr <n> [--event REQUEST_CHANGES|COMMENT|APPROVE] [--body TEXT] [--dry-run]`. It runs the three steps below in the only safe order — build the payload, **hard-gate** on `verify_review_anchors.sh`, submit only if the gate passed — and captures the diff and head ref in a *single* fetch so verification cannot compare against a stale blob. Exit codes: `2` = anchors failed, nothing submitted; `3` = submit failed. With zero inline comments the anchor gate is skipped rather than failing (it rejects an empty anchor list).
   - **Omit `--diff` and `--head`.** Passing either one short-circuits the script's own fetch, which is the only thing making the pair consistent. Supply `--diff`/`--head` only when `pr_preflight.sh` captured them in the same step, and even then prefer the plain call — re-fetching and re-verifying costs one network round-trip and removes the whole stale-ref class of bug. `--dry-run` already prints every anchor it would post, so there is no reason to run it repeatedly; run it once to eyeball, then submit once.
-- **Manual equivalent**: write findings to a spec JSON (`path`, `line`, `severity`, `title`, `description`, `impact`, `solution`), then run `python3 <skills-dir>/review-pull-request/scripts/build_review_payload.py <spec.json> --out <payload.json>` (see `--help`). It enforces `REQUEST_CHANGES`, a neutral one-line body, inline-only findings, `side: RIGHT`, and no `subject_type`. Submit with `github-cli/scripts/submit_pull_request_review_payload.sh --repo ... --pull-number <n> --input <payload.json>`. Do not hand-write an ad-hoc throwaway builder script.
+- **Manual equivalent**: write findings to a spec JSON (`path`, `line`, `severity`, `title`, `description`, `impact`, `solution`), then run `python3 <skills-dir>/github-pr-review/scripts/build_review_payload.py <spec.json> --out <payload.json>` (see `--help`), which automatically renders comments into the `@templates/pull_request_review_comment.md` structure. Submit with `github-cli/scripts/submit_pull_request_review_payload.sh --repo ... --pull-number <n> --input <payload.json>`. Do not hand-write an ad-hoc throwaway builder script.
 - **Bot-authored PRs** (e.g. Jules): 
   - `APPROVE`: Submit with empty body, no inline comments.
-  - `REQUEST_CHANGES`: Neutral one-liner body + inline file-level `comments` with findings. Bots only act on inline comments.
+  - `REQUEST_CHANGES`: Neutral one-liner body + inline file-level `comments` with findings formatted per `@templates/pull_request_review_comment.md`. Bots only act on inline comments.
   - **Deleted File Anchoring**: Deleted files have no added lines (`side: RIGHT`) in GitHub diff hunks to anchor comments. Bundle any findings for deleted files into an inline comment on an associated modified file (referencing the deleted path in the body).
   - **Jules-owned PRs**: Jules exclusively owns changes to its PR branch. NEVER push any Git or code changes to that branch, including commits or merges. Never merge the base branch into it or tell Jules to do so; that can duplicate existing changes, create conflicts, desynchronize Jules's local checkout, and cause crashes or empty commits. If base-branch drift or conflicts become unmanageable, consider starting a new Jules session from the current PR branch and let Jules own the subsequent changes. This restriction is about updating the PR branch; landing an approved PR into its base via `gh pr merge` remains a separate action under the normal review and approval process.
 - **Review decision**: For this user's reviews, submit `REQUEST_CHANGES` for any finding, including low-severity findings; do not substitute `COMMENT` based on severity. Use `APPROVE` only when there are no findings. GitHub's self-authored-PR restriction is the platform-required exception: use `COMMENT` because GitHub rejects both `REQUEST_CHANGES` and `APPROVE` on one's own PR.
@@ -219,12 +229,12 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
   - `path` must match the PR's diff path exactly.
   - **Pre-submit anchor verification** (mandatory before `REQUEST_CHANGES`/`COMMENT` with inline comments): run the bundled script — it validates every `path`/`line` pair in the payload against the saved diff and exits non-zero if any anchor is not a `+` line.
     ```bash
-    bash <skills-dir>/review-pull-request/scripts/verify_review_anchors.sh \
+    bash <skills-dir>/github-pr-review/scripts/verify_review_anchors.sh \
       --diff <pr>.diff --payload <payload-file> --head origin/pr-<n>
     ```
     To enumerate all valid added line numbers from the diff before drafting findings, run:
     ```bash
-    bash <skills-dir>/review-pull-request/scripts/verify_review_anchors.sh --diff <pr>.diff --list
+    bash <skills-dir>/github-pr-review/scripts/verify_review_anchors.sh --diff <pr>.diff --list
     ```
     Use `--path <file> --line <n> [--line <n> ...]` to check anchors ad hoc, and `--quiet` for the verdict only. A `PASS` verdict is a hard prerequisite for submission.
     > ⚠️ **Never hand-transcribe the hunk-parsing awk.** Two failure modes were observed in practice (2026-09-26): (a) transcribing the one-liner from this file and dropping the `$3` field reference makes the script read the *pre*-change hunk start, so every anchor looks invalid; (b) inverting the diff-line ↔ file-line arithmetic when spot-checking. Both produce confident wrong answers. Let the script do it, and cross-check with `--head origin/pr-<n>` which prints the anchored line's actual text from the PR head blob — that output is the ground truth to eyeball before submitting.
@@ -232,7 +242,7 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
     > ⚠️ **`could not be resolved against <ref>` means the diff and the ref are from different fetches, not that the anchor is wrong.** The verifier reports this distinctly when the path is absent from `--head` (deleted or renamed file, or a stale ref) or the line is past the file's end. An empty added line is a *valid* anchor and does not trigger it. Treat the verdict as "re-run `pr_preflight.sh`", never as "move the line".
 - **Verify "tests pass" claims against what CI actually runs** (added 2026-10-01). A PR body's "verified with `python3 -m unittest`" / "all tests pass" is only meaningful if a workflow discovers those files. Many repos have zero test-running jobs, so the claim is unfalsifiable and a *new* test file may be dead weight. Run the bundled auditor rather than hand-grepping workflows:
   ```bash
-  bash <skills-dir>/review-pull-request/scripts/audit_ci_test_coverage.sh \
+  bash <skills-dir>/github-pr-review/scripts/audit_ci_test_coverage.sh \
     --repo <owner>/<repo> [--ref origin/master] [test/path ...]
   ```
   It reports test files present on the ref, any test-runner invocation found in `.github/workflows/*.yml`, the `paths:` filters (a PR touching only e.g. `.py` may trigger nothing), and whether each requested test file is referenced by CI. Treat a `NO test file is named in any workflow` verdict as grounds to flag every test-verification claim in the PR as **unconfirmed** — and to flag any newly added test as never-executed.
@@ -256,7 +266,7 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
   - ⚠️ **Re-fetch and re-verify immediately before submit — the PR head can move mid-audit.** Bot PRs amend without warning. Observed 2026-10-01 on warpcode/dotfiles#143: `gh pr view` reported 1 commit / `+17/-5`, and minutes later the bot had pushed `6c813fa` ("address review comments"), rewriting the `attrs` branch (`if attrs:` → `if isinstance(attrs, dict):` plus a nested `if url:`), adding a fourth guard in the `text` branch, and **deleting** `.jules/bolt.md`. Net effect on the audit: one of four drafted comments became obsolete and every anchor after the first hunk shifted.
     - **The diff and the `--head` ref must come from the same fetch.** `verify_review_anchors.sh --head origin/pr-<n>` reads a *local* ref, while the diff comes from `gh pr diff`. If those two come from different moments, the verifier can print old line text for a line number that now holds different content — which reads as a valid cross-check while proving nothing. Let `pr_preflight.sh` do the fetch:
       ```bash
-      bash <skills-dir>/review-pull-request/scripts/pr_preflight.sh \
+      bash <skills-dir>/github-pr-review/scripts/pr_preflight.sh \
         --repo <owner>/<repo> --pr <pr> --expect-sha <sha-captured-at-discovery>
       ```
       It writes the diff and the ref in one fetch, prints a manifest, and prints the exact `verify_review_anchors.sh` / `submit_review.sh` commands to run next.
@@ -274,7 +284,7 @@ For read-only audit worktrees (mutation runs, benchmark comparisons) use
 name, fetches the PR ref on demand, and removes the whole set in one call:
 
 ```bash
-W=<skills-dir>/review-pull-request/scripts/review_worktree.sh
+W=<skills-dir>/github-pr-review/scripts/review_worktree.sh
 bash "$W" add --pr <pr> --role head          # -> /tmp/opencode/wt/pr<pr>-head
 bash "$W" add --pr <pr> --role base          # -> /tmp/opencode/wt/pr<pr>-base
 bash "$W" exec --pr <pr> --role head -- go test ./... -count=1
