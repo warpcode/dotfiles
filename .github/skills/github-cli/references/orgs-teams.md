@@ -6,11 +6,11 @@ Query authenticated user information, organization teams, and team membership.
 
 ## Operations Overview
 
-| Operation | Risk Level | Primary MCP Action | Script Fallback (`@scripts/`) |
+| Operation | Risk Level | Primary MCP Action | CLI Fallback (`gh`) |
 | :--- | :--- | :--- | :--- |
-| **Get current user** | Read-Only | `get_me` | `get_me.sh` |
-| **Get organization teams** | Read-Only | `get_teams` | `get_teams.sh` |
-| **Get team members** | Read-Only | `get_team_members` | `get_team_members.sh` |
+| **Get current user** | Read-Only | `get_me` | `gh api user` |
+| **Get organization teams** | Read-Only | `get_teams` | `gh api orgs/{org}/teams` |
+| **Get team members** | Read-Only | `get_team_members` | `gh api orgs/{org}/teams/{team_slug}/members` |
 
 ---
 
@@ -19,7 +19,7 @@ Query authenticated user information, organization teams, and team membership.
 Inspect the currently authenticated user account:
 
 ```bash
-bash @scripts/get_me.sh
+gh api user
 ```
 
 ---
@@ -29,7 +29,7 @@ bash @scripts/get_me.sh
 List all teams within an organization:
 
 ```bash
-bash @scripts/get_teams.sh --org <org_name>
+gh api orgs/<org_name>/teams
 ```
 
 ---
@@ -39,5 +39,5 @@ bash @scripts/get_teams.sh --org <org_name>
 List members of a specific organization team:
 
 ```bash
-bash @scripts/get_team_members.sh --org <org_name> --team-slug <team_slug>
+gh api orgs/<org_name>/teams/<team_slug>/members
 ```

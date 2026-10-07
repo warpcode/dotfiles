@@ -162,10 +162,13 @@ flowchart LR
 ### 3. Validation & Quality Gate
 1. **Automated Validation**: Run the validator before committing any skill edits:
    `python3 <skill-dir>/scripts/validate.py <skill-directory>`
+   To audit empirical script usage across recent sessions (default 200 sessions):
+   `python3 <skill-dir>/scripts/validate.py --audit-script-usage [--sessions 200] <skill-directory>`
 2. **Compilation**: Confirm all bundled scripts compile (`python3 -m py_compile`, `bash -n`, `zsh -n`).
 3. **Reference Integrity**: Ensure every referenced path (`@references/...`, `templates/...`, `scripts/...`) exists on disk.
 4. **Scriptability Check**: Confirm the validator reports no `workflow-scriptability` WARN.
-5. Read `@references/audit-workflow.md`.
+5. **Empirical Script Usage**: Audit bundled script executions across conversation history (`audit_bundled_scripts.py --sessions 200`) to raise obsolete scripts for removal or consolidation.
+6. Read `@references/audit-workflow.md`.
 
 ---
 
@@ -196,6 +199,7 @@ Run helper scripts relative to this skill's root directory (`<skill-dir>/scripts
 |---|---|---|---|
 | `validate.py` | `@scripts/validate.py` | `python3 <skill-dir>/scripts/validate.py <path>` | Validates frontmatter, description cap, body length, paths, script syntax, and workflow scriptability |
 | `validate.py (self-test)` | `@scripts/validate.py` | `python3 <skill-dir>/scripts/validate.py --self-test` | Runs internal test suite of the validation engine |
+| `audit_bundled_scripts.py` | `@scripts/audit_bundled_scripts.py` | `python3 <skill-dir>/scripts/audit_bundled_scripts.py <path> [--sessions 200]` | Audits empirical script usage in conversation history via search_tools.py |
 
 ---
 
@@ -212,10 +216,12 @@ Every created or edited skill package must satisfy:
    script that returns everything the judgement needs, from one consistent
    snapshot. Any fact the workflow cannot establish is reported as a gap, never
    inferred — and no mutation is documented before the gather step.
-5. **No shell loops, `jq` chains, or inline `python3 -c` in any `SKILL.md` body.**
+6. **No shell loops, `jq` chains, or inline `python3 -c` in any `SKILL.md` body.**
    Those belong in `scripts/`, behind `--help`.
-6. **At least one bundled script exists for any tool-backed workflow skill**, and
+7. **At least one bundled script exists for any tool-backed workflow skill**, and
    its invocation is documented in a routing table with a "run when" condition.
-7. Scripts are report-only by default; mutations require an explicit flag.
-8. Each new script compiles (`py_compile` / `bash -n`) and its documented
+8. Scripts are report-only by default; mutations require an explicit flag.
+9. Each new script compiles (`py_compile` / `bash -n`) and its documented
    invocation has been executed successfully at least once.
+10. Bundled scripts are audited for empirical usage (`--audit-script-usage`);
+    obsolete or dead scripts are flagged for removal or consolidation.

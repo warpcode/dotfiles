@@ -114,6 +114,27 @@ python3 <skill-dir>/scripts/review_conversation.py <target> --segment 2707:2787
 python3 <skill-dir>/scripts/review_conversation.py <target> --user-turns
 ```
 
+### Multi-Session Tool & Script Search (`search_tools.py`)
+
+Search conversation transcripts across recent sessions to find empirical usage of tools, CLI commands, or bundled skill scripts:
+
+```bash
+# 1. Search for tool usage across the 200 most recent sessions (default ceiling):
+python3 <skill-dir>/scripts/search_tools.py --tool run_command
+
+# 2. Search for command executions or regex patterns:
+python3 <skill-dir>/scripts/search_tools.py --command "gh pr review"
+
+# 3. Check empirical invocations of a specific script:
+python3 <skill-dir>/scripts/search_tools.py --script pr_audit_bundle.sh
+
+# 4. Batch audit all scripts in a skill's scripts directory:
+python3 <skill-dir>/scripts/search_tools.py --scripts-dir <skill-dir>/scripts/
+
+# Configurable session depth: --sessions 500 or --all (default: 200 sessions)
+# Structured output: --json | Scope filter: --workspace <path> | Platform: --platform <name>
+```
+
 ### Output of Stage 1 Dossier
 
 The default command emits a token-efficient Markdown dossier (<120 lines, ~1.2k tokens) containing:

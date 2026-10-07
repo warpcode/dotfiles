@@ -12,11 +12,17 @@ Manage GitHub platform operations end-to-end through CLI and MCP tools. This ski
 
 ## Execution Priority
 
-1. **GitHub MCP server** — If the GitHub MCP server is available and
-   authenticated, use its tools (e.g. `create_pull_request`, `list_issues`,
-   `add_issue_comment`, `pull_request_review_write`) as the primary execution surface.
-2. **MCP Parity Scripts** — If MCP is unavailable, you MUST use the corresponding wrapper script in `<skill-dir>/scripts/` (e.g., `<skill-dir>/scripts/create_pull_request.sh`, `<skill-dir>/scripts/list_issues.sh`). There is a 1-to-1 parity script for every MCP tool. Do NOT manually construct complex `gh` or `gh api` CLI commands yourself; pass the required MCP arguments as flags to the wrapper script (e.g. `--owner`, `--repo`, `--title`).
-3. **No raw API access** — Do NOT fall back to raw `curl` calls against the
+1. **Bundled Workflow Scripts** — Always check and use bundled composite scripts in
+   `<skill-dir>/scripts/` first whenever one covers the workflow (e.g. `pr_audit_bundle.sh`
+   for PR audits, `submit_pull_request_review_payload.sh` for reviews, `merge_pull_request.sh`
+   for ruleset-gated merges, `pr_state_rollup.py` for status). They gather full snapshots in
+   one invocation, avoid tool call sprawl, and enforce repo safety invariants.
+2. **GitHub MCP server** — For operations not covered by a bundled workflow script,
+   use GitHub MCP server tools (e.g. `issue_write`, `list_issues`, `search_code`) if
+   authenticated and available.
+3. **`gh` CLI Commands** — When MCP is unavailable or for targeted CLI checks,
+   invoke native `gh` commands directly.
+4. **No raw API access** — Do NOT fall back to raw `curl` calls against the
    GitHub REST or GraphQL APIs. If neither MCP nor `gh` is available, guide the
    user to install/authenticate `gh` (`gh auth login`) or enable the GitHub
    MCP server.
@@ -47,7 +53,7 @@ Run bundled helper scripts relative to this skill's root directory (`<skill-dir>
 | PR audit bundle script | `@scripts/pr_audit_bundle.sh` | `bash <skill-dir>/scripts/pr_audit_bundle.sh --repo <owner/repo> --pr <n> [--out <dir>]` | One-call non-invasive PR audit: metadata, diff file, head file copies, source issues + acceptance criteria, dependency shipped status |
 | List / Filter PRs script | `@scripts/list_pull_requests.sh` | `bash <skill-dir>/scripts/list_pull_requests.sh [OPTIONS]` | List and filter PRs (approved, commits after review, waiting on author, unresponded) |
 | List PR review threads script | `@scripts/list_pull_request_review_threads.sh` | `bash <skill-dir>/scripts/list_pull_request_review_threads.sh [OPTIONS]` | Retrieve review threads for a pull request via GraphQL |
-| Get PR script | `@scripts/get_pull_request.sh` | `bash <skill-dir>/scripts/get_pull_request.sh [OPTIONS]` | Fetch comprehensive PR state (summary table, merge readiness checks, comments, reviews, stats) |
+| Merge PR script | `@scripts/merge_pull_request.sh` | `bash <skill-dir>/scripts/merge_pull_request.sh --pull-number <n> [--admin]` | Ruleset-gated squash merge with safety bypass |
 | Resolve thread script | `@scripts/update_pull_request_review_thread_resolution.sh` | `bash <skill-dir>/scripts/update_pull_request_review_thread_resolution.sh [OPTIONS]` | Resolve PR review threads via GraphQL |
 | Submit review payload script | `@scripts/submit_pull_request_review_payload.sh` | `bash <skill-dir>/scripts/submit_pull_request_review_payload.sh [OPTIONS]` | Submit structured PR review payload (with file/line comments) via REST |
 | PR status query | `@queries/find_prs.gql` | GraphQL query for PR status, review, and activity classification |
@@ -92,7 +98,8 @@ These apply to **all** operations executed via `gh` CLI:
    already exist for the branch.
 7. **Always get explicit permission before posting a review** (COMMENT,
    APPROVE, REQUEST_CHANGES).
-8. **Execution priority**: GitHub MCP server first, then `gh` CLI. Never use
-   raw `curl` against the GitHub REST or GraphQL APIs.
+8. **Execution priority**: Bundled workflow scripts first, then GitHub MCP
+   server, then `gh` CLI. Never use raw `curl` against the GitHub REST or
+   GraphQL APIs.
 9. **Write operations require authentication** — guide the user to
    `gh auth login` or enable the GitHub MCP server when missing.

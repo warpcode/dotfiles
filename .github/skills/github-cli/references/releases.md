@@ -6,13 +6,13 @@ Query, view, create, and manage GitHub releases and release assets.
 
 ## Operations Overview
 
-| Operation | Risk Level | Primary MCP Action | Script Fallback (`@scripts/`) | CLI Fallback (`gh`) |
-| :--- | :--- | :--- | :--- | :--- |
-| **List releases** | Read-Only | `list_releases` | `list_releases.sh` | `gh release list` |
-| **Get latest release** | Read-Only | `get_latest_release` | `get_latest_release.sh` | `gh release view` |
-| **Get release by tag** | Read-Only | `get_release_by_tag` | `get_release_by_tag.sh` | `gh release view <tag>` |
-| **Create release** | Mutating (Write) | N/A (`gh release`) | N/A | `gh release create <tag> --draft` |
-| **Download assets** | Read-Only | N/A (`gh release`) | N/A | `gh release download <tag>` |
+| Operation | Risk Level | Primary MCP Action | CLI Fallback (`gh`) |
+| :--- | :--- | :--- | :--- |
+| **List releases** | Read-Only | `list_releases` | `gh release list` |
+| **Get latest release** | Read-Only | `get_latest_release` | `gh release view` |
+| **Get release by tag** | Read-Only | `get_release_by_tag` | `gh release view <tag>` |
+| **Create release** | Mutating (Write) | N/A (`gh release`) | `gh release create <tag> --draft` |
+| **Download assets** | Read-Only | N/A (`gh release`) | `gh release download <tag>` |
 
 ---
 
@@ -21,28 +21,28 @@ Query, view, create, and manage GitHub releases and release assets.
 ### List Releases
 ```bash
 # Auto-detected repository
-bash @scripts/list_releases.sh
+gh release list --limit 20
 
 # Explicit repository override
-bash @scripts/list_releases.sh --owner octocat --repo hello-world
+gh release list --repo octocat/hello-world
 ```
 
 ### Get Latest Release
 ```bash
 # Auto-detected repository
-bash @scripts/get_latest_release.sh
+gh release view
 
 # Explicit repository override
-bash @scripts/get_latest_release.sh --owner octocat --repo hello-world
+gh release view --repo octocat/hello-world
 ```
 
 ### Get Release by Tag
 ```bash
 # Auto-detected repository
-bash @scripts/get_release_by_tag.sh --tag "v1.2.0"
+gh release view "v1.2.0"
 
 # Explicit repository override
-bash @scripts/get_release_by_tag.sh --owner octocat --repo hello-world --tag "v1.2.0"
+gh release view "v1.2.0" --repo octocat/hello-world
 ```
 
 ---
@@ -60,16 +60,7 @@ gh release create "v1.2.0" \
   --draft
 ```
 
-### Publish an Existing Draft Release
-```bash
-gh release edit "v1.2.0" --draft=false
-```
-
 ### Download Release Assets
 ```bash
-# Download all assets for a tag into the current directory
-gh release download "v1.2.0"
-
-# Download specific matching assets
-gh release download "v1.2.0" --pattern "*.tar.gz" --dir /tmp/assets/
+gh release download "v1.2.0" --pattern "*.tar.gz" --dir "./dist"
 ```

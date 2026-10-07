@@ -6,27 +6,27 @@ Execute targeted search queries across code, commits, issues, pull requests, rep
 
 ## Operations Overview
 
-| Operation | Risk Level | Primary MCP Action | Script Fallback (`@scripts/`) |
+| Operation | Risk Level | Primary MCP Action | CLI Fallback (`gh`) |
 | :--- | :--- | :--- | :--- |
-| **Search code** | Read-Only | `search_code` | `search_code.sh` |
-| **Search commits** | Read-Only | `search_commits` | `search_commits.sh` |
-| **Search issues** | Read-Only | `search_issues` | `search_issues.sh` |
-| **Search PRs** | Read-Only | `search_pull_requests` | `search_pull_requests.sh` |
-| **Search repos** | Read-Only | `search_repositories` | `search_repositories.sh` |
-| **Search users** | Read-Only | `search_users` | `search_users.sh` |
+| **Search code** | Read-Only | `search_code` | `gh search code <query>` |
+| **Search commits** | Read-Only | `search_commits` | `gh search commits <query>` |
+| **Search issues** | Read-Only | `search_issues` | `gh search issues <query>` |
+| **Search PRs** | Read-Only | `search_pull_requests` | `gh search prs <query>` |
+| **Search repos** | Read-Only | `search_repositories` | `gh search repos <query>` |
+| **Search users** | Read-Only | `search_users` | `gh api search/users?q=<query>` |
 
 ---
 
 ## 1. Code Search
 ```bash
-bash @scripts/search_code.sh --query "function processData repo:owner/repo"
+gh search code "function processData repo:owner/repo"
 ```
 
 ---
 
 ## 2. Commit Search
 ```bash
-bash @scripts/search_commits.sh --query "fix(auth) repo:owner/repo"
+gh search commits "fix(auth) repo:owner/repo"
 ```
 
 ---
@@ -34,10 +34,10 @@ bash @scripts/search_commits.sh --query "fix(auth) repo:owner/repo"
 ## 3. Issues & Pull Requests Search
 ```bash
 # Search issues across a repo or org
-bash @scripts/search_issues.sh --query "database connection timeout repo:owner/repo state:open"
+gh search issues "database connection timeout repo:owner/repo state:open"
 
 # Search PRs
-bash @scripts/search_pull_requests.sh --query "review-requested:@me state:open"
+gh search prs "review-requested:@me state:open"
 ```
 
 ---
@@ -45,8 +45,8 @@ bash @scripts/search_pull_requests.sh --query "review-requested:@me state:open"
 ## 4. Repository & User Search
 ```bash
 # Search repositories
-bash @scripts/search_repositories.sh --query "dotfiles topic:zsh stars:>100"
+gh search repos "dotfiles topic:zsh stars:>100"
 
 # Search users / organizations
-bash @scripts/search_users.sh --query "location:London followers:>50"
+gh api search/users -f q="location:London followers:>50"
 ```

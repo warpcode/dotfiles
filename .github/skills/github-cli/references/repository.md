@@ -9,19 +9,18 @@ Manage remote repository content, files, branches, tags, commits, collaborators,
 
 ## Operations Overview
 
-| Operation | Risk Level | Primary MCP Action | Script Fallback (`@scripts/`) |
+| Operation | Risk Level | Primary MCP Action | CLI Fallback (`gh`) |
 | :--- | :--- | :--- | :--- |
-| **Get file contents** | Read-Only | `get_file_contents` | `get_file_contents.sh` |
-| **Create/update file** | Mutating (Write) | `create_or_update_file` | `create_or_update_file.sh` |
-| **Delete file** | Mutating (Destructive)| `delete_file` | `delete_file.sh` |
-| **Push multiple files** | Mutating (Write) | `push_files` | `push_files.sh` |
-| **List branches** | Read-Only | `list_branches` | `list_branches.sh` |
-| **Create branch** | Mutating (Write) | `create_branch` | `create_branch.sh` |
-| **Get / List tags** | Read-Only | `get_tag`, `list_tags` | `get_tag.sh`, `list_tags.sh` |
-| **Get / List commits** | Read-Only | `get_commit`, `list_commits` | `get_commit.sh`, `list_commits.sh` |
-| **List collaborators** | Read-Only | `list_repository_collaborators`| `list_repository_collaborators.sh` |
-| **Create repository** | Mutating (Write) | `create_repository` | `create_repository.sh` |
-| **Fork repository** | Mutating (Write) | `fork_repository` | `fork_repository.sh` |
+| **Get file contents** | Read-Only | `get_file_contents` | `gh api repos/{owner}/{repo}/contents/{path}` |
+| **Create/update file** | Mutating (Write) | `create_or_update_file` | `gh api -X PUT repos/{owner}/{repo}/contents/{path}` |
+| **Delete file** | Mutating (Destructive)| `delete_file` | `gh api -X DELETE repos/{owner}/{repo}/contents/{path}` |
+| **List branches** | Read-Only | `list_branches` | `git branch -r` or `gh api repos/{owner}/{repo}/branches` |
+| **Create branch** | Mutating (Write) | `create_branch` | `git checkout -b <branch>` or `gh api -X POST repos/{owner}/{repo}/git/refs` |
+| **Get / List tags** | Read-Only | `get_tag`, `list_tags` | `git tag` or `gh api repos/{owner}/{repo}/tags` |
+| **Get / List commits** | Read-Only | `get_commit`, `list_commits` | `git log` or `gh api repos/{owner}/{repo}/commits` |
+| **List collaborators** | Read-Only | `list_repository_collaborators`| `gh api repos/{owner}/{repo}/collaborators` |
+| **Create repository** | Mutating (Write) | `create_repository` | `gh repo create` |
+| **Fork repository** | Mutating (Write) | `fork_repository` | `gh repo fork` |
 
 ---
 
@@ -30,37 +29,24 @@ Manage remote repository content, files, branches, tags, commits, collaborators,
 ### Get File Contents
 Fetch remote file content without checking out the branch:
 ```bash
-bash @scripts/get_file_contents.sh --path "path/to/file.txt" --branch "main" [--owner <owner>] [--repo <repo>]
+gh api repos/<owner>/<repo>/contents/<path>?ref=<branch> -H "Accept: application/vnd.github.raw"
 ```
 
 ### Create or Update a Single Remote File
 ```bash
-# 1. Create a brand new file (no --sha required)
-bash @scripts/create_or_update_file.sh \
-  --path "docs/guide.md" \
-  --message "docs: create user guide" \
-  --content "<base64_encoded_content>" \
-  --branch "feature-branch"
-
-# 2. Update an existing file (passing optional --sha)
-bash @scripts/create_or_update_file.sh \
-  --path "docs/guide.md" \
-  --message "docs: update user guide" \
-  --content "<base64_encoded_content>" \
-  --branch "feature-branch" \
-  --sha "3a4b5c6d..." \
-  --owner "octocat" \
-  --repo "custom-repo"
+gh api -X PUT repos/<owner>/<repo>/contents/<path> \
+  -f message="docs: update guide" \
+  -f content="$(base64 -w 0 < local_file.md)" \
+  -f branch="feature-branch" \
+  -f sha="<existing_file_sha>"
 ```
 
 ### Delete a Single Remote File
 ```bash
-bash @scripts/delete_file.sh \
-  --path "path/to/file.txt" \
-  --message "chore: remove obsolete file" \
-  --branch "feature-branch" \
-  --sha "<file_sha>" \
-  [--owner <owner>] [--repo <repo>]
+gh api -X DELETE repos/<owner>/<repo>/contents/<path> \
+  -f message="chore: remove obsolete file" \
+  -f branch="feature-branch" \
+  -f sha="<file_sha>"
 ```
 
 ---
@@ -69,22 +55,21 @@ bash @scripts/delete_file.sh \
 
 ### List Branches
 ```bash
-bash @scripts/list_branches.sh [--owner <owner>] [--repo <repo>]
+gh api repos/<owner>/<repo>/branches --jq '.[].name'
 ```
 
 ### Create a Remote Branch
 Create a branch pointing directly to a specific commit SHA:
 ```bash
-bash @scripts/create_branch.sh --branch "new-feature" --sha "<commit_sha>" [--owner <owner>] [--repo <repo>]
+gh api -X POST repos/<owner>/<repo>/git/refs \
+  -f ref="refs/heads/new-feature" \
+  -f sha="<commit_sha>"
 ```
 
 ### List and Inspect Tags
 ```bash
-# List all tags
-bash @scripts/list_tags.sh [--owner <owner>] [--repo <repo>]
-
-# Get specific tag ref
-bash @scripts/get_tag.sh --tag "<tag_name>" [--owner <owner>] [--repo <repo>]
+# List tags via API
+gh api repos/<owner>/<repo>/tags --jq '.[].name'
 ```
 
 ---
@@ -93,12 +78,12 @@ bash @scripts/get_tag.sh --tag "<tag_name>" [--owner <owner>] [--repo <repo>]
 
 ### Get Commit Details
 ```bash
-bash @scripts/get_commit.sh --sha "<commit_sha>" [--owner <owner>] [--repo <repo>]
+gh api repos/<owner>/<repo>/commits/<commit_sha>
 ```
 
 ### List Commits
 ```bash
-bash @scripts/list_commits.sh [--owner <owner>] [--repo <repo>]
+gh api repos/<owner>/<repo>/commits --jq '.[].sha'
 ```
 
 ---
@@ -107,23 +92,19 @@ bash @scripts/list_commits.sh [--owner <owner>] [--repo <repo>]
 
 ### List Collaborators
 ```bash
-bash @scripts/list_repository_collaborators.sh [--owner <owner>] [--repo <repo>]
+gh api repos/<owner>/<repo>/collaborators --jq '.[].login'
 ```
 
 ### Create Repository
 ```bash
-# Minimal private repository (default)
-bash @scripts/create_repository.sh --name "my-new-repo"
+# Create private repository
+gh repo create my-new-repo --private
 
-# Public repository with optional description
-bash @scripts/create_repository.sh --name "my-open-source-tool" --description "A CLI tool for developers" --public true
+# Create public repository with description
+gh repo create my-open-source-tool --public --description "A CLI tool for developers"
 ```
 
 ### Fork Repository
 ```bash
-# Fork the currently auto-detected repository
-bash @scripts/fork_repository.sh
-
-# Fork a specific external repository
-bash @scripts/fork_repository.sh --owner upstream-org --repo project-template
+gh repo fork <owner>/<repo> --clone=false
 ```

@@ -9,6 +9,7 @@ Execution commands and scripts for review discovery, inspection, and thread reso
   - Approved PRs: `bash @scripts/list_pull_requests.sh --approved`
   - Ready for re-review (commits after review): `bash @scripts/list_pull_requests.sh --commits-after-review`
   - Stalled / Waiting on author: `bash @scripts/list_pull_requests.sh --waiting-on-author`
+
 - **Review Thread Discovery**: retrieve review threads for a specific PR:
   ```bash
   # Standard auto-detected repo
@@ -17,63 +18,40 @@ Execution commands and scripts for review discovery, inspection, and thread reso
   # Explicit repo overrides
   bash @scripts/list_pull_request_review_threads.sh --owner octocat --repo hello-world --pull-number 42
   ```
-  The script's GraphQL query requests only the first 100 threads and first 100 comments per thread. For a complete review or resolution inventory, check `totalCount` against the returned node counts; when pagination is needed, use a paginated GitHub MCP read. Never report first-page counts as exhaustive.
+  The script's GraphQL query requests the first 100 threads and first 100 comments per thread. For complete review inventories, check `totalCount` against the returned node counts. Never report first-page counts as exhaustive.
+
+---
 
 ## 2. Inspection
 
-- Retrieve PR state (summary table, comments, reviews, threads, readiness): 
-  `bash @scripts/get_pull_request.sh --pull-number <pr_number>`
-  *(or with explicit overrides: `bash @scripts/get_pull_request.sh --owner <owner> --repo <repo> --pull-number <pr_number>`)*
-- Fetch full file contents if needed: 
-  `bash @scripts/get_file_contents.sh --owner <owner> --repo <repo> --path <path> --branch <branch>`
-- **CI / Checks Status**: verify with `gh pr checks <pr_number>`. If checks
-  fail, fetch logs via `gh run list --repo <owner>/<repo> --branch <branch_name>`
-  and `gh run view <run_id> --log-failed`.
+- **Gather PR Snapshot**: Collect full PR metadata, git diff, head files, and acceptance criteria in one call:
+  `bash @scripts/pr_audit_bundle.sh --repo <owner/repo> --pr <n> --out /tmp/pr<n>`
+- **CI / Checks Status**: verify with `gh pr checks <pr_number>`. If checks fail, fetch logs via `gh run view <run_id> --log-failed`.
+
+---
 
 ## 3. Review Submission & Comments
 
-- **Verification Gate**: BEFORE approving or merging, check PR state and merge readiness checks:
+- **Submit Review Comment / Approve (Silent Approval Invariant)**:
+  *(Note: Never include "LGTM" or approval boilerplate. Approvals must have an empty body).*
   ```bash
-  bash @scripts/get_pull_request.sh --pull-number <pr_number>
+  # Submit silent approval via gh CLI:
+  gh pr review 42 --approve --body ""
+
+  # Request changes via gh CLI:
+  gh pr review 42 --request-changes --body-file review_summary.md
+
+  # General review comment:
+  gh pr review 42 --comment --body-file review_summary.md
   ```
 
-- **Submit Review Comment (Default / Auto-detected Repo)**:
-  *(Note: When reviewing a PR authored by the authenticated user, GitHub rejects `REQUEST_CHANGES` and `APPROVE` with HTTP 422; submissions must use `COMMENT`.)*
+- **Submit Structured Review Payload (Line & File Comments)**:
   ```bash
-  bash @scripts/create_pull_request_review.sh --pull-number 42 --body "LGTM with minor suggestions."
+  # Submit structured payload with staged line/file comments via REST:
+  bash @scripts/submit_pull_request_review_payload.sh --pr 42 --payload-file review_payload.json
   ```
 
-- **Submit Approval Review (Silent Approval Invariant)**:
-  *(Note: Never include "LGTM" or approval comments. Approvals must be silent with an empty body).*
-  ```bash
-  bash @scripts/create_pull_request_review.sh --pull-number 42 --approve true --body ""
-  # Or via gh CLI directly:
-  gh pr review 42 --approve
-  ```
-
-- **Submit Review on Cross-Repository (with optional `--owner` and `--repo` overrides)**:
-  ```bash
-  bash @scripts/create_pull_request_review.sh --owner octocat --repo hello-world --pull-number 10 --approve true --body ""
-  ```
-
-
-- **Add Comment to Pending Review**:
-  ```bash
-  # Standard auto-detected repo
-  bash @scripts/add_comment_to_pending_review.sh --pull-number 42 --review-id "PRR_kwDOA123" --body "Please check this line."
-
-  # Explicit repo override
-  bash @scripts/add_comment_to_pending_review.sh --owner octocat --repo hello-world --pull-number 10 --review-id "PRR_kwDOA123" --body "Please check this line."
-  ```
-
-- **Reply to Specific Review Comment**:
-  ```bash
-  # Standard auto-detected repo
-  bash @scripts/add_reply_to_pull_request_comment.sh --pull-number 42 --comment-id 987654321 --body "Fixed in latest commit."
-
-  # Explicit repo override
-  bash @scripts/add_reply_to_pull_request_comment.sh --owner octocat --repo hello-world --pull-number 10 --comment-id 987654321 --body "Fixed in latest commit."
-  ```
+---
 
 ## 4. Review Thread Resolution
 
@@ -82,7 +60,9 @@ Use the following script to resolve a PR review thread via GraphQL:
 # Resolve a review thread
 bash @scripts/update_pull_request_review_thread_resolution.sh --thread-id "<thread_id>"
 ```
-After resolving threads, fetch a fresh complete thread inventory before reporting remaining counts. Verify the requested thread IDs changed state, and distinguish unresolved current threads from unresolved outdated threads.
+After resolving threads, fetch a fresh thread inventory with `list_pull_request_review_threads.sh` to confirm resolution.
+
+---
 
 ## 5. Atomically Submit Mixed-Type Reviews (GraphQL)
 
@@ -91,13 +71,11 @@ To submit a pull request review containing both line-level comments and file-lev
 2. Attach comments via `addPullRequestReviewThread` (using `subjectType: FILE` for file-level comments or `subjectType: LINE` for line comments).
 3. Finalize and publish via `submitPullRequestReview`.
 
-## 6. CLI Escaping & Query Safety
+---
 
-- **GH CLI Escaping Safety**: When updating, replying, or posting review comments via `gh api` containing backticks, brackets, or code tokens, write the payload to a JSON file and load it using `--input <file>` rather than inline shell flags (e.g. `--field` or `-f`) to prevent shell substitution and character stripping.
-- **GraphQL File Query Parameters**: When calling `gh api graphql` with a query stored in a file, always pass the query using the uppercase `-F` parameter (e.g., `-F query=@/path/to/query.gql`) rather than the lowercase `-f`, which interprets the argument as a literal query string. Pass queries with variable injection.
-
-## 7. Mergeability
+## 6. Mergeability
 
 Check if a PR is mergeable:
-`gh pr view <pr_number> --json mergeable,mergeStateStatus`
-
+```bash
+gh pr view <pr_number> --json mergeable,mergeStateStatus
+```

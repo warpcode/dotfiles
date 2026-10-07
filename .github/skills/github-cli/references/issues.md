@@ -4,86 +4,79 @@ Execution commands for managing GitHub issues: create, update, query, comment, a
 
 ## 1. Operations Overview
 
-| Operation | Primary MCP Action | Script Fallback (`@scripts/`) | CLI Fallback (`gh`) |
-| :--- | :--- | :--- | :--- |
-| **Read issue** | `get_issue` | `get_issue.sh` | `gh issue view <num> --comments` |
-| **Edit/Create issue** | `issue_write` | `update_issue.sh` | `gh issue edit <num>` / `gh issue create` |
-| **Add comment** | `add_issue_comment` | `add_issue_comment.sh` | `gh issue comment <num> --body "..."` |
-| **List issues** | `list_issues` | `list_issues.sh` | `gh issue list` |
-| **Assign Copilot** | `assign_copilot_to_issue` | `assign_copilot_to_issue.sh` | `gh issue edit <num> --add-assignee github-copilot[bot]` |
-| **Add sub-issue** | `sub_issue_write` | `update_sub_issue.sh` | `gh api -X POST repos/{owner}/{repo}/issues/{num}/sub_issues` |
-| **List issue types** | `list_issue_types` | `list_issue_types.sh` | `gh api repos/{owner}/{repo}/issues/types` |
-| **List issue fields**| `list_issue_fields`| `list_issue_fields.sh` | `gh api repos/{owner}/{repo}/issues/fields` |
+| Operation | Primary MCP Action | CLI Fallback (`gh`) |
+| :--- | :--- | :--- |
+| **Read issue** | `get_issue` | `gh issue view <num> --comments` |
+| **Create issue** | `issue_write` | `gh issue create --title "..." --body-file "..."` |
+| **Edit issue** | `issue_write` | `gh issue edit <num> --title "..." --body-file "..."` |
+| **Add comment** | `add_issue_comment` | `gh issue comment <num> --body-file "..."` |
+| **List issues** | `list_issues` | `gh issue list` |
+| **Assign Copilot** | `assign_copilot_to_issue` | `gh issue edit <num> --add-assignee github-copilot[bot]` |
+| **Add sub-issue** | `sub_issue_write` | `gh api -X POST repos/{owner}/{repo}/issues/{num}/sub_issues` |
+| **List issue types** | `list_issue_types` | `gh api repos/{owner}/{repo}/issues/types` |
+| **List issue fields**| `list_issue_fields`| `gh api repos/{owner}/{repo}/issues/fields` |
 
 ---
 
-## 2. Execute via Scripts
+## 2. Execute via `gh` CLI
 
 ### Read an Issue
 ```bash
 # Auto-detected repository
-bash @scripts/get_issue.sh --issue-number 42
+gh issue view 42 --comments
 
 # Explicit owner and repo override
-bash @scripts/get_issue.sh --owner octocat --repo hello-world --issue-number 10
+gh issue view 10 --repo octocat/hello-world --comments
 ```
 
 ### Create / Edit an Issue
 ```bash
+# Create an issue (always write body to a file first)
+gh issue create --title "Bug: connection retry failed" --body-file issue_body.md --label "bug"
+
 # Edit issue on auto-detected repository
-bash @scripts/update_issue.sh --issue-number 42 --title "Bug: connection retry failed" --body "Steps to reproduce..."
+gh issue edit 42 --title "Bug: connection retry failed" --body-file issue_body.md
 
 # Edit issue on explicit repository
-bash @scripts/update_issue.sh --owner octocat --repo hello-world --issue-number 10 --title "Updated title" --body "Updated description"
+gh issue edit 10 --repo octocat/hello-world --title "Updated title"
 ```
-> For CLI creation with `--body-file`:
-> ```bash
-> gh issue create --title "Issue title" --body-file "tmp_body.md" --label "bug" && rm "tmp_body.md"
-> ```
 
 ### Add Issue Comment
 ```bash
 # Auto-detected repository
-bash @scripts/add_issue_comment.sh --issue-number 42 --body "Fixed in commit abc1234."
+gh issue comment 42 --body-file comment.md
 
 # Explicit repository override
-bash @scripts/add_issue_comment.sh --owner octocat --repo hello-world --issue-number 10 --body "Investigating now."
+gh issue comment 10 --repo octocat/hello-world --body-file comment.md
 ```
 
 ### List Issues
 ```bash
 # Auto-detected repository
-bash @scripts/list_issues.sh
+gh issue list --state open --limit 30
 
-# Explicit repository
-bash @scripts/list_issues.sh --owner octocat --repo hello-world
+# Explicit repository with label filter
+gh issue list --repo octocat/hello-world --label "bug" --state open
 ```
 
 ### Assign Copilot to Issue
 ```bash
 # Auto-detected repository
-bash @scripts/assign_copilot_to_issue.sh --issue-number 42
+gh issue edit 42 --add-assignee github-copilot[bot]
 
 # Explicit repository override
-bash @scripts/assign_copilot_to_issue.sh --owner octocat --repo hello-world --issue-number 10
+gh issue edit 10 --repo octocat/hello-world --add-assignee github-copilot[bot]
 ```
 
 ### Manage Sub-Issues (Issue Hierarchy)
 ```bash
-# Auto-detected repository
-bash @scripts/update_sub_issue.sh --issue-number 42 --sub-issue-id 12345678
-
-# Explicit repository override
-bash @scripts/update_sub_issue.sh --owner octocat --repo hello-world --issue-number 10 --sub-issue-id 12345678
+# Add sub-issue via GitHub API
+gh api -X POST repos/{owner}/{repo}/issues/42/sub_issues -f sub_issue_id=12345678
 ```
 
 ### Discover Issue Types & Fields
 ```bash
-# Auto-detected repository
-bash @scripts/list_issue_types.sh
-bash @scripts/list_issue_fields.sh
-
-# Explicit repository override
-bash @scripts/list_issue_types.sh --owner octocat --repo hello-world
-bash @scripts/list_issue_fields.sh --owner octocat --repo hello-world
+# Discover configured issue types and custom fields
+gh api repos/{owner}/{repo}/issues/types
+gh api repos/{owner}/{repo}/issues/fields
 ```

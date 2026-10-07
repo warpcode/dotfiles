@@ -4,104 +4,74 @@ Execution commands for pull requests: create, update, publish, view, review, and
 
 ## 1. Operations Overview
 
-| Operation | Primary MCP Action | Script Fallback (`@scripts/`) | CLI Fallback (`gh`) |
+| Operation | Primary MCP Action | Script Tool (`@scripts/`) | CLI Fallback (`gh`) |
 | :--- | :--- | :--- | :--- |
-| **Create PR** | `create_pull_request` | `create_pull_request.sh` | `gh pr create --draft ...` |
-| **Read PR** | `pull_request_read` | `get_pull_request.sh` | `gh pr view <num> --comments` |
-| **Update PR** | `update_pull_request` | `update_pull_request.sh` | `gh pr edit <num> ...` |
-| **Update Branch** | `update_pull_request_branch` | `update_pull_request_branch.sh` | `gh pr update-branch <num>` |
+| **Audit PR (Full)** | N/A | `pr_audit_bundle.sh` | N/A (1-call snapshot gather) |
+| **Create PR** | `create_pull_request` | N/A | `gh pr create --draft ...` |
+| **Read PR** | `pull_request_read` | N/A | `gh pr view <num> --comments` |
+| **Rollup / CI Status**| N/A | `pr_state_rollup.py` | `gh pr list` / `gh pr checks` |
+| **Update PR** | `update_pull_request` | N/A | `gh pr edit <num> ...` |
 | **Merge PR** | `merge_pull_request` | `merge_pull_request.sh` | `gh pr merge <num> --squash` |
 | **List PRs** | `list_pull_requests` | `list_pull_requests.sh` | `gh pr list` |
-| **Request Copilot** | `request_copilot_review` | `request_copilot_review.sh` | `gh api ... requested_reviewers` |
+| **Request Copilot** | `request_copilot_review` | N/A | `gh pr edit <num> --add-reviewer github-copilot[bot]` |
 
 ---
 
-## 2. Execute via Scripts
+## 2. Execute PR Workflows
 
-### Create a Pull Request
-Execute creation (always draft):
+### Audit a Pull Request (Composite Bundle)
+Collect full metadata, clean diff, head file copies, and check runs in a single call:
 ```bash
-# 1. Standard creation on auto-detected repository
-bash @scripts/create_pull_request.sh \
-  --title "feat(ui): Add dark mode toggle" \
-  --body "PR description body" \
-  --head "$current_branch" \
-  --base "$base_branch"
+# Auto-detected repository
+bash @scripts/pr_audit_bundle.sh --repo <owner/repo> --pr 42 --out /tmp/pr42
+```
 
-# 2. Creation on explicit target repository (cross-repo / forks)
-bash @scripts/create_pull_request.sh \
-  --owner "octocat" \
-  --repo "hello-world" \
+### Create a Pull Request (Always Draft)
+```bash
+# Standard draft creation on current branch
+gh pr create \
+  --draft \
   --title "feat(ui): Add dark mode toggle" \
-  --body "PR description body" \
+  --body-file "pr_body.md" \
+  --base "master"
+
+# Cross-repo / fork draft creation
+gh pr create \
+  --repo "octocat/hello-world" \
+  --draft \
+  --title "feat(ui): Add dark mode toggle" \
+  --body-file "pr_body.md" \
   --head "fork-user:feat/dark-mode" \
-  --base "main"
+  --base "master"
 ```
 
 ### Update a Pull Request
 ```bash
-# Update title and body on current repo
-bash @scripts/update_pull_request.sh \
-  --pull-number 42 \
-  --title "feat(ui): Add dark mode toggle (v2)" \
-  --body "Updated PR description body"
+# Update title and body
+gh pr edit 42 --title "feat(ui): Add dark mode toggle (v2)" --body-file "updated_body.md"
 
-# Update with explicit owner/repo override
-bash @scripts/update_pull_request.sh \
-  --owner "octocat" \
-  --repo "hello-world" \
-  --pull-number 42 \
-  --title "Updated title" \
-  --body "Updated body"
-```
-
-### Synchronize / Update PR Branch
-```bash
-# Auto-detected repository
-bash @scripts/update_pull_request_branch.sh --pull-number 42
-
-# Explicit owner/repo
-bash @scripts/update_pull_request_branch.sh --owner "octocat" --repo "hello-world" --pull-number 42
+# Update with explicit repo override
+gh pr edit 42 --repo "octocat/hello-world" --title "Updated title"
 ```
 
 ### Request Copilot Review
 ```bash
-bash @scripts/request_copilot_review.sh --pull-number 42
+gh pr edit 42 --add-reviewer github-copilot[bot]
 ```
 
-### Get Pull Request & Merge Readiness
-Fetch full pull request state, merge readiness checks, reviews, and comments:
-```bash
-# Auto-detected repository
-bash @scripts/get_pull_request.sh --pull-number 42
-
-# Explicit repository override
-bash @scripts/get_pull_request.sh --owner "octocat" --repo "hello-world" --pull-number 42
-```
-
-### Merge a Pull Request
+### Merge a Pull Request (Safe Ruleset Bypass)
 > [!CAUTION]
-> Run `@scripts/get_pull_request.sh --pull-number <pr_number>` or review checks first to verify merge status and readiness.
+> Always verify review checks and ruleset invariants first before initiating merge.
 
 ```bash
-# Auto-detected repository
+# Standard auto-detected repository
 bash @scripts/merge_pull_request.sh --pull-number 42
 
 # Explicit repository override
 bash @scripts/merge_pull_request.sh --owner "octocat" --repo "hello-world" --pull-number 42
 
-# Merge with administrator privileges (required when rulesets block non-admin merges)
+# Ruleset bypass with admin privileges (required when rulesets require admin)
 bash @scripts/merge_pull_request.sh --owner "octocat" --repo "hello-world" --pull-number 42 --admin
-```
-
-### View & Read PR Details
-Read raw JSON/comments or formatted view:
-```bash
-# Auto-detected repository
-bash @scripts/get_pull_request.sh --pull-number 42
-
-# Explicit repository override
-bash @scripts/get_pull_request.sh --owner "octocat" --repo "hello-world" --pull-number 42
 ```
 
 ### List & Filter Pull Requests
@@ -109,11 +79,13 @@ bash @scripts/get_pull_request.sh --owner "octocat" --repo "hello-world" --pull-
 # 1. Basic open PRs overview on auto-detected repository
 bash @scripts/list_pull_requests.sh
 
-# 2. Basic open PRs on explicit repository
-bash @scripts/list_pull_requests.sh --owner "octocat" --repo "hello-world"
-
-# 3. Discovery & Filtering (with optional flags)
-bash @scripts/list_pull_requests.sh --all
-bash @scripts/list_pull_requests.sh --owner "octocat" --repo "hello-world" --approved
+# 2. Discovery & Filtering with triage flags
+bash @scripts/list_pull_requests.sh --approved
 bash @scripts/list_pull_requests.sh --commits-after-review --state OPEN --limit 50
+```
+
+### Rollup PR State & CI Health
+```bash
+# Dense table of state, draft, head SHA, review decision, mergeability, and CI checks
+python3 @scripts/pr_state_rollup.py --repo <owner/repo> 42 43
 ```

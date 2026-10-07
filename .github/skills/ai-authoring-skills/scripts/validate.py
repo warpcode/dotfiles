@@ -19,6 +19,9 @@ against the key rules documented in ../SKILL.md:
   - workflow scriptability: SKILL.md does not hand-roll loops and does not
     document long command chains the agent must execute one call at a time
     (WARN only - prose guidance to bundle workflows into scripts)
+  - bundled script usage: empirical conversation usage check via search_tools.py
+    identifying active, low usage, and obsolete scripts (--audit-script-usage,
+    default 200 sessions)
 
 YAML parsing uses PyYAML when installed; otherwise falls back to a
 minimal parser covering the flat key/value + block-scalar subset that
@@ -26,6 +29,7 @@ skill frontmatter actually uses.
 
 Usage:
     ./validate.py <skill-dir> [<skill-dir> ...]
+    ./validate.py --audit-script-usage [--sessions 200] <skill-dir>
     ./validate.py --self-test
 
 Each check prints "<check> : PASS|FAIL|WARN"; exit status is 1 if any
@@ -40,6 +44,15 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+try:
+    from audit_bundled_scripts import audit_skill_scripts, get_bundled_scripts
+except Exception:
+    audit_skill_scripts = None
+    get_bundled_scripts = None
 
 MAX_DESC_CHARS = 1024
 MAX_BODY_LINES = 500
@@ -174,7 +187,7 @@ def strip_fenced_blocks(lines):
     return out
 
 
-def validate_skill(skill_dir):
+def validate_skill(skill_dir, audit_script_usage=False, sessions=200):
     """Return a list of (check, status, detail); status is PASS/FAIL/WARN."""
     results = []
 
@@ -281,6 +294,8 @@ def validate_skill(skill_dir):
         add("scripts-compile", "PASS")
 
     results.append(_check_scriptability(body_lines)[0])
+    if audit_script_usage:
+        results.append(_check_bundled_script_usage(skill_dir, sessions=sessions))
     return results
 
 
@@ -342,6 +357,56 @@ def _check_scriptability(body_lines):
     if findings:
         return [("workflow-scriptability", "WARN", "; ".join(findings))]
     return [("workflow-scriptability", "PASS", "")]
+
+
+def _check_bundled_script_usage(skill_dir, sessions=200):
+    """Audit empirical usage of a skill's bundled scripts in recent conversations.
+
+    Identifies ACTIVE, LOW_USAGE, and NEVER_USED/ORPHAN scripts.
+    WARN when obsolete or orphan scripts are found that should be removed or consolidated.
+    """
+    skill_dir = Path(skill_dir).resolve()
+    if audit_skill_scripts is None or get_bundled_scripts is None:
+        return ("bundled-script-usage", "WARN", "audit_bundled_scripts module unavailable")
+
+    scripts = get_bundled_scripts(skill_dir)
+    if not scripts:
+        return ("bundled-script-usage", "PASS", "no bundled scripts to audit")
+
+    try:
+        report = audit_skill_scripts(skill_dir, sessions=sessions)
+    except Exception as e:
+        return ("bundled-script-usage", "WARN", f"audit failed: {e}")
+
+    scripts_data = report.get("scripts", {})
+    obsolete = [
+        f"{name} ({d['status']})"
+        for name, d in scripts_data.items()
+        if d.get("status") in ("NEVER_USED", "ORPHAN")
+    ]
+    low_usage = [
+        f"{name} ({d['invocations']} calls)"
+        for name, d in scripts_data.items()
+        if d.get("status") == "LOW_USAGE"
+    ]
+    scanned = report.get("scanned_sessions", sessions)
+    if obsolete:
+        detail = (
+            f"scanned {scanned} sessions: {len(obsolete)} obsolete script(s) [{', '.join(obsolete)}]; "
+            f"consider removal or consolidation"
+        )
+        return ("bundled-script-usage", "WARN", detail)
+    elif low_usage:
+        detail = (
+            f"scanned {scanned} sessions: {len(scripts_data)} script(s) active/low-usage [{', '.join(low_usage)}]"
+        )
+        return ("bundled-script-usage", "PASS", detail)
+    else:
+        return (
+            "bundled-script-usage",
+            "PASS",
+            f"scanned {scanned} sessions: all {len(scripts_data)} script(s) active",
+        )
 
 
 def _self_test():
@@ -493,6 +558,11 @@ def _self_test():
             ("scriptability-allows-english-for",
              lambda: _expect(_scriptability_findings(
                  ["Collect the data for the report and summarise it."]) == [])),
+            ("bundled-script-usage-no-scripts",
+             lambda: _expect(_check_bundled_script_usage(loopy)[1] == "PASS")),
+            ("bundled-script-usage-flag-integration",
+             lambda: _expect(any(c[0] == "bundled-script-usage" and c[1] == "PASS"
+                                 for c in validate_skill(loopy, audit_script_usage=True)))),
         ]
 
         results = []
@@ -524,6 +594,17 @@ def main(argv=None):
     ap.add_argument(
         "--self-test", action="store_true", help="run built-in assertions and exit"
     )
+    ap.add_argument(
+        "--audit-script-usage",
+        action="store_true",
+        help="audit empirical usage of bundled scripts across conversations (default: 200 sessions)",
+    )
+    ap.add_argument(
+        "--sessions",
+        type=int,
+        default=200,
+        help="max recent conversation sessions to scan for script audit (default: 200)",
+    )
     args = ap.parse_args(argv)
 
     if args.self_test:
@@ -533,7 +614,11 @@ def main(argv=None):
 
     failed = False
     for d in args.skills:
-        results = validate_skill(d)
+        results = validate_skill(
+            d,
+            audit_script_usage=args.audit_script_usage,
+            sessions=args.sessions,
+        )
         ok = not any(s == "FAIL" for _, s, _ in results)
         failed |= not ok
         print(d)

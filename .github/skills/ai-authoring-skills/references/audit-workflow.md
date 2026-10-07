@@ -46,7 +46,18 @@ Standard Operating Procedure for auditing triggering reliability, structural hea
          condition, not buried in a reference.
    - [ ] **Large payloads write to `--out`, not stdout.** Agents truncate long
          stdout and silently conclude from partial data.
-6. **Generalization Check**:
+6. **Empirical Script Usage Audit** (check bundled scripts against conversation transcripts):
+   Run `python3 scripts/audit_bundled_scripts.py <skill-path> --sessions 200`
+   (or `validate.py --audit-script-usage <skill-path>`).
+   Queries `ai-conversation-review`'s `search_tools.py` over conversation transcripts
+   (default 200 sessions, configurable with `--sessions <N>` or `--all`).
+   - Categorizes bundled scripts:
+     - **ACTIVE** (≥5 invocations): frequently executed; keep and prioritize.
+     - **LOW_USAGE** (1-4 invocations): rarely executed; evaluate combining into a composite script with other commands in a chain.
+     - **NEVER_USED** (0 invocations, documented): candidate for deprecation/removal if obsolete.
+     - **ORPHAN** (0 invocations, undocumented): dead code candidate for removal.
+   - If a bundled script has "never" or very low usage that could be added to a script with other commands in a chain, raise it as obsolete for removal or consolidation.
+7. **Generalization Check**:
    - Eliminate hardcoded paths or over-fitting to single chat examples.
    - Replace MUST-stacking with clear operational rationales and boundaries.
 
@@ -101,7 +112,13 @@ When performing a formal skill audit, structure findings using this exact format
 - **Correlation Risk**: [Resources read more than once, and whether staleness can mislead]
 - **Verdict**: [Script-first / partially scripted / narration-only]
 
-## 5. Recommended Actions
+## 5. Empirical Script Usage (default: 200 sessions)
+- **Scanned Sessions**: [N]
+- **Active Scripts**: [List with call counts]
+- **Low Usage / Consolidation Candidates**: [List with call counts and proposed parent script]
+- **Never Used / Obsolete Scripts**: [List flagged for removal]
+
+## 6. Recommended Actions
 1. [Action item 1 — a single gather script first; it fixes cost and correctness]
 2. [Action item 2]
 ```
