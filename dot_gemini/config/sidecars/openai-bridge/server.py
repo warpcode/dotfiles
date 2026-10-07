@@ -142,7 +142,12 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
             if history:
                 context_str = "Context of previous conversation:\n"
                 for msg in history:
-                    role = msg.get("role", "user").capitalize()
+                    raw_role = msg.get("role", "user")
+                    if not isinstance(raw_role, str):
+                        raw_role = "user"
+                    # Sanitize role: restrict to alphanumeric characters to prevent role header / prompt injection
+                    clean_role = "".join(c for c in raw_role if c.isalnum()) or "User"
+                    role = clean_role.capitalize()
                     content = msg.get("content", "")
                     context_str += f"{role}: {content}\n"
                 context_str += "\nNow respond to the following prompt:\n"
