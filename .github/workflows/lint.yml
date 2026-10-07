@@ -32,3 +32,30 @@ jobs:
           else
             echo "All Zsh files passed syntax check"
           fi
+
+      - name: Run Zsh unit tests
+        run: |
+          if [ ! -d "dot_zsh/tests" ]; then
+            echo "Error: dot_zsh/tests directory not found!" >&2
+            exit 1
+          fi
+          test_count=0
+          failed=0
+          for test_script in dot_zsh/tests/*.zsh; do
+            [ -f "$test_script" ] || continue
+            test_count=$((test_count + 1))
+            echo "Executing $test_script..."
+            if ! zsh "$test_script"; then
+              echo "FAILED: $test_script" >&2
+              failed=$((failed + 1))
+            fi
+          done
+          if [ "$test_count" -eq 0 ]; then
+            echo "Error: No Zsh test scripts found in dot_zsh/tests!" >&2
+            exit 1
+          fi
+          if [ "$failed" -gt 0 ]; then
+            echo "Error: $failed Zsh test suite(s) failed!" >&2
+            exit 1
+          fi
+          echo "All $test_count Zsh test suite(s) passed successfully."
