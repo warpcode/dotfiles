@@ -9,7 +9,7 @@ usage() {
 Usage: pr_audit_bundle.sh --repo <owner/repo> --pr <number> [--out <dir>]
 
 Non-invasive PR audit bundle (no checkout, no workspace tests). Writes into <out>
-(default: ./scratch/pr<number>):
+(default: /tmp/pr<number>):
   meta.json          PR metadata (title, body, files, commits, reviews, checks)
   pr<number>.diff    Full unified diff (read it with view_file ranges, NOT stdout)
   head/<path>        Raw head-branch copy of every added/modified file
@@ -21,7 +21,7 @@ acceptance-criteria checkboxes, and 'depends on #N' issues with shipped status
 Options:
   --repo <owner/repo>  Required. Never guessed from the local directory.
   --pr <number>        Required.
-  --out <dir>          Output directory.
+  --out <dir>          Output directory (default: /tmp/pr<number>).
   -h, --help           Show this help.
 EOF
 }
@@ -43,7 +43,7 @@ if [[ -z "$repo" || -z "$pr" ]]; then
   echo "Error: --repo and --pr are required. Use --help for usage." >&2
   exit 1
 fi
-[[ -z "$out" ]] && out="scratch/pr${pr}"
+[[ -z "$out" ]] && out="/tmp/pr${pr}"
 mkdir -p "$out/head" "$out/issues"
 
 gh pr view "$pr" --repo "$repo" \
