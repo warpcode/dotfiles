@@ -1,7 +1,7 @@
 from .metrics import calculate_metrics
 
 def _flatten_adf_list(node, parts):
-    """Helper function to append ADF content to a list of parts."""
+    """Helper function to append ADF content to a list of parts with type safety and null guards."""
     if node is None:
         return
     if isinstance(node, list):
@@ -13,16 +13,27 @@ def _flatten_adf_list(node, parts):
 
     node_type = node.get("type")
     if node_type == "text":
-        parts.append(node.get("text", ""))
+        text = node.get("text")
+        if isinstance(text, str) and text:
+            parts.append(text)
     elif node_type == "hardBreak":
         parts.append("\n")
     elif node_type == "inlineCard":
-        parts.append(node.get("attrs", {}).get("url", ""))
+        attrs = node.get("attrs")
+        if isinstance(attrs, dict):
+            url = attrs.get("url")
+            if isinstance(url, str) and url:
+                parts.append(url)
     elif node_type == "mention":
-        parts.append(node.get("attrs", {}).get("text", ""))
+        attrs = node.get("attrs")
+        if isinstance(attrs, dict):
+            text = attrs.get("text")
+            if isinstance(text, str) and text:
+                parts.append(text)
     elif node_type in ("paragraph", "heading", "listItem", "tableCell"):
-        content = node.get("content", [])
-        _flatten_adf_list(content, parts)
+        content = node.get("content")
+        if content:
+            _flatten_adf_list(content, parts)
         parts.append("\n")
     elif "content" in node:
         _flatten_adf_list(node["content"], parts)

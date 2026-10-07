@@ -133,6 +133,53 @@ class TestFormatters(unittest.TestCase):
         _flatten_adf_list("just a string", parts)
         self.assertEqual(parts, [])
 
+    def test_flatten_adf_guards_false_paths(self):
+        self.assertEqual(flatten_adf({"type": "inlineCard"}), "")
+        self.assertEqual(flatten_adf({"type": "inlineCard", "attrs": None}), "")
+        self.assertEqual(flatten_adf({"type": "inlineCard", "attrs": "not-a-dict"}), "")
+        self.assertEqual(flatten_adf({"type": "inlineCard", "attrs": {"url": None}}), "")
+        self.assertEqual(flatten_adf({"type": "inlineCard", "attrs": {"url": 123}}), "")
+        self.assertEqual(flatten_adf({"type": "inlineCard", "attrs": {"url": ""}}), "")
+
+        self.assertEqual(flatten_adf({"type": "mention"}), "")
+        self.assertEqual(flatten_adf({"type": "mention", "attrs": None}), "")
+        self.assertEqual(flatten_adf({"type": "mention", "attrs": "not-a-dict"}), "")
+        self.assertEqual(flatten_adf({"type": "mention", "attrs": {"text": None}}), "")
+        self.assertEqual(flatten_adf({"type": "mention", "attrs": {"text": ["a", "b"]}}), "")
+        self.assertEqual(flatten_adf({"type": "mention", "attrs": {"text": ""}}), "")
+
+        self.assertEqual(flatten_adf({"type": "text"}), "")
+        self.assertEqual(flatten_adf({"type": "text", "text": 123}), "")
+        self.assertEqual(flatten_adf({"type": "text", "text": ""}), "")
+
+        self.assertEqual(flatten_adf({"type": "paragraph", "content": []}), "\n")
+        self.assertEqual(flatten_adf({"type": "paragraph", "content": None}), "\n")
+
+    def test_flatten_adf_catchall_structural_nodes(self):
+        doc = {
+            "type": "doc",
+            "content": [
+                {
+                    "type": "bulletList",
+                    "content": [
+                        {
+                            "type": "listItem",
+                            "content": [{"type": "text", "text": "Item 1"}]
+                        }
+                    ]
+                },
+                {
+                    "type": "codeBlock",
+                    "content": [{"type": "text", "text": "print('hello')"}]
+                },
+                {
+                    "type": "panel",
+                    "content": [{"type": "text", "text": "Important note"}]
+                }
+            ]
+        }
+        self.assertEqual(flatten_adf(doc), "Item 1\nprint('hello')Important note")
+
     def test_process_issue_minimal(self):
         issue = {"id": "1", "key": "TEST-1"}
         result = process_issue(issue, requested_expands=[])
