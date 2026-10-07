@@ -617,6 +617,51 @@ class TestJulesFormatters(unittest.TestCase):
         self.assertNotIn("### Actionable Items", md)
 
 
+class TestJulesBatchOperations(unittest.TestCase):
+    def test_audit_sessions_repo_filter(self):
+        client = JulesClient(api_key="dummy")
+        mock_sessions = {
+            "sessions": [
+                {
+                    "id": "s1",
+                    "sourceContext": {"source": "sources/github/warpcode/cloakenv"},
+                    "createTime": "2026-10-01T12:00:00Z",
+                    "state": "IN_PROGRESS",
+                },
+                {
+                    "id": "s2",
+                    "sourceContext": {"source": "sources/github/warpcode/dotfiles"},
+                    "createTime": "2026-10-01T12:00:00Z",
+                    "state": "IN_PROGRESS",
+                },
+            ]
+        }
+        with patch.object(client, "list_sessions", return_value=mock_sessions), \
+             patch.object(client, "audit_session", side_effect=lambda s, **kw: {"id": s["id"], "source": s["sourceContext"]["source"]}):
+            audits = client.audit_sessions(page_size=10, repo="cloakenv", max_age_days=0)
+            self.assertEqual(len(audits), 1)
+            self.assertEqual(audits[0]["id"], "s1")
+
+    def test_archive_session_all_candidates(self):
+        from main import cmd_archive_session
+        parser = setup_parser()
+        args = parser.parse_args(["archive-session", "--all-candidates"])
+        self.assertTrue(args.all_candidates)
+        self.assertEqual(args.session_ids, [])
+
+        client = MagicMock()
+        mock_candidates = [
+            {"id": "cand-1", "assessment": "STALLED"},
+            {"id": "cand-2", "assessment": "AWAITING_PLAN_APPROVAL"},
+        ]
+        with patch("main._archive_candidates", return_value=mock_candidates):
+            cmd_archive_session(client, args)
+            self.assertEqual(client.archive_session.call_count, 2)
+            client.archive_session.assert_any_call("cand-1")
+            client.archive_session.assert_any_call("cand-2")
+
+
 if __name__ == "__main__":
     unittest.main()
+
 

@@ -50,6 +50,14 @@ def cmd_sessions(client: JulesClient, args: argparse.Namespace) -> None:
         page_token=getattr(args, "page_token", None),
         filter_expr=getattr(args, "filter", None),
     )
+    repo = getattr(args, "repo", None)
+    if repo and "sessions" in data:
+        clean_repo = repo.strip().removeprefix("sources/").removeprefix("github/").lower()
+        data["sessions"] = [
+            s
+            for s in data["sessions"]
+            if clean_repo in s.get("sourceContext", {}).get("source", "").removeprefix("sources/").removeprefix("github/").lower()
+        ]
     print(format_sessions(data))
 
 
@@ -79,7 +87,9 @@ def cmd_check_sessions(client: JulesClient, args: argparse.Namespace) -> None:
             stale_threshold_mins=stale_threshold,
             filter_expr=getattr(args, "filter", None),
             max_age_days=max_age_days,
+            repo=getattr(args, "repo", None),
         )
+
 
     show_history = getattr(args, "history", False) or bool(session_id)
     print(
@@ -215,6 +225,7 @@ def _archive_candidates(client: JulesClient, args: argparse.Namespace) -> list[d
     audits = client.audit_sessions(
         page_size=getattr(args, "page_size", None) or 20,
         max_age_days=getattr(args, "max_age_days", None),
+        repo=getattr(args, "repo", None),
     )
     return [
         a
@@ -247,7 +258,7 @@ def _print_archive_candidates(client: JulesClient, args: argparse.Namespace) -> 
         )
     print(
         "\nArchiving is REVERSIBLE. Apply with: "
-        "`archive-session <id> [<id> ...]`"
+        "`archive-session <id> [<id> ...]` or `archive-session --all-candidates`"
     )
 
 
@@ -256,11 +267,19 @@ def cmd_archive_session(client: JulesClient, args: argparse.Namespace) -> None:
         _print_archive_candidates(client, args)
         return
 
-    if not args.session_ids:
-        die("Provide one or more session IDs, or use --list-candidates.")
+    target_ids = list(args.session_ids or [])
+    if getattr(args, "all_candidates", False):
+        candidates = _archive_candidates(client, args)
+        target_ids.extend([c["id"] for c in candidates if c.get("id")])
+        if not target_ids:
+            print("No candidate sessions found to archive.")
+            return
+
+    if not target_ids:
+        die("Provide one or more session IDs, or use --list-candidates / --all-candidates.")
 
     verb = "Unarchived" if args.unarchive else "Archived"
-    for sid in args.session_ids:
+    for sid in target_ids:
         if args.unarchive:
             client.unarchive_session(sid)
         else:
@@ -268,6 +287,7 @@ def cmd_archive_session(client: JulesClient, args: argparse.Namespace) -> None:
         clean = sid.strip().removeprefix("sessions/")
         suffix = " (restored to active listing)" if args.unarchive else " (reversible)"
         print(f"{verb} session {clean}{suffix}")
+
 
 
 def setup_parser() -> argparse.ArgumentParser:
@@ -354,6 +374,10 @@ Authentication:
         "--filter",
         help="Filter expression to filter sessions",
     )
+    p_sessions.add_argument(
+        "--repo",
+        help="Filter sessions by repository (e.g. warpcode/cloakenv or cloakenv)",
+    )
 
     # session
     p_session = subparsers.add_parser(
@@ -381,6 +405,10 @@ Authentication:
         nargs="?",
         default=None,
         help="Optional specific session ID to audit (if omitted, audits recent sessions)",
+    )
+    p_check.add_argument(
+        "--repo",
+        help="Filter audited sessions by repository (e.g. warpcode/cloakenv or cloakenv)",
     )
     p_check.add_argument(
         "--stale-threshold-mins",
@@ -576,7 +604,7 @@ Authentication:
     p_arch.add_argument(
         "session_ids",
         nargs="*",
-        help="One or more Jules session IDs to archive (omit when using --list-candidates)",
+        help="One or more Jules session IDs to archive (omit when using --list-candidates or --all-candidates)",
     )
     p_arch.add_argument(
         "--unarchive",
@@ -587,6 +615,21 @@ Authentication:
         "--list-candidates",
         action="store_true",
         help="Dry-run: list gated/stalled sessions without a PR that are safe to archive.",
+    )
+    p_arch.add_argument(
+        "--all-candidates",
+        action="store_true",
+        help="Archive all candidate gated/stalled sessions without a PR in a single command.",
+    )
+    p_arch.add_argument(
+        "--repo",
+        help="Filter candidate sessions by repository (e.g. warpcode/cloakenv or cloakenv)",
+    )
+    p_arch.add_argument(
+        "--max-age-days",
+        type=int,
+        default=30,
+        help="Ignore sessions older than this threshold in days (default: 30; set 0 to disable)",
     )
 
     # nudge

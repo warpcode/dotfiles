@@ -538,10 +538,17 @@ class JulesClient:
         stale_threshold_mins: int = 60,
         filter_expr: str | None = None,
         max_age_days: int | None = 30,
+        repo: str | None = None,
     ) -> list[dict[str, Any]]:
-        """List and audit recent sessions, ignoring inactive sessions over max_age_days old."""
+        """List and audit recent sessions, optionally filtered by repo, ignoring inactive sessions over max_age_days old."""
         res = self.list_sessions(page_size=page_size, filter_expr=filter_expr)
         sessions = res.get("sessions", [])
+        if repo:
+            clean_repo = repo.strip().removeprefix("sources/").removeprefix("github/").lower()
+            sessions = [
+                s for s in sessions
+                if clean_repo in s.get("sourceContext", {}).get("source", "").removeprefix("sources/").removeprefix("github/").lower()
+            ]
         now = datetime.now(timezone.utc)
         audits = []
         for s in sessions:
@@ -558,4 +565,5 @@ class JulesClient:
                         pass
             audits.append(self.audit_session(s, stale_threshold_mins=stale_threshold_mins, max_age_days=max_age_days))
         return audits
+
 
