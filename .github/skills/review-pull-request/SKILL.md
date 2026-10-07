@@ -149,9 +149,9 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
      ```bash
      # Single thread:
      bash <skills-dir>/github-cli/scripts/update_pull_request_review_thread_resolution.sh --thread-id "<thread_id>"
-
+     # Multiple threads in ONE call (batch resolution prevents tool call sprawl):
+     bash <skills-dir>/github-cli/scripts/update_pull_request_review_thread_resolution.sh --thread-ids "<id1>,<id2>,<id3>"
      ```
-      For multiple threads, invoke the single-thread script once per thread ID and re-query the thread list to verify each result.
    - **Uncompleted or Broken**: Bump the thread with a contextual reply using the initial comment's REST integer `databaseId`:
      ```bash
      bash <skills-dir>/github-cli/scripts/add_reply_to_pull_request_comment.sh --owner <owner> --repo <repo> --pull-number <pr> --comment-id <databaseId> --body "..."
