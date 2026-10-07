@@ -1,0 +1,17 @@
+{
+  "skill_name": "github-pr",
+  "evals": [
+    {
+      "id": 0,
+      "name": "pr-authoring-title-format",
+      "prompt": "Create a draft pull request for issue #102 adding support for JWT authentication. Format the title and body properly.",
+      "expected_output": "A draft PR created with title '[#102] Add JWT authentication support' and structured body using templates/pull_request.md, requesting user confirmation before submission."
+    },
+    {
+      "id": 1,
+      "name": "pr-conflict-resolution-author",
+      "prompt": "Resolve merge conflicts on PR branch feature/auth against origin/main as the author.",
+      "expected_output": "Guidance on using an isolated worktree in /tmp/, merging origin/main, resolving conflicts, and standard pushing without force-push."
+    }
+  ]
+}
