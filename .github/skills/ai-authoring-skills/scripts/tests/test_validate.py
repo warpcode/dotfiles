@@ -148,5 +148,100 @@ class TestScriptsCompile(unittest.TestCase):
         self.assertNotIn("\n", detail)
 
 
+class TestScriptability(unittest.TestCase):
+    """The workflow-scriptability WARN: narration-only workflows must be
+    detected, and prohibitions/English prose must not be."""
+
+    def findings(self, *lines):
+        return validate._scriptability_findings(list(lines))
+
+    def test_clean_skill_has_no_findings(self):
+        self.assertEqual(self.findings(
+            "Run `scripts/bundle.sh --repo O/R --pr 42` to gather everything.",
+            "Then compare the CI conclusions with the review decision.",
+        ), [])
+
+    def test_detects_shell_loop(self):
+        found = self.findings("for f in $(git diff --name-only); do")
+        self.assertTrue(any("shell loop" in f for f in found), found)
+
+    def test_loop_detected_on_the_keyword_line(self):
+        # Matching is line-oriented, so a multi-line loop is reported on the
+        # line carrying the keyword. The body alone is indistinguishable from an
+        # ordinary pipeline, so it is not flagged.
+        found = self.findings(
+            "for f in $(git diff --name-only); do",
+            "  git show origin/main:$f | jq .path",
+        )
+        self.assertEqual(len([f for f in found if "shell loop" in f]), 1)
+
+    def test_detects_inline_python(self):
+        found = self.findings('Run python3 -c "import json; print(json.load(f))"')
+        self.assertTrue(any("inline python3 -c" in f for f in found), found)
+
+    def test_detects_chained_pipe_filter(self):
+        found = self.findings("git log --oneline | grep fix | jq -r .sha")
+        self.assertTrue(any("chained pipe filter" in f for f in found), found)
+
+    def test_detects_command_chain(self):
+        found = self.findings(
+            "1. Run gh pr view 42 --json title",
+            "2. Run gh pr checks 42",
+        )
+        self.assertTrue(any("documented instruction lines" in f for f in found),
+                        found)
+
+    def test_single_command_line_is_not_a_chain(self):
+        self.assertEqual(self.findings("1. Run gh pr view 42 --json title"), [])
+
+    def test_prohibition_is_not_flagged(self):
+        self.assertEqual(self.findings(
+            "Never write an inline python3 -c script.",
+            "Do not use a shell loop here.",
+        ), [])
+
+    def test_passing_mention_is_not_flagged(self):
+        self.assertEqual(self.findings(
+            "Flag any use of `python3 -c \"...\"` as an audit finding.",
+            "There is no gh in the local clone; Jules has no API access.",
+        ), [])
+
+    def test_english_for_is_not_a_loop(self):
+        self.assertEqual(self.findings(
+            "Collect the data for the report and summarise it.",
+            "Iterate for each open pull request.",
+        ), [])
+
+    def test_fenced_code_is_ignored(self):
+        text = validate.strip_fenced_blocks([
+            "Never do this:",
+            "```bash",
+            "for f in a b; do gh pr view $f; done",
+            "```",
+            "Use the bundle instead.",
+        ])
+        self.assertEqual(validate._scriptability_findings(text), [])
+
+    def test_warn_does_not_fail_the_skill(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = Path(tmp) / "loopy-skill"
+            skill.mkdir()
+            (skill / "SKILL.md").write_text(
+                "---\n"
+                "name: loopy-skill\n"
+                "description: >\n"
+                "  Loops inline. Use when the user asks for a loop.\n"
+                "---\n"
+                "# Loopy\n"
+                "for f in $(git diff --name-only); do\n"
+                "  git show origin/main:$f\n"
+                "done\n"
+            )
+            results = validate.validate_skill(skill)
+            statuses = {c: s for c, s, _ in results}
+            self.assertEqual(statuses["workflow-scriptability"], "WARN")
+            self.assertFalse(any(s == "FAIL" for _, s, _ in results))
+
+
 if __name__ == "__main__":
     unittest.main()

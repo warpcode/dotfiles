@@ -179,6 +179,120 @@ gh issue list \
 
 ---
 
+## Pattern 0: Gather First, Then Bundle (read this before Pattern 1)
+
+**This is the default shape of a script in a skill. Patterns 1-4 are components
+you compose inside it.**
+
+Design every workflow as three steps, and make the first one the biggest call:
+
+```
+GATHER   one script, one call → every fact the judgement needs, one snapshot
+REASON   the agent, over the full output — the only non-mechanical step
+ACT      one mutating call, report-only until the user approves
+```
+
+Two things to settle before writing the gather script:
+
+**What must be known before anything may be acted on?** Write it as a contract:
+
+| Fact | Retrieved by | Gap if unavailable |
+|---|---|---|
+| identity — owner/repo/ids/ref | | |
+| current state — status, decisions, mergeability | | |
+| verification — checks, dependencies, base comparison | | |
+| requirements — source issue, acceptance criteria | | |
+
+**What must the gather script never do?** Act on its own output, or default a
+retrieval failure to a benign-looking value. A missing CI check is not a passing
+CI check:
+
+```python
+# ✗ A retrieval failure becomes "CI passed with zero checks"
+checks = rollup.get("statusCheckRollup") or []
+ci = "PASS" if all(c.get("conclusion") == "SUCCESS" for c in checks) else "FAIL"
+# → all([]) is True, so an empty or failed response reports PASS
+
+# ✓ Absence is explicit, and the verdict distinguishes it
+checks = rollup.get("statusCheckRollup")
+if checks is None:
+    ci, gap = "UNKNOWN", "statusCheckRollup absent from API response"
+elif not checks:
+    ci, gap = "NO_CHECKS", "no CI workflow configured"
+else:
+    ci, gap = ("PASS" if all(c.get("conclusion") == "SUCCESS" for c in checks)
+               else "FAIL"), None
+```
+
+Then apply the bundling rule to every remaining step: *how many tool calls does
+the agent need to complete it?* Anything above one is a missing script.
+
+```bash
+# ✗ What most skills ship — the agent orchestrates
+gh pr view "$PR" --json number,title,isDraft,reviewDecision
+gh pr checks "$PR"
+gh api "repos/$REPO/pulls/$PR/comments"
+gh api "repos/$REPO/pulls/$PR/reviews"
+# ...4 calls, 4 round-trips, 4 partial JSON docs the agent must correlate by hand
+
+# ✓ What a skill should ship — the script orchestrates
+bash <skill-dir>/scripts/pr_audit_bundle.sh --repo "$REPO" --pr "$PR"
+# 1 call, 1 coherent JSON doc
+```
+
+The difference is not cosmetic. In the left version the agent can read `gh pr
+view` at time T1 and `gh pr checks` at T3, and correlate them as if they were
+simultaneous — the underlying state may have moved. The bundle captures one
+consistent snapshot because the correlation happens in code.
+
+### Signals that a bundle is missing
+
+| Symptom in a SKILL.md | Bundle needed |
+|---|---|
+| Numbered steps each containing a bare command | One script per question those steps answer together |
+| A shell `for`/`while` loop in the body | A parameterised script |
+| A `jq` chain spanning multiple invocations | One script doing the join in code |
+| Several `get-`/`list-` scripts the agent must call in sequence | One `*-bundle.sh` |
+| Instructions to "compare" or "correlate" two outputs | A script that returns them pre-correlated |
+| Guidance like "retrieve X, then Y, then check Z" | `*-rollup.py` or `*-audit.py` |
+| A mutation documented before the facts it depends on are gathered | A gather script that runs first |
+
+### Signals that the gather step is missing or wrong
+
+| Symptom | Defect |
+|---|---|
+| The workflow opens with an action ("merge it", "post the comment") | No gather phase |
+| Each step re-derives `--repo`, ids, or the head SHA | Identity is re-guessed per call; two reads can target different things |
+| The agent is told to "check whether the dependency shipped" without being told where to get that fact | Gathering is left to the agent's judgement |
+| Output uses `or []`, `or {}`, `or False` for remote fields | Retrieval failures render as benign values and invert verdicts |
+| The script returns `checks: []` for a repo with no CI | Indistinguishable from "CI passed" |
+| `gh pr diff` is read from stdout | Truncation yields a confident, wrong conclusion; use `--out <dir>` |
+
+### Bundle construction checklist
+
+1. **Name the question** the bundle answers. One question per bundle.
+2. **Resolve shared parameters once** (repo, owner, ids) at the top. A guessed or
+   twice-resolved `owner/repo` is a top source of "could not resolve to a
+   Repository" failures.
+3. **Capture a consistent snapshot** — fetch everything before deriving anything.
+4. **Derive the verdict in code**, not in the agent's head. Booleans and
+   reason lists travel better than data requiring arithmetic.
+5. **Emit dense JSON to stdout, progress to stderr.**
+6. **Default to read-only.** Mutations behind an explicit flag.
+7. **Fail loudly and specifically.** Say which sub-call failed and why; a
+   bundle that swallows errors reports confident, wrong answers.
+8. **Optionally write artefacts to `--out <dir>`** instead of stdout when payload
+   is large — agents truncate long stdout, and a partial read is silently
+   incomplete. Write files, print a summary, let the agent read ranges.
+
+### Naming
+
+Use the CRUD prefix for the primary noun plus a composite suffix — `-bundle`
+(fixed set gathered), `-rollup` (N aggregated to state), `-audit` (read-only
+verification with a verdict). See `@references/script-standards.md`.
+
+---
+
 ## Pattern 4: Composite Workflow
 
 Use when the agent task requires multiple CLI operations that form a logical unit. The script becomes the unit of work rather than each individual command.
@@ -245,12 +359,18 @@ Across all scripts, apply these practices to minimise token usage:
 
 | Practice | Saves tokens | Example |
 |---|---|---|
+| **One bundle script over many calls** | **The largest win — collapses N round-trips to 1** | **Pattern 0 / Pattern 4** |
 | Use `--json` with explicit fields | Eliminates decorative output | `--json number,title,state` |
 | Pipe through `jq` to filter | Removes unwanted fields | `jq '{number, title}'` |
 | Pre-filter in the script | LLM sees only relevant items | `--state open --author @me` |
 | Emit structured summaries not logs | LLM parses JSON not prose | `{ "merged": [1,2], "failed": [3] }` |
 | Use `--quiet` or `--no-color` | Eliminates ANSI codes | `--no-color` |
-| One composite script over many calls | Fewer round-trips | Pattern 4 above |
+| Write large payloads to `--out <dir>` | Avoids stdout truncation → wrong conclusions | `--out /tmp/pr42` |
+| Derive verdicts in code, not in context | No mental arithmetic, consistent answers | `{"ready":true,"reasons":[]}` |
+
+**Order matters.** Bundling is applied first and saves the most; field selection
+and filtering are applied *inside* the bundle. Optimising the shape of each
+individual call while leaving N calls in the chain is rearranging deckchairs.
 
 ---
 
@@ -275,3 +395,27 @@ bash scripts/list-my-prs.sh --state open
 ````
 
 Always include: path, purpose, input flags, output schema, and the conditions under which the LLM should prefer this script over a direct `gh` invocation.
+
+For multi-script skills, add an explicit routing note so the agent picks the
+bundle rather than assembling a chain from atomic wrappers:
+
+> Run the bundle instead of chaining the individual scripts. Do not call
+> `get_pull_request.sh` and `list_pull_request_review_threads.sh` separately —
+> `pr_audit_bundle.sh` captures both from one consistent snapshot.
+
+### Anti-pattern
+
+Do **not** document a workflow as a numbered list of individual commands and
+then offer a script for one of them:
+
+```markdown
+## Review a PR
+1. `gh pr view 42 --json ...`      ← agent runs this
+2. `gh pr checks 42`                ← agent runs this
+3. `gh pr diff 42`                  ← agent runs this, output truncated
+4. Compare the CI results with the review decision and report blockers.
+```
+
+This is three round-trips, a truncated read, and mechanical comparison logic
+re-derived at runtime. It is a script wearing a numbered list. Rewrite it as one
+script invocation plus a sentence describing what the script returns.

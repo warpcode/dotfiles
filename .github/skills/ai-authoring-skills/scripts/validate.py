@@ -16,6 +16,9 @@ against the key rules documented in ../SKILL.md:
     ignored so illustrative examples do not false-positive
   - bundled scripts compile: *.py -> py_compile.compile (in-process),
     *.sh -> bash -n, *.zsh -> zsh -n
+  - workflow scriptability: SKILL.md does not hand-roll loops and does not
+    document long command chains the agent must execute one call at a time
+    (WARN only - prose guidance to bundle workflows into scripts)
 
 YAML parsing uses PyYAML when installed; otherwise falls back to a
 minimal parser covering the flat key/value + block-scalar subset that
@@ -43,6 +46,51 @@ MAX_BODY_LINES = 500
 
 NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 TRIGGER_RE = re.compile(r"\buse (this skill )?when\b|\btriggers?\b", re.I)
+
+# Scriptability heuristics. These detect the *narration-only* workflow defect:
+# a SKILL.md that documents a multi-step command chain for the agent to run one
+# invocation at a time, instead of bundling it into a script. Guidance, not
+# enforcement - hence WARN.
+#
+# Matching is line-oriented so a prohibition ("never run `python3 -c`", "use the
+# bundle instead of hand-rolling the loop") is not mistaken for a prescription.
+CODEISH_RE = re.compile(r"[;{}]|\bdo\b|\bdone\b|\$\(|`|\$\[")
+# A shell loop needs shell structure after the keyword: an arithmetic form, a
+# glob/quoted head, or a variable followed by `in`/`;`. This keeps English
+# ("for the workflow", "for each PR") out of the results.
+LOOP_RE = re.compile(
+    r"^\s*(?:\$\(\()?\s*(?:for|while|until)\s+"
+    r"(?:\(\(|\{|\$|\"|'|\[\[|\w+\s+in\s|\w+\s*;\s*do|\w+\s+in\b)"
+    r"|^\s*\$\(\(\s*(?:for|while)\b"
+)
+INLINE_PY_RE = re.compile(r"python3?\s+-c\s+['\"]")
+JQ_CHAIN_RE = re.compile(r"\|\s*(?:jq|grep|awk|sed)\b[^|]*\|\s*(?:jq|grep|awk|sed)\b")
+# A documented instruction line ("1. run ...", "- execute ...") that ends in a
+# shell-ish command *invoked bare* - not quoted as an inline code reference.
+# Two or more of these outside a fenced block means the agent is being told to
+# chain invocations. A prohibition ("no `gh`", "never run git push") or a passing
+# mention in backticks is not a chain.
+INSTRUCTION_CMD_RE = re.compile(
+    r"^\s*(?:\d+\.|[-*])\s+[^`\n]{0,90}?"
+    r"(?<![`\w])(?:gh|git|jq|curl|aws|kubectl|docker|glab|hub|ghcr)\s+[a-z][\w-]*"
+)
+# Prose that forbids or merely mentions the pattern rather than prescribing it.
+# Split by strictness: PROHIBITION_RE is unambiguous and suppresses every
+# finding; NEGATION_RE is weaker and only suppresses inline-code and chain
+# findings, where a passing mention is the common false positive.
+_PROHIBITION = (
+    r"\b(?:never|avoid|instead\s+of|rather\s+than|anti-?pattern|forbidden"
+    r"|prohibited|prohibit\w*|do\s*n[o']t|must\s+not|eliminat\w+|ban\w*"
+    r"|block\w*|❌|✗|✘)\b"
+)
+# Unambiguous prohibition: suppresses every finding on the line.
+PROHIBITION_RE = re.compile(_PROHIBITION, re.I)
+# Weaker hedging ("no `gh`", "flag any use of") plus the prohibitions. Only
+# suppresses inline-code and chain findings, where passing mentions dominate.
+NEGATION_RE = re.compile(
+    r"\b(?:no|not|cannot|only|flag|wrong|bad|❌|✗|✘)\b|" + _PROHIBITION, re.I
+)
+MAX_SCRIPTABILITY_CHAIN = 2
 RESOURCE_RE = re.compile(
     r"(?<![\w/.])@?((?:references|templates|scripts|assets)/[\w][\w./-]*[.\w])"
 )
@@ -232,7 +280,68 @@ def validate_skill(skill_dir):
     else:
         add("scripts-compile", "PASS")
 
+    results.append(_check_scriptability(body_lines)[0])
     return results
+
+
+def _scriptability_findings(prose_lines):
+    """Return scriptability findings for the prose lines of a SKILL.md.
+
+    Each finding is a string. Fenced code is assumed already stripped.
+    """
+    findings = []
+    chain_count = 0
+
+    for i, line in enumerate(prose_lines, start=1):
+        if not line.strip():
+            continue
+        # A line that forbids the pattern is guidance, not a prescription.
+        prohibited = bool(PROHIBITION_RE.search(line))
+        hedged = bool(NEGATION_RE.search(line))
+
+        # Loops are matched strictly: only an explicit prohibition suppresses
+        # them, because "for ... in" prose is easy to over-read.
+        if not prohibited and LOOP_RE.search(line) and CODEISH_RE.search(line):
+            findings.append(f"shell loop in SKILL.md (~line {i}): "
+                            f"{line.strip()[:60]!r}")
+
+        # Inline code and pipe chains are matched leniently: a passing mention
+        # ("flag any use of `python3 -c`") is far more common than a real
+        # prescription, so weaker hedging words suppress them too.
+        if not hedged:
+            if INLINE_PY_RE.search(line):
+                findings.append(f"inline python3 -c in SKILL.md (~line {i}): "
+                                f"{line.strip()[:60]!r}")
+            if JQ_CHAIN_RE.search(line):
+                findings.append(f"chained pipe filter in SKILL.md (~line {i}): "
+                                f"{line.strip()[:60]!r}")
+
+        if INSTRUCTION_CMD_RE.match(line) and not hedged:
+            chain_count += 1
+
+    if chain_count >= MAX_SCRIPTABILITY_CHAIN:
+        findings.append(
+            f"{chain_count} documented instruction lines each end in a command "
+            "- the agent is chaining invocations. Consider a bundle script."
+        )
+    return findings
+
+
+def _check_scriptability(body_lines):
+    """Return a list holding one (check, status, detail) scriptability result.
+
+    WARN when SKILL.md documents a workflow the agent must execute one call at a
+    time, instead of bundling it into a script. Detects hand-rolled loops and
+    documented command chains - the two shapes that make an agent burn hundreds
+    of tool calls re-deriving a procedure it could have run once.
+
+    Advisory by design (WARN, never FAIL): the check is heuristic, and a
+    prohibition that mentions a loop in order to forbid it must not be flagged.
+    """
+    findings = _scriptability_findings(strip_fenced_blocks(body_lines))
+    if findings:
+        return [("workflow-scriptability", "WARN", "; ".join(findings))]
+    return [("workflow-scriptability", "PASS", "")]
 
 
 def _self_test():
@@ -255,6 +364,62 @@ def _self_test():
             "# My skill\n"
             "Read references/deep.md for details.\n"
         )
+
+        loopy = tmp / "loopy-skill"
+        loopy.mkdir()
+        (loopy / "SKILL.md").write_text(
+            "---\n"
+            "name: loopy-skill\n"
+            "description: >\n"
+            "  Does a thing. Use when the user asks to do the thing.\n"
+            "---\n"
+            "# Loopy\n"
+            "Run this:\n"
+            "for f in $(git diff --name-only); do\n"
+            "  git show origin/main:$f | git hash-object --stdin\n"
+            "done\n"
+        )
+
+        chainy = tmp / "chainy-skill"
+        chainy.mkdir()
+        (chainy / "SKILL.md").write_text(
+            "---\n"
+            "name: chainy-skill\n"
+            "description: >\n"
+            "  Does a thing. Use when the user asks to do the thing.\n"
+            "---\n"
+            "# Chainy\n"
+            "1. Run gh pr view 42 --json title\n"
+            "2. Run gh pr checks 42\n"
+            "3. Compare the two results.\n"
+        )
+
+        fenced = tmp / "fenced-skill"
+        fenced.mkdir()
+        (fenced / "SKILL.md").write_text(
+            "---\n"
+            "name: fenced-skill\n"
+            "description: >\n"
+            "  Does a thing. Use when the user asks to do the thing.\n"
+            "---\n"
+            "# Fenced\n"
+            "Never do this:\n"
+            "```bash\n"
+            "for f in a b; do gh pr view $f; done\n"
+            "gh pr view 1 --json x\n"
+            "gh pr view 2 --json x\n"
+            "```\n"
+            "Use the bundle instead.\n"
+        )
+
+        def scriptability_of(d):
+            """Return the finding strings for a skill dir (test helper)."""
+            _, body = split_skill_md(Path(d) / "SKILL.md")
+            return [
+                detail
+                for _, status, detail in _check_scriptability(body)
+                if status == "WARN"
+            ]
 
         bad = tmp / "Bad_Name"
         bad.mkdir()
@@ -302,6 +467,32 @@ def _self_test():
             ("strip-fenced-blocks",
              lambda: _expect(strip_fenced_blocks(
                  ["```", "templates/x.md", "```", "ok"]) == ["ok"])),
+            ("scriptability-clean-skill",
+             lambda: _expect(scriptability_of(good) == [])),
+            ("scriptability-detects-loop",
+             lambda: _expect(any("shell loop" in f for f in scriptability_of(loopy)))),
+            ("scriptability-detects-chain",
+             lambda: _expect(any("documented instruction lines" in f
+                                 for f in scriptability_of(chainy)))),
+            ("scriptability-ignores-fenced-code",
+             lambda: _expect(scriptability_of(fenced) == [])),
+            ("scriptability-ignores-prohibitions",
+             lambda: _expect(_scriptability_findings(
+                 ["Never write a python3 -c heredoc inline.",
+                  "Use the bundle instead of hand-rolling the loop.",
+                  "Anti-pattern: for f in a; do gh pr view $f; done"]) == [])),
+            ("scriptability-flags-inline-py",
+             lambda: _expect(any("inline python3 -c" in f
+                                 for f in _scriptability_findings(
+                                     ["Run python3 -c \"import json\" to parse."])))),
+            ("scriptability-flags-loop-not-prose-for",
+             lambda: _expect(any("shell loop" in f
+                                 for f in _scriptability_findings(
+                                     ["for f in $(git diff --name-only); do",
+                                      "  git show origin/main:$f | jq ."])))),
+            ("scriptability-allows-english-for",
+             lambda: _expect(_scriptability_findings(
+                 ["Collect the data for the report and summarise it."]) == [])),
         ]
 
         results = []
