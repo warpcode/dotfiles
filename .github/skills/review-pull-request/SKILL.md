@@ -7,6 +7,24 @@ description: Master orchestrator for end-to-end GitHub pull request reviews (dis
 
 Master orchestrator for pull request reviews. You are responsible for the entire review lifecycle, delegating specialized audits to subagents and ensuring project memories are updated after every review.
 
+## 🧰 Script Reference
+
+**Prefer a bundled script over a hand-rolled command chain.** Every script below
+emits a concise Markdown summary to stdout, so one call replaces a dozen bash
+calls. `--help` documents each one. Paths are relative to this skill's directory.
+
+| Script | Use it for |
+| --- | --- |
+| `github-cli/scripts/pr_audit_bundle.sh` | **First call of any audit.** Writes `meta.json`, the full diff, head copies of every changed file and the source issue, then prints a summary. Replaces separate `gh pr view` / `gh issue view` / `gh pr diff` calls. |
+| `scripts/pr_preflight.sh` | Captures the diff and the head ref from **one fetch** and asserts the head has not moved. Exit 3 = the PR was amended mid-audit; re-run before submitting. |
+| `scripts/review_worktree.sh` | Creates, lists and destroys throwaway audit worktrees under fixed names (`pr<n>-head`, `pr<n>-base`). Fetches the PR ref on demand; `rm --all-roles` tears a PR's set down in one call. |
+| `scripts/mutation_check.sh` | Proves a test suite actually bites. Applies each mutation, runs the test command over the **whole package** on both head and base, and reports which named test caught it. Verdict per mutation: `KILLED` / `SURVIVED` / `PRE-EXISTING`. |
+| `scripts/build_review_payload.py` | Turns a findings spec JSON into a REST review payload (inline comments, `side: RIGHT`, no `subject_type`). |
+| `scripts/verify_review_anchors.sh` | **Hard gate.** Exits non-zero if any anchor is not an added line, or cannot be resolved against `--head`. |
+| `scripts/submit_review.sh` | Builds → verifies → submits, in that order, capturing diff and ref in one fetch. The preferred submission path. |
+| `scripts/audit_ci_test_coverage.sh` | Reports whether CI actually runs the repo's tests, and which `paths:` filters gate it. |
+| `scripts/apply_mutation.py` | The mutation rewriter `mutation_check.sh` calls. Run it standalone with `--check` to confirm a pattern applies before committing to a finding. |
+
 ## 🚀 Lifecycle Procedure
 
 ### 1. Discovery & Selection
@@ -80,11 +98,28 @@ Master orchestrator for pull request reviews. You are responsible for the entire
 - **Never read a large diff from stdout**: the tool truncates `gh pr diff` output to its tail. Read `pr<n>.diff` and `head/<path>` from the bundle with `view_file` line ranges. Valid `gh api` patterns: `-H "Accept: application/vnd.github.v3.diff" > file` and `-H "Accept: application/vnd.github.raw" > file`; `gh api` has no `--output`, and `--jq` fails on non-JSON responses.
 - **Dependency "shipped" check**: when the issue says `depends on #N`, a `CLOSED` state is not proof the dependency shipped (verified 2026-10-03 on warpcode/cloakenv#162: `CLOSED` with an empty `closedByPullRequestsReferences`). Confirm a merged PR exists (the bundle prints it), or that the symbol the PR relies on exists on the base branch.
 - **Test-only PRs still need branch-purity evidence**: For a diff that only touches test files (e.g. `_test.go`), there is no production behaviour to reason about, so spend the audit budget on proving the *test* is meaningful:
-  - **Mutation-verification**: When a change adds tests without touching production code, "all N subtests pass" is not evidence of coverage. Prove assertions bite by breaking one branch of the code under test in a throwaway worktree (`git worktree add --detach /tmp/wt origin/pr-<n>`), confirming a *named* subtest fails, then restoring the file. Report which subtest caught it; tests that pass under mutation are tautological.
+  - **Mutation-verification**: When a change adds tests without touching production code, "all N subtests pass" is not evidence of coverage. Prove assertions bite by breaking one branch of the code under test and confirming a *named* subtest fails. Report which subtest caught it; tests that pass under mutation are tautological.
+  - **Run `mutation_check.sh`, never a hand-written `run_mut` shell function.** Doing this by hand meant re-typing an inline `python3 - <<EOF` source rewriter plus a `cp .bak` / restore dance per mutation (four separate re-definitions in one review session alone). Write a mutation spec and call the script:
+    ```bash
+    bash <skills-dir>/review-pull-request/scripts/mutation_check.sh \
+      --pr <n> --spec /tmp/opencode/pr<n>/mutations.json \
+      --test-cmd "go test ./internal/engine/ -count=1"
+    ```
+    Spec format (JSON array; `"new": ""` deletes the matched text, `count` defaults to 1):
+    ```json
+    [{"name": "M1: drop the gStart<0 guard",
+      "path": "internal/engine/autoload.go",
+      "old":  "if gStart < 0 ||",
+      "new":  "if true ||"}]
+    ```
+    It prints a table of mutation → verdict → failing test name, and exits `1` when any mutation survived. It creates the head and base worktrees itself and removes them on exit, so it needs no separate `git worktree` calls.
+    - **`SURVIVED` is the finding.** No test failed, so that branch is untested. Quote the mutation and the test file that should have caught it.
+    - **`PRE-EXISTING` is not a finding on this PR.** The base branch fails too, so the branch was already untested repo-wide — a follow-up issue at most.
+    - **Exit 2 means a pattern never applied.** A mutation that did not apply proves nothing; fix the spec's `old` text rather than reporting the branch as a gap. Use `apply_mutation.py --check` to confirm a pattern exists before relying on it.
   - Read assertions, not just their presence. Grep the whole package for the untested branch to distinguish "this PR's gap" from "repo-wide gap". Strength-of-assertion findings (length-only checks, existence-only checks, values asserted nowhere) are the highest-yield category here.
-  - **Scope mutation runs to the whole package, not just the functions the PR touches** (verified 2026-10-03 on warpcode/cloakenv#209). A `-run TestFoo*` invocation covering only the PR's own table will report an "uncovered gap" that a sibling test in the same package already closes: #209's body declared double-quote escaping unprotected because disabling `getQuoteContext`'s `quoteDouble` branch gave "zero failures across all 23 tests" (its 8 + 15), while `go test ./internal/engine/ -count=1` fails the pre-existing `TestMatchCommandRule_Security/Double_quoted_template_expansion`. Always run the mutation **without** a `-run` filter before reporting a coverage gap, and re-check any "this gap is untested" claim the author makes against the full package.
+  - **Scope mutation runs to the whole package, not just the functions the PR touches** (verified 2026-10-03 on warpcode/cloakenv#209). A `-run TestFoo*` invocation covering only the PR's own table will report an "uncovered gap" that a sibling test in the same package already closes: #209's body declared double-quote escaping unprotected because disabling `getQuoteContext`'s `quoteDouble` branch gave "zero failures across all 23 tests" (its 8 + 15), while `go test ./internal/engine/ -count=1` fails the pre-existing `TestMatchCommandRule_Security/Double_quoted_template_expansion`. Always pass the **whole-package** command to `--test-cmd`, never one with a `-run` filter, and re-check any "this gap is untested" claim the author makes against the full package.
   - **When a subtest's name implies a specific guard, prove the mutation distinguishes it** (verified 2026-10-03 on warpcode/cloakenv#209). A case named `braced with non-alphanumeric` appeared to cover `isValidGroupNameOrNum`, but neutering that function entirely left the whole package green: the case actually pinned the unknown-reference-stays-literal fallback, because a *second* guard downstream (`findGroupIndex` returning `-1` → `getGroupValue` rejecting `group < 0`) produced identical output. A test only pins a branch if some input makes the branches differ; when a redundant guard shadows it, add an input that would resolve differently without the guard.
-  - **Run the same mutation against the base branch too**, so the finding distinguishes "this PR introduced an untested branch" from "the branch was already untested repo-wide" — the former is actionable on this PR, the latter is a follow-up issue at most.
+  - **Run the same mutation against the base branch too**, so the finding distinguishes "this PR introduced an untested branch" from "the branch was already untested repo-wide" — the former is actionable on this PR, the latter is a follow-up issue at most. `mutation_check.sh` does this by default; `--skip-base` opts out and forfeits the `PRE-EXISTING` verdict.
 - **Stacked PRs on unmerged or closed bases** (verified 2026-10-03 on warpcode/cloakenv#212): when `baseRefName` is not the default branch, `gh pr diff` shows only the *incremental* delta over that base, which is not the change that would ship.
   ```bash
   gh pr view <n> --json baseRefName -q .baseRefName          # is it the default branch?
@@ -145,6 +180,7 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
 ### 4. Submission
 - Draft a JSON review payload according to the `github-cli` review standards (Severity, Description, Impact, Solution).
 - **One-call submit (preferred)**: `bash <skills-dir>/review-pull-request/scripts/submit_review.sh --spec <findings.json> --repo <owner/repo> --pr <n> [--event REQUEST_CHANGES|COMMENT|APPROVE] [--body TEXT] [--dry-run]`. It runs the three steps below in the only safe order — build the payload, **hard-gate** on `verify_review_anchors.sh`, submit only if the gate passed — and captures the diff and head ref in a *single* fetch so verification cannot compare against a stale blob. Exit codes: `2` = anchors failed, nothing submitted; `3` = submit failed. With zero inline comments the anchor gate is skipped rather than failing (it rejects an empty anchor list).
+  - **Omit `--diff` and `--head`.** Passing either one short-circuits the script's own fetch, which is the only thing making the pair consistent. Supply `--diff`/`--head` only when `pr_preflight.sh` captured them in the same step, and even then prefer the plain call — re-fetching and re-verifying costs one network round-trip and removes the whole stale-ref class of bug. `--dry-run` already prints every anchor it would post, so there is no reason to run it repeatedly; run it once to eyeball, then submit once.
 - **Manual equivalent**: write findings to a spec JSON (`path`, `line`, `severity`, `title`, `description`, `impact`, `solution`), then run `python3 <skills-dir>/review-pull-request/scripts/build_review_payload.py <spec.json> --out <payload.json>` (see `--help`). It enforces `REQUEST_CHANGES`, a neutral one-line body, inline-only findings, `side: RIGHT`, and no `subject_type`. Submit with `github-cli/scripts/submit_pull_request_review_payload.sh --repo ... --pull-number <n> --input <payload.json>`. Do not hand-write an ad-hoc throwaway builder script.
 - **Bot-authored PRs** (e.g. Jules): 
   - `APPROVE`: Submit with empty body, no inline comments.
@@ -186,6 +222,7 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
     Use `--path <file> --line <n> [--line <n> ...]` to check anchors ad hoc, and `--quiet` for the verdict only. A `PASS` verdict is a hard prerequisite for submission.
     > ⚠️ **Never hand-transcribe the hunk-parsing awk.** Two failure modes were observed in practice (2026-09-26): (a) transcribing the one-liner from this file and dropping the `$3` field reference makes the script read the *pre*-change hunk start, so every anchor looks invalid; (b) inverting the diff-line ↔ file-line arithmetic when spot-checking. Both produce confident wrong answers. Let the script do it, and cross-check with `--head origin/pr-<n>` which prints the anchored line's actual text from the PR head blob — that output is the ground truth to eyeball before submitting.
     > The `+` branch must compare `cur` **before** incrementing: after the `@@` header and context lines, `cur` holds the line number of the line currently being read, so `cur++` first shifts the test one line late (off-by-one, verified 2026-09-24).
+    > ⚠️ **`could not be resolved against <ref>` means the diff and the ref are from different fetches, not that the anchor is wrong.** The verifier reports this distinctly when the path is absent from `--head` (deleted or renamed file, or a stale ref) or the line is past the file's end. An empty added line is a *valid* anchor and does not trigger it. Treat the verdict as "re-run `pr_preflight.sh`", never as "move the line".
 - **Verify "tests pass" claims against what CI actually runs** (added 2026-10-01). A PR body's "verified with `python3 -m unittest`" / "all tests pass" is only meaningful if a workflow discovers those files. Many repos have zero test-running jobs, so the claim is unfalsifiable and a *new* test file may be dead weight. Run the bundled auditor rather than hand-grepping workflows:
   ```bash
   bash <skills-dir>/review-pull-request/scripts/audit_ci_test_coverage.sh \
@@ -209,18 +246,41 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
   - Redirect `gh api` output to a scratch file (e.g. `> out.json 2>&1`) — piping to `--jq`/`cat` can hang the terminal in the alternate buffer and the POST never completes.
   - ⚠️ **Never keep in-flight review artifacts in the repo's `scratch/` directory.** Observed 2026-10-01 on warpcode/dotfiles#143: `scratch/` was wiped by an external process *between* `jq` validation and the submit call, taking `review_payload_143.json`, the saved `.diff`, and all metadata with it. The submit script then aborted at its `-f` check with a misleading `input file not found`. Nothing was posted (good — the failure was pre-POST), but the audit had to be reconstructed from scratch. Use the pre-approved external dir `/tmp/opencode/` for the payload and saved diff; they survive for the whole session. Keep `scratch/` only for throwaway output.
   - ⚠️ **Re-fetch and re-verify immediately before submit — the PR head can move mid-audit.** Bot PRs amend without warning. Observed 2026-10-01 on warpcode/dotfiles#143: `gh pr view` reported 1 commit / `+17/-5`, and minutes later the bot had pushed `6c813fa` ("address review comments"), rewriting the `attrs` branch (`if attrs:` → `if isinstance(attrs, dict):` plus a nested `if url:`), adding a fourth guard in the `text` branch, and **deleting** `.jules/bolt.md`. Net effect on the audit: one of four drafted comments became obsolete and every anchor after the first hunk shifted.
-    - **The diff and the `--head` ref must come from the same fetch.** `verify_review_anchors.sh --head origin/pr-<n>` reads a *local* ref fetched at the start of the audit. If the PR moved since then, the verifier compares a fresh `gh pr diff` against a **stale blob** — it can print old line text for a line number that now holds different content, which reads as a valid cross-check while proving nothing. Re-fetch and regenerate **both** in the same step:
+    - **The diff and the `--head` ref must come from the same fetch.** `verify_review_anchors.sh --head origin/pr-<n>` reads a *local* ref, while the diff comes from `gh pr diff`. If those two come from different moments, the verifier can print old line text for a line number that now holds different content — which reads as a valid cross-check while proving nothing. Let `pr_preflight.sh` do the fetch:
       ```bash
-      git fetch origin pull/<pr>/head:refs/remotes/origin/pr-<pr> --force
-      gh pr diff <pr> --repo <owner>/<repo> > /tmp/opencode/<pr>.diff 2>&1
+      bash <skills-dir>/review-pull-request/scripts/pr_preflight.sh \
+        --repo <owner>/<repo> --pr <pr> --expect-sha <sha-captured-at-discovery>
       ```
-    - **Assert the head SHA is unchanged** from the value captured at discovery (`jq -r .sha`). If it moved, re-run the audit against the new head before submitting — do not assume the amendment addressed your points, and re-check whether any drafted finding was already resolved by it (here the bot self-fixed the `.jules/bolt.md` finding, so that comment had to be dropped).
+      It writes the diff and the ref in one fetch, prints a manifest, and prints the exact `verify_review_anchors.sh` / `submit_review.sh` commands to run next.
+    - **Do not pass `--diff`/`--head` to `submit_review.sh` unless you captured them with `pr_preflight.sh` in this same step.** Both flags short-circuit the script's own fetch, which is the only thing guaranteeing the pair is consistent. Supplying them from an earlier fetch reinstates exactly the stale-ref hazard the script exists to prevent — this was the most common submission pattern in real sessions (13 of 13 calls overrode both flags), and each override had to be preceded by a hand-written `git fetch && gh pr diff` chain to make it safe. Prefer plain `submit_review.sh --spec ... --pr <n>`, which re-fetches and re-verifies in one call.
+    - **Assert the head SHA is unchanged** from the value captured at discovery (`jq -r .sha`); `pr_preflight.sh --expect-sha` does this and exits `3` when it moved. If it moved, re-run the audit against the new head before submitting — do not assume the amendment addressed your points, and re-check whether any drafted finding was already resolved by it (here the bot self-fixed the `.jules/bolt.md` finding, so that comment had to be dropped).
     - Treat every bot commit-message claim ("address review comments") as an unverified claim: diff the amendment and confirm each item against the head blob before crediting it.
 
   - ⚠️ **Audit PR *body* claims against the new head, not the copy you first read.** In the same #143 case the body was byte-for-byte unchanged by the amendment and still advertised "56.7% in benchmark" for a benchmark that never reaches 3 of the 4 changed branches. Re-fetch `body` after any amendment and re-check every numeric/verification claim in it.
 
 ### 5. Non-Destructive PR Branch Conflict Resolution
 When an approved PR has textual or semantic merge conflicts with the default branch (`origin/main` or `origin/master`) following a prior merge, and user approval is granted to resolve conflicts. **Jules-owned PR exception:** Do not use this procedure to update a Jules-owned PR branch: never merge the base branch into it or push any Git or code changes to it. If the PR is out of date or base-branch changes cause too many conflicts, consider starting a new Jules session from the current PR branch and let Jules own the subsequent changes.
+
+For read-only audit worktrees (mutation runs, benchmark comparisons) use
+`review_worktree.sh` instead of `git worktree add` — it gives each role a fixed
+name, fetches the PR ref on demand, and removes the whole set in one call:
+
+```bash
+W=<skills-dir>/review-pull-request/scripts/review_worktree.sh
+bash "$W" add --pr <pr> --role head          # -> /tmp/opencode/wt/pr<pr>-head
+bash "$W" add --pr <pr> --role base          # -> /tmp/opencode/wt/pr<pr>-base
+bash "$W" exec --pr <pr> --role head -- go test ./... -count=1
+bash "$W" rm  --pr <pr> --all-roles --force
+```
+
+Hand-rolled `git worktree add`/chains produced three failure modes in real
+sessions: three different names for "the base branch" in one session, leaked
+checkouts when a command between create and remove failed, and a removal that
+failed but was read as success. `rm --all-roles` also self-heals the registry,
+so a stale row cannot masquerade as a live worktree.
+
+The procedure below is for **resolving conflicts on a branch you may modify**,
+which the audit worktrees deliberately do not support:
 1. Create an isolated scratch worktree to preserve the main workspace:
    ```bash
    git worktree add scratch/worktree-<pr> -b fix/pr-<pr> origin/<branch>

@@ -97,7 +97,12 @@ if [[ -z "$DIFF" ]]; then
 fi
 if [[ -z "$HEAD" ]]; then
   HEAD="origin/pr-$PR"
-  git fetch -q origin "+refs/pull/$PR/head:$HEAD" --force \
+  # Fully qualify the destination ref. A short destination like `origin/pr-N`
+  # makes git create a LOCAL BRANCH refs/heads/origin/pr-N rather than the
+  # remote-tracking ref; once the real refs/remotes/origin/pr-N also exists
+  # (pr_preflight.sh, or any documented fetch, creates it) `origin/pr-N` is
+  # ambiguous and the `--head` cross-check below fails on every anchor.
+  git fetch -q origin "+refs/pull/$PR/head:refs/remotes/$HEAD" --force \
     || die "could not fetch head ref $HEAD"
 fi
 

@@ -84,11 +84,69 @@ is_added_line() {
   ' "$diff_file"
 }
 
+# `git show` fails when the path is absent from the ref: a deleted or renamed
+# file, a payload path that does not exist, or simply the wrong ref. Without a
+# guard that failure propagates under `set -euo pipefail`, kills the loop
+# mid-iteration, and the script exits 128 having printed no VERDICT -- so the
+# caller cannot distinguish a bad anchor from a broken ref lookup. Ask git
+# directly instead, and report the outcome explicitly.
+#
+# NOTE: an added line may legitimately be blank, so "empty text" is not proof
+# of a failed lookup. Absence is decided by `git cat-file`/`wc`, and both are
+# cached per path so a payload of N anchors over the same file costs one
+# `git show`, not N.
+declare -A _ref_present=()
+declare -A _ref_lines=()
+declare -A _ref_blob=()
+
+# Cache the head blob per path, ONCE, in a temp file. Deliberately not a
+# command substitution: that would run in a subshell and discard the cache,
+# turning N anchors over one file back into N `git show` calls. The temp file
+# (rather than a shell variable) also preserves the trailing newline, so the
+# line count is exact -- a body captured by `$(...)` silently loses it and
+# reports the last line of every file as "beyond EOF".
+_REFTMP="$(mktemp -d)"
+trap 'rm -rf "$_REFTMP"' EXIT
+
+_N=0
+load_ref_file() {
+  local p="$1"
+  if [[ -z "${_ref_lines[$p]+x}" ]]; then
+    _ref_blob["$p"]="$_REFTMP/$(printf '%s' "$p" | tr '/' '_')"
+    if git show "${head_ref}:$p" > "${_ref_blob[$p]}" 2>/dev/null; then
+      _ref_present["$p"]=1
+      _ref_lines["$p"]="$(sed -n '$=' < "${_ref_blob[$p]}" | tr -d ' ')"
+      [[ "${_ref_lines[$p]}" == "0" ]] && _ref_lines["$p"]=1
+    else
+      _ref_present["$p"]=0
+      _ref_lines["$p"]=0
+    fi
+  fi
+  _N="${_ref_lines[$p]}"
+}
+
+# $2 is 1-indexed within the cached blob.
 head_text() {
-  git show "${head_ref}:$1" 2>/dev/null | sed -n "$2p"
+  sed -n "$2p" < "${_ref_blob[$1]}"
+}
+
+# Resolve one anchor against the head ref. Sets REASON when the cross-check
+# could not be completed, which is a distinct failure from a bad anchor: it
+# means the diff and the ref came from different fetches.
+REASON=""
+resolve_against_head() {
+  local p="$1" l="$2"
+  REASON=""
+  load_ref_file "$p"
+  if [[ "${_ref_present[$p]:-0}" != "1" ]]; then
+    REASON="<absent from $head_ref -- deleted, renamed, or wrong ref>"
+  elif [[ "$l" -gt "$_N" ]]; then
+    REASON="<beyond EOF of $head_ref:$p>"
+  fi
 }
 
 fail=0
+unresolved=0
 checked=0
 for i in "${!paths[@]}"; do
   p="${paths[$i]}"
@@ -101,7 +159,20 @@ for i in "${!paths[@]}"; do
     fail=$((fail + 1))
   fi
   if [[ -n "$head_ref" ]]; then
-    txt="$(head_text "$p" "$l" | tr -d '\t' | cut -c1-60)"
+    resolve_against_head "$p" "$l"
+    if [[ -n "$REASON" ]]; then
+      # The anchor cannot be cross-checked, so it cannot be trusted either way.
+      unresolved=$((unresolved + 1))
+      if [[ "$status" == "OK" ]]; then
+        status="FAIL"
+        fail=$((fail + 1))
+      fi
+      txt="$REASON"
+    else
+      txt="$(head_text "$p" "$l" 2>/dev/null || true)"
+    fi
+    txt="${txt//$'\t'/}"
+    txt="${txt:0:60}"
     if [[ $quiet -eq 0 ]]; then
       printf '%-4s %s:%s  %s\n' "$status" "$p" "$l" "$txt"
     fi
@@ -110,6 +181,12 @@ for i in "${!paths[@]}"; do
   fi
 done
 
+if [[ $unresolved -gt 0 ]]; then
+  echo "VERDICT: FAIL - $unresolved anchor(s) could not be resolved against $head_ref." >&2
+  echo "         The diff and $head_ref were not captured from the same fetch," >&2
+  echo "         or the path was deleted/renamed. Do NOT submit." >&2
+  exit 1
+fi
 if [[ $fail -gt 0 ]]; then
   echo "VERDICT: FAIL - $fail of $checked anchor(s) are not added lines. Do NOT submit."
   exit 1
