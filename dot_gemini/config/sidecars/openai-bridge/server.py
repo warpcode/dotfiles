@@ -135,7 +135,7 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
     def process_completions(self, messages, model, is_chat=True):
         # Map models to antigravity model options: flash_lite, flash, pro
         if not isinstance(model, str) or model not in ALLOWED_MODELS:
-            logging.warning(f"Requested model '{model}' not recognized. Falling back to 'flash_lite'.")
+            logging.warning("Requested model %r not recognized. Falling back to 'flash_lite'.", model)
             model = "flash_lite"
 
         if not messages:
