@@ -118,6 +118,83 @@ except ImportError:
     _yaml = None
 
 
+def _scan_scalar(rest):
+    """Walk a scalar string, tracking quote states and bracket/brace depths.
+    Returns (cleaned_val, rest_tail). Raises ValueError if quotes or depth
+    are unbalanced."""
+    i = 0
+    n = len(rest)
+    in_quote = None
+    stack = []
+    end_idx = None
+    is_quoted_scalar = rest.startswith('"') or rest.startswith("'")
+    is_flow_collection = rest.startswith("[") or rest.startswith("{")
+
+    while i < n:
+        ch = rest[i]
+
+        if in_quote:
+            if ch == "\\" and i + 1 < n and rest[i + 1] in ('"', "'", "\\"):
+                i += 2
+                continue
+            if ch == in_quote:
+                in_quote = None
+                i += 1
+                if is_quoted_scalar and end_idx is None:
+                    end_idx = i
+                continue
+            i += 1
+            continue
+
+        if ch in ('"', "'"):
+            if is_quoted_scalar or is_flow_collection:
+                in_quote = ch
+            i += 1
+            continue
+
+        if ch == "#" and not stack:
+            # YAML 1.2 §6.6: A '#' begins a comment when preceded by whitespace or at start of unquoted scalar
+            if i == 0 or rest[i - 1] in (" ", "\t"):
+                if end_idx is None:
+                    end_idx = i
+                break
+
+        if is_flow_collection and ch in ("[", "{"):
+            stack.append(ch)
+            i += 1
+            continue
+
+        if is_flow_collection and ch in ("]", "}"):
+            if not stack:
+                raise ValueError("unexpected closing delimiter")
+            top = stack.pop()
+            if (ch == "]" and top != "[") or (ch == "}" and top != "{"):
+                raise ValueError("mismatched closing delimiter")
+            i += 1
+            if not stack and end_idx is None:
+                # Top level collection ended; record candidate end_idx
+                end_idx = i
+            continue
+
+        i += 1
+
+    if in_quote:
+        raise ValueError("unclosed quote")
+    if stack:
+        raise ValueError("unclosed bracket/brace depth")
+
+    if end_idx is None:
+        end_idx = n
+
+    val_part = rest[:end_idx].strip()
+    tail_part = rest[end_idx:].strip()
+
+    if tail_part and not tail_part.startswith("#"):
+        raise ValueError(f"invalid trailing content after delimiter: {tail_part!r}")
+
+    return val_part, tail_part
+
+
 def _parse_flat_yaml(text):
     """Minimal YAML subset parser: flat keys, quoted/plain scalars and
     > / | block scalars - enough for SKILL.md frontmatter."""
@@ -129,21 +206,44 @@ def _parse_flat_yaml(text):
         i += 1
         if not line.strip() or line.lstrip().startswith("#"):
             continue
-        m = re.match(r"^([A-Za-z][\w-]*):\s*(.*)$", line)
+        m = re.match(r"^([A-Za-z][\w-]*): *(.*)$", line)
         if not m:
             raise ValueError(f"cannot parse frontmatter line: {line!r}")
         key, rest = m.group(1), m.group(2).strip()
-        if rest and rest[0] in ">|":
+
+        # Reject tab character anywhere in separator whitespace
+        colon_idx = line.find(":")
+        if colon_idx != -1 and "\t" in line[colon_idx + 1 : len(line) - len(line[colon_idx + 1 :].lstrip())]:
+            raise ValueError(f"invalid tab separator after key: {line!r}")
+
+        # Block scalar indicator: '>' or '|', an optional chomping indicator
+        # ('-' strip, '+' keep) and an optional explicit indent digit. All
+        # valid YAML combinations are accepted, e.g. '>-', '>+', '|2'.
+        block_ind = re.match(r"^[>|]([+-]?[0-9]?)$", rest)
+        if block_ind:
             chunk = []
             while i < len(lines) and (
                 not lines[i].strip() or lines[i][:1] in (" ", "\t")
             ):
                 chunk.append(lines[i].strip())
                 i += 1
-            joiner = " " if rest[0] == ">" else "\n"
+            joiner = " " if rest.startswith(">") else "\n"
             data[key] = joiner.join(c for c in chunk if c)
         else:
-            data[key] = rest.strip("\"'")
+            if rest.startswith(">") or rest.startswith("|"):
+                raise ValueError(f"invalid block scalar indicator: {line!r}")
+
+            try:
+                val, _ = _scan_scalar(rest)
+            except ValueError as e:
+                raise ValueError(f"invalid YAML value in line {line!r}: {e}") from e
+
+            if (val.startswith('"') and val.endswith('"')) or (
+                val.startswith("'") and val.endswith("'")
+            ):
+                data[key] = val[1:-1]
+            else:
+                data[key] = val
     return data
 
 
@@ -563,6 +663,26 @@ def _self_test():
             ("bundled-script-usage-flag-integration",
              lambda: _expect(any(c[0] == "bundled-script-usage" and c[1] == "PASS"
                                  for c in validate_skill(loopy, audit_script_usage=True)))),
+            ("flat-yaml-invalid-brackets",
+             lambda: _expect_raises(ValueError, lambda: _parse_flat_yaml("name: [invalid yaml"))),
+            ("flat-yaml-invalid-braces",
+             lambda: _expect_raises(ValueError, lambda: _parse_flat_yaml("name: {unclosed"))),
+            ("flat-yaml-trailing-comment",
+             lambda: _expect(_parse_flat_yaml('metadata: {"a": 1} # note') == {"metadata": '{"a": 1}'})),
+            ("flat-yaml-nested-brackets-error",
+             lambda: _expect_raises(ValueError, lambda: _parse_flat_yaml("metadata: [a, [b, c]"))),
+            ("flat-yaml-overclosed-braces-error",
+             lambda: _expect_raises(ValueError, lambda: _parse_flat_yaml("metadata: {a: b}}"))),
+            ("flat-yaml-quoted-comment-with-delimiter",
+             lambda: _expect(_parse_flat_yaml('name: "x" # he said "hi"') == {"name": "x"})),
+            ("flat-yaml-block-scalar-keep-chomping",
+             lambda: _expect(_parse_flat_yaml("a: >+\n  x\n  y") == {"a": "x y"})),
+            ("flat-yaml-block-scalar-explicit-indent",
+             lambda: _expect(_parse_flat_yaml("a: |2\n  x\n  y") == {"a": "x\ny"})),
+            ("flat-yaml-block-scalar-strip-and-indent",
+             lambda: _expect(_parse_flat_yaml("a: >-2\n  x\n  y") == {"a": "x y"})),
+            ("flat-yaml-bad-block-indicator-rejected",
+             lambda: _expect_raises(ValueError, lambda: _parse_flat_yaml("a: >x\n  x"))),
         ]
 
         results = []
@@ -584,6 +704,16 @@ def _self_test():
 
 def _expect(cond, msg="assertion failed"):
     assert cond, msg
+
+
+def _expect_raises(exc_type, fn):
+    try:
+        fn()
+    except exc_type:
+        return
+    except Exception as e:
+        raise AssertionError(f"expected {exc_type.__name__}, got {type(e).__name__}") from e
+    raise AssertionError(f"expected {exc_type.__name__} to be raised")
 
 
 def main(argv=None):
