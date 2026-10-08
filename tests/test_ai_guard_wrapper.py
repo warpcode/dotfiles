@@ -249,9 +249,12 @@ class TestAIGuardWrapper(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertEqual(data.get("decision"), "deny")
         stderr_output = mock_stderr.getvalue()
+        reason_output = data.get("reason", "")
         self.assertIn("Error invoking security guard (file)", stderr_output)
         self.assertNotIn("/path/to/secret.key", stderr_output)
         self.assertNotIn("sensitive_arg", stderr_output)
+        self.assertNotIn("/path/to/secret.key", reason_output)
+        self.assertNotIn("sensitive_arg", reason_output)
 
     @patch('builtins.open', new_callable=mock_open)
     @patch('ai_guard_wrapper.run_guard')
