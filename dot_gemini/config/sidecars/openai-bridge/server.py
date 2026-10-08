@@ -152,8 +152,13 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
             if not isinstance(msg, dict):
                 continue
             raw_role = msg.get("role")
-            role = raw_role if isinstance(raw_role, str) and raw_role.lower() in ALLOWED_ROLES else "user"
-            normalized_messages.append({"role": role.lower(), "content": _extract_text(msg.get("content"))})
+            # Avoid duplicate lowercasing by caching lowercased role string
+            if isinstance(raw_role, str):
+                role_lower = raw_role.lower()
+                role = role_lower if role_lower in ALLOWED_ROLES else "user"
+            else:
+                role = "user"
+            normalized_messages.append({"role": role, "content": _extract_text(msg.get("content"))})
 
         if not normalized_messages:
             self.send_error_response(400, "No valid messages provided")
@@ -164,11 +169,12 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
         last_msg = messages[-1]
         current_prompt = last_msg.get("content", "")
 
-        # Compute hash of history (excluding last message) to check for a continued conversation
+        # Compute hash of history (excluding last message) to check for a continued conversation.
+        # Since normalized_messages has deterministic key ordering, json.dumps without sort_keys is faster.
         history = messages[:-1]
         history_hash = ""
         if history:
-            history_str = json.dumps(history, sort_keys=True)
+            history_str = json.dumps(history)
             combined = f"{model}:{history_str}"
             history_hash = hashlib.sha256(combined.encode("utf-8")).hexdigest()
 
@@ -227,7 +233,7 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
         # If we got a conversation ID, update the cache for the next turn
         if parsed_conv_id:
             new_history = messages + [{"role": "assistant", "content": parsed_content}]
-            new_history_str = json.dumps(new_history, sort_keys=True)
+            new_history_str = json.dumps(new_history)
             new_combined = f"{model}:{new_history_str}"
             new_hash = hashlib.sha256(new_combined.encode("utf-8")).hexdigest()
             with cache_lock:
