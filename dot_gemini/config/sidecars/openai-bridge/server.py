@@ -42,6 +42,20 @@ def _extract_text(content):
     return ""
 
 
+def _normalize_message(raw_role, raw_content):
+    """Constructs a normalized message dictionary with deterministic key ordering.
+
+    Ensures both input messages and assistant responses use the exact same key order
+    ('role' followed by 'content'), making json.dumps without key-sorting safe and fast.
+    """
+    if isinstance(raw_role, str):
+        role_lower = raw_role.lower()
+        role = role_lower if role_lower in ALLOWED_ROLES else "user"
+    else:
+        role = "user"
+    return {"role": role, "content": _extract_text(raw_content)}
+
+
 class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         # Redirect http.server logs to python logging
@@ -151,14 +165,7 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
         for msg in messages:
             if not isinstance(msg, dict):
                 continue
-            raw_role = msg.get("role")
-            # Avoid duplicate lowercasing by caching lowercased role string
-            if isinstance(raw_role, str):
-                role_lower = raw_role.lower()
-                role = role_lower if role_lower in ALLOWED_ROLES else "user"
-            else:
-                role = "user"
-            normalized_messages.append({"role": role, "content": _extract_text(msg.get("content"))})
+            normalized_messages.append(_normalize_message(msg.get("role"), msg.get("content")))
 
         if not normalized_messages:
             self.send_error_response(400, "No valid messages provided")
@@ -232,7 +239,7 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
 
         # If we got a conversation ID, update the cache for the next turn
         if parsed_conv_id:
-            new_history = messages + [{"role": "assistant", "content": parsed_content}]
+            new_history = messages + [_normalize_message("assistant", parsed_content)]
             new_history_str = json.dumps(new_history)
             new_combined = f"{model}:{new_history_str}"
             new_hash = hashlib.sha256(new_combined.encode("utf-8")).hexdigest()
