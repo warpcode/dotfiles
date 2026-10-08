@@ -208,8 +208,6 @@ def _parse_flat_yaml(text):
             continue
         m = re.match(r"^([A-Za-z][\w-]*): *(.*)$", line)
         if not m:
-            if re.match(r"^([A-Za-z][\w-]*):[\t ]*", line):
-                raise ValueError(f"invalid tab separator after key: {line!r}")
             raise ValueError(f"cannot parse frontmatter line: {line!r}")
         key, rest = m.group(1), m.group(2).strip()
 
@@ -218,7 +216,11 @@ def _parse_flat_yaml(text):
         if colon_idx != -1 and "\t" in line[colon_idx + 1 : len(line) - len(line[colon_idx + 1 :].lstrip())]:
             raise ValueError(f"invalid tab separator after key: {line!r}")
 
-        if rest in (">", "|", ">-", "|-"):
+        # Block scalar indicator: '>' or '|', an optional chomping indicator
+        # ('-' strip, '+' keep) and an optional explicit indent digit. All
+        # valid YAML combinations are accepted, e.g. '>-', '>+', '|2'.
+        block_ind = re.match(r"^[>|]([+-]?[0-9]?)$", rest)
+        if block_ind:
             chunk = []
             while i < len(lines) and (
                 not lines[i].strip() or lines[i][:1] in (" ", "\t")
@@ -673,6 +675,14 @@ def _self_test():
              lambda: _expect_raises(ValueError, lambda: _parse_flat_yaml("metadata: {a: b}}"))),
             ("flat-yaml-quoted-comment-with-delimiter",
              lambda: _expect(_parse_flat_yaml('name: "x" # he said "hi"') == {"name": "x"})),
+            ("flat-yaml-block-scalar-keep-chomping",
+             lambda: _expect(_parse_flat_yaml("a: >+\n  x\n  y") == {"a": "x y"})),
+            ("flat-yaml-block-scalar-explicit-indent",
+             lambda: _expect(_parse_flat_yaml("a: |2\n  x\n  y") == {"a": "x\ny"})),
+            ("flat-yaml-block-scalar-strip-and-indent",
+             lambda: _expect(_parse_flat_yaml("a: >-2\n  x\n  y") == {"a": "x y"})),
+            ("flat-yaml-bad-block-indicator-rejected",
+             lambda: _expect_raises(ValueError, lambda: _parse_flat_yaml("a: >x\n  x"))),
         ]
 
         results = []
