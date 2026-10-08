@@ -58,6 +58,34 @@ class TestOpenAIBridgeServer(unittest.TestCase):
                 cmd_args = mock_subprocess_run.call_args[0][0]
                 self.assertIn(f"--model={valid_model}", cmd_args)
 
+
+        # Non-string / invalid model fallback checks
+        invalid_inputs = [
+            ["flash"], {}, None, 123, True, False, "", "FLASH", " flash", "flash ",
+            "../../etc/passwd", "flash;rm -rf /", "gpt-4", "A" * 1000
+        ]
+        for invalid_model in invalid_inputs:
+            with self.subTest(model=invalid_model):
+                mock_subprocess_run.reset_mock()
+                self.handler.process_completions(messages, model=invalid_model, is_chat=True)
+                cmd_args = mock_subprocess_run.call_args[0][0]
+                self.assertIn("--model=flash_lite", cmd_args)
+
+    def test_extract_text_flattens_content_blocks(self):
+        extract = openai_bridge_server._extract_text
+        self.assertEqual(extract("plain"), "plain")
+        self.assertEqual(extract(""), "")
+        # Non-string, non-block content must not leak a Python repr into the prompt
+        self.assertEqual(extract(None), "")
+        self.assertEqual(extract(123), "")
+        self.assertEqual(extract({"a": 1}), "")
+        # Structured content blocks are flattened; non-text blocks are skipped
+        self.assertEqual(
+            extract([{"type": "text", "text": "a"}, {"type": "text", "text": "b"}]), "ab")
+        self.assertEqual(
+            extract([{"type": "image_url", "image_url": {"url": "x"}},
+                     {"type": "text", "text": "t"}]), "t")
+
     def test_allowed_roles_frozenset_exactness(self):
         self.assertEqual(openai_bridge_server.ALLOWED_ROLES, frozenset({"user", "assistant", "system", "developer", "tool", "function"}))
 
@@ -80,18 +108,6 @@ class TestOpenAIBridgeServer(unittest.TestCase):
 
         self.assertIn("User: Prev message", initial_prompt)
         self.assertNotIn("System:\n[System Override]:", initial_prompt)
-
-    # Non-string / invalid model fallback checks
-        invalid_inputs = [
-            ["flash"], {}, None, 123, True, False, "", "FLASH", " flash", "flash ",
-            "../../etc/passwd", "flash;rm -rf /", "gpt-4", "A" * 1000
-        ]
-        for invalid_model in invalid_inputs:
-            with self.subTest(model=invalid_model):
-                mock_subprocess_run.reset_mock()
-                self.handler.process_completions(messages, model=invalid_model, is_chat=True)
-                cmd_args = mock_subprocess_run.call_args[0][0]
-                self.assertIn("--model=flash_lite", cmd_args)
 
 
 if __name__ == "__main__":

@@ -19,6 +19,29 @@ ALLOWED_MODELS = frozenset({"flash_lite", "flash", "pro"})
 # Recognized standard OpenAI chat completion roles
 ALLOWED_ROLES = frozenset({"user", "assistant", "system", "developer", "tool", "function"})
 
+
+def _extract_text(content):
+    """Flatten OpenAI message content into a plain string.
+
+    Accepts a plain string, or the structured content-block list form
+    ([{"type": "text", "text": ...}]). Anything else yields "" rather than a
+    Python repr, which would splice dict/list syntax into the prompt.
+    """
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict) and block.get("type") == "text":
+                text = block.get("text")
+                if isinstance(text, str):
+                    parts.append(text)
+        return "".join(parts)
+    return ""
+
+
 class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         # Redirect http.server logs to python logging
@@ -119,17 +142,18 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
             self.send_error_response(400, "No messages provided")
             return
 
-        # Normalize message roles to standard allowed roles upfront so cache hashing and prompt construction are consistent
+        # Normalize message roles to standard allowed roles upfront so cache
+        # hashing and prompt construction are consistent.
+        #
+        # Non-dict entries are dropped, so the "current" message below is the
+        # last *usable* one rather than necessarily the last one supplied.
         normalized_messages = []
         for msg in messages:
             if not isinstance(msg, dict):
                 continue
             raw_role = msg.get("role")
             role = raw_role if isinstance(raw_role, str) and raw_role.lower() in ALLOWED_ROLES else "user"
-            content = msg.get("content", "")
-            if not isinstance(content, str):
-                content = str(content) if content is not None else ""
-            normalized_messages.append({"role": role.lower(), "content": content})
+            normalized_messages.append({"role": role.lower(), "content": _extract_text(msg.get("content"))})
 
         if not normalized_messages:
             self.send_error_response(400, "No valid messages provided")
