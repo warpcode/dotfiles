@@ -17,9 +17,12 @@ class TestJulesUtils(unittest.TestCase):
         dt1 = parse_iso_datetime("2023-10-25T12:34:56Z")
         self.assertEqual(dt1, datetime(2023, 10, 25, 12, 34, 56, tzinfo=timezone.utc))
 
-        # Test ISO 8601 without Z suffix
+        # Test ISO 8601 without Z suffix. No offset means UTC, and the result
+        # must be tz-aware: callers subtract it from datetime.now(timezone.utc)
+        # and a naive value raises TypeError.
         dt2 = parse_iso_datetime("2023-10-25T12:34:56")
-        self.assertEqual(dt2, datetime(2023, 10, 25, 12, 34, 56))
+        self.assertEqual(dt2, datetime(2023, 10, 25, 12, 34, 56, tzinfo=timezone.utc))
+        self.assertIsNotNone(dt2.tzinfo)
 
         # Test ISO 8601 with explicit offset
         dt3 = parse_iso_datetime("2023-10-25T12:34:56+00:00")

@@ -20,15 +20,27 @@ def info(message: str, verbose: bool = False) -> None:
 
 
 def parse_iso_datetime(iso_str: str) -> datetime:
-    """Parse an ISO 8601 timestamp string into a datetime object.
+    """Parse an ISO 8601 timestamp string into a timezone-aware datetime.
 
-    Uses Python 3.11+ native fromisoformat parsing as a fast path to avoid
-    string allocation and replacement overhead for ISO strings with 'Z' or offsets.
+    Python 3.11+ parses a trailing 'Z' natively and is used as a fast path;
+    older versions need it rewritten to an explicit offset.
+
+    The result is always tz-aware. Input without an offset is interpreted as
+    UTC, which is what every caller requires: they subtract the result from
+    datetime.now(timezone.utc), and mixing aware and naive datetimes raises
+    TypeError. Previously such input returned a naive datetime, and because
+    those call sites swallow exceptions the failure was silent -- inactivity
+    and age stayed 0.0 and the max-age filter never excluded anything.
     """
     try:
-        return datetime.fromisoformat(iso_str)
+        dt = datetime.fromisoformat(iso_str)
     except ValueError:
-        return datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
+        # Rewrite only a trailing 'Z'; an interior one is part of the value.
+        normalised = iso_str[:-1] + "+00:00" if iso_str.endswith("Z") else iso_str
+        dt = datetime.fromisoformat(normalised)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 def format_datetime(iso_str: str | None) -> str:
@@ -37,8 +49,6 @@ def format_datetime(iso_str: str | None) -> str:
         return "N/A"
     try:
         dt = parse_iso_datetime(iso_str)
-        if dt.tzinfo is not None:
-            dt = dt.astimezone(timezone.utc)
-        return dt.strftime("%Y-%m-%d %H:%M:%S UTC")
+        return dt.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     except Exception:
         return iso_str
