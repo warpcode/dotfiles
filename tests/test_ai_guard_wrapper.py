@@ -242,6 +242,17 @@ class TestAIGuardWrapper(unittest.TestCase):
         self.assertTrue("injectSteps" in json.loads(mock_stdout.getvalue()))
         self.mock_exit.assert_called_with(0)
 
+    @patch('subprocess.run', side_effect=Exception("Execution mock failure"))
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_run_guard_exception_does_not_leak_cmd_args(self, mock_stderr, mock_subprocess):
+        code, data = ai_guard_wrapper.run_guard("file", args=["/path/to/secret.key", "sensitive_arg"])
+        self.assertEqual(code, 2)
+        self.assertEqual(data.get("decision"), "deny")
+        stderr_output = mock_stderr.getvalue()
+        self.assertIn("Error invoking security guard (file)", stderr_output)
+        self.assertNotIn("/path/to/secret.key", stderr_output)
+        self.assertNotIn("sensitive_arg", stderr_output)
+
     @patch('builtins.open', new_callable=mock_open)
     @patch('ai_guard_wrapper.run_guard')
     @patch('sys.stdout', new_callable=StringIO)
