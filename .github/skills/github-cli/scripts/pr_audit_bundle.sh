@@ -75,7 +75,18 @@ echo "# PR #${pr} audit bundle ($repo)"
 jq -r '"**\(.title)** by \(.author.login) | \(.headRefName) -> \(.baseRefName) | \(.state) | \(.commits|length) commit(s)"' "$out/meta.json"
 echo
 echo "## Files"
-jq -r '.files[] | "- \(.changeType) \(.path) (+\(.additions)/-\(.deletions))"' "$out/meta.json"
+base_ref="$(jq -r '.baseRefName' "$out/meta.json")"
+jq -r '.files[] | "\(.changeType)\t\(.path)\t+\(.additions)/-\(.deletions)"' "$out/meta.json" | while IFS=$'\t' read -r ctype path stat; do
+  status_tag=""
+  if [[ -f "$out/head/$path" ]] && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    base_hash="$(git show "origin/${base_ref}:${path}" 2>/dev/null | git hash-object --stdin || true)"
+    head_hash="$(git hash-object "$out/head/$path" 2>/dev/null || true)"
+    if [[ -n "$base_hash" && -n "$head_hash" ]]; then
+      [[ "$base_hash" == "$head_hash" ]] && status_tag=" [SAME as ${base_ref}]" || status_tag=" [DIFFERS]"
+    fi
+  fi
+  echo "- ${ctype} ${path} (${stat})${status_tag}"
+done
 echo
 echo "## CI"
 jq -r '[.statusCheckRollup[]? | "\(.name // .context): \(.conclusion // .state // .status)"] | unique | .[] | "- " + .' "$out/meta.json"
@@ -86,11 +97,15 @@ while IFS= read -r n; do
   echo "### #${n}: $(jq -r '.title' "$out/issues/${n}.json")"
   jq -r '.body // ""' "$out/issues/${n}.json" | grep -E '^\s*- \[[ xX]\]' || echo "(no checkbox acceptance criteria found; read issues/${n}.json)"
   # Dependencies: "depends on #M" in the issue body.
-  jq -r '.body // ""' "$out/issues/${n}.json" | grep -oiE 'depend[a-z]* +on +(issue +)?#[0-9]+' | grep -oE '[0-9]+' | sort -un | while IFS= read -r m; do
-    state="$(gh issue view "$m" --repo "$repo" --json state -q .state)"
-    merged="$(gh pr list --repo "$repo" --state merged --search "#${m}" --json number --limit 5 -q 'map("#"+(.number|tostring))|join(",")')"
-    echo "- depends on #${m}: ${state}; merged PRs mentioning it: ${merged:-NONE (CLOSED != shipped)}"
-  done
+  deps="$({ jq -r '.body // ""' "$out/issues/${n}.json" | grep -oiE 'depend[a-z]* +on +(issue +)?#[0-9]+' | grep -oE '[0-9]+' || true; } | sort -un)"
+  if [[ -n "$deps" ]]; then
+    while IFS= read -r m; do
+      [[ -z "$m" ]] && continue
+      state="$(gh issue view "$m" --repo "$repo" --json state -q .state)"
+      merged="$(gh pr list --repo "$repo" --state merged --search "#${m}" --json number --limit 5 -q 'map("#"+(.number|tostring))|join(",")')"
+      echo "- depends on #${m}: ${state}; merged PRs mentioning it: ${merged:-NONE (CLOSED != shipped)}"
+    done <<< "$deps"
+  fi
 done < "$out/issues/_list.txt"
 echo
 echo "Bundle written to: $out"
