@@ -177,7 +177,8 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
         current_prompt = last_msg.get("content", "")
 
         # Compute hash of history (excluding last message) to check for a continued conversation.
-        # Since normalized_messages has deterministic key ordering, json.dumps without sort_keys is faster.
+        # Every dict here comes from _normalize_message, so key order is fixed and json.dumps
+        # does not need sort_keys; the saving is small and shrinks as message content grows.
         history = messages[:-1]
         history_hash = ""
         if history:
