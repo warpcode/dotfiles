@@ -47,9 +47,9 @@ def run_guard(subcmd: str, args: list[str] = None, stdin_str: str = None) -> tup
             except Exception:
                 pass
         return res.returncode, data
-    except Exception as e:
-        sys.stderr.write(f"Error invoking {cmd}: {e}\n")
-        return 2, {"decision": "deny", "reason": f"Security guard execution failed: {e}"}
+    except Exception:
+        sys.stderr.write(f"Error invoking guard subcommand '{subcmd}'\n")
+        return 2, {"decision": "deny", "reason": f"Security guard execution failed for subcommand '{subcmd}'"}
 
 
 def extract_command(mapping):

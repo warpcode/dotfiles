@@ -67,6 +67,18 @@ class TestAiGuardWrapperHelper(unittest.TestCase):
         self.assertEqual(ai_guard_wrapper.extract_command(["list", "of", "items"]), "")
         self.assertEqual(ai_guard_wrapper.extract_command("CommandLine string"), "")
 
+    @patch('subprocess.run', side_effect=OSError("Sensitive system error details /path/to/secret"))
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_run_guard_exception_handling_sanitizes_errors(self, mock_stderr, mock_subproc):
+        code, data = ai_guard_wrapper.run_guard("file", args=["/path/to/sensitive/file"])
+        self.assertEqual(code, 2)
+        self.assertEqual(data.get("decision"), "deny")
+        self.assertNotIn("/path/to/sensitive/file", data.get("reason", ""))
+        self.assertNotIn("Sensitive system error details", data.get("reason", ""))
+        self.assertNotIn("/path/to/sensitive/file", mock_stderr.getvalue())
+        self.assertNotIn("Sensitive system error details", mock_stderr.getvalue())
+        self.assertIn("file", data.get("reason", ""))
+
 
 class TestAIGuardWrapper(unittest.TestCase):
 
