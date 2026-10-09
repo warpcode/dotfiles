@@ -75,6 +75,23 @@ class TestSearchTools(unittest.TestCase):
         self.assertFalse(matched)
         self.assertIsNone(target)
 
+        # Assert boundary behavior: partial substring collisions must not match
+        prefix_collision_tc = {
+            "name": "run_command",
+            "args": {"CommandLine": "python3 prefix_verify_review_anchors.sh"},
+        }
+        matched, target = match_tool_call(prefix_collision_tc, script_patterns=patterns)
+        self.assertFalse(matched)
+        self.assertIsNone(target)
+
+        suffix_collision_tc = {
+            "name": "run_command",
+            "args": {"CommandLine": "python3 verify_review_anchors.sh_bak"},
+        }
+        matched, target = match_tool_call(suffix_collision_tc, script_patterns=patterns)
+        self.assertFalse(matched)
+        self.assertIsNone(target)
+
     def test_extract_tool_calls_from_jsonl(self):
         with tempfile.NamedTemporaryFile("w+", suffix=".jsonl", delete=False) as tf:
             # write mock antigravity transcript line
