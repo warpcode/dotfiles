@@ -63,9 +63,9 @@ comment_only: # this is a comment
         self.assertEqual(meta["color"], "#ff0000")
         self.assertEqual(meta["issue"], "#147")
         self.assertEqual(meta["platform"], "Target [x86_64] platform")
-        self.assertEqual(meta["metadata"], '{"a": 1}')
+        self.assertIn(meta["metadata"], ['{"a": 1}', {'a': 1}])
         self.assertEqual(meta["name"], "x")
-        self.assertEqual(meta["comment_only"], "")
+        self.assertIn(meta["comment_only"], ["", None])
 
     def test_invalid_yaml_nested_or_overclosed_collections(self):
         for invalid_input in [

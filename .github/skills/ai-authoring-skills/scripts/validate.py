@@ -41,6 +41,7 @@ import os
 import py_compile
 import re
 import subprocess
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -388,6 +389,25 @@ def validate_skill(skill_dir, audit_script_usage=False, sessions=200):
                     detail = (proc.stderr or proc.stdout).strip().splitlines()
                     msg = detail[-1] if detail else "see stderr"
                     broken.append(f"{p.relative_to(skill_dir)}: {msg}")
+                elif p.suffix == ".sh" and shutil.which("shellcheck"):
+                    sc_proc = subprocess.run(["shellcheck", str(p)], capture_output=True, text=True)
+                    if sc_proc.returncode != 0:
+                        detail = (sc_proc.stderr or sc_proc.stdout).strip().splitlines()
+                        msg = detail[-1] if detail else "shellcheck failed"
+                        broken.append(f"{p.relative_to(skill_dir)} (shellcheck): {msg}")
+
+    tests_dir = skill_dir / "scripts" / "tests"
+    if tests_dir.is_dir():
+        test_proc = subprocess.run(
+            [sys.executable, "-m", "unittest", "discover", "-s", str(tests_dir)],
+            capture_output=True,
+            text=True,
+        )
+        if test_proc.returncode != 0:
+            detail = (test_proc.stderr or test_proc.stdout).strip().splitlines()
+            msg = detail[-1] if detail else "tests failed"
+            broken.append(f"scripts/tests: {msg}")
+
     if broken:
         add("scripts-compile", "FAIL", "; ".join(broken))
     else:

@@ -21,5 +21,7 @@ sought it. A bare "proceed" / "go ahead" authorises nothing on its own — resta
 confirm. Approval does not carry forward to the next gate or to a newly discovered action.
 
 ## Skills
-Browse `.github/skills/`. Load the relevant SKILL.md before executing. If a loaded skill ships a
-script for a step, run the script — do not hand-write an equivalent loop.
+Browse `.github/skills/`. `~/.gemini/config/skills/` is a direct symlink to `.github/skills/` in
+this repository; always edit and author skill sources directly under `.github/skills/`. Load the
+relevant SKILL.md before executing. If a loaded skill ships a script for a step, run the script — do
+not hand-write an equivalent loop.
