@@ -9,3 +9,8 @@
 ## 2026-10-08 - Omit Key-Sorting in Hash Generation for Pre-Normalized Dictionaries
 **Learning:** `json.dumps(dict, sort_keys=True)` incurs key-sorting overhead across large dictionary lists. When list items are pre-normalized with deterministic key insertion order, `sort_keys=True` is redundant for in-memory hashing.
 **Action:** Omit `sort_keys=True` only when every dict in the structure is constructed by the same normalization helper (`_normalize_message`) with a fixed key order, and the hashed value is in-memory only. Keep `sort_keys=True` wherever key ordering is incidental or when hashes are persisted across process boundaries.
+
+## 2026-10-09 - Pre-Compile Dynamic Regexes and Fast Substring Pre-Checks
+**Learning:** Evaluating dynamically interpolated regexes (`re.search(rf"...")`) inside inner loops (such as matching tool call arguments against script target names across transcripts) bypasses Python's internal `re` cache and incurs severe regex compilation and evaluation overhead per item.
+**Action:** Pre-compile dynamic regex patterns into a dictionary (`script_patterns`) at the top level before iteration, and use a fast string containment check (`if s in cmd_str:`) as a short-circuit guard prior to running `pattern.search(cmd_str)`.
+
