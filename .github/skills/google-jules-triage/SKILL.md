@@ -44,23 +44,6 @@ This triage procedure is independent of any specific tooling or transport. It op
 | `archive_session` | Reversibly hide session | Session ID | Hides inactive session from default listings |
 | `create_session` | Spawn replacement session | Prompt, source repo, branch, title | New session rooted on a rebuilt `tidy/` branch |
 
-### Bundled Scripts — use these, do not reimplement them
-
-Every step below has a script. Hand-writing the equivalent loop is the single largest
-source of wasted calls in this workflow, and it is how thresholds get silently
-misapplied. Run the script; only read its source if it errors.
-
-| Script | Purpose | Usage |
-|---|---|---|
-| `scripts/detect_empty_commits.sh` | Count empty commits above a merge base; exits `2` when wedged | `detect_empty_commits.sh <base-ref> <head-ref>` |
-| `scripts/verify_delivery.sh` | Prove from the remote whether a session pushed or opened a PR | `verify_delivery.sh <owner/repo> <source-branch> [base]` |
-| `scripts/bench_compare.sh` | Base-vs-head benchmark table; auto-copies benchmark files that exist on only one side | `bench_compare.sh <base-ref> <head-ref> [--bench RE] [--pkg P] [--count N] [--json]` |
-| `scripts/pr_overlap_matrix.sh` | File×PR matrix across repos, flagging duplicate-PR clusters | `pr_overlap_matrix.sh --repos owner/repo[,owner/repo] [--min-shared N] [--json]` |
-
-All support `--help`. `bench_compare.sh` emits Markdown by default and `--json` for machine use;
-it reports `absent on base` for benchmarks a PR introduced, which is exactly the check that
-catches a PR body quoting figures for a benchmark that never existed on base.
-
 ---
 
 ## Triage Workflows
@@ -76,16 +59,6 @@ catches a PR body quoting figures for a benchmark that never existed on base.
    - `✅ COMPLETED`: Task finished with an attached pull request. Review the PR.
    - `🗑️ JUNK`: Degenerate session — **archive immediately without nudging**. See signature below.
 3. Synthesize findings using the report template at `templates/session-audit.md`.
-
-**Inspecting one session? Use `check-sessions <session-id> --history` — one call returns state,
-source, PR, and the full conversation transcript.** Do not compose `session` + `activities` +
-`activity` by hand to reconstruct what that single call already prints. Reach for the individual
-commands only when you need one specific activity's full body that the history view truncates.
-
-**Sweeping many PRs at once?** Run
-`bash <skills-dir>/google-jules-triage/scripts/pr_overlap_matrix.sh --repos owner/repo[,owner/repo]`
-to get a file×PR matrix with duplicate clusters flagged. Do not loop `gh pr view --json files` by
-hand — that is a 20+ call loop that the script replaces with one.
 
 **Junk Session Signature**: Sessions where all agent turns consist of single-character strings (`a`), garbled CJK fragments (`体`, `轻`, `部件`, `皮肤`), or non-sequitur language output followed by a rubber-stamped `Code review rating is #Correct#` are degenerate — the runner produced no real work. Archive immediately: `archive-session <id>`. Do not nudge.
 
@@ -126,15 +99,18 @@ session.
 **Do not push anything to the session's own branch.** Not a merge, not a rebase, not a fix-up
 commit. Write to a fresh `tidy/` branch and start the replacement session there.
 
-1. **Confirm it is genuinely wedged** — count empty commits above the merge base.
-
-   **Run the bundled script. Do NOT hand-write this loop.** It already encodes the
-   `>=2 EMPTY = wedged` threshold, and retyping it is how sessions get misdiagnosed.
+1. **Confirm it is genuinely wedged** — count empty commits above the merge base:
    ```bash
    git fetch origin pull/<n>/head:refs/remotes/origin/pr-<n> --force
    bash <skills-dir>/google-jules-triage/scripts/detect_empty_commits.sh origin/main origin/pr-<n>
    ```
-   Exit codes: `0` clean, `1` one empty commit (may still be healthy), `2` wedged.
+   Or inline:
+   ```bash
+   for c in $(git rev-list origin/main..origin/pr-<n>); do
+     s=$(git show --shortstat --format='' $c | tr -d ' \n')
+     printf '%s [%s]\n' "$c" "${s:-EMPTY}"
+   done
+   ```
    Two or more `EMPTY` entries, or one that survives a claimed squash, means escalate.
 
 2. **Isolate the real diff** — blob-hash each reported file against `origin/main`. Files that are

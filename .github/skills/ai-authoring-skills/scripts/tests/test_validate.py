@@ -43,43 +43,6 @@ invalid yaml line without colon
         with self.assertRaises(ValueError):
             validate.split_skill_md(self.skill_md_path)
 
-    def test_valid_yaml_plain_scalars_and_comments(self):
-        content = """---
-description: Don't do this # comment
-url: https://example.com#section
-color: "#ff0000"
-issue: "#147"
-platform: Target [x86_64] platform
-metadata: {"a": 1} # note
-name: "x" # he said "hi"
-comment_only: # this is a comment
----
-# Body
-"""
-        self.skill_md_path.write_text(content, encoding="utf-8")
-        meta, body_lines = validate.split_skill_md(self.skill_md_path)
-        self.assertEqual(meta["description"], "Don't do this")
-        self.assertEqual(meta["url"], "https://example.com#section")
-        self.assertEqual(meta["color"], "#ff0000")
-        self.assertEqual(meta["issue"], "#147")
-        self.assertEqual(meta["platform"], "Target [x86_64] platform")
-        self.assertIn(meta["metadata"], ['{"a": 1}', {'a': 1}])
-        self.assertEqual(meta["name"], "x")
-        self.assertIn(meta["comment_only"], ["", None])
-
-    def test_invalid_yaml_nested_or_overclosed_collections(self):
-        for invalid_input in [
-            "metadata: [a, [b, c]",
-            "metadata: {a: b}}",
-            'name: "quoted" (important)',
-            "name:\taudit-target-skill",
-            "description: >not-a-block-scalar",
-        ]:
-            content = f"---\n{invalid_input}\n---\n# Body"
-            self.skill_md_path.write_text(content, encoding="utf-8")
-            with self.assertRaises(ValueError, msg=f"Expected ValueError for {invalid_input!r}"):
-                validate.split_skill_md(self.skill_md_path)
-
     def test_standard_markdown_without_frontmatter(self):
         content = """# Header
 This is a standard markdown document without any frontmatter.

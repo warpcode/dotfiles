@@ -7,25 +7,8 @@ _registry.ns_var() {
     printf '%s_%s_%s' "registry" "$1" "$2"
 }
 
-_registry.validate_prefix() {
-    if [[ ! "$1" =~ ^[A-Za-z0-9_.]+$ ]]; then
-        print -r -- "Invalid function prefix: ${1[1,40]//[[:cntrl:]]/?}" >&2
-        return 1
-    fi
-}
-
-_registry.validate_key() {
-    local norm="${1//-/_}"
-    if [[ ! "$norm" =~ ^[A-Za-z0-9_:]+$ ]]; then
-        print -r -- "Invalid identifier/key: ${1[1,40]//[[:cntrl:]]/?}" >&2
-        return 1
-    fi
-}
-
 _registry.norm() {
-    local norm="${1//-/_}"
-    _registry.validate_key "$norm" || return 1
-    print -r -- "$norm"
+    print -r -- "${1//-/_}"
 }
 
 _registry.validate_name() {
@@ -41,15 +24,13 @@ _registry.validate_exists() {
 
 # Read associative array value: _registry.aa_get <varname> <key>
 _registry.aa_get() {
-    _registry.validate_key "$2" || return 1
     local ref="${1}[${2}]"
     print -r -- "${(P)ref}"
 }
 
 # Write associative array value: _registry.aa_set <varname> <key> <value>
 _registry.aa_set() {
-    _registry.validate_key "$2" || return 1
-    typeset -g "${1}[${2}]"="$3"
+    eval "${1}[${2}]=${(q)3}"
 }
 
 # Read array elements: _registry.arr_get <varname> → prints elements one per line
@@ -67,7 +48,7 @@ _registry.arr_get() {
 
 # registry.define <namespace> <id> <key>=<value> ...
 registry.define() {
-    local ns="$1" id; id="$(_registry.norm "$2")" || return 1; shift 2
+    local ns="$1" id; id="$(_registry.norm "$2")"; shift 2
     _registry.validate_name "$ns" || return 1
 
     local data_var exists_var list_var
@@ -87,22 +68,20 @@ registry.define() {
     for pair in "$@"; do
         [[ "$pair" == *=* ]] || continue
         k="${pair%%=*}" v="${pair#*=}"
-        k="$(_registry.norm "$k")" || return 1
         _registry.aa_set "$data_var" "${id}:${k}" "$v"
     done
 
     _registry.aa_set "$exists_var" "$id" "1"
 
     if (( add_to_list )); then
-        typeset -ga "$list_var"
-        set -A "$list_var" "${(@P)list_var}" "$id"
+        eval "${list_var}+=(\"\${id}\")"
     fi
 }
 
 # registry.exists <namespace> <id>
 registry.exists() {
     _registry.validate_exists "$1" || return 1
-    local id; id="$(_registry.norm "$2")" || return 1
+    local id; id="$(_registry.norm "$2")"
     local exists_var="$(_registry.ns_var "$1" "exists")"
     local exists_ref="${exists_var}[${id}]"
     [[ -n "${(P)exists_ref}" ]]
@@ -117,18 +96,16 @@ registry.list() {
 # registry.get <namespace> <id> <key>
 registry.get() {
     _registry.validate_exists "$1" || return 1
-    local id; id="$(_registry.norm "$2")" || return 1
-    local k; k="$(_registry.norm "$3")" || return 1
+    local id; id="$(_registry.norm "$2")"
     local data_var
     data_var="$(_registry.ns_var "$1" "data")"
-    _registry.aa_get "$data_var" "${id}:${k}"
+    _registry.aa_get "$data_var" "${id}:${3}"
 }
 
 # registry.is_enabled <namespace> <id> <func_prefix>
 registry.is_enabled() {
     _registry.validate_exists "$1" || return 1
-    local id; id="$(_registry.norm "$2")" || return 1
-    _registry.validate_prefix "$3" || return 1
+    local id; id="$(_registry.norm "$2")"
     local fn="$3.$id.enabled"
     if (( $+functions[$fn] )); then
         "$fn"
@@ -140,11 +117,6 @@ registry.is_enabled() {
 _registry.dispatch() {
     local ns="$1" prefix="$2" method="$3" mode="$4"; shift 4
     _registry.validate_exists "$ns" || return 1
-    _registry.validate_prefix "$prefix" || return 1
-    if [[ ! "$method" =~ ^[A-Za-z0-9_]+$ ]]; then
-        print -r -- "Invalid method: ${method[1,40]//[[:cntrl:]]/?}" >&2
-        return 1
-    fi
 
     local -a ids
     ids=($(_registry.arr_get "$(_registry.ns_var "$ns" "list")"))

@@ -23,7 +23,6 @@ These instructions capture persistent memories, behavioral guardrails, and techn
 4. **UI Stability & Decision Presentation**:
    - **Never call `update_topic` and `ask_user` in the same turn.** Set topic first, then call `ask_user` in the subsequent turn to avoid raw JSON rendering in CLI.
    - **Recommendation Invariant**: Whenever presenting choices, options, or next steps to the user, ALWAYS explicitly state the recommended choice along with the underlying rationale.
-   - **Interactive Suggestion Options**: When presenting suggestions, proposals, or concrete plans, provide interactive selectable options via `ask_question` to approve, suggest changes, or reject, listing the recommended choice first.
 
 5. **Resource Selection & Delegation**:
    - Check whether an existing skill applies before executing and follow its guidelines.

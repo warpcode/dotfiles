@@ -68,9 +68,7 @@ list_files() {
 file_body() {
   local path="$1"
   if [[ $local_mode -eq 1 ]]; then
-    if [[ -f "$path" ]]; then
-      cat -- "$path"
-    fi
+    [[ -f "$path" ]] && cat -- "$path" || true
   else
     git show "$ref:$path" 2>/dev/null || true
   fi
