@@ -71,11 +71,40 @@ while IFS= read -r n; do
   gh issue view "$n" --repo "$repo" --json number,title,body,state,comments > "$out/issues/${n}.json"
 done < "$out/issues/_list.txt"
 
+base_ref="$(jq -r '.baseRefName' "$out/meta.json")"
+
+# Merge-tree conflict preflight and empty commit audit if inside local work tree
+conflict_count="UNKNOWN"
+empty_commits=()
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  git fetch -q origin "pull/${pr}/head:refs/remotes/origin/pr-${pr}" 2>/dev/null || true
+  if git rev-parse --verify "origin/pr-${pr}" >/dev/null 2>&1; then
+    mb="$(git merge-base "origin/${base_ref}" "origin/pr-${pr}" 2>/dev/null || true)"
+    if [[ -n "$mb" ]]; then
+      conflict_count="$(git merge-tree "$mb" "origin/${base_ref}" "origin/pr-${pr}" 2>/dev/null | grep -c '<<<<<<<' || true)"
+      for c in $(git rev-list --reverse "origin/pr-${pr}" "^$mb" 2>/dev/null); do
+        if ! git diff --name-status "$c^" "$c" 2>/dev/null | grep -q .; then
+          empty_commits+=("$(git log -1 --format='%h (%ci)' "$c" 2>/dev/null)")
+        fi
+      done
+    fi
+  fi
+fi
+
+# Review threads query if script is available
+threads_script="$(dirname "$0")/list_pull_request_review_threads.sh"
+if [[ -f "$threads_script" ]]; then
+  bash "$threads_script" --owner "${repo%%/*}" --repo "${repo#*/}" --pull-number "$pr" > "$out/threads.txt" 2>/dev/null || true
+fi
+
 echo "# PR #${pr} audit bundle ($repo)"
 jq -r '"**\(.title)** by \(.author.login) | \(.headRefName) -> \(.baseRefName) | \(.state) | \(.commits|length) commit(s)"' "$out/meta.json"
+echo "- Merge conflicts with ${base_ref}: ${conflict_count}"
+if [[ "${#empty_commits[@]}" -gt 0 ]]; then
+  echo "- ⚠️ Empty commits: ${#empty_commits[@]} (unmodified tree): ${empty_commits[*]}"
+fi
 echo
 echo "## Files"
-base_ref="$(jq -r '.baseRefName' "$out/meta.json")"
 jq -r '.files[] | "\(.changeType)\t\(.path)\t+\(.additions)/-\(.deletions)"' "$out/meta.json" | while IFS=$'\t' read -r ctype path stat; do
   status_tag=""
   if [[ -f "$out/head/$path" ]] && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -108,4 +137,11 @@ while IFS= read -r n; do
   fi
 done < "$out/issues/_list.txt"
 echo
+
+if [[ -f "$out/threads.txt" ]]; then
+  echo "## Review threads"
+  grep -E '^\*\*Total Threads\*\*|## Thread' "$out/threads.txt" || echo "No review threads found."
+  echo
+fi
+
 echo "Bundle written to: $out"
