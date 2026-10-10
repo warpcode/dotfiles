@@ -32,12 +32,50 @@ calls. `--help` documents each one. Paths are relative to this skill's directory
 | --- | --- | --- |
 | Inline Review Comment | `@templates/pull_request_review_comment.md` | Required schema for `REQUEST_CHANGES` inline findings (`Severity`, `Description`, `Impact`, `Proposed Solution`). |
 
+## ⚖️ Code Review Orchestration Standards
+
+### Review Tone & Style
+- **Tone**: Strictly neutral, fact-based, and formal. Do not include encouraging adjectives, subjective evaluations, or conversational filler (e.g., "looks excellent", "successfully", "elegantly", "LGTM").
+- **Format**: For each finding, use the structure: 1. Severity (High/Medium/Low), 2. Description, 3. Impact, 4. Proposed Solution. Refer to `@templates/pull_request_review_comment.md` for comment formatting details.
+
+### Review Events & Decision Rules
+- **REQUEST_CHANGES**: Use whenever ANY finding exists, including low-severity findings, unaddressed comments, or unresolved merge conflicts.
+- **COMMENT**: Do not use as a substitute for `REQUEST_CHANGES` based on severity. Use only for the self-authored-PR restriction (where GitHub API blocks `REQUEST_CHANGES` on self-authored PRs), or when the user explicitly requests a non-decision comment.
+- **APPROVE**: Use strictly when zero findings exist or all previously raised issues are fully resolved.
+- **Silent Approvals Invariant**: When approving a PR, NEVER add new file comments or subjective summaries. Pass an empty review body (`--body ""`) and submit no comments.
+
+### Review Orchestration & Phase Separation
+- **Formal Review Harness**: Formal pull request reviews SHOULD be performed where available to ensure end-to-end audit, specialized subagents, and memory extraction.
+- **Code Review Phase Separation**: During active PR review workflows, treat any user architectural ideas, cleanup requests, or file removal proposals as requested review comments to be submitted to GitHub. Do NOT checkout the branch or perform local workspace edits unless the user explicitly commands a local change or workspace modification.
+- **Inline Comments Required for Bot-Authored PRs**: When reviewing PRs authored by automated bots (e.g., Jules), all findings MUST be submitted as inline file comments on specific lines (`side: RIGHT`), not solely in the main review body. Bot authors respond to inline comments; findings in the review body alone are ignored. The main review body should be a neutral, brief summary only.
+- **Conflict Commenting**: When requesting changes due to merge conflicts or general findings, always add corresponding inline comments directly to the affected files in the review payload to ensure external integrations and bots detect the required changes.
+
+### Audit Prioritization Hierarchy
+Systematically evaluate each area, prioritizing findings in the following order:
+1. **Bugs and functional correctness**
+2. **Security issues**
+3. **Style guideline violations**
+4. **Performance and efficiency**
+5. **Readability and maintainability**
+6. **Anti-patterns and duplication**
+7. **Project convention consistency**
+8. **Issue requirement compliance**
+9. **Unresolved PR comments and review questions**
+
+### General Review & Branch Constraints
+- **Branch Dynamism**: PR review workflows and scripts MUST NOT hardcode default branch names (e.g. `origin/master` or `master`). Instead, query the PR metadata dynamically (`baseRefName`) to determine the target base branch.
+- **Merge Regression Check**: If the PR has a merge/rebase commit at its tip, diff changed files against their base-branch versions to verify formatting, fixture whitespace, and trailing newlines weren't regressed.
+- **Line-Comment Constraint**: Line-level comments MUST be on added lines (`+` lines, `side: RIGHT`) within current PR diff hunks.
+- **Findings Outside Diff**: For findings on unchanged lines outside the PR diff hunks, post a file-level comment or include the finding in the main review summary describing the file, line number, and proposed fix.
+- **No Base Branch Update Requests**: During PR reviews, NEVER ask the author or bot to update, rebase, or sync the pull request branch with the main/base branch.
+
 ## 🚀 Lifecycle Procedure
 
 ### 1. Discovery & Selection
 - Activate the `github-cli` skill (reviews + pull-requests references).
 - Perform discovery of open PRs and active threads.
-- Present candidates to the user and obtain explicit selection for a single PR (strictly follow the **Review Boundaries** mandate in `AGENTS.md`).
+- **Review Boundaries**: When discovering multiple PRs, strictly limit auditing and commentary to the specific PR(s) selected by the user. Do not proactively audit other candidates in the same turn or session unless explicitly requested. Present candidates to the user and obtain explicit selection for a single PR.
+- **Batching Permission**: ALWAYS obtain explicit user permission before processing multiple PRs in one session. Only batch if the user explicitly requests "all", a specific list, or confirms the batching proposal.
 - If the user requests multiple PRs, preserve strict boundaries by running them as separate lifecycles in the selected order; never broaden one lifecycle to cover multiple PRs.
 
 ### 2. Contextual Audit
@@ -153,6 +191,10 @@ calls. `--help` documents each one. Paths are relative to this skill's directory
 
 ### 3. Outdated Review Thread Triage (Bot-Authored PRs)
 When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushed after a prior review:
+- Compare the current diff/files against the thread feedback.
+- **Strict Thread Closing**: Resolve ONLY when the change is verified as complete.
+- **Unfulfilled Threads**: DO NOT resolve; post a reply describing what remains outstanding.
+
 1. Retrieve review threads:
    ```bash
    bash <skills-dir>/github-cli/scripts/list_pull_request_review_threads.sh --owner <owner> --repo <repo> --pull-number <pr>
