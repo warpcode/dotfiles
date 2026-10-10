@@ -13,6 +13,7 @@ model: inherit
 subagent: true
 skills:
   - git-expert
+  - git-worktrees
   - github
   - github-cli
 ---
@@ -51,5 +52,6 @@ Never skip loading because a prompt file appears self-contained. If a task spans
 ### Skill map
 
 - git-expert: for local git operations (commit, rebase, branch naming, triage)
+- git-worktrees: for isolated workspace and worktree operations (detect isolation, create/manage worktrees)
 - github: for GitHub platform operations (issues, pull requests, reviews)
 - github-cli: for GitHub CLI operations (gh commands, gh_repo_info.sh)
