@@ -1,9 +1,11 @@
 ---
 name: git-expert
 description: >
-  Expert local Git operations: branch strategies, conflict resolution,
-  rebase/reflog triage, submodules, and Conventional Commits. Use
-  when performing local git operations.
+  Expert local Git operations: branch strategies, rebase and merge conflict
+  resolution, reflog triage, submodules, and Conventional Commits.
+  Load this FIRST for "fix my conflict", "rebase conflict", "unmerged paths",
+  "MERGING/REBASING state", "cherry-pick in progress" — run
+  `scripts/merge_state.sh` before reading diffs by hand.
 user-invocable: false
 ---
 
@@ -46,6 +48,7 @@ Run bundled helper scripts relative to this skill's root directory (`<skill-dir>
 | `@scripts/merge_state.sh` | Detect in-progress merge/rebase/cherry-pick/revert/bisect + conflict files + recovery commands | "Am I mid-merge?", "What's conflicting?", recovery triage |
 | `@scripts/stash.sh` | Stash list with message, age, changed files (optional `--older-than N`, `--drop`) | "What's in my stash?", stash inspection/cleanup |
 | `@scripts/sync.sh` | Safe remote rebase sync (fetch, auto-stash tracked modifications, rebase non-interactively, pop stash, preserve untracked files) | "Pull/sync latest changes", "sync branch with remote" |
+| `@scripts/push.sh` | Safe push with preflight commit preview and status reporting | "Push commits", "push branch" |
 | `@scripts/repo_size.sh` | Object count & repo size report (optional `--aggressive` maintenance) | "How big is the repo?", git object statistics/cleanup |
 | `@scripts/audit_repo_branches.py` | Classify every remote branch as `KEEP`/`DELETE_MERGED`/`DELETE_STALE`/`SUPERSEDED`/`REVIEW`/`REVIEW_STALE`; detects sibling branches that conflict with each other; emits a ready-to-run `git push origin --delete` for only the safe ones (`--repo`, `--base`, `--json`, `--fetch`) | "Which branches are obsolete?", "which of these two PR branches wins?", pre-prune cleanup |
 
@@ -72,6 +75,18 @@ the tree was restructured underneath it. Port the coverage forward, then delete.
 regression-tested in `scripts/tests/test_audit_repo_branches.py`.
 
 All bundled scripts support `--raw` (or `--raw-output`) for unformatted, machine-readable output suitable for parsing or piping.
+
+**Conflict resolution: `merge_state.sh` first, always.** When a user reports a conflict
+("fix my pull conflict", "unmerged paths", "rebase conflict") or `git status` output shows
+`MERGING`/`REBASING`/`CHERRY-PICKING`/`REVERTING`, run `merge_state.sh` as the *first* call.
+Do not reconstruct the situation from `git status` + `git log` + `git diff --diff-filter=U`
+plus a `git show <sha>:<path>` per side — that is four calls and ~25 KB of context where the
+script answers it in one. Only then read the conflicted blobs themselves; choosing how two
+divergent revisions compose is judgement and stays with you.
+
+`git rebase --continue` is not commit authoring — the `commit` skill does not apply to it.
+Approval is still required where the repo instructions demand it, and always pass
+`GIT_EDITOR=true` (or `-c core.editor=true`) so the editor never opens.
 
 Scripts with optional mutation operations (`--delete-merged`, `--drop`, `--remove`, `--aggressive`) are **report/dry-run by default** — they never mutate without an explicit flag. Always present the informational report and get user approval before running with a destructive flag.
 

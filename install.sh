@@ -64,7 +64,8 @@ readonly DOTFILES_INSTALL_DIR
 
 
 readonly DOTFILES_REPO_URL="${DOTFILES_REPO_URL:-https://github.com/warpcode/dotfiles.git}"
-readonly OS_NAME="$(detect_os)"
+OS_NAME="$(detect_os)"
+readonly OS_NAME
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -309,7 +310,8 @@ main() {
     chezmoi_global_args+=(--override-data "${override_data}")
   fi
 
-  PAGER=cat chezmoi "${chezmoi_global_args[@]}" init --apply --source "${DOTFILES}"
+  export PAGER=cat
+  chezmoi "${chezmoi_global_args[@]}" init --apply --source "${DOTFILES}"
 
   info "Installing mise tools (llama.cpp, ollama, etc)..."
   "${mise_bin}" install || true

@@ -135,9 +135,9 @@ diffs in MD code blocks, logs as bullet lists, metadata as key-value pairs.
 
 | Operation | Command | Notes |
 |-----------|---------|-------|
-| List worktrees | `git worktree list` | Managed via `git-worktrees` skill |
-| Add a worktree | `git worktree add <path> <branch>` | See `git-worktrees` skill |
-| Remove a worktree | `git worktree remove <path>` | Managed via `git-worktrees` skill |
+| List worktrees | `git worktree list` | |
+| Add a worktree | `git worktree add <path> <branch>` | See `@references/worktrees.md` |
+| Remove a worktree | `git worktree remove <path>` | |
 | List submodules | `git submodule status` | |
 | Init submodules | `git submodule update --init --recursive` | After a fresh clone |
 

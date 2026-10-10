@@ -29,6 +29,7 @@ class TestWorktreesScript(unittest.TestCase):
             f.write("# Test Repo\n")
         self.git("add", "README.md", cwd=self.repo)
         self.git("commit", "-m", "Initial commit", cwd=self.repo)
+        self.default_branch = self.git("branch", "--show-current", cwd=self.repo).strip()
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir, ignore_errors=True)
@@ -88,7 +89,8 @@ class TestWorktreesScript(unittest.TestCase):
         res = self.run_script()
         self.assertEqual(res.returncode, 0)
         self.assertIn("## Stale Worktrees", res.stdout)
-        self.assertIn(wt_path, res.stdout)
+        self.assertIn(f"  - {wt_path}", res.stdout)
+        self.assertNotIn("None detected.", res.stdout)
 
     def test_non_destructive_by_default(self):
         wt_path = os.path.join(self.tmpdir, "wt-keep")
@@ -106,6 +108,77 @@ class TestWorktreesScript(unittest.TestCase):
         res = self.run_script("--remove", wt_path)
         self.assertEqual(res.returncode, 0)
         self.assertIn(f"## Remove worktree: {wt_path}", res.stdout)
+        self.assertFalse(os.path.exists(wt_path))
+
+    def test_remove_dirty_worktree_fails_and_preserves_dir(self):
+        wt_path = os.path.join(self.tmpdir, "wt-dirty")
+        self.git("worktree", "add", "-b", "feature-dirty", wt_path)
+        dirty_file = os.path.join(wt_path, "dirty.txt")
+        with open(dirty_file, "w") as f:
+            f.write("untracked modifications\n")
+
+        res = self.run_script("--remove", wt_path)
+        self.assertNotEqual(res.returncode, 0)
+        self.assertTrue(os.path.exists(wt_path))
+        self.assertTrue(os.path.exists(dirty_file))
+
+    def test_create_clean_merge(self):
+        self.git("checkout", "-b", "feature-clean", cwd=self.repo)
+        fpath = os.path.join(self.repo, "clean.txt")
+        with open(fpath, "w") as f:
+            f.write("clean\n")
+        self.git("add", "clean.txt", cwd=self.repo)
+        self.git("commit", "-m", "Clean feature", cwd=self.repo)
+        self.git("checkout", self.default_branch, cwd=self.repo)
+
+        wt_path = os.path.join(self.tmpdir, "wt-created-clean")
+        res = self.run_script(
+            "--create", "feature-clean",
+            "--base", self.default_branch,
+            "--path", wt_path,
+            "--no-fetch",
+        )
+        self.assertEqual(res.returncode, 0)
+        self.assertIn("# Worktree Created: Success", res.stdout)
+        self.assertTrue(os.path.exists(wt_path))
+        self.assertTrue(os.path.exists(os.path.join(wt_path, "clean.txt")))
+
+    def test_create_conflict_detection(self):
+        self.git("checkout", "-b", "feature-conflict", cwd=self.repo)
+        readme = os.path.join(self.repo, "README.md")
+        with open(readme, "w") as f:
+            f.write("# Feature Edit\n")
+        self.git("add", "README.md", cwd=self.repo)
+        self.git("commit", "-m", "Feature readme", cwd=self.repo)
+        self.git("checkout", self.default_branch, cwd=self.repo)
+
+        with open(readme, "w") as f:
+            f.write("# Master Edit\n")
+        self.git("add", "README.md", cwd=self.repo)
+        self.git("commit", "-m", "Master readme", cwd=self.repo)
+
+        wt_path = os.path.join(self.tmpdir, "wt-created-conflict")
+        res = self.run_script(
+            "--create", "feature-conflict",
+            "--base", self.default_branch,
+            "--path", wt_path,
+            "--no-fetch",
+        )
+        self.assertEqual(res.returncode, 2)
+        self.assertIn("# Worktree Created: Conflict Detected", res.stdout)
+        self.assertIn("README.md", res.stdout)
+
+    def test_create_already_checked_out_branch_error(self):
+        wt_path = os.path.join(self.tmpdir, "wt-second")
+        # Default branch is currently checked out in self.repo
+        res = self.run_script(
+            "--create", self.default_branch,
+            "--path", wt_path,
+            "--no-fetch",
+            cwd=self.repo,
+        )
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("git worktree add failed:", res.stderr)
         self.assertFalse(os.path.exists(wt_path))
 
 
