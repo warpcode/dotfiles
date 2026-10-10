@@ -1,9 +1,11 @@
 ---
 name: git-expert
 description: >
-  Expert local Git operations: branch strategies, conflict resolution,
-  rebase/reflog triage, worktrees, submodules, and Conventional Commits. Use
-  when performing local git operations.
+  Expert local Git operations: branch strategies, rebase and merge conflict
+  resolution, reflog triage, worktrees, submodules, and Conventional Commits.
+  Load this FIRST for "fix my conflict", "rebase conflict", "unmerged paths",
+  "MERGING/REBASING state", "cherry-pick in progress" — run
+  `scripts/merge_state.sh` before reading diffs by hand.
 user-invocable: false
 ---
 
@@ -74,6 +76,18 @@ the tree was restructured underneath it. Port the coverage forward, then delete.
 regression-tested in `scripts/tests/test_audit_repo_branches.py`.
 
 All bundled scripts support `--raw` (or `--raw-output`) for unformatted, machine-readable output suitable for parsing or piping.
+
+**Conflict resolution: `merge_state.sh` first, always.** When a user reports a conflict
+("fix my pull conflict", "unmerged paths", "rebase conflict") or `git status` output shows
+`MERGING`/`REBASING`/`CHERRY-PICKING`/`REVERTING`, run `merge_state.sh` as the *first* call.
+Do not reconstruct the situation from `git status` + `git log` + `git diff --diff-filter=U`
+plus a `git show <sha>:<path>` per side — that is four calls and ~25 KB of context where the
+script answers it in one. Only then read the conflicted blobs themselves; choosing how two
+divergent revisions compose is judgement and stays with you.
+
+`git rebase --continue` is not commit authoring — the `commit` skill does not apply to it.
+Approval is still required where the repo instructions demand it, and always pass
+`GIT_EDITOR=true` (or `-c core.editor=true`) so the editor never opens.
 
 Scripts with optional mutation operations (`--delete-merged`, `--drop`, `--remove`, `--aggressive`) are **report/dry-run by default** — they never mutate without an explicit flag. Always present the informational report and get user approval before running with a destructive flag.
 
