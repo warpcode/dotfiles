@@ -10,15 +10,7 @@ user-invocable: false
 
 This skill provides guidelines and procedures for authoring, structuring, managing, and merging GitHub Pull Requests.
 
-> **Prerequisites:** This skill requires either the GitHub MCP server or the `gh` CLI to be available and authenticated for GitHub platform operations. Local workspace conflict resolution and isolation are handled via bundled helper scripts.
-
-## Shared Resources
-
-Run bundled helper scripts relative to this skill's root directory (`<skill-dir>/scripts/...` e.g. `.github/skills/github-pr/scripts/...`):
-
-| Script | Purpose | Invocation |
-| --- | --- | --- |
-| `@scripts/pr_worktree_sync.sh` | Author-side PR branch isolation, base sync, and worktree cleanup | `bash <skill-dir>/scripts/pr_worktree_sync.sh setup\|status\|cleanup` |
+> **Prerequisites:** This skill requires either the GitHub MCP server or the `gh` CLI to be available and authenticated. However, this file contains **ZERO** script or MCP direct references for usage. For execution, refer to the `github-cli` skill.
 
 ## 1. Base Branch & Safety Rules
 
@@ -54,17 +46,12 @@ Ensure the body:
 ## 4. Author-Side Conflict Resolution
 
 When resolving base branch merge conflicts on a PR branch as the PR author (using a local workspace):
-1. Run the bundled worktree sync script:
-   ```bash
-   bash <skill-dir>/scripts/pr_worktree_sync.sh setup --branch <branch> [--base <base>]
-   ```
-2. If conflicts occur, resolve them inside the reported worktree path.
-3. Run verification tests in the worktree.
-4. Push changes via standard `git push origin <branch>` (NEVER force-push `--force` or `--force-with-lease`).
-5. Remove the worktree:
-   ```bash
-   bash <skill-dir>/scripts/pr_worktree_sync.sh cleanup --dir <path>
-   ```
+1. Use an isolated git worktree in `/tmp/` to prevent main workspace contamination.
+2. Fetch the remote branch and base branch.
+3. Merge the base branch into the PR branch non-interactively (`git -c core.editor=true merge origin/<base>`).
+4. Resolve conflicts while preserving both PR additions and base branch code.
+5. Push the resolved branch using a standard `git push` (NEVER force-push `--force` or `--force-with-lease`).
+6. Clean up the isolated worktree.
 
 > ⚠️ **Jules-Owned PR Exception**: Jules exclusively owns changes to its PR branch. NEVER push Git/code changes or perform merges on a Jules-owned PR branch. If base-branch drift or conflicts become unmanageable on a Jules PR, start a new Jules session from the current PR branch and let Jules handle the subsequent changes.
 
