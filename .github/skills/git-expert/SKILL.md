@@ -2,7 +2,7 @@
 name: git-expert
 description: >
   Expert local Git operations: branch strategies, rebase and merge conflict
-  resolution, reflog triage, worktrees, submodules, and Conventional Commits.
+  resolution, reflog triage, submodules, and Conventional Commits.
   Load this FIRST for "fix my conflict", "rebase conflict", "unmerged paths",
   "MERGING/REBASING state", "cherry-pick in progress" — run
   `scripts/merge_state.sh` before reading diffs by hand.
@@ -26,7 +26,7 @@ responding:
 | Merge conflict resolution | `@references/merge-conflicts.md` | Conflict markers, resolution strategies, merge vs rebase conflicts, abort options |
 | Merge strategies | `@references/merge-strategies.md` | Explicit merges, fast-forward, rebase, squash-on-merge, decision matrix |
 | Branch strategies & handling | `@references/branching-strategies.md` | Git Flow vs trunk-based vs GitHub Flow, branch naming rules, merge vs rebase |
-| Worktrees | `@references/worktrees.md` | Detect existing isolation (worktrees/submodules), create isolated workspaces (native tools first, git fallback), project setup, baseline verification, and manage git worktrees |
+| Worktrees | Delegated to `git-worktrees` skill | Detect existing isolation, create/manage worktrees, directory ignore checks |
 | Commit message workflow | `@references/commit-workflow.md` | Steps, strategy selection (Conventional vs Work-Based), operational constraints (preflight, staged-only, no auto-commit) |
 | Commit message format | `@references/commit-message-format.md` | Generate/draft a commit message; format rules for type/scope/subject/body/footer, type table, hard constraints |
 
@@ -49,7 +49,6 @@ Run bundled helper scripts relative to this skill's root directory (`<skill-dir>
 | `@scripts/stash.sh` | Stash list with message, age, changed files (optional `--older-than N`, `--drop`) | "What's in my stash?", stash inspection/cleanup |
 | `@scripts/sync.sh` | Safe remote rebase sync (fetch, auto-stash tracked modifications, rebase non-interactively, pop stash, preserve untracked files) | "Pull/sync latest changes", "sync branch with remote" |
 | `@scripts/push.sh` | Safe push with preflight commit preview and status reporting | "Push commits", "push branch" |
-| `@scripts/worktrees.sh` | List/detect active & stale worktrees, prune metadata (optional `--remove <path>`) | "What worktrees exist?", worktree inspection/cleanup |
 | `@scripts/repo_size.sh` | Object count & repo size report (optional `--aggressive` maintenance) | "How big is the repo?", git object statistics/cleanup |
 | `@scripts/audit_repo_branches.py` | Classify every remote branch as `KEEP`/`DELETE_MERGED`/`DELETE_STALE`/`SUPERSEDED`/`REVIEW`/`REVIEW_STALE`; detects sibling branches that conflict with each other; emits a ready-to-run `git push origin --delete` for only the safe ones (`--repo`, `--base`, `--json`, `--fetch`) | "Which branches are obsolete?", "which of these two PR branches wins?", pre-prune cleanup |
 
