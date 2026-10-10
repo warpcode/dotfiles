@@ -48,8 +48,14 @@ def run_guard(subcmd: str, args: list[str] = None, stdin_str: str = None) -> tup
                 pass
         return res.returncode, data
     except Exception as e:
-        sys.stderr.write(f"Error invoking {cmd}: {e}\n")
-        return 2, {"decision": "deny", "reason": f"Security guard execution failed: {e}"}
+        sys.stderr.write(f"Error invoking security guard ({subcmd})\n")
+        if os.environ.get("AI_GUARD_DEBUG"):
+            try:
+                with open("/tmp/ai-guard-wrapper.log", "a") as lf:
+                    lf.write(f"GUARD FAILURE subcmd={subcmd}: {e!r}\n")
+            except Exception:
+                pass
+        return 2, {"decision": "deny", "reason": f"Security guard execution failed ({subcmd})"}
 
 
 def extract_command(mapping):

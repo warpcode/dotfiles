@@ -7,6 +7,15 @@
   "chat.viewSessions.orientation": "stacked",
   "github.copilot.chat.agentDebugLog.enabled": true,
   "chat.byokUtilityModelDefault": "mainAgent",
+  "chat.hookFilesLocations": {
+    ".claude/settings.json": true,
+    ".claude/settings.local.json": true,
+    ".github/hooks": true,
+    "~/.agents/hooks": true,
+    "~/.claude/settings.json": true,
+    "~/.copilot/hooks": true
+  },
+  "chat.tools.compressOutput.enabled": true,
   "yaml.disableSchemaDetection": [
     "azure-pipelines.yml",
     "azure-pipelines.yaml",
@@ -59,7 +68,12 @@
   "js/ts.experimental.useTsgo": true,
   "chat.agent.sandbox.enabled": "off",
   "chat.agent.maxRequests": 100,
+  "chat.tools.terminal.outputCompaction": true,
+  "chat.useClaudeMdFile": false,
   "antigravity.enableTelemetry": false,
   "chat.tools.terminal.enableAutoApprove": true,
+  "diffEditor.maxComputationTime": 0,
+  "diffEditor.renderSideBySide": false,
+  "github.copilot.completions.chat.enabled": true,
   {{ template "commands/vscode.tmpl" . }}
 }

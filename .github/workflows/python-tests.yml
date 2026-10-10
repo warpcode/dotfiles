@@ -1,11 +1,11 @@
 ---
 name: Python Skill Tests
 
-# Skill scripts are plain Python, but until now nothing in CI executed them.
+# Skill scripts are plain Python or Bash, but until now nothing in CI executed them.
 # Both existing workflows are path-filtered to **/*.zsh, so a .py-only pull
 # request triggered no workflow at all and every "tests pass" claim in a PR body
 # was unverifiable. Suites referenced from an earlier PR review:
-#   ai-authoring-skills (10), git-expert (12), github-cli (6),
+#   ai-authoring-skills (10), git-expert (12), git-worktrees (.github/skills/git-worktrees/scripts/tests/test_worktrees.py), github-cli (6),
 #   google-jules-api (41), jira-api (45), ai-conversation-review (3)
 
 on:
@@ -14,12 +14,14 @@ on:
       - master
     paths:
       - '**/*.py'
+      - '**/*.sh'
       - '.github/workflows/python-tests.yml'
   pull_request:
     branches:
       - master
     paths:
       - '**/*.py'
+      - '**/*.sh'
       - '.github/workflows/python-tests.yml'
 
 permissions:

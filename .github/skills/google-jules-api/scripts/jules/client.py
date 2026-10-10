@@ -5,7 +5,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from .utils import die, info
+from .utils import die, info, parse_iso_datetime
 
 DEFAULT_BASE_URL = "https://jules.googleapis.com/v1alpha"
 
@@ -454,8 +454,7 @@ class JulesClient:
         inactive_mins = 0.0
         if latest_activity_time:
             try:
-                clean_time = latest_activity_time.replace("Z", "+00:00")
-                act_dt = datetime.fromisoformat(clean_time)
+                act_dt = parse_iso_datetime(latest_activity_time)
                 inactive_mins = max(0.0, (now - act_dt).total_seconds() / 60.0)
             except Exception:
                 pass
@@ -465,8 +464,7 @@ class JulesClient:
         age_days = 0.0
         if created_str:
             try:
-                clean_created = created_str.replace("Z", "+00:00")
-                c_dt = datetime.fromisoformat(clean_created)
+                c_dt = parse_iso_datetime(created_str)
                 age_days = max(0.0, (now - c_dt).total_seconds() / 86400.0)
             except Exception:
                 pass
@@ -539,10 +537,18 @@ class JulesClient:
         filter_expr: str | None = None,
         max_age_days: int | None = 30,
         repo: str | None = None,
+        all_pages: bool = False,
     ) -> list[dict[str, Any]]:
         """List and audit recent sessions, optionally filtered by repo, ignoring inactive sessions over max_age_days old."""
-        res = self.list_sessions(page_size=page_size, filter_expr=filter_expr)
-        sessions = res.get("sessions", [])
+        sessions: list[dict[str, Any]] = []
+        page_token: str | None = None
+        while True:
+            res = self.list_sessions(page_size=page_size, page_token=page_token, filter_expr=filter_expr)
+            batch = res.get("sessions", [])
+            sessions.extend(batch)
+            page_token = res.get("nextPageToken")
+            if not all_pages or not page_token or not batch:
+                break
         if repo:
             clean_repo = repo.strip().removeprefix("sources/").removeprefix("github/").lower()
             sessions = [
@@ -556,8 +562,7 @@ class JulesClient:
                 ts = s.get("createTime") or s.get("updateTime")
                 if ts:
                     try:
-                        clean_time = ts.replace("Z", "+00:00")
-                        s_dt = datetime.fromisoformat(clean_time)
+                        s_dt = parse_iso_datetime(ts)
                         age_days = (now - s_dt).total_seconds() / 86400.0
                         if age_days > max_age_days:
                             continue
