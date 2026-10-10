@@ -1,31 +1,41 @@
 from .metrics import calculate_metrics
 
+# Pre-allocated set constant at module level for O(1) block type testing
+NEWLINE_BLOCK_TYPES = {"paragraph", "heading", "listItem", "tableCell"}
+
+
 def _flatten_adf_list(node, parts):
-    """Helper function to append ADF content to a list of parts."""
-    if node is None:
-        return
-    if isinstance(node, list):
+    """Helper function to append ADF content to a list of parts with type safety and null guards."""
+    if isinstance(node, dict):
+        node_type = node.get("type")
+        if node_type == "text":
+            text = node.get("text")
+            if isinstance(text, str) and text:
+                parts.append(text)
+        elif node_type == "hardBreak":
+            parts.append("\n")
+        elif node_type == "inlineCard":
+            attrs = node.get("attrs")
+            if isinstance(attrs, dict):
+                url = attrs.get("url")
+                if isinstance(url, str) and url:
+                    parts.append(url)
+        elif node_type == "mention":
+            attrs = node.get("attrs")
+            if isinstance(attrs, dict):
+                text = attrs.get("text")
+                if isinstance(text, str) and text:
+                    parts.append(text)
+        elif node_type in NEWLINE_BLOCK_TYPES:
+            content = node.get("content")
+            if content:
+                _flatten_adf_list(content, parts)
+            parts.append("\n")
+        elif "content" in node:
+            _flatten_adf_list(node["content"], parts)
+    elif isinstance(node, list):
         for item in node:
             _flatten_adf_list(item, parts)
-        return
-    if not isinstance(node, dict):
-        return
-
-    node_type = node.get("type")
-    if node_type == "text":
-        parts.append(node.get("text", ""))
-    elif node_type == "hardBreak":
-        parts.append("\n")
-    elif node_type == "inlineCard":
-        parts.append(node.get("attrs", {}).get("url", ""))
-    elif node_type == "mention":
-        parts.append(node.get("attrs", {}).get("text", ""))
-    elif node_type in ("paragraph", "heading", "listItem", "tableCell"):
-        content = node.get("content", [])
-        _flatten_adf_list(content, parts)
-        parts.append("\n")
-    elif "content" in node:
-        _flatten_adf_list(node["content"], parts)
 
 def flatten_adf(node):
     """Recursive function to handle nested ADF (Atlassian Document Format) content."""
