@@ -46,6 +46,7 @@ Run bundled helper scripts relative to this skill's root directory (`<skill-dir>
 | `@scripts/merge_state.sh` | Detect in-progress merge/rebase/cherry-pick/revert/bisect + conflict files + recovery commands | "Am I mid-merge?", "What's conflicting?", recovery triage |
 | `@scripts/stash.sh` | Stash list with message, age, changed files (optional `--older-than N`, `--drop`) | "What's in my stash?", stash inspection/cleanup |
 | `@scripts/sync.sh` | Safe remote rebase sync (fetch, auto-stash tracked modifications, rebase non-interactively, pop stash, preserve untracked files) | "Pull/sync latest changes", "sync branch with remote" |
+| `@scripts/push.sh` | Safe push with preflight commit preview and status reporting | "Push commits", "push branch" |
 | `@scripts/repo_size.sh` | Object count & repo size report (optional `--aggressive` maintenance) | "How big is the repo?", git object statistics/cleanup |
 | `@scripts/audit_repo_branches.py` | Classify every remote branch as `KEEP`/`DELETE_MERGED`/`DELETE_STALE`/`SUPERSEDED`/`REVIEW`/`REVIEW_STALE`; detects sibling branches that conflict with each other; emits a ready-to-run `git push origin --delete` for only the safe ones (`--repo`, `--base`, `--json`, `--fetch`) | "Which branches are obsolete?", "which of these two PR branches wins?", pre-prune cleanup |
 
@@ -73,7 +74,7 @@ regression-tested in `scripts/tests/test_audit_repo_branches.py`.
 
 All bundled scripts support `--raw` (or `--raw-output`) for unformatted, machine-readable output suitable for parsing or piping.
 
-Scripts with optional mutation operations (`--delete-merged`, `--drop`, `--remove`, `--aggressive`) are **report/dry-run by default** — they never mutate without an explicit flag. Always present the informational report and get user approval before running with a destructive flag.
+Scripts with optional mutation operations (`--delete-merged`, `--drop`, `--aggressive`) are **report/dry-run by default** — they never mutate without an explicit flag. Always present the informational report and get user approval before running with a destructive flag.
 
 ## Safety Rules
 

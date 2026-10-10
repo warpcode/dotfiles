@@ -16,5 +16,12 @@ Mirror CI: `zsh -n`, `bash -n`, `shellcheck`, `python3 -m py_compile`. Full list
 - `git push --force`, PR merge, network-impacting changes
 - See `dot_agents/AGENTS.md` §3 for the full gate.
 
+Approval scope: approval covers **only the actions explicitly enumerated** in the request that
+sought it. A bare "proceed" / "go ahead" authorises nothing on its own — restate the list and
+confirm. Approval does not carry forward to the next gate or to a newly discovered action.
+
 ## Skills
-Browse `.github/skills/`. Load the relevant SKILL.md before executing.
+Browse `.github/skills/`. `~/.gemini/config/skills/` is a direct symlink to `.github/skills/` in
+this repository; always edit and author skill sources directly under `.github/skills/`. Load the
+relevant SKILL.md before executing. If a loaded skill ships a script for a step, run the script — do
+not hand-write an equivalent loop.

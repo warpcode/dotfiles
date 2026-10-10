@@ -40,7 +40,8 @@ You MUST load the skill(s) relevant to the task BEFORE executing anything. Skill
 ### Mandatory loading procedure
 
 1. **Classify the task** — determine which skill applies before touching git or GitHub:
-   - Local git operation (status, diff, commit, rebase, branch, triage, stash, worktree) → `git-expert`
+   - Local git operation (status, diff, commit, rebase, branch, triage, stash) → `git-expert`
+   - Isolated workspace & worktree operation (detect isolation, create/manage worktrees) → `git-worktrees`
    - GitHub platform operation (issue, PR, review, search) → `github`
    - GitHub CLI execution (`gh` commands) → `github-cli`
 2. **Load the skill** — read the skill's `SKILL.md` and the reference file(s) relevant to the task (e.g. `commit-workflow.md`, `commit-message-format.md` for commits) before executing.

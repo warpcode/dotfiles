@@ -88,7 +88,8 @@ class TestWorktreesScript(unittest.TestCase):
         res = self.run_script()
         self.assertEqual(res.returncode, 0)
         self.assertIn("## Stale Worktrees", res.stdout)
-        self.assertIn(wt_path, res.stdout)
+        self.assertIn(f"  - {wt_path}", res.stdout)
+        self.assertNotIn("None detected.", res.stdout)
 
     def test_non_destructive_by_default(self):
         wt_path = os.path.join(self.tmpdir, "wt-keep")
