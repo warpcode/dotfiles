@@ -224,7 +224,6 @@ def match_tool_call(
     tool_re: Optional[re.Pattern] = None,
     command_re: Optional[re.Pattern] = None,
     script_targets: Optional[Set[str]] = None,
-    script_patterns: Optional[Dict[str, re.Pattern]] = None,
 ) -> Tuple[bool, Optional[str]]:
     """Check if a tool call matches query filters. Returns (matched, matched_target_key)."""
     name = tc.get("name", "")
@@ -253,22 +252,12 @@ def match_tool_call(
         if not command_re.search(cmd_str):
             return False, None
 
-    # Script targets list filter (prefer pre-compiled script_patterns map for ~20x performance boost)
-    if script_patterns is not None:
-        matched_script = None
-        for s, pattern in script_patterns.items():
-            # Fast string containment check before regex search
-            if s in cmd_str and pattern.search(cmd_str):
-                matched_script = s
-                break
-        if not matched_script:
-            return False, None
-        return True, matched_script
-    elif script_targets is not None:
+    # Script targets list filter
+    if script_targets is not None:
         matched_script = None
         for s in script_targets:
-            # Fast string containment check before compiling dynamic regex
-            if s in cmd_str and re.search(rf"(?:^|[\s/\"']){re.escape(s)}(?:[\s\"']|$)", cmd_str):
+            # Match script basename in command tokens, word boundaries, or path
+            if re.search(rf"(?:^|[\s/\"']){re.escape(s)}(?:[\s\"']|$)", cmd_str):
                 matched_script = s
                 break
         if not matched_script:
@@ -320,14 +309,6 @@ def main() -> int:
     tool_re = re.compile(args.tool, re.I) if args.tool else None
     command_re = re.compile(args.command, re.I) if args.command else None
 
-    # Pre-compile script target regex patterns once for all sessions
-    script_patterns: Optional[Dict[str, re.Pattern]] = None
-    if target_scripts:
-        script_patterns = {
-            s: re.compile(rf"(?:^|[\s/\"']){re.escape(s)}(?:[\s\"']|$)")
-            for s in target_scripts
-        }
-
     # Discover sessions
     scan_limit = None if args.all else args.sessions
     sessions = discover_sessions(limit=scan_limit, workspace_filter=args.workspace, platform_filter=args.platform)
@@ -361,13 +342,7 @@ def main() -> int:
 
         session_had_match = False
         for tc in tcs:
-            matched, target_key = match_tool_call(
-                tc,
-                tool_re=tool_re,
-                command_re=command_re,
-                script_targets=target_scripts,
-                script_patterns=script_patterns,
-            )
+            matched, target_key = match_tool_call(tc, tool_re=tool_re, command_re=command_re, script_targets=target_scripts)
             if not matched or not target_key:
                 continue
 

@@ -16,45 +16,6 @@ history_to_conv_id = {}
 
 # Allowed models for Antigravity bridge mapping
 ALLOWED_MODELS = frozenset({"flash_lite", "flash", "pro"})
-# Recognized standard OpenAI chat completion roles
-ALLOWED_ROLES = frozenset({"user", "assistant", "system", "developer", "tool", "function"})
-
-
-def _extract_text(content):
-    """Flatten OpenAI message content into a plain string.
-
-    Accepts a plain string, or the structured content-block list form
-    ([{"type": "text", "text": ...}]). Anything else yields "" rather than a
-    Python repr, which would splice dict/list syntax into the prompt.
-    """
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts = []
-        for block in content:
-            if isinstance(block, str):
-                parts.append(block)
-            elif isinstance(block, dict) and block.get("type") == "text":
-                text = block.get("text")
-                if isinstance(text, str):
-                    parts.append(text)
-        return "".join(parts)
-    return ""
-
-
-def _normalize_message(raw_role, raw_content):
-    """Constructs a normalized message dictionary with deterministic key ordering.
-
-    Ensures both input messages and assistant responses use the exact same key order
-    ('role' followed by 'content'), making json.dumps without key-sorting safe and fast.
-    """
-    if isinstance(raw_role, str):
-        role_lower = raw_role.lower()
-        role = role_lower if role_lower in ALLOWED_ROLES else "user"
-    else:
-        role = "user"
-    return {"role": role, "content": _extract_text(raw_content)}
-
 
 class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
     def log_message(self, format, *args):
@@ -149,40 +110,21 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
     def process_completions(self, messages, model, is_chat=True):
         # Map models to antigravity model options: flash_lite, flash, pro
         if not isinstance(model, str) or model not in ALLOWED_MODELS:
-            logging.warning("Requested model %r not recognized. Falling back to 'flash_lite'.", model)
+            logging.warning(f"Requested model '{model}' not recognized. Falling back to 'flash_lite'.")
             model = "flash_lite"
 
         if not messages:
             self.send_error_response(400, "No messages provided")
             return
 
-        # Normalize message roles to standard allowed roles upfront so cache
-        # hashing and prompt construction are consistent.
-        #
-        # Non-dict entries are dropped, so the "current" message below is the
-        # last *usable* one rather than necessarily the last one supplied.
-        normalized_messages = []
-        for msg in messages:
-            if not isinstance(msg, dict):
-                continue
-            normalized_messages.append(_normalize_message(msg.get("role"), msg.get("content")))
-
-        if not normalized_messages:
-            self.send_error_response(400, "No valid messages provided")
-            return
-
-        messages = normalized_messages
-
         last_msg = messages[-1]
         current_prompt = last_msg.get("content", "")
 
-        # Compute hash of history (excluding last message) to check for a continued conversation.
-        # Every dict here comes from _normalize_message, so key order is fixed and json.dumps
-        # does not need sort_keys; the saving is small and shrinks as message content grows.
+        # Compute hash of history (excluding last message) to check for a continued conversation
         history = messages[:-1]
         history_hash = ""
         if history:
-            history_str = json.dumps(history)
+            history_str = json.dumps(history, sort_keys=True)
             combined = f"{model}:{history_str}"
             history_hash = hashlib.sha256(combined.encode("utf-8")).hexdigest()
 
@@ -240,8 +182,8 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
 
         # If we got a conversation ID, update the cache for the next turn
         if parsed_conv_id:
-            new_history = messages + [_normalize_message("assistant", parsed_content)]
-            new_history_str = json.dumps(new_history)
+            new_history = messages + [{"role": "assistant", "content": parsed_content}]
+            new_history_str = json.dumps(new_history, sort_keys=True)
             new_combined = f"{model}:{new_history_str}"
             new_hash = hashlib.sha256(new_combined.encode("utf-8")).hexdigest()
             with cache_lock:

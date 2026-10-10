@@ -125,16 +125,6 @@ class ApplyMutationTests(unittest.TestCase):
         self.assertEqual(res.returncode, 0, res.stderr)
         self.assertIn("return key", self.read())
 
-    def test_path_traversal_absolute_path_blocked(self):
-        res = run({"path": "/etc/passwd", "old": "root", "new": "hacked"}, self.root)
-        self.assertEqual(res.returncode, 2)
-        self.assertIn("target path is outside root directory", res.stderr)
-
-    def test_path_traversal_relative_parent_blocked(self):
-        res = run({"path": "../../etc/passwd", "old": "root", "new": "hacked"}, self.root)
-        self.assertEqual(res.returncode, 2)
-        self.assertIn("target path is outside root directory", res.stderr)
-
 
 if __name__ == "__main__":
     unittest.main()

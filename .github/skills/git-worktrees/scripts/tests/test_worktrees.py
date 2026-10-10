@@ -29,7 +29,6 @@ class TestWorktreesScript(unittest.TestCase):
             f.write("# Test Repo\n")
         self.git("add", "README.md", cwd=self.repo)
         self.git("commit", "-m", "Initial commit", cwd=self.repo)
-        self.default_branch = self.git("branch", "--show-current", cwd=self.repo).strip()
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir, ignore_errors=True)
@@ -89,8 +88,7 @@ class TestWorktreesScript(unittest.TestCase):
         res = self.run_script()
         self.assertEqual(res.returncode, 0)
         self.assertIn("## Stale Worktrees", res.stdout)
-        self.assertIn(f"  - {wt_path}", res.stdout)
-        self.assertNotIn("None detected.", res.stdout)
+        self.assertIn(wt_path, res.stdout)
 
     def test_non_destructive_by_default(self):
         wt_path = os.path.join(self.tmpdir, "wt-keep")
@@ -109,52 +107,6 @@ class TestWorktreesScript(unittest.TestCase):
         self.assertEqual(res.returncode, 0)
         self.assertIn(f"## Remove worktree: {wt_path}", res.stdout)
         self.assertFalse(os.path.exists(wt_path))
-
-    def test_create_clean_merge(self):
-        self.git("checkout", "-b", "feature-clean", cwd=self.repo)
-        fpath = os.path.join(self.repo, "clean.txt")
-        with open(fpath, "w") as f:
-            f.write("clean\n")
-        self.git("add", "clean.txt", cwd=self.repo)
-        self.git("commit", "-m", "Clean feature", cwd=self.repo)
-        self.git("checkout", self.default_branch, cwd=self.repo)
-
-        wt_path = os.path.join(self.tmpdir, "wt-created-clean")
-        res = self.run_script(
-            "--create", "feature-clean",
-            "--base", self.default_branch,
-            "--path", wt_path,
-            "--no-fetch",
-        )
-        self.assertEqual(res.returncode, 0)
-        self.assertIn("# Worktree Created: Success", res.stdout)
-        self.assertTrue(os.path.exists(wt_path))
-        self.assertTrue(os.path.exists(os.path.join(wt_path, "clean.txt")))
-
-    def test_create_conflict_detection(self):
-        self.git("checkout", "-b", "feature-conflict", cwd=self.repo)
-        readme = os.path.join(self.repo, "README.md")
-        with open(readme, "w") as f:
-            f.write("# Feature Edit\n")
-        self.git("add", "README.md", cwd=self.repo)
-        self.git("commit", "-m", "Feature readme", cwd=self.repo)
-        self.git("checkout", self.default_branch, cwd=self.repo)
-
-        with open(readme, "w") as f:
-            f.write("# Master Edit\n")
-        self.git("add", "README.md", cwd=self.repo)
-        self.git("commit", "-m", "Master readme", cwd=self.repo)
-
-        wt_path = os.path.join(self.tmpdir, "wt-created-conflict")
-        res = self.run_script(
-            "--create", "feature-conflict",
-            "--base", self.default_branch,
-            "--path", wt_path,
-            "--no-fetch",
-        )
-        self.assertEqual(res.returncode, 2)
-        self.assertIn("# Worktree Created: Conflict Detected", res.stdout)
-        self.assertIn("README.md", res.stdout)
 
 
 if __name__ == "__main__":

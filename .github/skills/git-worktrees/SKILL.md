@@ -99,16 +99,13 @@ Run bundled helper scripts relative to this skill's root directory (`<skill-dir>
 
 | Script | Purpose | Invocation |
 |--------|---------|------------|
-| `@scripts/worktrees.sh` | Create isolated worktree, list active/stale worktrees, prune metadata, or remove worktree | `bash <skill-dir>/scripts/worktrees.sh [--create <branch>] [--base <base>] [--remove <path>] [--raw]` |
+| `@scripts/worktrees.sh` | List active/stale worktrees, prune metadata (optional `--remove <path>`, `--raw`) | `bash <skill-dir>/scripts/worktrees.sh [--remove <path>] [--raw]` |
 
-## Worktree Management & Lifecycle
+## Worktree Inspection & Cleanup
 
-Use the bundled script for end-to-end worktree isolation, inspection, and cleanup:
+To detect active/stale worktree references, prune dead worktree metadata, or safely remove linked worktrees:
 
 ```bash
-# Create an isolated worktree for a branch and merge base ref (e.g. origin/master)
-bash <skill-dir>/scripts/worktrees.sh --create <branch> [--base <base>] [--path <path>]
-
 # Detect active and stale worktrees, and prune metadata (dry-run by default)
 bash <skill-dir>/scripts/worktrees.sh
 
