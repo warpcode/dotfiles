@@ -537,10 +537,18 @@ class JulesClient:
         filter_expr: str | None = None,
         max_age_days: int | None = 30,
         repo: str | None = None,
+        all_pages: bool = False,
     ) -> list[dict[str, Any]]:
         """List and audit recent sessions, optionally filtered by repo, ignoring inactive sessions over max_age_days old."""
-        res = self.list_sessions(page_size=page_size, filter_expr=filter_expr)
-        sessions = res.get("sessions", [])
+        sessions: list[dict[str, Any]] = []
+        page_token: str | None = None
+        while True:
+            res = self.list_sessions(page_size=page_size, page_token=page_token, filter_expr=filter_expr)
+            batch = res.get("sessions", [])
+            sessions.extend(batch)
+            page_token = res.get("nextPageToken")
+            if not all_pages or not page_token or not batch:
+                break
         if repo:
             clean_repo = repo.strip().removeprefix("sources/").removeprefix("github/").lower()
             sessions = [
