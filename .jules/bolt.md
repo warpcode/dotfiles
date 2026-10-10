@@ -14,3 +14,6 @@
 **Learning:** Evaluating dynamically interpolated regexes (`re.search(rf"...")`) inside inner loops (such as matching tool call arguments against script target names across transcripts) bypasses Python's internal `re` cache and incurs severe regex compilation and evaluation overhead per item.
 **Action:** Pre-compile dynamic regex patterns into a dictionary (`script_patterns`) at the top level before iteration, and use a fast string containment check (`if s in cmd_str:`) as a short-circuit guard prior to running `pattern.search(cmd_str)`.
 
+## 2026-10-10 - Module-Level Set Allocation and Type Guard Ordering in AST Parsing
+**Learning:** In recursive document format/AST traversals (e.g., Jira ADF parsing), checking the most common container type (`isinstance(node, dict)`) first reduces guard evaluations per node visit. Additionally, allocating string sets (`NEWLINE_BLOCK_TYPES`) at module level avoids per-function-call tuple creation overhead.
+**Action:** Order type guards in tree traversal functions according to node type frequency and move literal tuple/set collections to module constants.
