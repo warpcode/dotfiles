@@ -52,7 +52,14 @@ def main() -> int:
             return fail(f"spec is missing '{key}'", 2)
 
     import os
-    target = os.path.join(args.root, mut["path"])
+    root_abs = os.path.abspath(args.root)
+    target = os.path.abspath(os.path.join(root_abs, mut["path"]))
+    try:
+        rel = os.path.relpath(target, root_abs)
+        if rel.startswith("..") or os.path.isabs(rel):
+            return fail(f"target path is outside root directory: {mut['path']!r}", 2)
+    except ValueError:
+        return fail(f"target path is outside root directory: {mut['path']!r}", 2)
     try:
         with open(target, encoding="utf-8") as fh:
             src = fh.read()
