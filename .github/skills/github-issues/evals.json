@@ -1,0 +1,17 @@
+{
+  "skill_name": "github-issues",
+  "evals": [
+    {
+      "id": 0,
+      "name": "issue-creation-triage",
+      "prompt": "Create a bug report issue for a memory leak in the Zsh completions module when parsing large command histories. Ensure fallback templates and explicit user approval guidelines are followed.",
+      "expected_output": "A structured bug report using templates/bug_report.md with clear reproduction steps and an explicit request for user approval before posting."
+    },
+    {
+      "id": 1,
+      "name": "issue-comment-update",
+      "prompt": "Post an update comment on issue #42 regarding reproduction steps and a link to draft PR #45.",
+      "expected_output": "A concise, neutral comment linking #45 with clear technical reproduction steps and no conversational filler."
+    }
+  ]
+}

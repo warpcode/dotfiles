@@ -53,8 +53,8 @@ if [[ -z "$ref" ]]; then
   for candidate in origin/master origin/main; do
     if git rev-parse --verify -q "$candidate" >/dev/null; then ref="$candidate"; break; fi
   done
-  ref="${ref:-origin/master}"
 fi
+[[ -n "$ref" ]] || { echo "error: could not determine ref; pass --ref" >&2; exit 1; }
 
 # Fetch all files on the ref into an index we can grep uniformly.
 list_files() {
