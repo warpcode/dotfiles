@@ -660,58 +660,6 @@ class TestJulesBatchOperations(unittest.TestCase):
             client.archive_session.assert_any_call("cand-1")
             client.archive_session.assert_any_call("cand-2")
 
-    def test_audit_sessions_pagination_all_pages(self):
-        client = JulesClient(api_key="dummy")
-        page1 = {
-            "sessions": [
-                {"id": "s1", "createTime": "2026-10-01T12:00:00Z", "state": "IN_PROGRESS"},
-            ],
-            "nextPageToken": "token-page-2",
-        }
-        page2 = {
-            "sessions": [
-                {"id": "s2", "createTime": "2026-10-01T12:00:00Z", "state": "IN_PROGRESS"},
-            ],
-        }
-
-        def mock_list_sessions(page_size=None, page_token=None, filter_expr=None):
-            if page_token == "token-page-2":
-                return page2
-            return page1
-
-        with patch.object(client, "list_sessions", side_effect=mock_list_sessions), \
-             patch.object(client, "audit_session", side_effect=lambda s, **kw: {"id": s["id"]}):
-            # Without all_pages: only 1 page
-            audits_single = client.audit_sessions(page_size=10, all_pages=False)
-            self.assertEqual(len(audits_single), 1)
-            self.assertEqual(audits_single[0]["id"], "s1")
-
-            # With all_pages: traverses to page 2
-            audits_all = client.audit_sessions(page_size=10, all_pages=True)
-            self.assertEqual(len(audits_all), 2)
-            self.assertEqual([a["id"] for a in audits_all], ["s1", "s2"])
-
-    def test_archive_candidates_batch_pagination(self):
-        from main import _archive_candidates
-        parser = setup_parser()
-        args = parser.parse_args(["archive-session", "--all-candidates", "--max-age-days", "0"])
-
-        client = MagicMock()
-        client.audit_sessions.return_value = [
-            {"id": "c1", "assessment": "STALLED", "pull_request_url": "", "is_inactive": False},
-            {"id": "c2", "assessment": "COMPLETED", "pull_request_url": "https://github.com/...", "is_inactive": False},
-        ]
-
-        candidates = _archive_candidates(client, args)
-        client.audit_sessions.assert_called_once_with(
-            page_size=50,
-            max_age_days=None,
-            repo=None,
-            all_pages=True,
-        )
-        self.assertEqual(len(candidates), 1)
-        self.assertEqual(candidates[0]["id"], "c1")
-
 
 if __name__ == "__main__":
     unittest.main()

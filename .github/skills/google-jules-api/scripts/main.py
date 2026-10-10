@@ -222,17 +222,10 @@ def cmd_delete_session(client: JulesClient, args: argparse.Namespace) -> None:
 
 
 def _archive_candidates(client: JulesClient, args: argparse.Namespace) -> list[dict]:
-    is_batch = getattr(args, "all_candidates", False) or getattr(args, "list_candidates", False) or getattr(args, "list_archived_candidates", False)
-    all_pages = getattr(args, "page_size", None) is None and is_batch
-    page_size = getattr(args, "page_size", None) or (50 if is_batch else 20)
-    max_age = getattr(args, "max_age_days", None)
-    if max_age == 0:
-        max_age = None
     audits = client.audit_sessions(
-        page_size=page_size,
-        max_age_days=max_age,
+        page_size=getattr(args, "page_size", None) or 20,
+        max_age_days=getattr(args, "max_age_days", None),
         repo=getattr(args, "repo", None),
-        all_pages=all_pages,
     )
     return [
         a

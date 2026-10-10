@@ -43,68 +43,37 @@ def main() -> int:
 
     raw = sys.stdin.read() if args.spec == "-" else open(args.spec, encoding="utf-8").read()
     try:
-        mut_data = json.loads(raw)
+        mut = json.loads(raw)
     except json.JSONDecodeError as exc:
         return fail(f"spec is not valid JSON: {exc}", 2)
 
+    for key in ("path", "old", "new"):
+        if key not in mut:
+            return fail(f"spec is missing '{key}'", 2)
+
     import os
-    root_abs = os.path.abspath(args.root)
+    target = os.path.join(args.root, mut["path"])
+    try:
+        with open(target, encoding="utf-8") as fh:
+            src = fh.read()
+    except OSError as exc:
+        return fail(f"cannot read {target}: {exc}", 2)
 
-    def resolve(path: str):
-        target = os.path.abspath(os.path.join(root_abs, path))
-        try:
-            rel = os.path.relpath(target, root_abs)
-        except ValueError:
-            return None, fail(f"target path is outside root directory: {path!r}", 2)
-        if rel.startswith("..") or os.path.isabs(rel):
-            return None, fail(f"target path is outside root directory: {path!r}", 2)
-        return target, None
-
-    mut_list = mut_data if isinstance(mut_data, list) else [mut_data]
-    if len(mut_list) > 1 and not args.check:
-        return fail("applying multiple mutations at once is unsupported; use --check or specify one mutation", 2)
-
-    for mut in mut_list:
-        for key in ("path", "old", "new"):
-            if key not in mut:
-                return fail(f"spec is missing '{key}'", 2)
-
-        target, err = resolve(mut["path"])
-        if err is not None:
-            return err
-        try:
-            with open(target, encoding="utf-8") as fh:
-                src = fh.read()
-        except OSError as exc:
-            return fail(f"cannot read {target}: {exc}", 2)
-
-        old, new = mut["old"], mut["new"]
-        count = int(mut.get("count", 1))
-        if count < 1:
-            return fail(f"count must be >= 1, got {count}", 2)
-
-        occurrences = src.count(old)
-        if occurrences == 0:
-            return fail(f"pattern not found in {mut['path']}: {old!r}", 1)
-        if occurrences < count:
-            return fail(
-                f"pattern occurs {occurrences}x in {mut['path']}, need {count}: {old!r}", 1)
-
-        if args.check:
-            name_prefix = f"[{mut.get('name')}] " if mut.get("name") else ""
-            print(f"{name_prefix}FOUND {occurrences}x in {mut['path']}")
-
-    if args.check:
-        return 0
-
-    mut = mut_list[0]
-    target, err = resolve(mut["path"])
-    if err is not None:
-        return err
-    with open(target, encoding="utf-8") as fh:
-        src = fh.read()
     old, new = mut["old"], mut["new"]
     count = int(mut.get("count", 1))
+    if count < 1:
+        return fail(f"count must be >= 1, got {count}", 2)
+
+    occurrences = src.count(old)
+    if occurrences == 0:
+        return fail(f"pattern not found in {mut['path']}: {old!r}", 1)
+    if occurrences < count:
+        return fail(
+            f"pattern occurs {occurrences}x in {mut['path']}, need {count}: {old!r}", 1)
+
+    if args.check:
+        print(f"FOUND {occurrences}x in {mut['path']}")
+        return 0
 
     # Replace the LAST `count` occurrence(s) from the front in a single pass so
     # overlapping patterns cannot shift the offsets mid-replacement.

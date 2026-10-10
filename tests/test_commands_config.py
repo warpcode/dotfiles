@@ -411,8 +411,8 @@ class TestCanonicalCommandsGenerator(unittest.TestCase):
 
     def test_dynamic_skills_parity_across_all_assistants(self):
         """Verify dynamic skill scripts in canonical data are correctly formatted by each assistant template."""
-        sample_script = "~/src/dotfiles/.github/skills/github-cli/scripts/list_pull_requests.sh"
-        sample_variant = "~/.agents/skills/github-cli/scripts/list_pull_requests.sh"
+        sample_script = "~/src/dotfiles/.github/skills/github-cli/scripts/list_issue_types.sh"
+        sample_variant = "~/.agents/skills/github-cli/scripts/list_issue_types.sh"
 
         # 1. Canonical data compiler
         out_canon = subprocess.check_output(
@@ -474,7 +474,7 @@ class TestCanonicalCommandsGenerator(unittest.TestCase):
         vscode_data = json.loads("{" + out_vscode + "}")
         vscode_term = vscode_data["chat.tools.terminal.autoApprove"]
         vscode_edits = vscode_data["chat.tools.edits.autoApprove"]
-        matching_keys = [k for k in vscode_term if "list_pull_requests" in k]
+        matching_keys = [k for k in vscode_term if "list_issue_types" in k]
         self.assertTrue(len(matching_keys) > 0)
         for k in matching_keys:
             self.assertTrue(vscode_term[k])

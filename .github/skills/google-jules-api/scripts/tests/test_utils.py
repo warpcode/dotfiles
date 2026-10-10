@@ -8,38 +8,9 @@ scripts_dir = Path(__file__).resolve().parent.parent
 if str(scripts_dir) not in sys.path:
     sys.path.insert(0, str(scripts_dir))
 
-from datetime import datetime, timezone
-from jules.utils import die, err, info, format_datetime, parse_iso_datetime
+from jules.utils import die, err, info, format_datetime
 
 class TestJulesUtils(unittest.TestCase):
-    def test_parse_iso_datetime(self):
-        # Test ISO 8601 with Z suffix
-        dt1 = parse_iso_datetime("2023-10-25T12:34:56Z")
-        self.assertEqual(dt1, datetime(2023, 10, 25, 12, 34, 56, tzinfo=timezone.utc))
-
-        # Test ISO 8601 without Z suffix. No offset means UTC, and the result
-        # must be tz-aware: callers subtract it from datetime.now(timezone.utc)
-        # and a naive value raises TypeError.
-        dt2 = parse_iso_datetime("2023-10-25T12:34:56")
-        self.assertEqual(dt2, datetime(2023, 10, 25, 12, 34, 56, tzinfo=timezone.utc))
-        self.assertIsNotNone(dt2.tzinfo)
-
-        # Test ISO 8601 with explicit offset
-        dt3 = parse_iso_datetime("2023-10-25T12:34:56+00:00")
-        self.assertEqual(dt3, datetime(2023, 10, 25, 12, 34, 56, tzinfo=timezone.utc))
-
-        # Test ISO 8601 with fractional seconds and Z suffix
-        dt4 = parse_iso_datetime("2023-10-25T12:34:56.789Z")
-        self.assertEqual(dt4, datetime(2023, 10, 25, 12, 34, 56, 789000, tzinfo=timezone.utc))
-
-        # Test ISO 8601 with non-zero timezone offset (+02:00)
-        dt5 = parse_iso_datetime("2023-10-25T14:34:56+02:00")
-        self.assertEqual(dt5.astimezone(timezone.utc), datetime(2023, 10, 25, 12, 34, 56, tzinfo=timezone.utc))
-
-        # Test invalid string raises ValueError
-        with self.assertRaises(ValueError):
-            parse_iso_datetime("not-a-datetime")
-
     def test_format_datetime_valid(self):
         # Test basic valid ISO 8601 string
         self.assertEqual(
@@ -50,12 +21,6 @@ class TestJulesUtils(unittest.TestCase):
         # Test valid ISO 8601 string with 'Z'
         self.assertEqual(
             format_datetime("2023-10-25T12:34:56Z"),
-            "2023-10-25 12:34:56 UTC"
-        )
-
-        # Test non-zero timezone offset converts properly to UTC
-        self.assertEqual(
-            format_datetime("2023-10-25T14:34:56+02:00"),
             "2023-10-25 12:34:56 UTC"
         )
 

@@ -106,7 +106,7 @@ else
   # Default to remote HEAD symbol or master/main
   REMOTE_HEAD="$(git symbolic-ref "refs/remotes/${REMOTE}/HEAD" 2>/dev/null || true)"
   if [[ -n "$REMOTE_HEAD" ]]; then
-    TARGET_BRANCH="${REMOTE_HEAD#refs/remotes/"${REMOTE}"/}"
+    TARGET_BRANCH="${REMOTE_HEAD#refs/remotes/${REMOTE}/}"
   elif git show-ref --verify --quiet "refs/remotes/${REMOTE}/master" 2>/dev/null; then
     TARGET_BRANCH="master"
   elif git show-ref --verify --quiet "refs/remotes/${REMOTE}/main" 2>/dev/null; then
@@ -194,15 +194,6 @@ if [[ -n "$POP_ERR" ]]; then
 fi
 
 AHEAD="$(git log "${REMOTE_REF}..HEAD" --oneline 2>/dev/null | wc -l | tr -d ' ')"
-MODIFIED_COUNT="$(git status --porcelain 2>/dev/null | grep -vc '^??' || true)"
-UNTRACKED_COUNT="$(git status --porcelain 2>/dev/null | grep -c '^??' || true)"
 echo "| Commits Ahead | $AHEAD |"
-echo "| Working Tree | ${MODIFIED_COUNT} modified, ${UNTRACKED_COUNT} untracked |"
-
-if [[ "$AHEAD" -gt 0 ]]; then
-  echo ""
-  echo "**Commits ahead of \`${REMOTE_REF}\`:**"
-  git log "${REMOTE_REF}..HEAD" --oneline -n 10 | sed 's/^/- /'
-fi
 echo ""
 echo "Successfully rebased \`$CURRENT_BRANCH\` onto \`$REMOTE_REF\`."
