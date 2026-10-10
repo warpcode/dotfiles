@@ -8,7 +8,11 @@ Chezmoi-managed dotfiles. Edit sources in `dot_*` — never touch stowed files i
 - `dot_agents/AGENTS.md` — guardrails + technical invariants.
 
 ## Validation
-Mirror CI: `zsh -n`, `bash -n`, `shellcheck`, `python3 -m py_compile`. Full list in `dot_agents/AGENTS.md` §Technical Context.
+Run `./validate.sh` from the repo root before declaring any change verified — never hand-assemble
+the individual checks. It mirrors CI (`lint.yml`, `python-tests.yml`): `zsh -n`, `bash -n`,
+`shellcheck`, `py_compile`, zsh suites, and `unittest` discovery under `.github/skills/*/scripts`
+and `tests/`. `--fast` skips the test suites, `--lint-only` runs syntax checks only, `--json`
+emits a machine-readable summary.
 
 ## Destructive gates (explicit approval required)
 - `chezmoi apply` / `chezmoi bootstrap --only packages`
