@@ -60,7 +60,7 @@ Run bundled helper scripts relative to this skill's root directory (`<skill-dir>
 | Review threads query | `@queries/review_threads.gql` | GraphQL query to list review threads |
 | Resolve thread query | `@queries/resolve_review_thread.gql` | GraphQL mutation to resolve review threads |
 | PR state rollup | `@scripts/pr_state_rollup.py` | `python3 <skill-dir>/scripts/pr_state_rollup.py --repo <owner/repo> [PR numbers…] [--all-states] [--wait] [--expect-sha N=SHA] [--json]` | One `gh pr list` call → dense table of state, draft, head SHA, review decision, mergeability, CI checks. `--wait` polls internally instead of sleep-looping in bash; `--expect-sha` flags a bot amending mid-audit. Exit 2 if any PR is conflicting, has failing checks, or drifted |
-| Repo alert audit | `github-dependabot` skill | `python3 .github/skills/github-dependabot/scripts/audit_repo_alerts.py --repo <owner/repo> [--base master] [--json] [--fetch]` | Dependabot + code-scanning triage in one call. Managed under `github-dependabot` skill. Classifies each alert against default branch, separates **phantom** alerts, flags `first_patched_version: NONE`, and prints dismiss commands. Read-only |
+| Repo alert audit | `github-dependabot` skill | `python3 <skills-dir>/github-dependabot/scripts/audit_repo_alerts.py --repo <owner/repo> [--base <default-branch>] [--json] [--fetch]` | Dependabot + code-scanning triage in one call. Managed under `github-dependabot` skill. Classifies each alert against default branch, separates **phantom** alerts, flags `first_patched_version: NONE`, and prints dismiss commands. Read-only |
 
 ### Alert triage notes
 

@@ -16,7 +16,7 @@ Standard operating procedures for dependency vulnerability monitoring, alert cla
 ```mermaid
 flowchart TD
     A["1. Run Audit Script"] --> B{"Classify Alerts"}
-    B -->|"Phantom Alert (Deleted Manifest)"| C["Dismiss as Inaccurate + Pin dependabot.yml"]
+    B -->|"Phantom Alert (Deleted/Stale Manifest)"| C["Dismiss as Inaccurate + Remove Stale Manifest"]
     B -->|"Unfixable (first_patched_version: NONE)"| D["Record Advisory & Monitor"]
     B -->|"Active Vulnerability"| E["In-Tree Lockfile Remediation"]
     E --> F["Verify Local Tests"]
@@ -25,11 +25,11 @@ flowchart TD
 
 ## Shared Resources
 
-Run bundled helper scripts relative to this skill's root directory (`<skill-dir>/scripts/...` e.g. `.github/skills/github-dependabot/scripts/...`):
+Run bundled helper scripts relative to this skill's root directory (`<skill-dir>/scripts/...` e.g. `<skills-dir>/github-dependabot/scripts/...`):
 
 | Resource | Location | Invocation Syntax | Purpose |
 |----------|----------|-------------------|---------|
-| Repo alert audit | `@scripts/audit_repo_alerts.py` | `python3 <skill-dir>/scripts/audit_repo_alerts.py --repo <owner/repo> [--base master] [--json] [--fetch]` | Dependabot + code-scanning triage in one call. Classifies each alert against the default branch, separates **phantom** alerts from real ones, flags `first_patched_version: NONE`, and outputs precise dismissal commands. Read-only. |
+| Repo alert audit | `@scripts/audit_repo_alerts.py` | `python3 <skill-dir>/scripts/audit_repo_alerts.py --repo <owner/repo> [--base <default-branch>] [--json] [--fetch]` | Dependabot + code-scanning triage in one call. Classifies each alert against the default branch, separates **phantom** alerts from real ones, flags `first_patched_version: NONE`, and outputs precise dismissal commands. Read-only. |
 
 ---
 
@@ -40,25 +40,26 @@ Always start alert reviews by running the bundled audit script to get a clean cl
 ### Step 1: Run the Audit Script
 
 ```bash
-python3 .github/skills/github-dependabot/scripts/audit_repo_alerts.py --repo <owner/repo> --base master
+python3 <skill-dir>/scripts/audit_repo_alerts.py --repo <owner/repo> --base <default-branch>
 ```
 
 ### Step 2: Classify Findings
 
 1. **Active Alerts (Real Manifests)**
-   - The manifest path exists on the base branch (`origin/master`).
+   - The manifest path exists on the default branch (`origin/<default-branch>`).
    - If a patched version exists (`fixed_in`), proceed to **Section 2: Automated Remediation Flow**.
 
-2. **Phantom Alerts (Deleted or Moved Manifests)**
-   - Dependabot auto-discovers manifests repo-wide and retains historical alerts for files that were moved, renamed, or deleted (e.g. old `.bk` files or deleted trees).
-   - **Dismissal Procedure**: Dismiss phantom alerts as `inaccurate` using the exact `gh` command emitted by `audit_repo_alerts.py`:
+2. **Phantom Alerts (Deleted, Moved, or Stale Manifests)**
+   - **Architecture Note**: Security alerts originate from GitHub's Dependency Graph, which scans all manifest files across the repository tree. `.github/dependabot.yml` configures automated version updates only, not security alert discovery.
+   - Dependabot retains historical alerts for files that were moved, renamed, or deleted (e.g. old `.bk` files, unused lockfiles, or deleted trees).
+   - **Dismissal & Resolution Procedure**: Dismiss phantom alerts as `inaccurate` using the exact `gh` command emitted by `audit_repo_alerts.py`:
      ```bash
      gh api --method PATCH repos/<owner/repo>/dependabot/alerts/<alert_number> \
        -f state=dismissed -f dismissed_reason=inaccurate \
-       -f dismissed_comment="Manifest absent from master; live path is <live_manifest>"
+       -f dismissed_comment="Manifest absent from <default-branch>; live path is <live_manifest>"
      ```
      *(Note: `dismissed_comment` is capped at 280 characters by the GitHub API).*
-   - **Root Cause Prevention**: Dismissing a phantom alert does not prevent Dependabot auto-discovery from re-opening it on future scans. Update `.github/dependabot.yml` to pin monitored directories.
+   - **Root Cause Resolution**: Dismissing an alert updates its status permanently unless a new scan finds the file again. To prevent phantom alert generation entirely, remove stale manifest files, backup directories, or unused lockfiles from the repository tree.
 
 3. **Unfixable Advisories (`first_patched_version: NONE`)**
    - Upstream vendor has not released a patched version yet.
@@ -119,19 +120,22 @@ When reviewing automated PRs submitted by `@dependabot`:
 2. **Release Notes & Changelogs**: Review linked release notes for semver breaking changes in major/minor version bumps.
 3. **CI Status**: Verify all required check runs pass on the PR branch.
 
-### Dependabot Bot Commands
-Interact with Dependabot PRs by commenting directly on the PR:
-- `@dependabot rebase`: Rebase the PR against base branch.
+### Dependabot Bot Commands & PR Merging
+Interact with Dependabot PRs by commenting directly on the PR or using GitHub CLI:
+- `@dependabot rebase`: Rebase the PR against the default branch.
 - `@dependabot recreate`: Re-create the PR from scratch with updated lockfiles.
-- `@dependabot merge`: Squash and merge the PR once checks pass (if auto-merge enabled).
 - `@dependabot ignore this package version`: Stop Dependabot from opening PRs for this version update.
 - `@dependabot ignore this dependency`: Stop all future updates for this dependency.
+- **Merging PRs**: The `@dependabot merge` command is deprecated. Use native GitHub CLI to auto-merge or squash merge:
+  ```bash
+  gh pr merge <pr_number> --repo <owner/repo> --squash --auto
+  ```
 
 ---
 
 ## 4. Configuration Best Practices (`.github/dependabot.yml`)
 
-Maintain an explicit `.github/dependabot.yml` configuration file to define package ecosystems, update schedules, and directory pinning.
+Maintain an explicit `.github/dependabot.yml` configuration file to define package ecosystems, update schedules, and directory targets for automated version updates.
 
 ### Standard Configuration Template
 
@@ -154,6 +158,6 @@ updates:
 ```
 
 ### Key Principles
-- **Pin Monitored Directories**: Explicitly setting `directory:` disables auto-discovery on deleted/historical paths, preventing phantom alerts.
+- **Version Updates Scope**: `.github/dependabot.yml` controls automated version update PRs and schedule frequencies.
 - **Group Updates**: Group non-critical minor/patch updates to reduce PR noise.
 - **Limit Open PRs**: Use `open-pull-requests-limit` to prevent PR overload.
