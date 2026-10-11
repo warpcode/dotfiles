@@ -145,7 +145,7 @@ pre-packages = "bash ~/.config/mise/scripts/setup_repos.sh"
 "llama.cpp"                = "latest"
 
 # --- Tooling & Config ---
-"github:warpcode/cloakenv" = "dev"
+"github:warpcode/cloakenv" = { version = "latest", prerelease = true }
 
 # --- LSP Servers ---
 
