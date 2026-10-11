@@ -3,9 +3,6 @@ name: git-expert
 description: >
   Expert local Git operations: branch strategies, rebase and merge conflict
   resolution, reflog triage, submodules, and repository maintenance.
-  Load this FIRST for "fix my conflict", "rebase conflict", "unmerged paths",
-  "MERGING/REBASING state", "cherry-pick in progress" — run
-  `scripts/merge_state.sh` before reading diffs by hand.
   Use when asked to resolve merge conflicts, handle complex rebases, manage branches,
   triage reflog, or inspect repository state.
 user-invocable: false
@@ -86,7 +83,7 @@ plus a `git show <sha>:<path>` per side — that is four calls and ~25 KB of con
 script answers it in one. Only then read the conflicted blobs themselves; choosing how two
 divergent revisions compose is judgement and stays with you.
 
-`git rebase --continue` is not commit authoring — the `git-commit` skill does not apply to it.
+`git rebase --continue` is not commit authoring — the `commit` skill does not apply to it.
 Approval is still required where the repo instructions demand it, and always pass
 `GIT_EDITOR=true` (or `-c core.editor=true`) so the editor never opens.
 
