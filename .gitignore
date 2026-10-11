@@ -36,6 +36,7 @@ eggs/
 .eggs/
 lib/
 lib64/
+!dot_config/mise/scripts/lib/
 parts/
 sdist/
 var/
