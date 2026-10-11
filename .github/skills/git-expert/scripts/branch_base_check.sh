@@ -47,8 +47,18 @@ fi
 
 # Refresh the remote-tracking ref so ancestry reflects the current base, but never
 # move a local branch: a check must not be able to rewrite history.
-git fetch -q "$(git rev-parse --abbrev-ref --symbolic-full-name "$BASE" 2>/dev/null || echo origin)" \
-  "${BASE#origin/}" 2>/dev/null || true
+#
+# The remote is the leading path segment of the base ref (origin/master -> origin).
+# Asking rev-parse for the symbolic name would return the *ref* (origin/master),
+# not the remote, and `git fetch origin/master master` always fails.
+case "$BASE" in
+  */*) REMOTE="${BASE%%/*}" ;;
+  *)   REMOTE="origin" ;;   # bare local branch name, nothing to refresh
+esac
+if [ "$REMOTE" != "origin" ] || [ "$BASE" != "$REMOTE" ]; then
+  git fetch -q "$REMOTE" "${BASE#"$REMOTE"/}" 2>/dev/null \
+    || echo "warning: could not refresh $BASE; check may use a stale base" >&2
+fi
 
 ANCESTOR=false
 if git merge-base --is-ancestor "$BASE" "$HEAD_REF" 2>/dev/null; then
@@ -57,12 +67,16 @@ fi
 
 AHEAD=$(git rev-list --count "$BASE..$HEAD_REF" 2>/dev/null || echo 0)
 BEHIND=$(git rev-list --count "$HEAD_REF..$BASE" 2>/dev/null || echo 0)
-# Commits on head that are NOT on base -- the actual contamination when ancestry fails.
-FOREIGN=$(git rev-list --count "$BASE..$HEAD_REF" 2>/dev/null || echo 0)
+# Note: there is deliberately no "foreign_commits" field. A previous version
+# computed it as `$BASE..$HEAD_REF`, which is byte-identical to AHEAD and so
+# carried no extra information. Distinguishing "inherited from a sibling branch"
+# from "authored here" is not derivable from ancestry alone -- both are simply
+# commits absent from the base -- so the field was dropped rather than given a
+# misleading value. Use is_ancestor + behind to detect stale-base contamination.
 
 if [ "$JSON" -eq 1 ]; then
-  printf '{"base":"%s","head":"%s","is_ancestor":%s,"ahead":%s,"behind":%s,"foreign_commits":%s}\n' \
-    "$BASE" "$HEAD_REF" "$ANCESTOR" "$AHEAD" "$BEHIND" "$FOREIGN"
+  printf '{"base":"%s","head":"%s","is_ancestor":%s,"ahead":%s,"behind":%s}\n' \
+    "$BASE" "$HEAD_REF" "$ANCESTOR" "$AHEAD" "$BEHIND"
   [ "$ANCESTOR" = true ] || exit 1
 else
   echo "== base   : $BASE"
