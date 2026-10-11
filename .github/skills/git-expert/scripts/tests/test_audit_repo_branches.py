@@ -154,5 +154,26 @@ class TestSiblingConflicts(unittest.TestCase):
         self.assertEqual({pairs[0]["superseded"], pairs[0]["by"]}, {"a", "b"})
 
 
+class TestPrFetchRefsNotBranches(unittest.TestCase):
+    """`pr-<n>` refs are created by pr_audit_bundle.sh, not by a human branch."""
+
+    def test_pr_refs_are_excluded(self):
+        refs = ("origin/master\norigin/main\norigin/HEAD\n"
+                "origin/pr-178\norigin/pr-181\n"
+                "origin/bolt/registry-reply-nofork\n")
+        with mock.patch.object(branches, "run", return_value=(0, refs, "")):
+            names = branches.list_branches()
+        self.assertNotIn("pr-178", names)
+        self.assertNotIn("pr-181", names)
+        self.assertIn("bolt/registry-reply-nofork", names)
+
+    def test_real_branch_containing_digits_survives(self):
+        """Only the exact `pr-<n>` shape is dropped, not legitimate names."""
+        refs = "origin/pr-181-hotfix\norigin/feature/pr-9\norigin/pricing-tool\n"
+        with mock.patch.object(branches, "run", return_value=(0, refs, "")):
+            names = branches.list_branches()
+        self.assertEqual(names, ["feature/pr-9", "pr-181-hotfix", "pricing-tool"])
+
+
 if __name__ == "__main__":
     unittest.main()

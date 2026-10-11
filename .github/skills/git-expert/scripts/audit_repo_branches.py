@@ -104,7 +104,16 @@ def list_branches() -> list[str]:
         line = line.strip()
         if not line or line.endswith("/HEAD") or line == "origin/master" or line == "origin/main":
             continue
-        names.append(line[len("origin/"):] if line.startswith("origin/") else line)
+        name = line[len("origin/"):] if line.startswith("origin/") else line
+        # Skip `pr-<n>` refs: these are pull-request FETCH_HEADs created by
+        # pr_audit_bundle.sh (`git fetch origin pull/<n>/head:.../pr-<n>`), not
+        # branches. Enumerating them made every audited PR appear as its own
+        # phantom branch, which then polluted the sibling table with pairs
+        # against itself. Observed 2026-10-10: `pr-178`/`pr-181` were reported
+        # as branches with no PR number and 3-10 "unique files".
+        if re.fullmatch(r"pr-\d+", name):
+            continue
+        names.append(name)
     return sorted(names)
 
 
