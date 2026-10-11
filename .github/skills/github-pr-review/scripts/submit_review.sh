@@ -24,8 +24,9 @@
 #   --diff FILE        saved diff for anchor verification (default: fetch)
 #   --head REF         head ref for verification          [default: fetch]
 #   --dry-run          build + verify only, never POST
+#   --validate-only    alias for --dry-run
 #
-# Exit codes: 0 submitted (or verified, with --dry-run), 1 usage/build failure,
+# Exit codes: 0 submitted (or verified, with --dry-run/--validate-only), 1 usage/build failure,
 # 2 anchor verification FAILED (nothing was submitted), 3 submit failed.
 
 set -euo pipefail
@@ -53,7 +54,7 @@ while [[ $# -gt 0 ]]; do
     --body)  BODY="${2:-}";  shift 2 ;;
     --diff)  DIFF="${2:-}";  shift 2 ;;
     --head)  HEAD="${2:-}";  shift 2 ;;
-    --dry-run) DRY_RUN=1; shift ;;
+    --dry-run|--validate-only) DRY_RUN=1; shift ;;
     -h|--help) sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) die "unknown argument: $1" ;;
   esac

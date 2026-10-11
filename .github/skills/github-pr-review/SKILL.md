@@ -74,8 +74,9 @@ Systematically evaluate each area, prioritizing findings in the following order:
 ## 🚀 Lifecycle Procedure
 
 ### 1. Discovery & Selection
+- If the PR number is explicitly provided by the user (e.g., `/github-pr-review 184`), skip candidate discovery and proceed directly to contextual audit for that PR.
 - Activate the `github-cli` skill (reviews + pull-requests references).
-- Perform discovery of open PRs and active threads.
+- When PR is not specified, perform discovery of open PRs and active threads.
 - **Review Boundaries**: When discovering multiple PRs, strictly limit auditing and commentary to the specific PR(s) selected by the user. Do not proactively audit other candidates in the same turn or session unless explicitly requested. Present candidates to the user and obtain explicit selection for a single PR.
 - **Batching Permission**: ALWAYS obtain explicit user permission before processing multiple PRs in one session. Only batch if the user explicitly requests "all", a specific list, or confirms the batching proposal.
 - If the user requests multiple PRs, preserve strict boundaries by running them as separate lifecycles in the selected order; never broaden one lifecycle to cover multiple PRs.
@@ -240,9 +241,24 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
   - **Description:** Exact diagnosis of the defect or invariant breach.
   - **Impact:** Functional failure, regression risk, or performance consequence.
   - **Proposed Solution:** Concrete diff or specific remediation steps.
-- **One-call submit (preferred)**: `bash <skills-dir>/github-pr-review/scripts/submit_review.sh --spec <findings.json> --owner <owner> --repo <name> --pr <n> [--event REQUEST_CHANGES|COMMENT|APPROVE] [--body TEXT] [--dry-run]`. It runs the three steps below in the only safe order — build the payload, **hard-gate** on `verify_review_anchors.sh`, submit only if the gate passed — and captures the diff and head ref in a *single* fetch so verification cannot compare against a stale blob. Exit codes: `2` = anchors failed, nothing submitted; `3` = submit failed. With zero inline comments the anchor gate is skipped rather than failing (it rejects an empty anchor list).
+- **Findings Schema (`--spec <findings.json>`)**:
+  A JSON array (or object with `"findings": [...]`) of finding objects. Example:
+  ```json
+  [
+    {
+      "path": "path/to/file.ext",
+      "line": 42,
+      "severity": "High",
+      "title": "Short title",
+      "description": "Exact diagnosis of the issue.",
+      "impact": "Functional failure or risk.",
+      "solution": "Proposed remediation or diff."
+    }
+  ]
+  ```
+- **One-call submit (preferred)**: `bash <skills-dir>/github-pr-review/scripts/submit_review.sh --spec <findings.json> --owner <owner> --repo <name> --pr <n> [--event REQUEST_CHANGES|COMMENT|APPROVE] [--body TEXT] [--validate-only|--dry-run]`. It runs the three steps below in the only safe order — build the payload, **hard-gate** on `verify_review_anchors.sh`, submit only if the gate passed — and captures the diff and head ref in a *single* fetch so verification cannot compare against a stale blob. Exit codes: `0` = submitted (or verified with `--validate-only`), `1` = build/usage failure, `2` = anchors failed, nothing submitted; `3` = submit failed. With zero inline comments the anchor gate is skipped rather than failing (it rejects an empty anchor list). Always run with `--validate-only` first to verify JSON syntax and anchors against the diff. Do not open the script source.
   - ⚠️ **`--owner` and `--repo` are separate flags — never pass a combined `<owner>/<repo>` to `--repo`** (verified 2026-10-08 on warpcode/dotfiles#173). The script concatenates them itself (`gh pr diff "$PR" --repo "$OWNER/$REPO"`), so `--repo warpcode/dotfiles` expands to `warpcode/warpcode/dotfiles` and dies with `could not fetch diff for #173` — a message that reads like a network or auth fault and sends you debugging `gh` rather than the flag. Note the contrast with the *other* scripts in this skill family: `submit_pull_request_review_payload.sh` and `pr_audit_bundle.sh` genuinely do take `--repo <owner>/<repo>` combined, so the correct form differs between scripts in the same directory. When a `submit_review.sh` fetch step fails, check for a doubled owner segment before anything else.
-  - **Omit `--diff` and `--head`.** Passing either one short-circuits the script's own fetch, which is the only thing making the pair consistent. Supply `--diff`/`--head` only when `pr_preflight.sh` captured them in the same step, and even then prefer the plain call — re-fetching and re-verifying costs one network round-trip and removes the whole stale-ref class of bug. `--dry-run` already prints every anchor it would post, so there is no reason to run it repeatedly; run it once to eyeball, then submit once.
+  - **Omit `--diff` and `--head`.** Passing either one short-circuits the script's own fetch, which is the only thing making the pair consistent. Supply `--diff`/`--head` only when `pr_preflight.sh` captured them in the same step, and even then prefer the plain call — re-fetching and re-verifying costs one network round-trip and removes the whole stale-ref class of bug. `--validate-only` (or `--dry-run`) already prints every anchor it would post, so there is no reason to run it repeatedly; run it once to eyeball, then submit once.
 - **Manual equivalent**: write findings to a spec JSON (`path`, `line`, `severity`, `title`, `description`, `impact`, `solution`), then run `python3 <skills-dir>/github-pr-review/scripts/build_review_payload.py <spec.json> --out <payload.json>` (see `--help`), which automatically renders comments into the `@templates/pull_request_review_comment.md` structure. Submit with `github-cli/scripts/submit_pull_request_review_payload.sh --repo ... --pull-number <n> --input <payload.json>`. Do not hand-write an ad-hoc throwaway builder script.
 - **Bot-authored PRs** (e.g. Jules): 
   - `APPROVE`: Submit with empty body, no inline comments.
