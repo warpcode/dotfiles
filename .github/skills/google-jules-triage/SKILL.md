@@ -52,6 +52,7 @@ misapplied. Run the script; only read its source if it errors.
 
 | Script | Purpose | Usage |
 |---|---|---|
+| `scripts/jules_audit.py` | Complete session audit across all pages; flag empty loops, stuck runners, unread user messages | `python3 scripts/jules_audit.py --all [--with-pr] [--json]` |
 | `scripts/detect_empty_commits.sh` | Count empty commits above a merge base; exits `2` when wedged | `detect_empty_commits.sh <base-ref> <head-ref>` |
 | `scripts/verify_delivery.sh` | Prove from the remote whether a session pushed or opened a PR | `verify_delivery.sh <owner/repo> <source-branch> [base]` |
 | `scripts/bench_compare.sh` | Base-vs-head benchmark table; auto-copies benchmark files that exist on only one side | `bench_compare.sh <base-ref> <head-ref> [--bench RE] [--pkg P] [--count N] [--json]` |
@@ -64,6 +65,16 @@ catches a PR body quoting figures for a benchmark that never existed on base.
 ---
 
 ## Triage Workflows
+
+### Audit completeness (mandatory)
+1. Enumerate ALL sessions via `scripts/jules_audit.py --all` (non-archived, all pages). Print a table:
+   `id | title | state | last-activity | last-user-msg | verdict`.
+2. For each session, read every activity, including user messages after the last agent plan,
+   before classifying. A session with a user comment newer than the last agent activity is
+   "awaiting agent", not "healthy".
+3. Always flag empty-commit loops (≥2 consecutive empty commits) and stale-branch loops.
+4. In the report, reference sessions by full ID + title. Never "session 1" or "that PR".
+5. Awaiting-feedback sessions: review, then send feedback in the same pass, without waiting to be asked.
 
 ### Workflow 1: Status Scan & Assessment Taxonomy
 1. Query active sessions using `list_sessions`. Filter out sessions older than 30 days by default (consult `@references/lifecycle-states.md`).
