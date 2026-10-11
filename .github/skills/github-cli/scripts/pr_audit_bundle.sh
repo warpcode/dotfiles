@@ -12,6 +12,7 @@ Non-invasive PR audit bundle (no checkout, no workspace tests). Writes into <out
 (default: /tmp/pr<number>):
   meta.json          PR metadata (title, body, files, commits, reviews, checks)
   pr<number>.diff    Full unified diff (read it with view_file ranges, NOT stdout)
+  anchors.txt        Valid added-line anchors (<path>:<line>: <text>) for inline comments
   head/<path>        Raw head-branch copy of every added/modified file
   issues/<n>.json    Source issues (Fixes/Closes/Resolves + closingIssuesReferences)
 Then prints a concise Markdown summary: files, CI rollup, source issues with their
@@ -50,6 +51,15 @@ gh pr view "$pr" --repo "$repo" \
   --json number,title,body,author,headRefName,baseRefName,state,files,commits,reviews,comments,statusCheckRollup,closingIssuesReferences \
   > "$out/meta.json"
 gh api "repos/${repo}/pulls/${pr}" -H "Accept: application/vnd.github.v3.diff" > "$out/pr${pr}.diff"
+
+# Generate changed-line anchors map (added lines for inline review comments).
+awk '
+  /^diff --git /   { p = $4; sub(/^b\//, "", p); next }
+  /^@@/           { split($3, r, ","); cur = substr(r[1], 2) + 0; next }
+  /^\+\+\+|^---/  { next }
+  /^\+/           { print p ":" cur ": " substr($0, 2); cur++; next }
+  /^ /            { cur++; next }
+' "$out/pr${pr}.diff" > "$out/anchors.txt"
 
 head_ref="$(jq -r '.headRefName' "$out/meta.json")"
 
