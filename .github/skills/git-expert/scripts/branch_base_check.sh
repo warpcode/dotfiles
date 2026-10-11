@@ -31,7 +31,7 @@ while [ $# -gt 0 ]; do
     --base) [ $# -ge 2 ] || { echo "--base requires a value" >&2; exit 2; }; BASE="$2"; shift 2 ;;
     --head) [ $# -ge 2 ] || { echo "--head requires a value" >&2; exit 2; }; HEAD_REF="$2"; shift 2 ;;
     --json) JSON=1; shift ;;
-    -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,/^[^#]/p' "$0" | sed '$d'; exit 0 ;;
     *) echo "unknown flag: $1" >&2; exit 2 ;;
   esac
 done
@@ -52,12 +52,14 @@ fi
 # Asking rev-parse for the symbolic name would return the *ref* (origin/master),
 # not the remote, and `git fetch origin/master master` always fails.
 case "$BASE" in
-  */*) REMOTE="${BASE%%/*}" ;;
-  *)   REMOTE="origin" ;;   # bare local branch name, nothing to refresh
+  */*) REMOTE="${BASE%%/*}"; TRACKED="${BASE#"$REMOTE"/}" ;;
+  *)   REMOTE=""; TRACKED="" ;;   # local branch: no remote-tracking ref to refresh
 esac
-if [ "$REMOTE" != "origin" ] || [ "$BASE" != "$REMOTE" ]; then
-  git fetch -q "$REMOTE" "${BASE#"$REMOTE"/}" 2>/dev/null \
-    || echo "warning: could not refresh $BASE; check may use a stale base" >&2
+if [ -n "$REMOTE" ]; then
+  # The ref actually refreshed is "$REMOTE/$TRACKED", which is not "$BASE"
+  # whenever BASE names a remote-tracking ref under a differently-named remote.
+  git fetch -q "$REMOTE" "$TRACKED" 2>/dev/null \
+    || echo "warning: could not refresh $REMOTE/$TRACKED; check may use a stale base" >&2
 fi
 
 ANCESTOR=false

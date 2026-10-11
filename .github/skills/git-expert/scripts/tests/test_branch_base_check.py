@@ -159,6 +159,47 @@ class TestBranchBaseCheck(unittest.TestCase):
         self.assertEqual(res.returncode, 1)
         self.assertIn("not found", res.stderr)
 
+    def test_help_never_leaks_script_body(self):
+        """`--help` used a hard-coded `sed -n '2,22p'` span coupled to the
+        header length, so any header edit silently truncated the output or
+        spilled into the script body. Every line of `--help` must be a comment
+        or blank; the test fails loudly when the span drifts instead.
+        """
+        res = subprocess.run([BRANCH_BASE_CHECK, "--help"], capture_output=True, text=True)
+        self.assertEqual(res.returncode, 0)
+        for line in res.stdout.splitlines():
+            self.assertTrue(
+                line == "" or line.startswith("#"),
+                f"--help leaked a non-comment line (span drift): {line!r}")
+
+    def test_local_branch_base_does_not_fetch(self):
+        """A slash-less `--base` names a local branch, which has no
+        remote-tracking ref to refresh. An earlier version still ran
+        `git fetch origin master` and, on failure, warned that it could not
+        refresh the local branch -- naming a ref it never attempted to update.
+        """
+        self.repo_remote_points_nowhere()
+        res = subprocess.run([BRANCH_BASE_CHECK, "--base", "master", "--head", "HEAD"],
+                             cwd=self.repo, capture_output=True, text=True)
+        self.assertEqual(res.returncode, 0)
+        self.assertNotIn("could not refresh", res.stderr,
+                         "a local-branch base must not attempt (or warn about) a fetch")
+
+    def test_fetch_warning_names_the_tracked_ref(self):
+        """The warning must name the ref the fetch actually targeted
+        (`<remote>/<branch>`), not the caller's base string."""
+        self.repo_remote_points_nowhere()
+        _git(self.repo, "update-ref", "refs/remotes/origin/master", "master")
+        res = subprocess.run([BRANCH_BASE_CHECK, "--base", "origin/master", "--head", "HEAD"],
+                             cwd=self.repo, capture_output=True, text=True)
+        self.assertIn("could not refresh origin/master", res.stderr)
+
+    def repo_remote_points_nowhere(self):
+        """Add an `origin` remote whose URL cannot be reached, so any fetch
+        the script attempts fails."""
+        subprocess.run(["git", "-C", self.repo, "remote", "add", "origin",
+                        os.path.join(self.repo, "no-such-remote.git")], check=True)
+
 
 if __name__ == "__main__":
     unittest.main()
