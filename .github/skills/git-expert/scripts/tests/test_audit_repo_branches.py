@@ -120,6 +120,39 @@ class TestSiblingConflicts(unittest.TestCase):
         ]
         self.assertEqual(branches.find_siblings(rows, "master"), [])
 
+    def test_competing_open_prs_are_paired(self):
+        """Regression: sibling detection only paired dead-vs-live branches, so
+        two OPEN PRs touching the same file were structurally invisible. That is
+        the common case -- on 2026-10-10 #180 and #181 were both open and
+        carried a byte-identical server.py."""
+        rows = [
+            {"branch": "sentinel/x", "pr": 180, "verdict": "KEEP", "behind": 0,
+             "unique_files": ["server.py", ".jules/sentinel.md"], "landed": False},
+            {"branch": "tools/y", "pr": 181, "verdict": "KEEP", "behind": 0,
+             "unique_files": ["server.py", "new_tool.py"], "landed": False},
+        ]
+        with mock.patch.object(branches, "conflict_markers", return_value=1), \
+             mock.patch.object(branches, "identical_blobs", return_value=["server.py"]):
+            pairs = branches.find_siblings(rows, "master")
+        self.assertEqual(len(pairs), 1, "competing OPEN PRs must be paired")
+        self.assertEqual(pairs[0]["superseded_pr"], 180)
+        self.assertEqual(pairs[0]["by_pr"], 181)
+        self.assertEqual(pairs[0]["identical_files"], ["server.py"])
+
+    def test_open_pair_reported_once_not_twice(self):
+        """The unordered pair (A,B) must not also appear as (B,A)."""
+        rows = [
+            {"branch": "a", "pr": 1, "verdict": "KEEP", "behind": 0,
+             "unique_files": ["f.py"], "landed": False},
+            {"branch": "b", "pr": 2, "verdict": "KEEP", "behind": 0,
+             "unique_files": ["f.py"], "landed": False},
+        ]
+        with mock.patch.object(branches, "conflict_markers", return_value=0), \
+             mock.patch.object(branches, "identical_blobs", return_value=["f.py"]):
+            pairs = branches.find_siblings(rows, "master")
+        self.assertEqual(len(pairs), 1)
+        self.assertEqual({pairs[0]["superseded"], pairs[0]["by"]}, {"a", "b"})
+
 
 if __name__ == "__main__":
     unittest.main()
