@@ -9,6 +9,7 @@ env.print.kv() {
 env.print.var() {
   env.lazy.load "$@"
   local var; for var in "$@"; do
+    [[ ! "$var" =~ '^[a-zA-Z_][a-zA-Z0-9_]*$' ]] && continue
     env.print.kv "$var" "${(P)var}"
   done
 }
@@ -24,6 +25,7 @@ env.lazy.load() {
   local -A seen
   local var dep deps exit_code value
   for var in "$@"; do
+    [[ ! "$var" =~ '^[a-zA-Z_][a-zA-Z0-9_]*$' ]] && continue
     [[ -v $var || -z ${_ENV_LAZY_VARS[$var]} ]] && continue
     
     deps=( ${=_ENV_LAZY_DEPS[$var]} )
@@ -52,6 +54,7 @@ env.lazy.load() {
 
 env.lazy.reset() {
   local var; for var in "$@"; do
+    [[ ! "$var" =~ '^[a-zA-Z_][a-zA-Z0-9_]*$' ]] && continue
     [[ -n ${_ENV_LAZY_VARS[$var]} && -v $var ]] && unset "$var"
   done
 }
@@ -68,6 +71,7 @@ env.print.kv_all() {
 
 env.get() {
   env.lazy.load "$1"
+  [[ ! "$1" =~ '^[a-zA-Z_][a-zA-Z0-9_]*$' ]] && return 1
   echo "${(P)1}"
 }
 
