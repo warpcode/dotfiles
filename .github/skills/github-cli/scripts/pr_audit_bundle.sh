@@ -73,12 +73,26 @@ done < "$out/issues/_list.txt"
 
 base_ref="$(jq -r '.baseRefName' "$out/meta.json")"
 
-# Merge-tree conflict preflight and empty commit audit if inside local work tree
+# Merge-tree conflict preflight and empty commit audit if inside matching local work tree
 conflict_count="UNKNOWN"
 empty_commits=()
+is_matching_repo=0
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  git fetch -q origin "pull/${pr}/head:refs/remotes/origin/pr-${pr}" 2>/dev/null || true
-  if git rev-parse --verify "origin/pr-${pr}" >/dev/null 2>&1; then
+  remote_url="$(git remote get-url origin 2>/dev/null || true)"
+  if [[ "$remote_url" =~ github\.com[:/]([^/]+)/([^/\s]+?)(\.git)?$ ]]; then
+    local_nwo="${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+    if [[ "$local_nwo" == "$repo" ]]; then
+      is_matching_repo=1
+    fi
+  fi
+fi
+
+if [[ "$is_matching_repo" -eq 1 ]]; then
+  git fetch -q origin "+refs/pull/${pr}/head:refs/remotes/origin/pr-${pr}" 2>/dev/null || true
+  if ! git rev-parse --verify "origin/${base_ref}" >/dev/null 2>&1; then
+    git fetch -q origin "+refs/heads/${base_ref}:refs/remotes/origin/${base_ref}" 2>/dev/null || true
+  fi
+  if git rev-parse --verify "origin/pr-${pr}" >/dev/null 2>&1 && git rev-parse --verify "origin/${base_ref}" >/dev/null 2>&1; then
     mb="$(git merge-base "origin/${base_ref}" "origin/pr-${pr}" 2>/dev/null || true)"
     if [[ -n "$mb" ]]; then
       conflict_count="$(git merge-tree "$mb" "origin/${base_ref}" "origin/pr-${pr}" 2>/dev/null | grep -c '<<<<<<<' || true)"
@@ -107,7 +121,7 @@ echo
 echo "## Files"
 jq -r '.files[] | "\(.changeType)\t\(.path)\t+\(.additions)/-\(.deletions)"' "$out/meta.json" | while IFS=$'\t' read -r ctype path stat; do
   status_tag=""
-  if [[ -f "$out/head/$path" ]] && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  if [[ -f "$out/head/$path" ]] && [[ "$is_matching_repo" -eq 1 ]]; then
     base_hash="$(git show "origin/${base_ref}:${path}" 2>/dev/null | git hash-object --stdin || true)"
     head_hash="$(git hash-object "$out/head/$path" 2>/dev/null || true)"
     if [[ -n "$base_hash" && -n "$head_hash" ]]; then
