@@ -144,4 +144,43 @@ if (( ${#err_msg} > 80 )); then
     exit 1
 fi
 
+# --- REPLY contract -------------------------------------------------------
+# The helpers return through the global REPLY, so correctness depends on no
+# other REPLY writer running between a helper returning and its caller reading
+# $REPLY. These cases pin that a second registry call cannot silently hand back
+# the first call's value, and that a caller's REPLY is genuinely clobbered
+# (documented in the registry.zsh header) rather than preserved.
+
+registry.define test_app reply_probe alpha="A" beta="B" >/dev/null
+
+# Interleaved calls must each yield their own value, never a stale one.
+_registry.norm "second-id"; local first_reply="$REPLY"
+_registry.norm "third-id";  local second_reply="$REPLY"
+if [[ "$first_reply" != "second_id" || "$second_reply" != "third_id" ]]; then
+    print -r "Test 6 Failed: interleaved _registry.norm returned stale REPLY ('$first_reply', '$second_reply')" >&2
+    exit 1
+fi
+
+# A REPLY written by the caller before a registry call must not be mistaken for
+# that call's result: read the value the helper actually produced.
+REPLY="caller-sentinel"
+registry.get test_app reply_probe alpha >/dev/null
+if [[ "$REPLY" == "caller-sentinel" ]]; then
+    print -r "Test 7 Failed: registry.get was expected to clobber REPLY but preserved it" >&2
+    exit 1
+fi
+
+# ...and that clobbering must not corrupt the returned value.
+if [[ "$(registry.get test_app reply_probe alpha)" != "A" ]]; then
+    print -r "Test 8 Failed: registry.get returned wrong value after REPLY clobber" >&2
+    exit 1
+fi
+
+# Interleaving two full public calls must keep each result independent.
+if [[ "$(registry.get test_app reply_probe alpha)" != "A" ]] ||
+   [[ "$(registry.get test_app reply_probe beta)"  != "B" ]]; then
+    print -r "Test 9 Failed: consecutive registry.get calls returned the wrong values" >&2
+    exit 1
+fi
+
 print -r "ALL REGISTRY TESTS PASSED SUCCESSFULLY!"
