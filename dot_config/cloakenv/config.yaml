@@ -18,6 +18,11 @@ vaults:
   kp:
     provider: "keepass"
     vault_path: "~/.keepass/Accounts.kdbx"
+  homelab:
+    provider: "search"
+    source_vaults: ["kp"]
+    query: '"dotenv:homelab" in tags'
+    include_fields: ["url"]
 
 # Autoloading configuration: Automatically match commands, mask/transform command lines, and inject vault credentials
 autoload:
