@@ -62,3 +62,15 @@ When resolving base branch merge conflicts on a PR branch as the PR author (usin
 - **Squash-Merge Preference**: Prefer squash-and-merge (`gh pr merge --squash`) for pull requests.
 - **Ruleset-Gated PR Merges**: On repositories using active GitHub branch rulesets where the user has bypass privileges, if `gh pr merge --squash` fails due to base branch policy, supply `--admin` to bypass the ruleset gate once CI checks and approvals are satisfied.
 - **Remote Branch Deletion**: Remote branch deletion is optional and separate. Delete a remote branch only after explicit user approval for that deletion.
+
+### Automated Merging Tool (`scripts/pr_merge.sh`)
+
+Use the bundled helper script `scripts/pr_merge.sh` to safely preflight and squash-merge a PR in one call:
+```bash
+bash <skill-dir>/scripts/pr_merge.sh <pr> --repo <owner/repo> [--admin] [--dry-run] [--delete-branch]
+```
+The script automatically verifies:
+1. PR open status and mergeability (fails loudly with exit code 2 on merge conflicts).
+2. CI status check rollup (fails with exit code 3 if CI checks are failing or pending).
+3. Applies `--admin` for ruleset bypass if requested.
+4. Supports `--dry-run` to preview the preflight without executing the merge.
