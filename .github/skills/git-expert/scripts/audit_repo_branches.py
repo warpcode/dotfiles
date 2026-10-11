@@ -355,6 +355,28 @@ def render(rows: list[dict], pairs: list[dict], base: str, repo: str) -> str:
     return "\n".join(out)
 
 
+def resolve_base_branch(explicit: str | None) -> str:
+    """Resolve base branch. If not explicit, probe origin/HEAD, origin/main, or origin/master."""
+    if explicit:
+        b = explicit.strip()
+        if b.startswith("origin/"):
+            b = b[len("origin/"):]
+        return b
+
+    code, out, _ = run(["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"])
+    if code == 0 and out.strip():
+        head = out.strip()
+        if head.startswith("origin/"):
+            head = head[len("origin/"):]
+        return head
+
+    if rev("origin/main"):
+        return "main"
+    if rev("origin/master"):
+        return "master"
+    return "master"
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(
         description="Classify remote branches as keep/delete/review (read-only).",
@@ -362,7 +384,7 @@ def main() -> None:
         epilog=__doc__,
     )
     ap.add_argument("--repo", help="owner/name. Defaults to origin remote.")
-    ap.add_argument("--base", default="master", help="base branch (default: master)")
+    ap.add_argument("--base", default=None, help="base branch (default: auto-detected from origin/HEAD, main, or master)")
     ap.add_argument("--json", action="store_true", help="emit JSON instead of Markdown")
     ap.add_argument("--fetch", action="store_true", help="git fetch --prune first")
     args = ap.parse_args()
@@ -370,13 +392,14 @@ def main() -> None:
     repo = resolve_repo(args.repo)
     if args.fetch:
         run(["git", "fetch", "--prune", "origin"])
-    if not rev(f"origin/{args.base}"):
-        sys.stderr.write(f"origin/{args.base} not found; pass --base or --fetch\n")
+    base = resolve_base_branch(args.base)
+    if not rev(f"origin/{base}"):
+        sys.stderr.write(f"origin/{base} not found; pass --base or --fetch\n")
         raise SystemExit(1)
 
     prmap = fetch_pr_map(repo)
-    rows = [analyse(b, args.base, prmap) for b in list_branches()]
-    pairs = find_siblings(rows, args.base)
+    rows = [analyse(b, base, prmap) for b in list_branches()]
+    pairs = find_siblings(rows, base)
 
     for r in rows:
         if r["verdict"] == "REVIEW" and any(
@@ -385,10 +408,10 @@ def main() -> None:
             r["verdict"] = "SUPERSEDED"
 
     if args.json:
-        print(json.dumps({"repo": repo, "base": args.base, "branches": rows,
+        print(json.dumps({"repo": repo, "base": base, "branches": rows,
                           "sibling_conflicts": pairs}, indent=2))
     else:
-        print(render(rows, pairs, args.base, repo))
+        print(render(rows, pairs, base, repo))
 
 
 if __name__ == "__main__":

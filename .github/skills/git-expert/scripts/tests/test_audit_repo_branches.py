@@ -39,6 +39,30 @@ class TestResolveRepo(unittest.TestCase):
                 branches.resolve_repo(None)
 
 
+class TestResolveBaseBranch(unittest.TestCase):
+    def test_explicit_branch_kept(self):
+        self.assertEqual(branches.resolve_base_branch("develop"), "develop")
+
+    def test_explicit_origin_prefix_stripped(self):
+        self.assertEqual(branches.resolve_base_branch("origin/main"), "main")
+        self.assertEqual(branches.resolve_base_branch("origin/master"), "master")
+
+    def test_symbolic_ref_origin_head_resolved(self):
+        with mock.patch.object(branches, "run",
+                               return_value=(0, "origin/main\n", "")):
+            self.assertEqual(branches.resolve_base_branch(None), "main")
+
+    def test_fallback_to_main_if_exists(self):
+        with mock.patch.object(branches, "run", return_value=(1, "", "")), \
+             mock.patch.object(branches, "rev", side_effect=lambda ref: "sha" if ref == "origin/main" else None):
+            self.assertEqual(branches.resolve_base_branch(None), "main")
+
+    def test_fallback_to_master_if_main_absent(self):
+        with mock.patch.object(branches, "run", return_value=(1, "", "")), \
+             mock.patch.object(branches, "rev", side_effect=lambda ref: "sha" if ref == "origin/master" else None):
+            self.assertEqual(branches.resolve_base_branch(None), "master")
+
+
 class TestBlobComparison(unittest.TestCase):
     def test_blob_returns_oid(self):
         with mock.patch.object(branches, "run", return_value=(0, "abc123\n", "")):
