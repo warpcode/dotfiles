@@ -71,6 +71,12 @@
   "chat.agent.maxRequests": 100,
   "chat.tools.terminal.outputCompaction": true,
   "chat.useClaudeMdFile": false,
+  "chat.implicitContext.includeActiveEditor": false,
+  "github.copilot.chat.virtualTools.threshold": 40,
+{{ if eq .profile "default" -}}
+  "chat.utilitySmallModel": "customendpoint/@preset/code-free",
+  "chat.utilityModel": "customendpoint/@preset/code-free",
+{{ end -}}
   "antigravity.enableTelemetry": false,
   "chat.tools.terminal.enableAutoApprove": true,
   "diffEditor.maxComputationTime": 0,
