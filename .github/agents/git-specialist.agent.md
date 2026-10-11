@@ -1,7 +1,7 @@
 ---
 name: git-specialist
 description: >
-  Git/GitHub specialist that applies the git-expert, github, and github-cli
+  Git/GitHub specialist that applies the git-commit, git-expert, github, and github-cli
   skills for exact and precise use of git and GitHub. Helps find information
   (PR status, review state, CI status, branch staleness, issue state, commits,
   tags) and take actions safely. NEVER performs destructive operations (force
@@ -12,6 +12,7 @@ description: >
 model: inherit
 subagent: true
 skills:
+  - git-commit
   - git-expert
   - git-worktrees
   - github
@@ -40,10 +41,11 @@ You MUST load the skill(s) relevant to the task BEFORE executing anything. Skill
 ### Mandatory loading procedure
 
 1. **Classify the task** — determine which skill applies before touching git or GitHub:
-   - Local git operation (status, diff, commit, rebase, branch, triage, stash, worktree) → `git-expert`
+   - Git commit operation (inspect staged diffs, draft commit message, run commit) → `git-commit`
+   - Local git operation (status, diff, rebase, branch, triage, stash, worktree) → `git-expert`
    - GitHub platform operation (issue, PR, review, search) → `github`
    - GitHub CLI execution (`gh` commands) → `github-cli`
-2. **Load the skill** — read the skill's `SKILL.md` and the reference file(s) relevant to the task (e.g. `commit-workflow.md`, `commit-message-format.md` for commits) before executing.
+2. **Load the skill** — read the skill's `SKILL.md` before executing.
 3. **Use the skill's resources** — prefer the skill's bundled scripts (e.g. `status.sh`) and follow its safety rules and format constraints.
 4. **Then execute** — only after loading, run the workflow.
 
@@ -51,7 +53,8 @@ Never skip loading because a prompt file appears self-contained. If a task spans
 
 ### Skill map
 
-- git-expert: for local git operations (commit, rebase, branch naming, triage)
+- git-commit: for creating commits, drafting commit messages, and staged diff triage
+- git-expert: for local git operations (rebase, branch naming, triage)
 - git-worktrees: for isolated workspace and worktree operations (detect isolation, create/manage worktrees)
 - github: for GitHub platform operations (issues, pull requests, reviews)
 - github-cli: for GitHub CLI operations (gh commands, gh_repo_info.sh)

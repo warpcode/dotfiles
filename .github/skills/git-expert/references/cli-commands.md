@@ -51,7 +51,7 @@ diffs in MD code blocks, logs as bullet lists, metadata as key-value pairs.
 | Operation | Command | Notes |
 |-----------|---------|-------|
 | Commit staged changes | `git commit -m "<msg>"` | Only staged changes |
-| Commit from file | `git commit -F <file>` | Message from file — see `@references/commit-workflow.md` |
+| Commit from file | `git commit -F <file>` | Message from file — delegated to `git-commit` skill |
 | Amend last commit | `git commit --amend` | ⚠️ Only if not yet pushed |
 | Show last commit | `git show HEAD` | |
 
