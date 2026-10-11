@@ -17,16 +17,18 @@ import sys
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("spec", help="findings spec JSON file")
+    ap.add_argument("spec", nargs="?", default=None, help="findings spec JSON file")
     ap.add_argument("--out", required=True, help="payload output path")
-    ap.add_argument("--body", default="Review findings are in the inline comments.",
+    ap.add_argument("--body", default=None,
                     help="neutral top-level review body (bot PRs only act on inline comments)")
     ap.add_argument("--event", default="REQUEST_CHANGES", choices=["REQUEST_CHANGES", "COMMENT", "APPROVE"])
     args = ap.parse_args()
 
-    with open(args.spec) as f:
-        spec = json.load(f)
-    findings = spec["findings"] if isinstance(spec, dict) else spec
+    findings = []
+    if args.spec:
+        with open(args.spec) as f:
+            spec = json.load(f)
+        findings = spec["findings"] if isinstance(spec, dict) else spec
 
     comments = []
     for i, item in enumerate(findings):
@@ -40,8 +42,15 @@ def main() -> int:
                 f"**Proposed Solution:** {item['solution']}")
         comments.append({"path": item["path"], "line": int(item["line"]), "side": "RIGHT", "body": body})
 
+    if args.body is not None:
+        body = args.body
+    elif args.event == "APPROVE":
+        body = ""
+    else:
+        body = "Review findings are in the inline comments."
+
     with open(args.out, "w") as f:
-        json.dump({"event": args.event, "body": args.body, "comments": comments}, f)
+        json.dump({"event": args.event, "body": body, "comments": comments}, f)
     print(f"Wrote {len(comments)} inline comment(s) to {args.out}")
     return 0
 

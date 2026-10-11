@@ -11,10 +11,10 @@
 # matches, which looks like a valid cross-check while proving nothing.
 #
 # Usage:
-#   submit_review.sh --spec findings.json --owner o --repo r --pr N [options]
+#   submit_review.sh [--spec findings.json] --owner o --repo r --pr N [options]
 #
 #   --spec FILE        findings spec (path/line/severity/title/description/
-#                      impact/solution)                  [required]
+#                      impact/solution)                  [required for REQUEST_CHANGES]
 #   --owner OWNER      repository owner                  [default: from origin]
 #   --repo NAME        repository name                   [default: from origin]
 #   --pr N             pull request number               [required]
@@ -59,12 +59,16 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ -n "$SPEC" ]] || die "--spec is required"
 [[ -n "$PR"   ]] || die "--pr is required"
 [[ -f "$BUILD" ]] || die "missing $BUILD"
 [[ -f "$VERIFY" ]] || die "missing $VERIFY"
 [[ -f "$SUBMIT" ]] || die "missing $SUBMIT (expected $SUBMIT)"
-[[ -f "$SPEC" ]] || die "spec file not found: $SPEC"
+
+if [[ -n "$SPEC" ]]; then
+  [[ -f "$SPEC" ]] || die "spec file not found: $SPEC"
+elif [[ "$EVENT" == "REQUEST_CHANGES" ]]; then
+  die "--spec is required for REQUEST_CHANGES"
+fi
 
 # Resolve owner/repo from the remote rather than trusting a remembered value or
 # the directory name.
@@ -107,8 +111,13 @@ if [[ -z "$HEAD" ]]; then
 fi
 
 # --- 1. build ---------------------------------------------------------------
-build_args=("$SPEC" --out "$PAYLOAD" --event "$EVENT")
-[[ -n "$BODY" ]] && build_args+=(--body "$BODY")
+build_args=(--out "$PAYLOAD" --event "$EVENT")
+[[ -n "$SPEC" ]] && build_args+=("$SPEC")
+if [[ -n "$BODY" ]]; then
+  build_args+=(--body "$BODY")
+elif [[ "$EVENT" == "APPROVE" ]]; then
+  build_args+=(--body "")
+fi
 python3 "$BUILD" "${build_args[@]}" >/dev/null || die "payload build failed"
 
 echo "submit_review: event=$EVENT  comments=$(jq '.comments | length' "$PAYLOAD")"

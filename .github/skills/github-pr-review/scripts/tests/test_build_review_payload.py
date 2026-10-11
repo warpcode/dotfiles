@@ -75,6 +75,25 @@ class BuildReviewPayloadTests(unittest.TestCase):
         self.assertEqual(res.returncode, 0, res.stderr)
         self.assertEqual(payload["event"], "APPROVE")
         self.assertEqual(payload["comments"], [])
+        self.assertEqual(payload["body"], "")
+
+    def test_omitted_spec_with_approve_succeeds(self):
+        out = tempfile.mktemp(suffix=".out")
+        try:
+            res = subprocess.run(
+                [sys.executable, SCRIPT, "--out", out, "--event", "APPROVE"],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(res.returncode, 0, res.stderr)
+            with open(out) as f:
+                payload = json.load(f)
+            self.assertEqual(payload["event"], "APPROVE")
+            self.assertEqual(payload["body"], "")
+            self.assertEqual(payload["comments"], [])
+        finally:
+            if os.path.exists(out):
+                os.unlink(out)
 
     def test_event_choices_are_enforced(self):
         res, _ = run("[]", "--event", "LGTM")
