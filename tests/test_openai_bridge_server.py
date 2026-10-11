@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import json
+import os
 import sys
 import importlib.util
 from pathlib import Path
@@ -149,6 +150,44 @@ class TestOpenAIBridgeServer(unittest.TestCase):
 
         self.assertIn("User: Prev message", initial_prompt)
         self.assertNotIn("System:\n[System Override]:", initial_prompt)
+
+    def test_default_host_is_loopback_only(self):
+        # SECURITY: the bridge is unauthenticated and drives `agentapi`, so it
+        # must never default to binding every interface.
+        self.assertEqual(openai_bridge_server.DEFAULT_HOST, "127.0.0.1")
+
+    def test_run_binds_loopback_by_default(self):
+        with patch.object(openai_bridge_server.http.server, "ThreadingHTTPServer") as mock_srv:
+            mock_srv.return_value.serve_forever.side_effect = KeyboardInterrupt
+            mock_srv.return_value.server_close = MagicMock()
+            with patch.dict(os.environ, {}, clear=False):
+                os.environ.pop("BRIDGE_HOST", None)
+                openai_bridge_server.run(port=18081)
+            self.assertEqual(mock_srv.call_args[0][0], ("127.0.0.1", 18081))
+
+    def test_read_body_rejects_oversized_request(self):
+        # SECURITY: an unauthenticated caller must not be able to force an
+        # unbounded allocation via Content-Length.
+        self.handler.headers = {"Content-Length": str(openai_bridge_server.MAX_CONTENT_LENGTH + 1)}
+        self.handler.rfile = MagicMock()
+        self.assertIsNone(self.handler.read_body())
+        self.handler.rfile.read.assert_not_called()
+        self.assertEqual(self.handler.send_error_response.call_args[0][0], 413)
+
+    def test_read_body_rejects_malformed_content_length(self):
+        self.handler.headers = {"Content-Length": "not-a-number"}
+        self.handler.rfile = MagicMock()
+        self.assertIsNone(self.handler.read_body())
+        self.handler.rfile.read.assert_not_called()
+        self.assertEqual(self.handler.send_error_response.call_args[0][0], 400)
+
+    def test_read_body_accepts_normal_request(self):
+        payload = b'{"messages": []}'
+        self.handler.headers = {"Content-Length": str(len(payload))}
+        self.handler.rfile = MagicMock()
+        self.handler.rfile.read.return_value = payload
+        self.assertEqual(self.handler.read_body(), payload)
+        self.handler.send_error_response.assert_not_called()
 
 
 if __name__ == "__main__":
