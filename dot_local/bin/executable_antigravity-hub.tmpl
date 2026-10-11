@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Launcher: repairs the SUID sandbox helper before exec, since app updates
+# re-extract it as a plain user-owned file.
+set -euo pipefail
+
+hub_dir="{{ .chezmoi.homeDir }}/.local/opt/antigravity-hub"
+sandbox="$hub_dir/chrome-sandbox"
+
+if [[ -f $sandbox ]] && { [[ $(stat -c %U "$sandbox") != root ]] || [[ $(stat -c %a "$sandbox") != 4755 ]]; }; then
+  if ! pkexec /bin/sh -c 'chown root:root "$1" && chmod 4755 "$1"' _ "$sandbox"; then
+    printf 'antigravity-hub: could not fix SUID sandbox helper; aborting\n' >&2
+    exit 1
+  fi
+fi
+
+exec "$hub_dir/antigravity" "$@"

@@ -53,6 +53,15 @@ Search codebase for common vulnerability anti-patterns:
 ### Phase 3: Calibrated Reporting
 Document all findings citing exact file paths, line ranges, and reproduction snippets.
 
+### Phase 4: Runtime Verification of Exposure Claims
+Static reading shows the *intended* bind address; only a live probe proves what the OS accepts. When a finding concerns a listening service, verify it before reporting rather than asserting it from the source.
+
+| Script | Purpose | Run when |
+|--------|---------|----------|
+| `@scripts/probe_tcp_bind.py --port N [--host H] [--expect-bound\|--expect-refused] [--json]` | Attempt a TCP connect and report whether the port is reachable on that interface; exits 1 when the expectation is not met | Confirming an unauthenticated listener is or is not LAN-exposed |
+
+Two probes are the minimum for a bind claim: loopback (should be bound) plus the host's LAN address (should be refused). Use `--json` to capture both results as evidence. Do not hand-write an inline `python3 -c` probe; the repo's `AGENTS.md` forbids inline Python, and this script is portable where `ss`/`lsof` are absent.
+
 ## Findings Output Format
 
 ````markdown
