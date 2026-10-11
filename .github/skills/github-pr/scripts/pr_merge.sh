@@ -9,6 +9,7 @@
 #
 # Usage:
 #   pr_merge.sh <pr> --repo <owner/repo> [--admin] [--dry-run] [--delete-branch]
+#   pr_merge.sh <pr> [--owner <owner>] --repo <repo> [--admin] [--dry-run] [--delete-branch]
 #   pr_merge.sh --pr <pr> --repo <owner/repo> [--admin] [--dry-run] [--delete-branch]
 
 set -euo pipefail
@@ -16,12 +17,14 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage: pr_merge.sh <pr> --repo <owner/repo> [options]
+       pr_merge.sh <pr> --owner <owner> --repo <repo> [options]
 
 Preflights mergeability and CI status, then squash-merges the PR.
 
 Arguments & Options:
   <pr>, --pr <number>      PR number to merge.
-  --repo <owner/repo>      Repository in owner/name format.
+  --repo <owner/repo>      Repository in owner/name or name format.
+  --owner <owner>          Repository owner (optional if repo is owner/name).
   --admin                  Bypass branch rulesets with admin privileges.
   --delete-branch          Delete head branch after merging.
   --dry-run                Preflight only; do not merge.
@@ -38,6 +41,7 @@ EOF
 
 pr=""
 repo=""
+owner=""
 admin=0
 dry_run=0
 delete_branch=0
@@ -50,6 +54,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --pr)
       pr="${2:-}"
+      shift 2
+      ;;
+    --owner)
+      owner="${2:-}"
       shift 2
       ;;
     --repo)
@@ -92,6 +100,14 @@ if [[ -z "$pr" ]]; then
   exit 1
 fi
 
+if [[ -n "$owner" ]]; then
+  if [[ -n "$repo" && "$repo" != *"/"* ]]; then
+    repo="${owner}/${repo}"
+  elif [[ -z "$repo" ]]; then
+    repo="${owner}"
+  fi
+fi
+
 if [[ -z "$repo" ]]; then
   remote_url="$(git remote get-url origin 2>/dev/null || true)"
   if [[ "$remote_url" =~ github\.com[:/]([^/]+)/([^/\s]+?)(\.git)?$ ]]; then
@@ -99,6 +115,11 @@ if [[ -z "$repo" ]]; then
   else
     echo "Error: --repo is required and cannot be determined from origin remote." >&2
     exit 1
+  fi
+elif [[ "$repo" != *"/"* ]]; then
+  remote_url="$(git remote get-url origin 2>/dev/null || true)"
+  if [[ "$remote_url" =~ github\.com[:/]([^/]+)/ ]]; then
+    repo="${BASH_REMATCH[1]}/${repo}"
   fi
 fi
 

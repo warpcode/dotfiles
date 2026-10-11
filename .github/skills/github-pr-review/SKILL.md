@@ -69,7 +69,7 @@ Systematically evaluate each area, prioritizing findings in the following order:
 - **Findings Outside Diff**: For findings on unchanged lines outside the PR diff hunks, post a file-level comment or include the finding in the main review summary describing the file, line number, and proposed fix.
 - **No Base Branch Update Requests**: During PR reviews, NEVER ask the author or bot to update, rebase, or sync the pull request branch with the main/base branch.
 - **Sandbox Precheck**: `submit_review.sh` and `pr_audit_bundle.sh` require network access and invoke `gh` CLI. Run them with `BypassSandbox: true` on the first call to avoid sandbox glob/permission failures.
-- **Batch Mode ("Approve, Merge, Next")**: After the user says "approve, merge, then next" across multiple candidates, run audit → approve → merge → next as one continuous flow. Use `github-pr/scripts/pr_merge.sh` to preflight and squash-merge. Pause and ask only when encountering failing CI, merge conflicts, or actionable review findings.
+- **Batch Mode ("Approve, Merge, Next")**: After the user says "approve, merge, then next" across multiple candidates, run audit → approve → merge → next as one continuous flow. Use `github-pr/scripts/pr_merge.sh <pr> --repo <owner/repo>` (or `--owner <owner> --repo <repo>`) to preflight and squash-merge. Pause and ask only when encountering failing CI, merge conflicts, or actionable review findings.
 
 ## 🚀 Lifecycle Procedure
 
