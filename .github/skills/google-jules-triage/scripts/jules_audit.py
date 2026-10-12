@@ -40,9 +40,10 @@ DEFAULT_BASE_URL = "https://jules.googleapis.com/v1alpha"
 class SimpleJulesClient:
     """Minimal Jules REST API client if peer jules package is unavailable."""
 
-    def __init__(self, api_key: str, base_url: str = DEFAULT_BASE_URL) -> None:
+    def __init__(self, api_key: str, base_url: str = DEFAULT_BASE_URL, timeout: int = 120) -> None:
         self.api_key = api_key.strip()
         self.base_url = base_url.rstrip("/")
+        self.timeout = timeout
 
     def call(
         self,
@@ -65,7 +66,7 @@ class SimpleJulesClient:
         req.add_header("Accept", "application/json")
 
         try:
-            with urlopen(req) as resp:
+            with urlopen(req, timeout=self.timeout) as resp:
                 body = resp.read().decode("utf-8")
                 return json.loads(body) if body.strip() else {}
         except HTTPError as e:
@@ -119,10 +120,13 @@ class SimpleJulesClient:
         return activities
 
 
-def get_client(api_key: str) -> Any:
+def get_client(api_key: str, timeout: int = 120) -> Any:
     if JulesClient is not None:
-        return JulesClient(api_key=api_key)
-    return SimpleJulesClient(api_key=api_key)
+        try:
+            return JulesClient(api_key=api_key, timeout=timeout)
+        except TypeError:
+            return JulesClient(api_key=api_key)
+    return SimpleJulesClient(api_key=api_key, timeout=timeout)
 
 
 def parse_dt(dt_str: str | None) -> datetime | None:
@@ -478,9 +482,22 @@ def main() -> None:
     )
     parser.add_argument(
         "--max-age-days",
+        "--days",
+        dest="max_age_days",
         type=int,
         default=30,
         help="Filter out sessions older than N days (default: 30, 0 for no limit).",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=120,
+        help="HTTP / network timeout in seconds (default: 120).",
+    )
+    parser.add_argument(
+        "--include-archived",
+        action="store_true",
+        help="Include archived sessions in audit (default: skip archived sessions).",
     )
     parser.add_argument(
         "--stale-threshold-mins",
@@ -490,6 +507,10 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+    setattr(args, "days", args.max_age_days)
+
+    import socket
+    socket.setdefaulttimeout(args.timeout)
 
     # Secret handling: must come from environment, never invoke secret provider
     api_key = os.environ.get("JULES_API_KEY")
@@ -509,21 +530,27 @@ def main() -> None:
         )
         sys.exit(1)
 
-    client = get_client(api_key.strip())
+    client = get_client(api_key.strip(), timeout=args.timeout)
 
     session_items: list[dict[str, Any]] = []
     now = datetime.now(timezone.utc)
 
     if args.all:
         page_token: str | None = None
+        page_num = 0
         while True:
+            page_num += 1
+            sys.stderr.write(
+                f"Fetching sessions page {page_num}... ({len(session_items)} collected so far)\n"
+            )
+            sys.stderr.flush()
             res = client.list_sessions(page_size=50, page_token=page_token)
             batch = res.get("sessions", [])
             if not batch:
                 break
             reached_max_age = False
             for s in batch:
-                if s.get("archived") is True:
+                if not args.include_archived and s.get("archived") is True:
                     continue
                 if args.max_age_days and args.max_age_days > 0:
                     ts = s.get("updateTime") or s.get("createTime")

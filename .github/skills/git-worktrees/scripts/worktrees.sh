@@ -29,6 +29,7 @@ Options:
   --no-fetch         Skip remote fetch during --create
   --remove <path>    Remove the specified worktree path (git worktree remove)
   --raw, --raw-output Output raw worktree list (git worktree list --porcelain)
+  -C, --repo <dir>   Path to git repository (default: current directory)
   -h, --help         Show this help message
 USAGE_EOF
 }
@@ -144,6 +145,7 @@ main() {
   local target_path=""
   local do_fetch="yes"
   local raw="no"
+  local repo_dir=""
 
   local args=("$@")
   local i=0
@@ -175,6 +177,10 @@ main() {
         raw="yes"
         (( i += 1 ))
         ;;
+      -C|--repo)
+        repo_dir="${args[$((i + 1))]:-}"
+        (( i += 2 ))
+        ;;
       -h|--help)
         print_usage
         exit 0
@@ -193,9 +199,18 @@ main() {
     exit 1
   fi
 
+  # Change to target repository if specified
+  if [[ -n "${repo_dir}" ]]; then
+    if [[ ! -d "${repo_dir}" ]]; then
+      err "Repository directory does not exist: ${repo_dir}"
+      exit 1
+    fi
+    cd "${repo_dir}"
+  fi
+
   # Ensure execution inside a git repository
   if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    err "Not inside a git work tree."
+    err "Not inside a git work tree. Specify a repository path with -C <dir> or --repo <dir>."
     exit 1
   fi
 

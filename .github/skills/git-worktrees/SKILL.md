@@ -99,7 +99,8 @@ Run bundled helper scripts relative to this skill's root directory (`<skill-dir>
 
 | Script | Purpose | Invocation |
 |--------|---------|------------|
-| `@scripts/worktrees.sh` | Create, list, prune, or remove isolated worktrees | `bash <skill-dir>/scripts/worktrees.sh [--create <branch>] [--remove <path>] [--raw]` |
+| `@scripts/worktrees.sh` | Create, list, prune, or remove isolated worktrees | `bash <skill-dir>/scripts/worktrees.sh [-C <dir>] [--create <branch>] [--remove <path>] [--raw]` |
+| `@scripts/wt_test.sh` | Run command/tests inside a worktree with execution summary | `bash <skill-dir>/scripts/wt_test.sh <worktree-path> <command...>` |
 
 ## Worktree Management & Inspection
 
@@ -112,11 +113,20 @@ bash <skill-dir>/scripts/worktrees.sh --create <branch> [--base <ref>] [--path <
 # Detect active and stale worktrees, and prune metadata (dry-run by default)
 bash <skill-dir>/scripts/worktrees.sh
 
+# Run against a specific repository path from any working directory:
+bash <skill-dir>/scripts/worktrees.sh -C /path/to/repo --raw
+
 # Raw porcelain output
 bash <skill-dir>/scripts/worktrees.sh --raw
 
 # Remove a specific worktree (requires explicit confirmation and flag; preserves dirty trees without --force)
 bash <skill-dir>/scripts/worktrees.sh --remove <path>
+
+# Run tests, builds, or git commands inside an isolated worktree with execution summary:
+bash <skill-dir>/scripts/wt_test.sh <worktree-path> <command...>
+# Examples:
+#   bash <skill-dir>/scripts/wt_test.sh /tmp/tidy-37 pytest
+#   bash <skill-dir>/scripts/wt_test.sh /tmp/tidy-39 git cherry-pick -n 22f67f49a663c2c10b188e23d333378
 ```
 
 > [!TIP]

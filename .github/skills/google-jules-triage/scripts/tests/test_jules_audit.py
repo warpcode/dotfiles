@@ -260,6 +260,55 @@ class TestJulesAudit(unittest.TestCase):
         # Only page 1 should have been fetched; page 2 must NOT be requested
         self.assertEqual(mock_client.list_sessions.call_count, 1)
 
+    @patch("jules_audit.get_client")
+    def test_days_alias_and_timeout(self, mock_get_client):
+        """--days alias sets max_age_days and --timeout passes timeout to get_client."""
+        mock_client = MagicMock()
+        mock_get_client.return_value = mock_client
+        mock_client.list_sessions.return_value = {"sessions": []}
+
+        with patch.dict(os.environ, {"JULES_API_KEY": "test-key"}), \
+             patch("sys.argv", ["jules_audit.py", "--all", "--days", "15", "--timeout", "45"]), \
+             patch("sys.stderr"):
+            jules_audit.main()
+
+        mock_get_client.assert_called_once_with("test-key", timeout=45)
+
+    @patch("jules_audit.get_client")
+    def test_archived_sessions_handling(self, mock_get_client):
+        """Archived sessions are skipped by default, but included when --include-archived is set."""
+        mock_client = MagicMock()
+        mock_get_client.return_value = mock_client
+        mock_client.list_sessions.return_value = {
+            "sessions": [
+                {"id": "arch-1", "title": "Archived", "archived": True, "state": "COMPLETED"},
+                {"id": "live-1", "title": "Live", "archived": False, "state": "COMPLETED"},
+            ]
+        }
+        mock_client.get_all_activities.return_value = []
+
+        # Default: skip archived
+        with patch.dict(os.environ, {"JULES_API_KEY": "test-key"}), \
+             patch("sys.argv", ["jules_audit.py", "--all", "--days", "0"]), \
+             patch("sys.stderr"):
+            jules_audit.main()
+
+        # Only live-1 should have activities requested
+        self.assertEqual(mock_client.get_all_activities.call_count, 1)
+        mock_client.get_all_activities.assert_called_with("live-1")
+
+        mock_client.get_all_activities.reset_mock()
+
+        # With --include-archived
+        with patch.dict(os.environ, {"JULES_API_KEY": "test-key"}), \
+             patch("sys.argv", ["jules_audit.py", "--all", "--days", "0", "--include-archived"]), \
+             patch("sys.stderr"):
+            jules_audit.main()
+
+        # Both arch-1 and live-1 should be processed
+        self.assertEqual(mock_client.get_all_activities.call_count, 2)
+
 
 if __name__ == "__main__":
     unittest.main()
+

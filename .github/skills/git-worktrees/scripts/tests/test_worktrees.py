@@ -204,6 +204,22 @@ class TestWorktreesScript(unittest.TestCase):
         self.assertIn("Could not determine base ref; pass --base <ref>.", res.stderr)
         self.assertFalse(os.path.exists(wt_path))
 
+    def test_repo_option(self):
+        # Run from outside the git repository (tmpdir) using -C and --repo
+        res_c = self.run_script("-C", self.repo, "--raw", cwd=self.tmpdir)
+        self.assertEqual(res_c.returncode, 0)
+        self.assertIn(f"worktree {self.repo}", res_c.stdout)
+
+        res_repo = self.run_script("--repo", self.repo, "--raw", cwd=self.tmpdir)
+        self.assertEqual(res_repo.returncode, 0)
+        self.assertIn(f"worktree {self.repo}", res_repo.stdout)
+
+    def test_not_inside_work_tree_error(self):
+        res = self.run_script("--raw", cwd=self.tmpdir)
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("Not inside a git work tree", res.stderr)
+        self.assertIn("Specify a repository path with -C <dir> or --repo <dir>", res.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -52,7 +52,7 @@ misapplied. Run the script; only read its source if it errors.
 
 | Script | Purpose | Usage |
 |---|---|---|
-| `scripts/jules_audit.py` | Complete session audit across all pages; flag empty loops, stuck runners, unread user messages | `python3 scripts/jules_audit.py --all [--with-pr] [--json]` |
+| `scripts/jules_audit.py` | Complete session audit across all pages; flag empty loops, stuck runners, unread user messages | `cloakenv run -- python3 scripts/jules_audit.py --all [--days 30] [--timeout 120] [--include-archived] [--with-pr] [--json]` |
 | `scripts/detect_empty_commits.sh` | Count empty commits above a merge base; exits `2` when wedged | `detect_empty_commits.sh <base-ref> <head-ref>` |
 | `scripts/verify_delivery.sh` | Prove from the remote whether a session pushed or opened a PR | `verify_delivery.sh <owner/repo> <source-branch> [base]` |
 | `scripts/bench_compare.sh` | Base-vs-head benchmark table; auto-copies benchmark files that exist on only one side | `bench_compare.sh <base-ref> <head-ref> [--bench RE] [--pkg P] [--count N] [--json]` |
@@ -65,10 +65,31 @@ catches a PR body quoting figures for a benchmark that never existed on base.
 
 ---
 
+## Running the Audit
+
+Always run: `cloakenv run -- python3 <skill-dir>/scripts/jules_audit.py --all --days 30` (`BypassSandbox: true`).
+Never inline `$(cloakenv get …)`.
+
+Flags:
+- `--all`: Audit all sessions across paginated pages (stops once sessions exceed max age).
+- `--days N` / `--max-age-days N`: Filter out sessions older than N days (default: 30, 0 for no limit).
+- `--session ID` / `-s ID`: Specific session ID(s) to audit (can be specified multiple times or positionally).
+- `--include-archived`: Include archived sessions in the audit (default: False; archived sessions are skipped).
+- `--timeout S`: HTTP and network socket timeout in seconds (default: 120).
+- `--with-pr`: Inspect associated PR branches and commits via `gh` CLI.
+- `--repo REPO`: Filter sessions by repository name or `owner/repo`.
+- `--stale-threshold-mins MINS`: Minutes without activity before an in-progress session is marked STALLED (default: 60).
+- `--classify`: Enforce detailed verdict classification.
+- `--json`: Output audit results as JSON instead of Markdown table.
+
+**Timeout and Heartbeat**: The script emits heartbeat progress lines to stderr (`Fetching sessions page N...` and `[idx/total] Auditing session...`). If there is no output after 60s, terminate the command and report; do not poll with `ps`, `ss`, or `strace`.
+
+---
+
 ## Triage Workflows
 
 ### Audit completeness (mandatory)
-1. Enumerate ALL sessions via `scripts/jules_audit.py --all` (non-archived, all pages). Print a table:
+1. Enumerate ALL sessions via `scripts/jules_audit.py --all --days 30` (non-archived, all pages). Print a table:
    `id | title | state | last-activity | last-user-msg | verdict`.
 2. For each session, read every activity, including user messages after the last agent plan,
    before classifying. A session with a user comment newer than the last agent activity is
