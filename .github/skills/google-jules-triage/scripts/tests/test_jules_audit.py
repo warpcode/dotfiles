@@ -227,6 +227,39 @@ class TestJulesAudit(unittest.TestCase):
         self.assertNotEqual(proc.returncode, 0)
         self.assertIn("Must specify --all or at least one --session ID", proc.stderr)
 
+    @patch("jules_audit.get_client")
+    def test_pagination_stops_when_session_exceeds_max_age(self, mock_get_client):
+        """Pagination must stop requesting pages once sessions exceed max_age_days."""
+        mock_client = MagicMock()
+        mock_get_client.return_value = mock_client
+
+        # Page 1 has one recent session and one old session (>30 days old)
+        mock_client.list_sessions.return_value = {
+            "sessions": [
+                {
+                    "id": "recent-1",
+                    "title": "Recent task",
+                    "state": "COMPLETED",
+                    "createTime": "2026-10-10T12:00:00Z",
+                },
+                {
+                    "id": "old-1",
+                    "title": "Old task",
+                    "state": "COMPLETED",
+                    "createTime": "2026-08-01T12:00:00Z",
+                },
+            ],
+            "nextPageToken": "page-2-token",
+        }
+        mock_client.get_all_activities.return_value = []
+
+        with patch.dict(os.environ, {"JULES_API_KEY": "test-key"}), \
+             patch("sys.argv", ["jules_audit.py", "--all", "--max-age-days", "30"]):
+            jules_audit.main()
+
+        # Only page 1 should have been fetched; page 2 must NOT be requested
+        self.assertEqual(mock_client.list_sessions.call_count, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

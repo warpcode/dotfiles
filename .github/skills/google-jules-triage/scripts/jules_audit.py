@@ -512,18 +512,35 @@ def main() -> None:
     client = get_client(api_key.strip())
 
     session_items: list[dict[str, Any]] = []
+    now = datetime.now(timezone.utc)
 
     if args.all:
         page_token: str | None = None
         while True:
             res = client.list_sessions(page_size=50, page_token=page_token)
             batch = res.get("sessions", [])
+            if not batch:
+                break
+            reached_max_age = False
             for s in batch:
                 if s.get("archived") is True:
                     continue
+                if args.max_age_days and args.max_age_days > 0:
+                    ts = s.get("updateTime") or s.get("createTime")
+                    if ts:
+                        dt = parse_dt(ts)
+                        if dt:
+                            age_days = (now - dt).total_seconds() / 86400.0
+                            if age_days > args.max_age_days:
+                                reached_max_age = True
+                                continue
                 session_items.append(s)
+
+            if reached_max_age and args.max_age_days and args.max_age_days > 0:
+                break
+
             page_token = res.get("nextPageToken")
-            if not page_token or not batch:
+            if not page_token:
                 break
     else:
         for sid in target_sessions:
@@ -539,7 +556,6 @@ def main() -> None:
             in s.get("sourceContext", {}).get("source", "").removeprefix("sources/").removeprefix("github/").lower()
         ]
 
-    now = datetime.now(timezone.utc)
     filtered_sessions: list[dict[str, Any]] = []
     for s in session_items:
         if args.max_age_days and args.max_age_days > 0:
@@ -553,8 +569,11 @@ def main() -> None:
         filtered_sessions.append(s)
 
     audits: list[dict[str, Any]] = []
-    for s in filtered_sessions:
+    total = len(filtered_sessions)
+    for idx, s in enumerate(filtered_sessions, 1):
         sid = s.get("id") or s.get("name", "").removeprefix("sessions/")
+        sys.stderr.write(f"[{idx}/{total}] Auditing session {sid}...\n")
+        sys.stderr.flush()
         try:
             activities = client.get_all_activities(sid)
         except Exception as e:
