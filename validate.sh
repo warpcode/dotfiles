@@ -99,6 +99,18 @@ lint_bash() {
 run "zsh -n (syntax)" lint_zsh
 run "bash -n (syntax)" lint_bash
 
+check_stray_artifacts() {
+    local strays
+    strays="$(git ls-files 2>/dev/null | grep -E '\.(rej|orig)$' || true)"
+    if [ -n "$strays" ]; then
+        printf 'Found stray patch/merge artifact files:\n%s\n' "$strays" >&2
+        return 1
+    fi
+    return 0
+}
+
+run "stray-artifacts" check_stray_artifacts
+
 # ---------------------------------------------------------------------------
 # Zsh unit tests (mirrors the lint.yml runner step)
 # ---------------------------------------------------------------------------
