@@ -57,6 +57,7 @@ misapplied. Run the script; only read its source if it errors.
 | `scripts/verify_delivery.sh` | Prove from the remote whether a session pushed or opened a PR | `verify_delivery.sh <owner/repo> <source-branch> [base]` |
 | `scripts/bench_compare.sh` | Base-vs-head benchmark table; auto-copies benchmark files that exist on only one side | `bench_compare.sh <base-ref> <head-ref> [--bench RE] [--pkg P] [--count N] [--json]` |
 | `scripts/pr_overlap_matrix.sh` | File×PR matrix across repos, flagging duplicate-PR clusters | `pr_overlap_matrix.sh --repos owner/repo[,owner/repo] [--min-shared N] [--json]` |
+| `scripts/recover_wedged_pr.sh` | Automate isolated worktree setup, empty-commit triage, and squash recovery for wedged PRs | `recover_wedged_pr.sh <owner/repo> <pr-number> [base]` |
 
 All support `--help`. `bench_compare.sh` emits Markdown by default and `--json` for machine use;
 it reports `absent on base` for benchmarks a PR introduced, which is exactly the check that
