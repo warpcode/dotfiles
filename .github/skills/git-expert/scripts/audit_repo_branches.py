@@ -104,16 +104,7 @@ def list_branches() -> list[str]:
         line = line.strip()
         if not line or line.endswith("/HEAD") or line == "origin/master" or line == "origin/main":
             continue
-        name = line[len("origin/"):] if line.startswith("origin/") else line
-        # Skip `pr-<n>` refs: these are pull-request FETCH_HEADs created by
-        # pr_audit_bundle.sh (`git fetch origin pull/<n>/head:.../pr-<n>`), not
-        # branches. Enumerating them made every audited PR appear as its own
-        # phantom branch, which then polluted the sibling table with pairs
-        # against itself. Observed 2026-10-10: `pr-178`/`pr-181` were reported
-        # as branches with no PR number and 3-10 "unique files".
-        if re.fullmatch(r"pr-\d+", name):
-            continue
-        names.append(name)
+        names.append(line[len("origin/"):] if line.startswith("origin/") else line)
     return sorted(names)
 
 
@@ -207,63 +198,25 @@ def analyse(branch: str, base: str, prmap: dict[str, dict]) -> dict:
     return row
 
 
-def identical_blobs(a: str, b: str, files: list[str]) -> list[str]:
-    """Files whose blob hash is byte-identical at both branch tips.
-
-    Two branches can carry the same change without producing textual conflict
-    markers -- e.g. one cherry-picked the other's commit, so the merge base is
-    far behind and merge-tree reports nothing useful. Blob equality is the
-    direct signal that only one of them can merge.
-    """
-    same = []
-    for path in files:
-        _, ha, _ = run(["git", "rev-parse", f"{a}:{path}"])
-        _, hb, _ = run(["git", "rev-parse", f"{b}:{path}"])
-        if ha.strip() and ha.strip() == hb.strip():
-            same.append(path)
-    return same
-
-
 def find_siblings(rows: list[dict], base: str) -> list[dict]:
-    """Branches whose unique files overlap another's.
-
-    Covers BOTH directions, because both occur in practice:
-
-      * dead vs live -- a closed branch whose work a sibling re-implemented;
-      * live vs live -- competing OPEN pull requests from the same bot. This is
-        the common case: on 2026-10-10, #180 and #181 were both open and carried
-        a byte-identical server.py (blob 22bc24e4). The previous
-        implementation only paired dead branches against live ones, so it
-        structurally could not see them and the sibling table came back empty.
-    """
+    """Closed branches whose unique files overlap an open/merged sibling's."""
     live = [r for r in rows if r["verdict"] in ("KEEP", "DELETE_MERGED") and r["unique_files"]]
-    dead = [r for r in rows if r["verdict"] in ("REVIEW", "DELETE_STALE") and r["unique_files"]]
     pairs = []
-
-    def compare(left: dict, right: dict, superseded: dict, by: dict) -> None:
-        shared = sorted(set(left["unique_files"]) & set(right["unique_files"]))
-        if not shared:
-            return
-        a, b = f"origin/{left['branch']}", f"origin/{right['branch']}"
-        pairs.append({
-            "superseded": superseded["branch"], "superseded_pr": superseded["pr"],
-            "by": by["branch"], "by_pr": by["pr"],
-            "shared_files": shared,
-            "conflict_markers": conflict_markers(a, b),
-            "identical_files": identical_blobs(a, b, shared),
-        })
-
-    for d in dead:
-        for l in live:
-            compare(d, l, d, l)
-
-    # Competing open PRs. i+1 ensures each unordered pair is compared once.
-    open_rows = [r for r in rows if r["verdict"] == "KEEP" and r["unique_files"]]
-    for i, left in enumerate(open_rows):
-        for right in open_rows[i + 1:]:
-            compare(left, right, left, right)
+    for dead in [r for r in rows if r["verdict"] in ("REVIEW", "DELETE_STALE")]:
+        if not dead["unique_files"]:
+            continue
+        for live_row in live:
+            shared = set(dead["unique_files"]) & set(live_row["unique_files"])
+            if not shared:
+                continue
+            a, b = f"origin/{dead['branch']}", f"origin/{live_row['branch']}"
+            markers = conflict_markers(a, b)
+            pairs.append({
+                "superseded": dead["branch"], "superseded_pr": dead["pr"],
+                "by": live_row["branch"], "by_pr": live_row["pr"],
+                "shared_files": sorted(shared), "conflict_markers": markers,
+            })
     return pairs
-
 
 
 def render(rows: list[dict], pairs: list[dict], base: str, repo: str) -> str:
@@ -321,30 +274,17 @@ def render(rows: list[dict], pairs: list[dict], base: str, repo: str) -> str:
     if pairs:
         out.append("## Sibling conflicts -- only one of each pair can merge")
         out.append("")
-        out.append("Covers competing OPEN pull requests as well as closed-vs-live "
-                   "branches. Both open PRs touching the same file cannot both "
-                   "merge; identical blobs mean the work is duplicated outright.")
-        out.append("")
-        out.append("| Branch A | Competing | Shared files | Conflict markers | Identical blobs |")
-        out.append("|---|---|---|---|---|")
-        for p in sorted(pairs, key=lambda x: (-len(x["identical_files"]),
-                                             -x["conflict_markers"])):
-            ident = len(p["identical_files"])
-            ident_cell = (f"**{ident} identical**" if ident else "0")
+        out.append("| Closed / older | Competing | Shared files | Conflict markers |")
+        out.append("|---|---|---|---|")
+        for p in sorted(pairs, key=lambda x: -x["conflict_markers"]):
             out.append(f"| `{p['superseded']}` (#{p['superseded_pr']}) "
                        f"| `{p['by']}` (#{p['by_pr']}) "
                        f"| {len(p['shared_files'])} "
-                       f"| {p['conflict_markers']} "
-                       f"| {ident_cell} |")
+                       f"| {p['conflict_markers']} |")
         out.append("")
         out.append("A non-zero marker count means merging both is impossible; the "
                    "second to land partially reverts the first.")
         out.append("")
-        if any(p["identical_files"] for p in pairs):
-            out.append("**Byte-identical files**: those branches carry the same "
-                       "content, so only one can merge and the other is superseded "
-                       "regardless of conflict markers. Close the duplicate.")
-            out.append("")
 
     if by_verdict.get("KEEP"):
         out.append(f"## Keep ({len(by_verdict['KEEP'])} open PRs)")

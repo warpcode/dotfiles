@@ -14,12 +14,14 @@ Use this skill whenever asked to commit changes, draft commit messages, or revie
 
 This skill provides a safe, interactive step-by-step commit procedure and formatting rules.
 
+> **Note on `<skills-dir>`**: Paths referencing `<skills-dir>` resolve relative to the root skills package directory (e.g., `.github/skills/` in this repository or `~/.gemini/config/skills/` in installed environments).
+
 ## Pillar 1: Commit Workflow
 
 Execute this workflow step-by-step when preparing and creating a git commit.
 
 ### Step 1: Collect Context
-Check repository status using `git status --porcelain` (or running the helper script `.github/skills/git-expert/scripts/status.sh`).
+Check repository status using `git status --porcelain` (or running the helper script `<skills-dir>/git-expert/scripts/status.sh`).
 Verify staged vs. unstaged changes.
 - **If staged changes exist**: Proceed to Step 2.
 - **If no staged changes exist**: Stop immediately and ask the user to stage the intended files using `git add`. Do NOT automatically stage files or proceed without staged changes.
@@ -32,7 +34,7 @@ Analyze staged filenames:
 
 ### Step 3: Staged Diff Triage
 Review the staged diff efficiently:
-- Run `python3 .github/skills/git-expert/scripts/git-diff-triage.py --threshold=40 -- --staged` or inspect `git diff --staged`.
+- Run `python3 <skills-dir>/git-expert/scripts/git-diff-triage.py --threshold=40 -- --staged` or inspect `git diff --staged`.
 - Token-efficient review: for small diffs (≤ 40 lines), review full content; for large diffs, inspect structural headers/hunks.
 
 ### Step 4: Assess Complexity
@@ -47,18 +49,18 @@ Draft the commit message adhering strictly to Pillar 2 (Commit Message Guideline
 - If multiline, body lines < 72 characters explaining *why* (not restating *what*).
 
 ### Step 6: Write Message to Temporary File
-Write the draft commit message to a temporary file using `mktemp` (e.g. `/tmp/commit-msg.txt`).
+Create a temporary file using `mktemp` (yielding e.g. `<msg-file>`) and write the draft commit message to it.
 - **MUST** use native file writing tools (e.g. `write_file`).
 - **NEVER** use shell redirection (`>`) or inline echo to create or write the file.
 
 ### Step 7: Present Command & Await Explicit Approval
 Present the exact commit command to the user for explicit approval:
 ```bash
-git commit -F /tmp/commit-msg.txt
+git commit -F <msg-file>
 ```
 - Display the drafted message content clearly.
 - **Await explicit user approval** before running `git commit`.
-- After execution and approval, clean up the temporary file (`rm /tmp/commit-msg.txt`).
+- After successful commit execution and approval, clean up the temporary file (`rm <msg-file>`).
 
 ### Operational Hard Constraints
 - **Explicit Approval Gate**: NEVER run `git commit` without explicit user permission.

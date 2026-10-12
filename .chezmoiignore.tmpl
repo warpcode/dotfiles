@@ -12,10 +12,6 @@ cache/
 conductor/
 generic/
 install.sh
-validate.sh
-*_test.py
-.zsh/tests/
-.zsh/tests/**
 tests/
 tmp/
 vendor/
@@ -44,10 +40,10 @@ Library/
 .local/share/icons/antigravity-hub.png
 {{ end }}
 
-# Ignore the Antigravity Hub extracted directory if it exists in the destination to prevent chezmoi
+# Ignore the Antigravity Hub binary if it exists in the destination to prevent chezmoi
 # from prompting about changes when the app auto-updates itself.
-{{ if stat (joinPath .chezmoi.homeDir ".local/opt/antigravity-hub") }}
-.local/opt/antigravity-hub/**
+{{ if stat (joinPath .chezmoi.homeDir ".local/bin/antigravity-hub") }}
+.local/bin/antigravity-hub
 {{ end }}
 
 # Hermes Agent state, caches, databases, and logs

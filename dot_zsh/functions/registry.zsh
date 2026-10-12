@@ -2,40 +2,9 @@
 # Namespace-scoped registries: define, query, dispatch, aggregate.
 
 # --- Internal Helpers ---
-#
-# PERF: `_registry.ns_var` and `_registry.norm` are pure string builders that
-# run on every registry.define/get/exists. Returning their result via `print`
-# forces every caller into `$( )`, which forks a subshell at ~0.49 ms each
-# (measured, zsh 5.8.1); registry.define forks 9 times, registry.get 4. Both now
-# return through the standard zsh `REPLY` convention instead, which forks
-# nothing. Per-call: registry.define 6.9 -> 1.0 ms, registry.get 2.9 -> 0.45 ms.
-#
-# SCOPE: only those two string helpers were converted. `_registry.arr_get` and
-# `_registry.aa_get` still return via stdout, so `_registry.dispatch` and
-# `registry.collect_parallel` still fork once each via `$( )` around arr_get.
-# (`registry.list` passes the name to arr_get as an argument and does not fork.)
-# Registry is not fork-free.
-#
-# STARTUP: the win is real, because six provider files under
-# `dot_zsh/apps/ai/providers/` call `ai.provider.define` at top level, and
-# `dot_zsh/init.zsh` sources `apps/**/*.zsh` at shell startup -- so registry.define
-# runs six times per interactive shell. Sourcing the init path (functions + apps,
-# as init.zsh does) measures 135.1 ms -> 88.5 ms mean over 9 reps, zsh 5.9,
-# comparing two trees differing only in this file. That ~47 ms is the figure to
-# quote; earlier "~276 -> ~206 ms" was measured over a different span and does
-# not reproduce here.
-#
-# REPLY CONTRACT: `REPLY` is global, so between a helper returning and the caller
-# reading `$REPLY`, no other REPLY-writing function may run. Every call site
-# below copies to a local on the adjacent line for this reason. A helper that
-# calls another REPLY-returning function must copy REPLY to a local *before* the
-# nested call. Note `_registry.validate_exists` sets REPLY as a side effect, so
-# registry.get/exists/list clobber a caller's global REPLY on paths that never
-# needed it -- nothing in dot_zsh/ reads REPLY today, but a new caller must not
-# assume REPLY survives a registry.* call.
 
 _registry.ns_var() {
-    REPLY="registry_${1}_${2}"
+    printf '%s_%s_%s' "registry" "$1" "$2"
 }
 
 _registry.validate_prefix() {
@@ -56,7 +25,7 @@ _registry.validate_key() {
 _registry.norm() {
     local norm="${1//-/_}"
     _registry.validate_key "$norm" || return 1
-    REPLY="$norm"
+    print -r -- "$norm"
 }
 
 _registry.validate_name() {
@@ -66,8 +35,7 @@ _registry.validate_name() {
 
 _registry.validate_exists() {
     _registry.validate_name "$1" || return 1
-    _registry.ns_var "$1" "list"
-    local list_var="$REPLY"
+    local list_var="$(_registry.ns_var "$1" "list")"
     typeset -p "$list_var" >/dev/null 2>&1 || { print "Unknown namespace: $1" >&2; return 1; }
 }
 
@@ -99,15 +67,13 @@ _registry.arr_get() {
 
 # registry.define <namespace> <id> <key>=<value> ...
 registry.define() {
-    local ns="$1" id
-    _registry.norm "$2" || return 1; id="$REPLY"
-    shift 2
+    local ns="$1" id; id="$(_registry.norm "$2")" || return 1; shift 2
     _registry.validate_name "$ns" || return 1
 
     local data_var exists_var list_var
-    _registry.ns_var "$ns" "data";    data_var="$REPLY"
-    _registry.ns_var "$ns" "exists";  exists_var="$REPLY"
-    _registry.ns_var "$ns" "list";    list_var="$REPLY"
+    data_var="$(_registry.ns_var "$ns" "data")"
+    exists_var="$(_registry.ns_var "$ns" "exists")"
+    list_var="$(_registry.ns_var "$ns" "list")"
 
     # Ensure arrays exist
     typeset -gA "$data_var" "$exists_var"
@@ -121,7 +87,7 @@ registry.define() {
     for pair in "$@"; do
         [[ "$pair" == *=* ]] || continue
         k="${pair%%=*}" v="${pair#*=}"
-        _registry.norm "$k" || return 1; k="$REPLY"
+        k="$(_registry.norm "$k")" || return 1
         _registry.aa_set "$data_var" "${id}:${k}" "$v"
     done
 
@@ -136,10 +102,8 @@ registry.define() {
 # registry.exists <namespace> <id>
 registry.exists() {
     _registry.validate_exists "$1" || return 1
-    local id
-    _registry.norm "$2" || return 1; id="$REPLY"
-    _registry.ns_var "$1" "exists"
-    local exists_var="$REPLY"
+    local id; id="$(_registry.norm "$2")" || return 1
+    local exists_var="$(_registry.ns_var "$1" "exists")"
     local exists_ref="${exists_var}[${id}]"
     [[ -n "${(P)exists_ref}" ]]
 }
@@ -147,25 +111,23 @@ registry.exists() {
 # registry.list <namespace>
 registry.list() {
     _registry.validate_exists "$1" || return 1
-    _registry.ns_var "$1" "list"
-    _registry.arr_get "$REPLY"
+    _registry.arr_get "$(_registry.ns_var "$1" "list")"
 }
 
 # registry.get <namespace> <id> <key>
 registry.get() {
     _registry.validate_exists "$1" || return 1
-    local id k data_var
-    _registry.norm "$2" || return 1; id="$REPLY"
-    _registry.norm "$3" || return 1; k="$REPLY"
-    _registry.ns_var "$1" "data"; data_var="$REPLY"
+    local id; id="$(_registry.norm "$2")" || return 1
+    local k; k="$(_registry.norm "$3")" || return 1
+    local data_var
+    data_var="$(_registry.ns_var "$1" "data")"
     _registry.aa_get "$data_var" "${id}:${k}"
 }
 
 # registry.is_enabled <namespace> <id> <func_prefix>
 registry.is_enabled() {
     _registry.validate_exists "$1" || return 1
-    local id
-    _registry.norm "$2" || return 1; id="$REPLY"
+    local id; id="$(_registry.norm "$2")" || return 1
     _registry.validate_prefix "$3" || return 1
     local fn="$3.$id.enabled"
     if (( $+functions[$fn] )); then
@@ -185,8 +147,7 @@ _registry.dispatch() {
     fi
 
     local -a ids
-    _registry.ns_var "$ns" "list"
-    ids=($(_registry.arr_get "$REPLY"))
+    ids=($(_registry.arr_get "$(_registry.ns_var "$ns" "list")"))
 
     local id fn out rc
     local filter_enabled=0
@@ -268,8 +229,7 @@ registry.collect_parallel() {
     local ns="$1" func_prefix="$2" method="$3"; shift 3
     _registry.validate_exists "$ns" || return 1
     local -a ids
-    _registry.ns_var "$ns" "list"
-    ids=($(_registry.arr_get "$REPLY"))
+    ids=($(_registry.arr_get "$(_registry.ns_var "$ns" "list")"))
 
     [[ -o monitor ]] && local restore_monitor=1 && unsetopt monitor
 

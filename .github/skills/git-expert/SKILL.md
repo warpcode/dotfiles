@@ -3,6 +3,9 @@ name: git-expert
 description: >
   Expert local Git operations: branch strategies, rebase and merge conflict
   resolution, reflog triage, submodules, and repository maintenance.
+  Load this FIRST for "fix my conflict", "rebase conflict", "unmerged paths",
+  "MERGING/REBASING state", "cherry-pick in progress" — run
+  `scripts/merge_state.sh` before reading diffs by hand.
   Use when asked to resolve merge conflicts, handle complex rebases, manage branches,
   triage reflog, or inspect repository state.
 user-invocable: false
@@ -39,7 +42,6 @@ Run bundled helper scripts relative to this skill's root directory (`<skill-dir>
 |--------|---------|----------|
 | `@scripts/status.sh` | Working tree state, branch, staged/unstaged changes, push/pull counts | Before checking local status |
 | `@scripts/context.sh <base> <head>` | Collect commits, diffstat, and full diff into temp files | Comparing base and head branches, PR prep |
-| `@scripts/branch_base_check.sh [--base REF] [--head REF] [--json]` | Fail if the head branch does not descend from the base (exits 1, prints cherry-pick remedy) | **Before `gh pr create`** — catches a branch cut from a stale feature branch |
 | `@scripts/git-diff-triage.py` | Token-efficient diff (full for small files, headers only for large) | Reviewing staged/unstaged changes |
 | `@scripts/branches.sh` | Branch overview: last commit, upstream, ahead/behind, merged status (optional `--prune`, `--delete-merged`) | "What branches exist?", "Is X merged?", branch pruning/cleanup |
 | `@scripts/branch_diff.sh` | Branch comparison vs base: divergence, commits, and file diffs | Comparing feature branch to main/base, PR prep |
@@ -83,7 +85,7 @@ plus a `git show <sha>:<path>` per side — that is four calls and ~25 KB of con
 script answers it in one. Only then read the conflicted blobs themselves; choosing how two
 divergent revisions compose is judgement and stays with you.
 
-`git rebase --continue` is not commit authoring — the `commit` skill does not apply to it.
+`git rebase --continue` is not commit authoring — the `git-commit` skill does not apply to it.
 Approval is still required where the repo instructions demand it, and always pass
 `GIT_EDITOR=true` (or `-c core.editor=true`) so the editor never opens.
 

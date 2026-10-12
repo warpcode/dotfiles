@@ -2,22 +2,6 @@
 
 Chezmoi-managed dotfiles. Edit sources in `dot_*` — never touch stowed files in `$HOME`.
 
-## Skills — load BEFORE starting work
-Browse `.github/skills/` and load the matching `SKILL.md` before executing. Do this first, not
-after improvising: a review audited by hand costs an order of magnitude more tool calls than one
-driven by a skill's bundled script.
-
-| Task | Skill |
-|---|---|
-| Auditing or reviewing any PR | `github-pr-review` |
-| Git/PR workflow, branch hygiene, conflict triage | `git-expert` |
-| Security findings, exposure, auth review | `code-security-audit` |
-| Running `gh` commands | `github-cli` |
-| Post-session skill/instruction improvement | `ai-conversation-review` |
-
-Prefer a loaded skill's bundled script over a hand-rolled command chain — if the skill ships a
-script for a step, run it rather than writing an equivalent loop.
-
 ## Loads
 - `.github/copilot-instructions.md` — Ponytail mode (auto).
 - `.github/instructions/*.md` — auto-applied via `applyTo` (zsh, mise).
@@ -40,5 +24,8 @@ Approval scope: approval covers **only the actions explicitly enumerated** in th
 sought it. A bare "proceed" / "go ahead" authorises nothing on its own — restate the list and
 confirm. Approval does not carry forward to the next gate or to a newly discovered action.
 
-`~/.gemini/config/skills/` is a direct symlink to `.github/skills/` in this repository; always
-edit and author skill sources directly under `.github/skills/`.
+## Skills
+Browse `.github/skills/`. `~/.gemini/config/skills/` is a direct symlink to `.github/skills/` in
+this repository; always edit and author skill sources directly under `.github/skills/`. Load the
+relevant SKILL.md before executing. If a loaded skill ships a script for a step, run the script — do
+not hand-write an equivalent loop.

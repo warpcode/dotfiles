@@ -19,16 +19,6 @@ ALLOWED_MODELS = frozenset({"flash_lite", "flash", "pro"})
 # Recognized standard OpenAI chat completion roles
 ALLOWED_ROLES = frozenset({"user", "assistant", "system", "developer", "tool", "function"})
 
-# SECURITY: This bridge has no authentication. Any client that can reach it can
-# drive the local `agentapi` agent with arbitrary prompts, executing with this
-# user's privileges and environment. It must therefore only ever listen on
-# loopback. Override with BRIDGE_HOST only when the exposure is understood.
-DEFAULT_HOST = "127.0.0.1"
-
-# SECURITY: Unauthenticated callers must not be able to make the server buffer
-# an unbounded body in memory (single-request memory exhaustion).
-MAX_CONTENT_LENGTH = 8 * 1024 * 1024
-
 
 def _extract_text(content):
     """Flatten OpenAI message content into a plain string.
@@ -113,30 +103,13 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
         }
         self.send_json(200, models_data)
 
-    def read_body(self):
-        """Read the request body, enforcing a maximum size.
-
-        Returns the decoded body, or None after sending an error response.
-        SECURITY: rejecting oversized requests up front prevents an unauthenticated
-        caller from forcing an unbounded allocation via Content-Length.
-        """
-        try:
-            content_length = int(self.headers.get("Content-Length", 0))
-        except (TypeError, ValueError):
-            self.send_error_response(400, "Invalid Content-Length header")
-            return None
+    def handle_completions(self):
+        content_length = int(self.headers.get("Content-Length", 0))
         if content_length == 0:
             self.send_error_response(400, "Empty request body")
-            return None
-        if content_length > MAX_CONTENT_LENGTH:
-            self.send_error_response(413, "Request body too large")
-            return None
-        return self.rfile.read(content_length)
-
-    def handle_completions(self):
-        body = self.read_body()
-        if body is None:
             return
+
+        body = self.rfile.read(content_length)
         try:
             req_data = json.loads(body.decode("utf-8"))
         except Exception as e:
@@ -153,9 +126,12 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
         self.process_completions(messages, model, is_chat=False)
 
     def handle_chat_completions(self):
-        body = self.read_body()
-        if body is None:
+        content_length = int(self.headers.get("Content-Length", 0))
+        if content_length == 0:
+            self.send_error_response(400, "Empty request body")
             return
+
+        body = self.rfile.read(content_length)
         try:
             req_data = json.loads(body.decode("utf-8"))
         except Exception as e:
@@ -347,14 +323,10 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
         # Fallback to whole stdout string if JSON parsing failed
         return None, stdout_str
 
-def run(port=18081, host=None):
-    # SECURITY: loopback-only by default. This bridge is unauthenticated, so
-    # binding 0.0.0.0 would expose remote prompt execution into `agentapi`.
-    if host is None:
-        host = os.environ.get("BRIDGE_HOST", DEFAULT_HOST)
-    server_address = (host, port)
+def run(port=18081):
+    server_address = ("", port)
     httpd = http.server.ThreadingHTTPServer(server_address, OpenAIBridgeHandler)
-    logging.info(f"Starting OpenAI Bridge server on {host}:{port}...")
+    logging.info(f"Starting OpenAI Bridge server on port {port}...")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
