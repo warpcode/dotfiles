@@ -51,7 +51,9 @@ def run_guard(subcmd: str, args: list[str] = None, stdin_str: str = None) -> tup
         sys.stderr.write(f"Error invoking security guard ({subcmd})\n")
         if os.environ.get("AI_GUARD_DEBUG"):
             try:
-                with open("/tmp/ai-guard-wrapper.log", "a") as lf:
+                log_path = os.path.expanduser("~/.local/state/ai-guard-wrapper.log")
+                os.makedirs(os.path.dirname(log_path), exist_ok=True)
+                with open(log_path, "a") as lf:
                     lf.write(f"GUARD FAILURE subcmd={subcmd}: {e!r}\n")
             except Exception:
                 pass
@@ -137,7 +139,9 @@ def handle_prompt_route(payload):
 
         if os.environ.get("AI_GUARD_DEBUG"):
             try:
-                with open("/tmp/ai-guard-wrapper.log", "a") as lf:
+                log_path = os.path.expanduser("~/.local/state/ai-guard-wrapper.log")
+                os.makedirs(os.path.dirname(log_path), exist_ok=True)
+                with open(log_path, "a") as lf:
                     lf.write(f"PROMPT SANITIZED: target_type={stype if 'stype' in locals() else 'unknown'}\n")
             except Exception:
                 pass
@@ -247,7 +251,9 @@ def main():
     raw_input = sys.stdin.read()
     if os.environ.get("AI_GUARD_DEBUG"):
         try:
-            with open("/tmp/ai-guard-wrapper.log", "a") as f:
+            log_path = os.path.expanduser("~/.local/state/ai-guard-wrapper.log")
+            os.makedirs(os.path.dirname(log_path), exist_ok=True)
+            with open(log_path, "a") as f:
                 f.write(f"HOOK CALLED: argv={sys.argv!r} len={len(raw_input)}\n")
         except Exception:
             pass
