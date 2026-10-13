@@ -85,7 +85,7 @@ python3 <skill-dir>/scripts/main.py sessions --page-size 10
 # Fetch full summary and outputs for a specific session
 python3 <skill-dir>/scripts/main.py session 4475409647262242777
 
-# Create a new coding session attached to a repository
+# Create a new coding session attached to a repository (defaults to --automation-mode AUTO_CREATE_PR)
 python3 <skill-dir>/scripts/main.py create-session \
   "Refactor sensitive memory buffers to use ZeroBytes" \
   --source github/warpcode/cloakenv \

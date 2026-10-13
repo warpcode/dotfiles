@@ -124,12 +124,15 @@ def cmd_create_session(client: JulesClient, args: argparse.Namespace) -> None:
     if not prompt:
         die("Task prompt is required. Provide prompt argument or pipe via stdin.")
 
+    automation_mode = getattr(args, "automation_mode", "AUTO_CREATE_PR")
+
     data = client.create_session(
         prompt=prompt,
         source=args.source,
         starting_branch=args.branch,
         title=args.title,
         require_plan_approval=args.require_approval,
+        automation_mode=automation_mode,
     )
     print(format_session(data))
 
@@ -585,6 +588,11 @@ Authentication:
         "--require-approval",
         action="store_true",
         help="Halt execution after plan generation to require human approval via 'approve-plan'",
+    )
+    p_create.add_argument(
+        "--automation-mode",
+        default="AUTO_CREATE_PR",
+        help="Automation mode for session execution (default: AUTO_CREATE_PR)",
     )
 
     # approve-plan
