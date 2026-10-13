@@ -1,6 +1,6 @@
 ---
-name: jules-agent-prompts
-description: Write, improve, review or extend prompts for Google Jules scheduled/async coding agents (Bolt performance, Sentinel security, Palette, documentation auditors, test writers, CI/workflow auditors, etc.) and any unattended agent that opens GitHub PRs on a schedule. Use this whenever the user mentions Jules, scheduled Jules tasks, "Bolt", "Sentinel", maintenance/janitor agents for GitHub repos, agents that create duplicate PRs, miss issues, are pedantic or micro-optimise, or asks for new agent ideas for repositories, even if they don't say "skill" or "prompt".
+name: google-jules-agent-prompts
+description: Write, improve, review or extend prompts for Google Jules scheduled/async coding agents (Bolt performance, Sentinel security, Palette, documentation auditors, test writers, CI/workflow auditors, etc.) and any unattended agent that opens GitHub PRs on a schedule. Use when the user mentions Jules, scheduled Jules tasks, "Bolt", "Sentinel", maintenance/janitor agents for GitHub repos, agents that create duplicate PRs, miss issues, are pedantic or micro-optimise, or asks for new agent ideas for repositories, even if they don't say "skill" or "prompt".
 ---
 
 # Jules agent prompts

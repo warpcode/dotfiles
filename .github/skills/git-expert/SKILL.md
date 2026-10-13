@@ -3,9 +3,9 @@ name: git-expert
 description: >
   Expert local Git operations: branch strategies, rebase and merge conflict
   resolution, reflog triage, submodules, and Conventional Commits.
-  Load this FIRST for "fix my conflict", "rebase conflict", "unmerged paths",
-  "MERGING/REBASING state", "cherry-pick in progress" — run
-  `scripts/merge_state.sh` before reading diffs by hand.
+  Use when executing local Git operations, or load FIRST for "fix my conflict",
+  "rebase conflict", "unmerged paths", "MERGING/REBASING state",
+  "cherry-pick in progress" — run `scripts/merge_state.sh` before reading diffs.
 user-invocable: false
 ---
 

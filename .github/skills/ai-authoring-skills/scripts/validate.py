@@ -398,8 +398,17 @@ def validate_skill(skill_dir, audit_script_usage=False, sessions=200):
 
     tests_dir = skill_dir / "scripts" / "tests"
     if tests_dir.is_dir():
+        scripts_dir = skill_dir / "scripts"
+        env = os.environ.copy()
+        env["PYTHONPATH"] = "."
+        if (scripts_dir / "pyproject.toml").is_file() and shutil.which("uv"):
+            cmd = ["uv", "run", "--locked", "python", "-m", "unittest", "discover", "-s", "tests"]
+        else:
+            cmd = [sys.executable, "-m", "unittest", "discover", "-s", "tests"]
         test_proc = subprocess.run(
-            [sys.executable, "-m", "unittest", "discover", "-s", str(tests_dir)],
+            cmd,
+            cwd=str(scripts_dir),
+            env=env,
             capture_output=True,
             text=True,
         )
