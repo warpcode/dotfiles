@@ -97,22 +97,16 @@ class ResolvedTarget:
         self.platform = platform  # "copilot", "antigravity", "opencode", "claude", "generic"
 
 
-def resolve_target(target: Optional[str], latest: bool = False, platform_filter: Optional[str] = None,
-                   current: bool = False) -> ResolvedTarget:
-    """Resolve a target identifier, file path, --latest, or --current across platforms."""
-    # 1. Handle --current before --latest: it is the more specific question.
-    if current:
-        return resolve_current(platform_filter)
-
-    # 2. Handle --latest
+def resolve_target(target: Optional[str], latest: bool = False, platform_filter: Optional[str] = None) -> ResolvedTarget:
+    """Resolve a target identifier, file path, or --latest across platforms."""
+    # 1. Handle --latest
     if latest:
         return resolve_latest(platform_filter)
 
     if not target:
         print(
-            "Error: Provide a transcript path, session ID/UUID, --current, or --latest.\n"
-            "       Prefer an explicit session ID, then --current; --latest is machine-wide\n"
-            "       and may resolve to a different conversation.",
+            "Error: Provide an explicit transcript path or session ID/UUID (or --latest).\n"
+            "       Example: review_conversation.py <uuid_or_path_or_ses_id> --record",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -196,85 +190,6 @@ def resolve_latest(platform_filter: Optional[str] = None) -> ResolvedTarget:
 
     if not candidates:
         print("Error: No transcripts found in standard locations.", file=sys.stderr)
-        sys.exit(1)
-
-    candidates.sort(key=lambda x: x[0], reverse=True)
-    best = candidates[0]
-    return ResolvedTarget(best[1], best[2], best[3], best[4])
-
-
-def resolve_current(platform_filter: Optional[str] = None) -> ResolvedTarget:
-    """Resolve the session for the conversation currently in progress.
-
-    `--latest` answers "which transcript changed most recently, anywhere on this
-    machine" -- which is NOT the same question as "which conversation am I in
-    right now". A long-running session loses to any newer short session, and a
-    different workspace started afterwards wins outright. Both were observed
-    (2026-10-07: `--latest` returned a dotfiles session while the active
-    cloakenv review session was still being written to).
-
-    `--current` scopes the query to the session whose `directory` matches the
-    working directory, then takes the most recently updated. Prefer an explicit
-    session ID whenever you already know it; this is the fallback that removes
-    the guesswork.
-    """
-    cwd = str(Path.cwd().resolve())
-    candidates = []
-
-    # OpenCode: scope to the current working directory.
-    if (not platform_filter or platform_filter == "opencode") and OPENCODE_DB_PATH.exists():
-        try:
-            conn = sqlite3.connect(f"file:{OPENCODE_DB_PATH}?mode=ro", uri=True)
-            rows = conn.execute(
-                "SELECT id, directory, time_updated FROM session "
-                "WHERE directory = ? ORDER BY time_updated DESC",
-                (cwd,),
-            ).fetchall()
-            for sid, sdir, tupdated in rows:
-                if not tupdated:
-                    continue
-                mtime = tupdated / 1000.0 if tupdated > 1e11 else float(tupdated)
-                candidates.append((mtime, "opencode_db", str(OPENCODE_DB_PATH), sid, "opencode"))
-            if not candidates:
-                # Fall back to a prefix match so a symlinked or trailing-slash
-                # path still resolves rather than erroring out.
-                rows = conn.execute(
-                    "SELECT id, directory, time_updated FROM session "
-                    "WHERE directory LIKE ? ORDER BY time_updated DESC",
-                    (cwd + "%",),
-                ).fetchall()
-                for sid, sdir, tupdated in rows:
-                    if not tupdated:
-                        continue
-                    mtime = tupdated / 1000.0 if tupdated > 1e11 else float(tupdated)
-                    candidates.append((mtime, "opencode_db", str(OPENCODE_DB_PATH), sid, "opencode"))
-        except Exception:
-            pass
-
-    # File-based platforms: most recently modified transcript under this workspace.
-    if not candidates:
-        for base in list(VSCODE_STORAGE_PATHS) + list(ANTIGRAVITY_BRAIN_PATHS):
-            if not base.exists():
-                continue
-            for p in base.rglob("*.jsonl"):
-                if not p.is_file():
-                    continue
-                s = str(p)
-                if cwd not in s:
-                    continue
-                if platform_filter and platform_filter not in ("copilot", "antigravity"):
-                    continue
-                candidates.append(
-                    (p.stat().st_mtime, "file", p, p.stem, detect_platform_from_file(p))
-                )
-
-    if not candidates:
-        print(
-            f"Error: No transcript found for the current working directory ({cwd}).\n"
-            "       Pass an explicit session ID or transcript path instead:\n"
-            "         review_conversation.py <ses_id|path> --record",
-            file=sys.stderr,
-        )
         sys.exit(1)
 
     candidates.sort(key=lambda x: x[0], reverse=True)
@@ -1227,13 +1142,10 @@ def main() -> None:
     parser.add_argument("target", nargs="?", default=None, help="Transcript path, session UUID, or OpenCode ses_...")
     parser.add_argument("--latest", action="store_true",
                         help="Auto-resolve the most recently updated transcript ANYWHERE on this machine. "
-                             "This is NOT necessarily the conversation in progress - prefer --current or an "
-                             "explicit session ID when reviewing the session you are in.")
-    parser.add_argument("--current", action="store_true",
-                        help="Auto-resolve the most recently updated session for the CURRENT working directory. "
-                             "Use this (or an explicit session ID) to review the conversation in progress.")
+                             "This is NOT necessarily the conversation in progress - provide an "
+                             "explicit session ID or transcript path when reviewing the session you are in.")
     parser.add_argument("--platform", choices=["copilot", "antigravity", "opencode", "claude"],
-                        help="Platform filter for --latest/--current")
+                        help="Platform filter for --latest")
 
     # Analysis modes
     parser.add_argument("--schema", action="store_true", help="Inspect event types, depth-3 keys, and field mappings")
@@ -1251,8 +1163,7 @@ def main() -> None:
     args = parser.parse_args()
 
     # 1. Resolve Target
-    resolved = resolve_target(args.target, latest=args.latest, platform_filter=args.platform,
-                              current=args.current)
+    resolved = resolve_target(args.target, latest=args.latest, platform_filter=args.platform)
 
     # 2. Ingest
     sess = ingest_session(resolved)
