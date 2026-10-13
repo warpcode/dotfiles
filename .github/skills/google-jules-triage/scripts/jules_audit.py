@@ -244,6 +244,7 @@ def audit_session(
 
     last_user_time: datetime | None = None
     last_agent_time: datetime | None = None
+    last_agent_msg_time: datetime | None = None
     last_user_msg: str = ""
     last_agent_msg: str = ""
     pending_plan_id: str | None = None
@@ -291,12 +292,14 @@ def audit_session(
             agent_activities.append({"type": "Agent Message", "content": amsg, "time": act_time})
             last_agent_msg = amsg
             last_agent_time = act_time
+            last_agent_msg_time = act_time
         elif "planGenerated" in act:
             plan = act["planGenerated"].get("plan", {})
             pending_plan_id = plan.get("id") or "plan"
             agent_activities.append({"type": "Plan Generated", "content": f"Plan {pending_plan_id}", "time": act_time})
             last_agent_time = act_time
         elif "progressUpdated" in act:
+            pending_plan_id = None
             pu = act["progressUpdated"]
             pu_title = pu.get("title", "")
             agent_activities.append({"type": "Progress Update", "content": pu_title, "time": act_time})
@@ -358,7 +361,7 @@ def audit_session(
 
     # Agent question awaiting reply
     agent_awaiting_reply = False
-    if last_agent_time and (not last_user_time or last_agent_time >= last_user_time):
+    if last_agent_msg_time and (not last_user_time or last_agent_msg_time > last_user_time):
         if last_agent_msg:
             lower_msg = last_agent_msg.lower()
             if any(
