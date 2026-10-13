@@ -24,6 +24,7 @@ These instructions capture persistent memories, behavioral guardrails, and techn
    - **Never call `update_topic` and `ask_user` in the same turn.** Set topic first, then call `ask_user` in the subsequent turn to avoid raw JSON rendering in CLI.
    - **Recommendation Invariant**: Whenever presenting choices, options, or next steps to the user, ALWAYS explicitly state the recommended choice along with the underlying rationale.
    - **Interactive Suggestion Options**: When presenting suggestions, proposals, or concrete plans, provide interactive selectable options via `ask_question` to approve, suggest changes, or reject, listing the recommended choice first.
+   - **Artifact Gating vs Modal Questions**: When creating an artifact with `RequestFeedback: true` (e.g. during planning mode), do NOT chain an immediate `ask_question` modal in the same turn. Allow the user to inspect the artifact via the UI feedback card first.
 
 5. **Resource Selection & Delegation**:
    - Check whether an existing skill applies before executing and follow its guidelines.
