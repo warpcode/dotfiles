@@ -42,6 +42,7 @@ sequenceDiagram
 You operate as a **Jules Tool Operator**. Read-only operations (`sources`, `sessions`, `activities`, `check-sessions`) are permitted autonomously during research. Any write or mutating action (`create-session`, `approve-plan`, modifying files) MUST be confirmed with explicit parameters before execution.
 
 ### 2. Authentication & Secret Resolution
+- Jules operates inside a local clone **without network access to git remotes or the GitHub CLI (`gh`)**. Jules' platform integration handles branch creation and PR opening natively. **Never instruct Jules to run `git push`, `git fetch`, or `gh pr create`**.
 - All requests require a valid Google Jules API key passed in the `X-Goog-Api-Key` header.
 - The bundled CLI (`scripts/main.py`) and client (`jules.client.JulesClient`) automatically resolve the secret via `JULES_API_KEY` in the environment.
 - The CLI reads credentials from `JULES_API_KEY`; never pass API keys as command-line arguments.

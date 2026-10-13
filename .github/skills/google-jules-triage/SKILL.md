@@ -243,17 +243,7 @@ gh pr list --state open --json number,headRefName              # no PR for this 
 The patch must be downloaded manually from the Jules web UI. So when a session finishes, check
 `gh pr list` for a branch matching its source branch **before** treating the work as saved.
 
-**Remediation.** Do not attempt to recover via the API. Respawn on the same source branch with an
-explicit, unmissable delivery instruction in the prompt — see the Delivery section of
-`templates/replacement-session-prompt.md`, and keep its wording intact:
-
-> You MUST `git push -u origin HEAD` and `gh pr create`. Do not finish without both. If the harness
-> offers to submit a patch artifact INSTEAD of pushing, decline it and push to the remote. A PR that
-> exists only inside the session is not a deliverable.
-
-Also state which attempts already failed and how, so the runner does not repeat them. Observed
-twice in a row on warpcode/cloakenv: sessions `940024975768340826` and `10856745711762183052` both
-reported success and pushed nothing.
+**Remediation.** Jules cannot run `git push` or `gh` due to lack of remote connectivity. When a session finishes with a patch artifact but no PR, publish it via the **Jules Web UI** ("Create Pull Request" button) or download/apply the unified diff patch from the session's outputs (`changeSet.gitPatch.unidiffPatch`) and open the PR locally. Do NOT instruct the runner to `git push` or `gh pr create`.
 
 ---
 
