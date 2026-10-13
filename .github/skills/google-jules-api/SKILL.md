@@ -166,6 +166,9 @@ python3 <skill-dir>/scripts/main.py archive-session --list-candidates --page-siz
 # Batch archive: archive ALL gated/stalled candidates without a PR in 1 single command
 python3 <skill-dir>/scripts/main.py archive-session --all-candidates
 
+# Batch archive: archive all sessions older than N days across all pages
+python3 <skill-dir>/scripts/main.py archive-session --all-candidates --older-than-days 30
+
 # Batch archive filtered by repo
 python3 <skill-dir>/scripts/main.py archive-session --all-candidates --repo warpcode/cloakenv
 
