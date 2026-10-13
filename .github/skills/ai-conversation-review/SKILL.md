@@ -181,6 +181,13 @@ You MUST NOT recommend scripting a "Keep in model" step.
 4. Fails loudly: `set -euo pipefail` (shell) or structured `try/except` (Python).
 5. Idempotent; mutating scripts require `--dry-run`.
 
+### Script & Process Efficiency Mandate (Batching & API Request Hygiene)
+Every review MUST explicitly evaluate existing scripts and processes for execution and network efficiency:
+1. **N+1 Sequential Request Smells**: Flag any loop or multi-turn sequence invoking CLI or REST calls per item (e.g. sequential `gh pr view` loops, per-session activities queries). Require batch endpoints, GraphQL query consolidation, or bulk repository fetches (e.g. `gh pr list --state all` once per repo).
+2. **Immutable Result Caching**: Verify whether scripts repeatedly query terminal, immutable entities (e.g. merged/closed PRs, completed historical tasks). Require disk or memory caching so repeated sweeps make zero redundant network calls.
+3. **Server-Side vs Client-Side Filtering**: Check whether commands download excessive payloads only to filter in client-side Python or shell loops. Enforce pushing filter expressions (`filter="archived=false"`, `--state`, `--limit`) directly to the API boundary.
+4. **Tool Call Sprawl Elimination**: Convert recurring multi-command chains of checks into single bundled scripts that fail loudly and return concise summaries.
+
 Start shell helpers from `<skill-dir>/templates/script-wrapper-blueprint.sh`. Detail: `references/script-consolidation-guide.md`.
 
 ---
