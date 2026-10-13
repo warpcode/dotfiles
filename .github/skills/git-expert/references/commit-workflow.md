@@ -49,7 +49,7 @@ Write the commit message to a temporary file in the system tmp directory using `
 
 ### 7. Present to User
 
-By default, always show the draft commit message to the user for approval. When approved, run the `git commit -F /tmp/*******` command and remove the temp file.
+By default, always show the draft commit message to the user for approval. When approved, execute the commit and immediate cleanup in a single command (`git commit -F /tmp/******* && rm /tmp/*******`).
 
 
 ## Operational Hard Constraints

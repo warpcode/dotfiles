@@ -780,6 +780,11 @@ def main(argv=None):
         default=200,
         help="max recent conversation sessions to scan for script audit (default: 200)",
     )
+    ap.add_argument(
+        "--json",
+        action="store_true",
+        help="output results as structured JSON",
+    )
     args = ap.parse_args(argv)
 
     if args.self_test:
@@ -788,6 +793,7 @@ def main(argv=None):
         ap.error("no skill directories given")
 
     failed = False
+    all_results = {}
     for d in args.skills:
         results = validate_skill(
             d,
@@ -796,10 +802,24 @@ def main(argv=None):
         )
         ok = not any(s == "FAIL" for _, s, _ in results)
         failed |= not ok
-        print(d)
-        for check, status, detail in results:
-            print(f"  {check} : {status}" + (f" - {detail}" if detail else ""))
-        print(f"  result : {'FAIL' if not ok else 'PASS'}")
+        if args.json:
+            all_results[str(d)] = {
+                "ok": ok,
+                "checks": [
+                    {"check": check, "status": status, "detail": detail}
+                    for check, status, detail in results
+                ],
+            }
+        else:
+            print(d)
+            for check, status, detail in results:
+                print(f"  {check} : {status}" + (f" - {detail}" if detail else ""))
+            print(f"  result : {'FAIL' if not ok else 'PASS'}")
+
+    if args.json:
+        import json
+        print(json.dumps({"results": all_results, "failed": failed}, indent=2))
+
     return 1 if failed else 0
 
 

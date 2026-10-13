@@ -17,8 +17,9 @@ changes or stage files on the user's behalf.
 
 Review the staged diff, draft the message from that diff, and present both the
 message and the exact commit command for explicit approval. Run `git commit`
-only after the user approves that exact command. If the user requests changes,
-revise and present the command again.
+only after the user approves that exact command (`git commit -F /tmp/... && rm /tmp/...`).
+If the user requests changes, revise and present the command again. For pushing commits,
+delegate to `push.sh` in `git-expert`.
 
 ## Hard Constraints
 
