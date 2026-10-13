@@ -215,7 +215,7 @@ class TestJulesAudit(unittest.TestCase):
         self.assertIn("JULES_API_KEY environment variable is required", proc.stderr)
 
     def test_cli_requires_all_or_session(self):
-        """CLI must exit non-zero when neither --all nor --session is provided."""
+        """CLI must exit non-zero when neither --all-pages nor --session is provided."""
         env = dict(os.environ)
         env["JULES_API_KEY"] = "fake-key"
         proc = subprocess.run(
@@ -225,7 +225,7 @@ class TestJulesAudit(unittest.TestCase):
             text=True,
         )
         self.assertNotEqual(proc.returncode, 0)
-        self.assertIn("Must specify --all or at least one --session ID", proc.stderr)
+        self.assertIn("Must specify --all-pages or at least one --session ID", proc.stderr)
 
     @patch("jules_audit.get_client")
     def test_pagination_stops_when_session_exceeds_max_age(self, mock_get_client):

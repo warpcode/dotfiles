@@ -8,6 +8,8 @@ track activity timelines, approve plans, send messages, and fetch git diff patch
 
 import argparse
 import json
+import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -294,6 +296,90 @@ def cmd_archive_session(client: JulesClient, args: argparse.Namespace) -> None:
         clean = sid.strip().removeprefix("sessions/")
         suffix = " (restored to active listing)" if args.unarchive else " (reversible)"
         print(f"{verb} session {clean}{suffix}")
+
+
+def build_repo_pr_cache(repos: set[str]) -> dict[str, str]:
+    """Fetch PR statuses in batch per repository using gh pr list: O(repos) instead of O(PRs)."""
+    cache: dict[str, str] = {}
+    for repo in repos:
+        try:
+            proc = subprocess.run(
+                [
+                    "gh", "pr", "list", "--repo", repo, "--state", "all",
+                    "--limit", "300", "--json", "number,state"
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=20,
+            )
+            if proc.returncode == 0 and proc.stdout.strip():
+                for pr in json.loads(proc.stdout):
+                    cache[f"{repo}#{pr['number']}"] = pr.get("state", "").upper()
+        except Exception as e:
+            sys.stderr.write(f"Warning: Failed to bulk fetch PRs for {repo}: {e}\n")
+    return cache
+
+
+def cmd_archive_closed_prs(client: JulesClient, args: argparse.Namespace) -> None:
+    """Batch archive all sessions whose remote GitHub PRs are MERGED or CLOSED."""
+    max_age = getattr(args, "max_age_days", 30)
+    if max_age == 0:
+        max_age = None
+
+    print("Auditing non-archived sessions for PR deliverables...")
+    sessions = client.audit_sessions(
+        page_size=50,
+        max_age_days=max_age,
+        repo=getattr(args, "repo", None),
+        all_pages=True,
+    )
+
+    repo_pr_map: list[tuple[str, str, int, str]] = []
+    unique_repos: set[str] = set()
+    for s in sessions:
+        pr_url = s.get("pull_request_url")
+        if not pr_url:
+            continue
+        m = re.search(r"github\.com/([^/]+/[^/]+)/pull/(\d+)", pr_url)
+        if m:
+            repo_slug = m.group(1)
+            pr_num = int(m.group(2))
+            sid = s.get("id", "")
+            title = s.get("title", "")
+            repo_pr_map.append((sid, repo_slug, pr_num, title))
+            unique_repos.add(repo_slug)
+
+    print(f"Found {len(repo_pr_map)} sessions with PRs across {len(unique_repos)} repos.")
+    print("Bulk resolving remote PR states...")
+    pr_cache = build_repo_pr_cache(unique_repos)
+
+    to_archive: list[tuple[str, str, str]] = []
+    for sid, repo_slug, pr_num, title in repo_pr_map:
+        key = f"{repo_slug}#{pr_num}"
+        state = pr_cache.get(key)
+        if state in ("MERGED", "CLOSED"):
+            to_archive.append((sid, state, title))
+
+    if not to_archive:
+        print("No sessions found with merged or closed PRs to archive.")
+        return
+
+    print(f"\nFound {len(to_archive)} sessions eligible for archival:")
+    for sid, st, tit in to_archive[:10]:
+        print(f"- `{sid}` [{st}]: {tit}")
+    if len(to_archive) > 10:
+        print(f"... and {len(to_archive) - 10} more.")
+
+    if not getattr(args, "apply", False):
+        print(f"\n[DRY RUN] Pass --apply to archive these {len(to_archive)} sessions.")
+        return
+
+    from concurrent.futures import ThreadPoolExecutor
+    print(f"\nArchiving {len(to_archive)} sessions concurrently...")
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        list(pool.map(lambda item: client.archive_session(item[0]), to_archive))
+    print(f"Successfully archived {len(to_archive)} sessions.")
 
 
 
@@ -657,6 +743,30 @@ Authentication:
         help="Nudge template to use",
     )
 
+    # archive-closed-prs
+    p_arch_prs = subparsers.add_parser(
+        "archive-closed-prs",
+        parents=[common_parser],
+        help="Batch archive sessions whose pull requests are MERGED or CLOSED on GitHub",
+        description="Audit sessions with PR deliverables, batch-check remote GitHub PR lifecycle states, and archive completed sessions.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p_arch_prs.add_argument(
+        "--apply",
+        action="store_true",
+        help="Actually apply the archival mutation (default is dry-run)",
+    )
+    p_arch_prs.add_argument(
+        "--repo",
+        help="Filter candidate sessions by repository (e.g. warpcode/cloakenv or cloakenv)",
+    )
+    p_arch_prs.add_argument(
+        "--max-age-days",
+        type=int,
+        default=30,
+        help="Ignore sessions older than this threshold in days (default: 30; set 0 to disable)",
+    )
+
     return parser
 
 
@@ -687,6 +797,7 @@ def main() -> None:
         "call": cmd_call,
         "delete-session": cmd_delete_session,
         "archive-session": cmd_archive_session,
+        "archive-closed-prs": cmd_archive_closed_prs,
     }
 
     commands[args.subcommand](client, args)

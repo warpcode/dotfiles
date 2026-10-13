@@ -444,9 +444,11 @@ def main() -> None:
         description="Audit Google Jules coding sessions for completeness, health state, and stuck runners."
     )
     parser.add_argument(
+        "--all-pages",
         "--all",
+        dest="all_pages",
         action="store_true",
-        help="Audit all non-archived sessions across all paginated pages.",
+        help="Audit non-archived sessions across all paginated pages (stops once sessions exceed max age).",
     )
     parser.add_argument(
         "--session",
@@ -508,6 +510,7 @@ def main() -> None:
 
     args = parser.parse_args()
     setattr(args, "days", args.max_age_days)
+    setattr(args, "all", args.all_pages)
 
     import socket
     socket.setdefaulttimeout(args.timeout)
@@ -523,9 +526,9 @@ def main() -> None:
 
     target_sessions = list(args.session) + list(args.positional_sessions)
 
-    if not args.all and not target_sessions:
+    if not args.all_pages and not target_sessions:
         sys.stderr.write(
-            "Error: Must specify --all or at least one --session ID.\n"
+            "Error: Must specify --all-pages or at least one --session ID.\n"
             "Use --help for usage information.\n"
         )
         sys.exit(1)
@@ -535,16 +538,17 @@ def main() -> None:
     session_items: list[dict[str, Any]] = []
     now = datetime.now(timezone.utc)
 
-    if args.all:
+    if args.all_pages:
         page_token: str | None = None
         page_num = 0
+        filter_expr = None if args.include_archived else "archived=false"
         while True:
             page_num += 1
             sys.stderr.write(
                 f"Fetching sessions page {page_num}... ({len(session_items)} collected so far)\n"
             )
             sys.stderr.flush()
-            res = client.list_sessions(page_size=50, page_token=page_token)
+            res = client.list_sessions(page_size=50, page_token=page_token, filter_expr=filter_expr)
             batch = res.get("sessions", [])
             if not batch:
                 break
@@ -599,13 +603,21 @@ def main() -> None:
     total = len(filtered_sessions)
     for idx, s in enumerate(filtered_sessions, 1):
         sid = s.get("id") or s.get("name", "").removeprefix("sessions/")
+        has_pr = any("pullRequest" in out for out in s.get("outputs", []))
+        is_completed = s.get("state") == "COMPLETED"
+
         sys.stderr.write(f"[{idx}/{total}] Auditing session {sid}...\n")
         sys.stderr.flush()
-        try:
-            activities = client.get_all_activities(sid)
-        except Exception as e:
-            sys.stderr.write(f"Warning: Failed to fetch activities for session {sid}: {e}\n")
+
+        # Optimization: bypass N+1 activity fetching for completed sessions that already delivered a PR
+        if is_completed and has_pr and not getattr(args, "classify", False):
             activities = []
+        else:
+            try:
+                activities = client.get_all_activities(sid)
+            except Exception as e:
+                sys.stderr.write(f"Warning: Failed to fetch activities for session {sid}: {e}\n")
+                activities = []
 
         audit_res = audit_session(
             session=s,

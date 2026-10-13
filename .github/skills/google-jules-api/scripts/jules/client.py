@@ -297,7 +297,11 @@ class JulesClient:
                 pr_url = out["pullRequest"].get("url", "")
                 break
 
-        activities = self.get_all_activities(sid)
+        # Optimization: bypass activity fetching for completed sessions that already produced a PR
+        if state == "COMPLETED" and pr_url:
+            activities = []
+        else:
+            activities = self.get_all_activities(sid)
         now = datetime.now(timezone.utc)
 
         conversation_history: list[dict[str, Any]] = []
@@ -540,6 +544,8 @@ class JulesClient:
         all_pages: bool = False,
     ) -> list[dict[str, Any]]:
         """List and audit recent sessions, optionally filtered by repo, ignoring inactive sessions over max_age_days old."""
+        if filter_expr is None:
+            filter_expr = "archived=false"
         sessions: list[dict[str, Any]] = []
         page_token: str | None = None
         while True:
@@ -558,6 +564,8 @@ class JulesClient:
         now = datetime.now(timezone.utc)
         audits = []
         for s in sessions:
+            if s.get("archived") is True:
+                continue
             if max_age_days is not None and max_age_days > 0:
                 ts = s.get("createTime") or s.get("updateTime")
                 if ts:
