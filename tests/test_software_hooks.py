@@ -30,6 +30,8 @@ OPENCODE_PLUGIN = REPO_ROOT / "dot_config" / "opencode" / "plugins" / "security-
 OPENCODE_TEST_MJS = REPO_ROOT / "tests" / "test_opencode_plugin.mjs"
 VSCODE_SETTINGS_TMPL = REPO_ROOT / "dot_config" / "Code" / "User" / "settings.json.tmpl"
 VALIDATE_SCRIPT = Path.home() / ".gemini" / "config" / "skills" / "ai-authoring-hooks" / "scripts" / "validate.py"
+if not VALIDATE_SCRIPT.is_file():
+    VALIDATE_SCRIPT = REPO_ROOT / ".github" / "skills" / "ai-authoring-hooks" / "scripts" / "validate.py"
 
 
 def resolve_binary(name: str) -> str | None:
@@ -504,15 +506,13 @@ class TestCrossPlatformHookSchemas(unittest.TestCase):
             AGY_HOOKS_JSON,
         ]
         for hf in hook_files:
-            with self.subTest(file=hf.name):
-                self.assertTrue(hf.is_file(), f"{hf} must exist")
-                res = subprocess.run(
-                    [sys.executable, str(VALIDATE_SCRIPT), str(hf)],
-                    capture_output=True,
-                    text=True
-                )
-                self.assertEqual(res.returncode, 0, f"Validation failed for {hf}:\n{res.stdout}\n{res.stderr}")
-                self.assertIn(f"PASS: {hf}", res.stdout)
+            self.assertTrue(hf.is_file(), f"{hf} must exist")
+
+        cmd = [sys.executable, str(VALIDATE_SCRIPT)] + [str(hf) for hf in hook_files]
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        self.assertEqual(res.returncode, 0, f"Validation failed:\n{res.stdout}\n{res.stderr}")
+        for hf in hook_files:
+            self.assertIn(f"PASS: {hf}", res.stdout, f"Expected pass message for {hf} in output:\n{res.stdout}")
 
 
 if __name__ == "__main__":
