@@ -146,8 +146,13 @@ def format_dt(dt_str: str | None) -> str:
     return dt.strftime("%Y-%m-%d %H:%M")
 
 
+_PR_CACHE: dict[str, dict[str, Any]] = {}
+
+
 def inspect_github_pr(pr_url: str) -> dict[str, Any]:
     """Inspect PR via gh CLI to check mergeability and empty commits."""
+    if pr_url in _PR_CACHE:
+        return _PR_CACHE[pr_url]
     m = re.search(r"github\.com/([^/]+)/([^/]+)/pull/(\d+)", pr_url)
     if not m:
         return {}
@@ -205,6 +210,7 @@ def inspect_github_pr(pr_url: str) -> dict[str, Any]:
             result["empty_commits_count"] = empty_count
     except Exception:
         pass
+    _PR_CACHE[pr_url] = result
     return result
 
 
@@ -241,6 +247,7 @@ def audit_session(
     last_user_msg: str = ""
     last_agent_msg: str = ""
     pending_plan_id: str | None = None
+    has_git_patch: bool = False
 
     # Initial session prompt is Turn 0
     prompt = (session.get("prompt") or "").strip()
@@ -282,6 +289,11 @@ def audit_session(
             last_agent_time = act_time
         elif "artifacts" in act:
             agent_activities.append({"type": "Artifacts", "content": "Artifacts produced", "time": act_time})
+            for art in act.get("artifacts", []):
+                cs = art.get("changeSet") or {}
+                if cs.get("gitPatch") or cs.get("suggestedCommitMessage"):
+                    has_git_patch = True
+                    break
             last_agent_time = act_time
 
     # Latest activity string
@@ -382,6 +394,8 @@ def audit_session(
     elif state == "COMPLETED":
         if pr_url:
             verdict = "COMPLETED_WITH_PR"
+        elif has_git_patch:
+            verdict = "UNDELIVERED_PATCH"
         else:
             verdict = "CLOSED_NO_PR"
     elif state == "FAILED":
@@ -403,6 +417,7 @@ def audit_session(
         "pull_request_url": pr_url,
         "pr_details": pr_details,
         "user_newer_than_agent": user_newer_than_agent,
+        "has_git_patch": has_git_patch,
     }
 
 

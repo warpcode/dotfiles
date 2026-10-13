@@ -706,6 +706,7 @@ class TestJulesBatchOperations(unittest.TestCase):
         client.audit_sessions.assert_called_once_with(
             page_size=50,
             max_age_days=None,
+            older_than_days=None,
             repo=None,
             all_pages=True,
         )

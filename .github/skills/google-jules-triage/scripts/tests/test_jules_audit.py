@@ -155,6 +155,27 @@ class TestJulesAudit(unittest.TestCase):
         }
         res_no_pr = jules_audit.audit_session(sess_no_pr, [])
         self.assertEqual(res_no_pr["verdict"], "CLOSED_NO_PR")
+        self.assertFalse(res_no_pr["has_git_patch"])
+
+        sess_patch = {
+            "id": "done-patch",
+            "title": "Cleaned up imports",
+            "state": "COMPLETED",
+            "createTime": "2026-10-11T10:00:00Z",
+            "outputs": [],
+        }
+        patch_acts = [
+            {
+                "id": "act-patch",
+                "createTime": "2026-10-11T10:30:00Z",
+                "artifacts": [
+                    {"changeSet": {"gitPatch": {"unidiffPatch": "diff --git a/a b/b\n"}}}
+                ],
+            }
+        ]
+        res_patch = jules_audit.audit_session(sess_patch, patch_acts)
+        self.assertEqual(res_patch["verdict"], "UNDELIVERED_PATCH")
+        self.assertTrue(res_patch["has_git_patch"])
 
     @patch("jules_audit.inspect_github_pr")
     def test_audit_session_empty_commit_loop(self, mock_inspect):
