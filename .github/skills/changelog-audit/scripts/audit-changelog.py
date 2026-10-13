@@ -265,7 +265,28 @@ def generate_markdown_report(
     continuity_findings: List[Dict[str, Any]],
 ) -> str:
     """Generate Markdown audit report from template."""
-    total_missing = sum(len(r["missing_commits"]) for r in audit_results)
+    entry_dates = {e["version"]: e.get("date") or "Unreleased" for e in entries}
+
+    summary_rows = []
+    missing_rows = []
+    total_missing = 0
+
+    for r in audit_results:
+        missing_commits = r["missing_commits"]
+        num_missing = len(missing_commits)
+        total_missing += num_missing
+
+        ver_status = "PASS" if not missing_commits and r["format_ok"] else "FAIL"
+        d = entry_dates.get(r["version"], "N/A")
+        summary_rows.append(
+            f"| `{r['version']}` | {d} | {ver_status} | {r['git_commit_count']} | {r['audited_commit_count']} | {num_missing} |"
+        )
+
+        for m in missing_commits:
+            missing_rows.append(
+                f"| `{m['short_sha']}` | {m['author']} | {m['subject']} | **{m['severity']}** |"
+            )
+
     overall_status = "PASS" if total_missing == 0 and not continuity_findings else ("WARN" if total_missing < 3 else "FAIL")
 
     lines = [
@@ -282,11 +303,7 @@ def generate_markdown_report(
         "| Version | Date | Status | Commits in Git | Accounted | Missing Commits |",
         "|---|---|---|---|---|---|",
     ]
-
-    for r in audit_results:
-        ver_status = "PASS" if not r["missing_commits"] and r["format_ok"] else "FAIL"
-        d = next((e.get("date") or "Unreleased" for e in entries if e["version"] == r["version"]), "N/A")
-        lines.append(f"| `{r['version']}` | {d} | {ver_status} | {r['git_commit_count']} | {r['audited_commit_count']} | {len(r['missing_commits'])} |")
+    lines.extend(summary_rows)
 
     lines.extend([
         "",
@@ -303,9 +320,7 @@ def generate_markdown_report(
             "| Commit SHA | Author | Subject | Severity |",
             "|---|---|---|---|",
         ])
-        for r in audit_results:
-            for m in r["missing_commits"]:
-                lines.append(f"| `{m['short_sha']}` | {m['author']} | {m['subject']} | **{m['severity']}** |")
+        lines.extend(missing_rows)
 
     if continuity_findings:
         lines.extend([
