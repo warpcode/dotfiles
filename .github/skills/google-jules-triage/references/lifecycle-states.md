@@ -38,7 +38,7 @@ When auditing sessions, evaluate their current state and duration against this t
 | `⚠️ PLAN_GATE` | State is `AWAITING_PLAN_APPROVAL` or session went idle (`COMPLETED`) with an unapproved plan. | Review plan steps against repository standards. Approve plan or request revisions. |
 | `💬 FEEDBACK_GATE` | State is `AWAITING_USER_FEEDBACK` or session is idle with agent questions awaiting response. | Read agent inquiry. Send steering feedback or answers to resume execution. |
 | `🚨 STALLED` | State is `IN_PROGRESS` (or idle `COMPLETED`) with unreplied messages or $\ge 60$ minutes without updates. | Send progress check inquiry or probe status to wake up cloud runner. |
-| `⚪ CLOSED_NO_PR` | State is `COMPLETED` with no attached PR, but deliverables or completed milestones were produced. | Request PR creation or investigate why pre-commit publishing halted. |
+| `⚪ CLOSED_NO_PR` | State is `COMPLETED` with no attached PR, but deliverables or patch artifacts were produced. | Review outputs for unidiff patch. Publish PR via Jules Web UI button, or apply patch locally. Do NOT tell runner to git push. |
 | `🔵 ACTIVE` | State is `IN_PROGRESS` and last activity was $< 60$ minutes ago. | Progressing normally; monitor without interrupting. |
 | `✅ COMPLETED` | State is `COMPLETED` and pull request is present in outputs. | Review and audit the resulting GitHub PR. |
 | `💤 INACTIVE` | Session created or updated $> 30$ days ago. | Abandoned or obsolete run; ignore by default in health sweeps. |
