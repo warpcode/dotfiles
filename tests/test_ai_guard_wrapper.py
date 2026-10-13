@@ -203,6 +203,30 @@ class TestAIGuardWrapper(unittest.TestCase):
                         ai_guard_wrapper.main()
                     mock_handle_prompt.assert_called_once_with({})
 
+    @patch('os.path.isfile', return_value=True)
+    @patch('builtins.open', new_callable=mock_open, read_data='{"type": "USER_INPUT", "content": "What is the capital of France?"}\n')
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_prompt_route_with_transcript_path(self, mock_stdout, mock_run_guard, mock_file, mock_isfile):
+        mock_run_guard.return_value = (0, {"decision": "allow"})
+        payload = {"transcriptPath": "/path/to/transcript.jsonl"}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_prompt_route(payload)
+
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {})
+        self.mock_exit.assert_called_with(0)
+
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_prompt_route_empty_no_transcript(self, mock_stdout):
+        payload = {}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_prompt_route(payload)
+
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {})
+        self.mock_exit.assert_called_with(0)
+
     @patch('ai_guard_wrapper.run_guard')
     @patch('sys.stdout', new_callable=StringIO)
     def test_handle_prompt_route_allow(self, mock_stdout, mock_run_guard):
@@ -242,6 +266,39 @@ class TestAIGuardWrapper(unittest.TestCase):
         self.assertTrue("injectSteps" in json.loads(mock_stdout.getvalue()))
         self.mock_exit.assert_called_with(0)
 
+    @patch('subprocess.run')
+    def test_run_guard_success_with_json_output(self, mock_subprocess):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = '{"decision": "allow"}'
+        mock_subprocess.return_value = mock_proc
+
+        code, data = ai_guard_wrapper.run_guard("file", args=["/path/to/file.txt"])
+        self.assertEqual(code, 0)
+        self.assertEqual(data, {"decision": "allow"})
+
+    @patch('subprocess.run')
+    def test_run_guard_success_with_empty_output(self, mock_subprocess):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = ''
+        mock_subprocess.return_value = mock_proc
+
+        code, data = ai_guard_wrapper.run_guard("file", args=["/path/to/file.txt"])
+        self.assertEqual(code, 0)
+        self.assertEqual(data, {})
+
+    @patch('subprocess.run')
+    def test_run_guard_success_with_invalid_json_output(self, mock_subprocess):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = 'not json format'
+        mock_subprocess.return_value = mock_proc
+
+        code, data = ai_guard_wrapper.run_guard("file", args=["/path/to/file.txt"])
+        self.assertEqual(code, 0)
+        self.assertEqual(data, {})
+
     @patch('subprocess.run', side_effect=Exception("Execution mock failure with /path/to/secret.key sensitive_arg"))
     @patch('sys.stderr', new_callable=StringIO)
     def test_run_guard_exception_does_not_leak_cmd_args(self, mock_stderr, mock_subprocess):
@@ -256,6 +313,16 @@ class TestAIGuardWrapper(unittest.TestCase):
         self.assertNotIn("sensitive_arg", stderr_output)
         self.assertNotIn("/path/to/secret.key", reason_output)
         self.assertNotIn("sensitive_arg", reason_output)
+
+    @patch('builtins.open', new_callable=mock_open)
+    @patch('subprocess.run', side_effect=Exception("Execution mock failure with sensitive detail"))
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_run_guard_debug_logging_exception_handling(self, mock_stderr, mock_subprocess, m_open):
+        m_open.side_effect = Exception("Failed to open debug log")
+        with patch.dict(os.environ, {"AI_GUARD_DEBUG": "1"}, clear=True):
+            code, data = ai_guard_wrapper.run_guard("file", args=["/path/to/secret.key"])
+            self.assertEqual(code, 2)
+            self.assertEqual(data.get("decision"), "deny")
 
     @patch('builtins.open', new_callable=mock_open)
     @patch('subprocess.run', side_effect=Exception("Execution mock failure with sensitive detail"))
