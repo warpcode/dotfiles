@@ -9,7 +9,9 @@ Standards for writing helper utilities bundled in skill `scripts/` directories.
 These govern script *quality* — how a script must behave once it exists.
 
 1. **Python as Primary Language**: Write executable scripts in Python targeting the standard library.
-2. **Zero External Dependencies**: Standard library only. When dependencies are unavoidable, use `uvx <package>` for ephemeral execution without polluting host environments.
+2. **Zero External Dependencies by Default**: Target the Python standard library. When external dependencies are strictly necessary:
+   - For one-off tools, use `uvx <package>` for ephemeral execution without polluting host environments.
+   - For packaged skill suites with complex libraries, bundle a `pyproject.toml` and lockfile in `scripts/`, executing deterministically via `uv run --locked python ...` (e.g. `youtube/scripts`).
 3. **Black Box Execution**: Agents must inspect `--help` to determine arguments and options, never reading script source code into context.
 4. **Token-Efficient Output**: Return minimal, parseable output (clean tables, JSON, or direct values). Avoid decorative banners, verbose logs, or excessive padding.
 

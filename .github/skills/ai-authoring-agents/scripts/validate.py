@@ -174,6 +174,24 @@ def validate_agent(file_path):
         else:
             add("tools-format", "FAIL", "tools must be a list or string")
 
+    # Antigravity / subagent model tier and workspace checks
+    if "model" in meta:
+        model = meta["model"]
+        valid_tiers = {"inherit", "flash_lite", "flash", "pro", "sonnet", "opus", "haiku", "gpt-4o", "gpt-4o-mini"}
+        if isinstance(model, str) and (model in valid_tiers or model.startswith(("claude-", "gemini-", "gpt-"))):
+            add("model-tier", "PASS")
+        elif isinstance(model, list):
+            add("model-tier", "PASS")
+        else:
+            add("model-tier", "WARN", f"unrecognized model {model!r}; prefer standard tier aliases: inherit, flash_lite, flash, pro")
+
+    if "workspace" in meta:
+        ws = meta["workspace"]
+        if ws in ("inherit", "branch", "share"):
+            add("workspace-mode", "PASS")
+        else:
+            add("workspace-mode", "FAIL", f"invalid workspace mode {ws!r}; expected inherit, branch, or share")
+
     return results
 
 

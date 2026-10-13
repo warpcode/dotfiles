@@ -133,6 +133,9 @@ Select the closest recipe template from `templates/`:
    a linter failure, pass concise line references and errors rather than full logs.
 5. **Path Independence**: Use standard root placeholders (`${CLAUDE_PROJECT_DIR}`,
    `$PROJECT_ROOT`, or relative project paths) instead of hardcoding absolute home paths.
+6. **Execution Budget & Failure Posture**:
+   - Set explicit timeouts (e.g. `timeout: 5` to `30` seconds) on handlers to prevent hung scripts from deadlocking agent turns.
+   - Design with a conscious failure posture: default to **fail-open** for non-critical advisory linters or context injection (so hook script crashes do not abort developer sessions), but **fail-closed** (exit 2) for strict security gates.
 
 ## Workflows
 

@@ -185,6 +185,27 @@ Pre-write rebuttals to predictable model rationalizations:
 
 ---
 
+### `[P3.4]` Non-Interactive Execution Guard
+- **Cognitive Layer**: Layer 3 (Operational Boundaries)
+- **Intent**: Ensure all shell and tool invocations operate strictly non-interactively without terminal hangs, editor locks, or interactive confirmation blocks.
+- **Applicability**:
+  - *Apply When*: Scheduled tasks (e.g. Jules), CI/CD runners, background cron automations, autonomous subagents.
+  - *Do NOT Apply When*: Interactive terminal pair programming where manual user input is intended.
+- **Companion Patterns**: `[P3.1]` Negative Constraints, `[P1.4]` Deterministic SOP Operator.
+- **Canonical Prompt Clause**:
+```markdown
+## Operational Rules
+
+### Unattended / Non-Interactive Execution Invariant
+- NEVER execute interactive terminal commands or tools that prompt for stdin or open interactive editors.
+- When running git commands, ALWAYS prefix with `-c core.editor=true` or set `GIT_EDITOR=true` (e.g. `git merge --no-edit`, `git -c core.editor=true rebase`).
+- Disable terminal pagers unconditionally (`PAGER=cat`, `GIT_PAGER=cat`, `GH_PAGER=cat`).
+- Use non-interactive CLI flags for package managers and tools (`--yes`, `-y`, `--batch`, `--non-interactive`).
+- Scripts must run report-only by default; mutations require explicit flags and must not pause for y/N confirmations in unattended environments.
+```
+
+---
+
 ## Layer 4: Reasoning & State Scaffolding
 
 ### `[P4.1]` Cite-or-Abstain (Zero-Hallucination Grounding)
@@ -399,4 +420,21 @@ Emit a progress report at each phase milestone:
 - **Verification Evidence**: Verbatim command output demonstrating success.
 - **Checklist State**: `- [x] Phase N Complete`
 - **Next Phase**: Name of next phase or halt explanation.
+```
+
+---
+
+### `[P5.5]` Tool Output Budget & Context Economy Contract
+- **Cognitive Layer**: Layer 5 (Verifiable Output Contracts)
+- **Intent**: Enforce strict context economy on tool calls, requiring dense parseable output and preventing runaway stdout buffer floods.
+- **Applicability**:
+  - *Apply When*: Custom CLI wrappers, gather bundles, multi-turn tool orchestrations, automated PR audits.
+  - *Do NOT Apply When*: Low-output atomic operations.
+- **Companion Patterns**: `[P1.3]` Autonomous Supervisor, `[P1.4]` SOP Operator.
+- **Canonical Prompt Clause**:
+```markdown
+## Tool Budget & Output Constraints
+- Tools and scripts MUST emit dense, single-line or key-filtered JSON. Omit pretty-printing, ANSI escape sequences, or verbose progress tables unless `--verbose` is explicitly requested.
+- For queries returning >50 items, enforce server-side pagination (`--limit`, `--page-size`) and return summary counts with cursor tokens.
+- Large diffs or full transcript payloads MUST be written to disk (`--out <path>`) with a concise summary printed to stdout, preventing output truncation.
 ```

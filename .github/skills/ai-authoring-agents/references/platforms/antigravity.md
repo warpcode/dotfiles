@@ -25,7 +25,8 @@ Source: [Frontmatter Configuration (YAML)](https://antigravity.google/docs/subag
 | `tools` | string[] | `[]` | Explicit allowlist of permitted tools (e.g. `view_file`, `replace_file_content`, `grep_search`, `run_command`) |
 | `mainAgent` | boolean | `true` | Allows selection as the primary agent in chat interfaces |
 | `subagent` | boolean | `true` | Allows invocation via the `invoke_subagent` tool |
-| `model` | string | `inherit` | Model tier used when invoked: `inherit`, `flash`, or `pro` |
+| `model` | string | `inherit` | Model tier used when invoked: `inherit`, `flash_lite`, `flash`, or `pro` |
+| `workspace` | string | `inherit` | Workspace isolation mode: `inherit` (shared current workspace), `branch` (isolated clone/branch), or `share` (shared git worktree without cloning) |
 | `commandExecutionPolicy` | string | `sandbox` | Shell auto-execution policy: `off`, `auto`, `eager`, `sandbox` |
 | `mcpServers` | object[] | `[]` | Custom MCP servers configured for this subagent |
 | `skills` / `plugins` | string[] | `[]` | Skill paths (e.g. `skills/my-helper-skill`) or plugin dependencies |
