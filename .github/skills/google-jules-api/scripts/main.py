@@ -230,12 +230,19 @@ def _archive_candidates(client: JulesClient, args: argparse.Namespace) -> list[d
     max_age = getattr(args, "max_age_days", None)
     if max_age == 0:
         max_age = None
+    older_than = getattr(args, "older_than_days", None)
+    if older_than:
+        max_age = None
+        all_pages = True
     audits = client.audit_sessions(
         page_size=page_size,
         max_age_days=max_age,
+        older_than_days=older_than,
         repo=getattr(args, "repo", None),
         all_pages=all_pages,
     )
+    if older_than:
+        return [a for a in audits if not a.get("pull_request_url") or a.get("assessment") in ("CLOSED_NO_PR", "STALLED", "COMPLETED_NO_OUTPUT", "AWAITING_PLAN_APPROVAL", "AWAITING_USER_FEEDBACK", "COMPLETED")]
     return [
         a
         for a in audits
@@ -723,6 +730,11 @@ Authentication:
         type=int,
         default=30,
         help="Ignore sessions older than this threshold in days (default: 30; set 0 to disable)",
+    )
+    p_arch.add_argument(
+        "--older-than-days",
+        type=int,
+        help="Archive sessions older than N days across all pages (overrides --max-age-days)",
     )
 
     # nudge

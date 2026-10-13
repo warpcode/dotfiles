@@ -540,10 +540,11 @@ class JulesClient:
         stale_threshold_mins: int = 60,
         filter_expr: str | None = None,
         max_age_days: int | None = 30,
+        older_than_days: int | None = None,
         repo: str | None = None,
         all_pages: bool = False,
     ) -> list[dict[str, Any]]:
-        """List and audit recent sessions, optionally filtered by repo, ignoring inactive sessions over max_age_days old."""
+        """List and audit recent sessions, optionally filtered by repo or age limits."""
         if filter_expr is None:
             filter_expr = "archived=false"
         sessions: list[dict[str, Any]] = []
@@ -566,16 +567,19 @@ class JulesClient:
         for s in sessions:
             if s.get("archived") is True:
                 continue
-            if max_age_days is not None and max_age_days > 0:
-                ts = s.get("createTime") or s.get("updateTime")
-                if ts:
-                    try:
-                        s_dt = parse_iso_datetime(ts)
-                        age_days = (now - s_dt).total_seconds() / 86400.0
-                        if age_days > max_age_days:
-                            continue
-                    except Exception:
-                        pass
+            ts = s.get("createTime") or s.get("updateTime")
+            if ts:
+                try:
+                    s_dt = parse_iso_datetime(ts)
+                    age_days = (now - s_dt).total_seconds() / 86400.0
+                    if max_age_days is not None and max_age_days > 0 and age_days > max_age_days:
+                        continue
+                    if older_than_days is not None and older_than_days > 0 and age_days <= older_than_days:
+                        continue
+                except Exception:
+                    pass
+            elif older_than_days is not None and older_than_days > 0:
+                continue
             audits.append(self.audit_session(s, stale_threshold_mins=stale_threshold_mins, max_age_days=max_age_days))
         return audits
 
