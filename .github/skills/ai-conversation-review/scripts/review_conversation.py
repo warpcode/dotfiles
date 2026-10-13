@@ -328,10 +328,13 @@ def normalize_tool_key(tool_name: str, args: Any) -> str:
     cmd = str(cmd).strip()
     if not cmd:
         return "sh:?"
-    try:
-        words = [w for w in shlex.split(cmd) if "=" not in w.split("/")[0]]
-    except ValueError:
-        words = cmd.split()
+    if '"' in cmd or "'" in cmd:
+        try:
+            words = [w for w in shlex.split(cmd) if "=" not in w.split("/")[0]]
+        except ValueError:
+            words = cmd.split()
+    else:
+        words = [w for w in cmd.split() if "=" not in w.split("/")[0]]
     if not words:
         return "sh:?"
     head = Path(words[0]).name
