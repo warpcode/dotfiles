@@ -3,7 +3,7 @@ name: jira-issue-assessment
 description: >
   Produce a read-only progress assessment of a Jira issue or epic against its criteria,
   related tickets, linked evidence, and whether each requirement is visible in pinned
-  source. Use for "assess this Jira issue", "check progress", or "is this in the code?".
+  source. Use when prompted for "assess this Jira issue", "check progress", or "is this in the code?".
 argument-hint: "Jira issue key or URL"
 ---
 

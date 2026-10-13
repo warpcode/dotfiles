@@ -67,3 +67,10 @@ python3 "$JIRA_API" call GET "/rest/api/3/issue/PROJ-123/transitions"
 - [ ] If `isLast: false` is returned, pagination is handled via `nextPageToken` or the user is informed that more results exist.
 - [ ] Direct API calls use GET and a relative Jira endpoint.
 - [ ] If searching custom fields, the `fields` subcommand was used to discover the correct field ID.
+
+## Development and Benchmarking
+
+For verifying ADF (Atlassian Document Format) parser performance:
+```bash
+python3 <skill-dir>/scripts/benchmark_flatten_adf.py
+```
