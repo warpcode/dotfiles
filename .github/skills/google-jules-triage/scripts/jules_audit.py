@@ -278,6 +278,13 @@ def audit_session(
             user_messages.append({"content": "Plan approved", "time": act_time})
             last_user_time = act_time
 
+        if "artifacts" in act:
+            for art in act.get("artifacts", []):
+                cs = art.get("changeSet") or {}
+                if cs.get("gitPatch") or cs.get("suggestedCommitMessage"):
+                    has_git_patch = True
+                    break
+
         if "agentMessaged" in act:
             amsg = act["agentMessaged"].get("agentMessage", "").strip()
             agent_messages.append({"content": amsg, "time": act_time})
@@ -296,11 +303,6 @@ def audit_session(
             last_agent_time = act_time
         elif "artifacts" in act:
             agent_activities.append({"type": "Artifacts", "content": "Artifacts produced", "time": act_time})
-            for art in act.get("artifacts", []):
-                cs = art.get("changeSet") or {}
-                if cs.get("gitPatch") or cs.get("suggestedCommitMessage"):
-                    has_git_patch = True
-                    break
             last_agent_time = act_time
 
     # Latest activity string

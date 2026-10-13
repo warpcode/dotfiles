@@ -277,8 +277,6 @@ class JulesClient:
             page_token = res.get("nextPageToken")
             if not page_token or not acts:
                 break
-            if limit and len(activities) >= limit:
-                return activities[-limit:]
         if limit and len(activities) > limit:
             return activities[-limit:]
         return activities
