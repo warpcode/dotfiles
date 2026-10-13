@@ -165,13 +165,24 @@ flowchart LR
    - Embed dynamic context (`` !`git diff` ``, `@file`).
    - Define ordered steps with `- [ ]` checkboxes and explicit verification gates.
 5. **Validate**:
-   - Verify frontmatter syntax.
-   - Run the skill validator: `python3 dot_agents/skills/ai-authoring-skills/scripts/validate.py dot_agents/skills/ai-authoring-commands`.
+   - Verify frontmatter syntax and parameter placeholders.
+   - Run the command validator: `python3 <skill-dir>/scripts/validate.py <path-to-command>`.
 6. **Test Invocation**: Run `/<name>` in the target environment and verify parameter substitution and prompt execution.
 
 ---
 
-## 8. Validation Checklist
+## 8. Script Helpers & Execution
+
+Run helper scripts relative to this skill's root directory:
+
+| Utility | Location | Invocation Syntax | Purpose |
+|---|---|---|---|
+| `validate.py` | `@scripts/validate.py` | `python3 <skill-dir>/scripts/validate.py <path>` | Validates command frontmatter, description, shell pre-execution safety, and parameter placeholders |
+| `validate.py (self-test)` | `@scripts/validate.py` | `python3 <skill-dir>/scripts/validate.py --self-test` | Runs internal test suite of the command validation engine |
+
+---
+
+## 9. Validation Checklist
 
 - [ ] File location and extension match target platform discovery paths.
 - [ ] Frontmatter YAML parses cleanly and includes `description` and `argument-hint`.

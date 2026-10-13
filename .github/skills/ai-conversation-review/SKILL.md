@@ -135,6 +135,15 @@ python3 <skill-dir>/scripts/search_tools.py --scripts-dir <skill-dir>/scripts/
 # Structured output: --json | Scope filter: --workspace <path> | Platform: --platform <name>
 ```
 
+### Supporting Modules & Utilities
+
+| Utility | Location | Purpose |
+|---|---|---|
+| `parse_conversation.py` | `@scripts/parse_conversation.py` | Core transcript parser supporting Antigravity, VS Code, OpenCode, and Claude Code |
+| `offload_analysis.py` | `@scripts/offload_analysis.py` | Algorithmic detector for tool sequences, retry loops, and script offload candidates |
+| `export_opencode_session.py` | `@scripts/export_opencode_session.py` | Standalone utility to dump OpenCode SQLite conversations to portable JSONL |
+| `audit_vscode_session.py` | `@scripts/audit_vscode_session.py` | Standalone structural auditor for VS Code Copilot Chat session records |
+
 ### Output of Stage 1 Dossier
 
 The default command emits a token-efficient Markdown dossier (<120 lines, ~1.2k tokens) containing:

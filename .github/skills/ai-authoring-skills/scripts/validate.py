@@ -422,6 +422,22 @@ def validate_skill(skill_dir, audit_script_usage=False, sessions=200):
     else:
         add("scripts-compile", "PASS")
 
+    scripts_dir = skill_dir / "scripts"
+    if scripts_dir.is_dir():
+        runnable_scripts = [
+            p.name for p in scripts_dir.glob("*")
+            if p.is_file()
+            and p.suffix in (".py", ".sh", ".zsh")
+            and not p.name.startswith("test_")
+        ]
+        if runnable_scripts:
+            skill_text = md.read_text(encoding="utf-8")
+            unmentioned = [s for s in runnable_scripts if s not in skill_text]
+            if unmentioned:
+                add("orphan-scripts", "WARN", f"runnable scripts not mentioned in SKILL.md: {', '.join(unmentioned)}")
+            else:
+                add("orphan-scripts", "PASS")
+
     results.append(_check_scriptability(body_lines)[0])
     if audit_script_usage:
         results.append(_check_bundled_script_usage(skill_dir, sessions=sessions))
