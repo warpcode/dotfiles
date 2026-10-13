@@ -53,6 +53,7 @@ misapplied. Run the script; only read its source if it errors.
 | Script | Purpose | Usage |
 |---|---|---|
 | `scripts/jules_audit.py` | Complete session audit across all pages; flag empty loops, stuck runners, unread user messages | `cloakenv run -- python3 scripts/jules_audit.py --all-pages [--days 30] [--timeout 120] [--include-archived] [--with-pr] [--json]` |
+| `scripts/deliver_patch.py` | Extract undelivered git patches from completed session outputs and apply to branches | `python3 scripts/deliver_patch.py <session_id> [--apply]` |
 | `scripts/detect_empty_commits.sh` | Count empty commits above a merge base; exits `2` when wedged | `detect_empty_commits.sh <base-ref> <head-ref>` |
 | `scripts/verify_delivery.sh` | Prove from the remote whether a session pushed or opened a PR | `verify_delivery.sh <owner/repo> <source-branch> [base]` |
 | `scripts/bench_compare.sh` | Base-vs-head benchmark table; auto-copies benchmark files that exist on only one side | `bench_compare.sh <base-ref> <head-ref> [--bench RE] [--pkg P] [--count N] [--json]` |

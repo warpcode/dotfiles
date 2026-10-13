@@ -249,6 +249,13 @@ def audit_session(
     pending_plan_id: str | None = None
     has_git_patch: bool = False
 
+    # Check for git patches in session outputs
+    for out in session.get("outputs", []):
+        cs = out.get("changeSet") or {}
+        if cs.get("gitPatch") or cs.get("suggestedCommitMessage"):
+            has_git_patch = True
+            break
+
     # Initial session prompt is Turn 0
     prompt = (session.get("prompt") or "").strip()
     if prompt:
@@ -318,8 +325,10 @@ def audit_session(
         last_activity_display = f"{lat_time} ({friendly_type})"
         latest_act_time = parse_dt(latest_act.get("createTime"))
     else:
-        last_activity_display = f"{format_dt(created_time)} (Created)"
-        latest_act_time = parse_dt(created_time or updated_time)
+        disp_time = updated_time or created_time
+        disp_type = "Completed" if state == "COMPLETED" else "Created"
+        last_activity_display = f"{format_dt(disp_time)} ({disp_type})"
+        latest_act_time = parse_dt(disp_time)
 
     # Inactivity calculation
     inactive_mins = 0.0
@@ -380,6 +389,15 @@ def audit_session(
         verdict = "EMPTY_COMMIT_LOOP"
     elif stale_branch:
         verdict = "STALE_BRANCH"
+    elif state == "COMPLETED":
+        if pr_url:
+            verdict = "COMPLETED_WITH_PR"
+        elif has_git_patch:
+            verdict = "UNDELIVERED_PATCH"
+        else:
+            verdict = "CLOSED_NO_PR"
+    elif state == "FAILED":
+        verdict = "FAILED"
     elif pending_plan_id or state == "AWAITING_PLAN_APPROVAL":
         verdict = "PLAN_GATE"
     elif agent_awaiting_reply or state == "AWAITING_USER_FEEDBACK":
@@ -391,15 +409,6 @@ def audit_session(
             verdict = "STALLED"
         else:
             verdict = "ACTIVE"
-    elif state == "COMPLETED":
-        if pr_url:
-            verdict = "COMPLETED_WITH_PR"
-        elif has_git_patch:
-            verdict = "UNDELIVERED_PATCH"
-        else:
-            verdict = "CLOSED_NO_PR"
-    elif state == "FAILED":
-        verdict = "FAILED"
     elif max_age_days and age_days > max_age_days:
         verdict = "INACTIVE"
     else:
@@ -613,6 +622,35 @@ def main() -> None:
                     if age_days > args.max_age_days:
                         continue
         filtered_sessions.append(s)
+
+    # Batch pre-populate PR cache if checking PRs
+    if getattr(args, "with_pr", False):
+        repos_seen = set()
+        for s in filtered_sessions:
+            src = s.get("sourceContext", {}).get("source", "").removeprefix("sources/").removeprefix("github/")
+            if src and "/" in src:
+                repos_seen.add(src)
+        for repo_slug in repos_seen:
+            try:
+                proc = subprocess.run(
+                    ["gh", "pr", "list", "--repo", repo_slug, "--state", "all", "--limit", "100", "--json", "number,url,mergeable,commits,state"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                if proc.returncode == 0 and proc.stdout.strip():
+                    for item in json.loads(proc.stdout):
+                        u = item.get("url")
+                        if u:
+                            commits = item.get("commits", [])
+                            _PR_CACHE[u] = {
+                                "mergeable": item.get("mergeable", "UNKNOWN"),
+                                "pr_state": item.get("state", "UNKNOWN"),
+                                "commits_count": len(commits),
+                                "empty_commits_count": 0,
+                            }
+            except Exception:
+                pass
 
     audits: list[dict[str, Any]] = []
     total = len(filtered_sessions)

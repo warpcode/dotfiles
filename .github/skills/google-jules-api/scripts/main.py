@@ -187,11 +187,16 @@ def cmd_nudge(client: JulesClient, args: argparse.Namespace) -> None:
 
 
 def cmd_activities(client: JulesClient, args: argparse.Namespace) -> None:
-    data = client.list_activities(
-        session_id=args.session_id,
-        page_size=getattr(args, "page_size", None),
-        page_token=getattr(args, "page_token", None),
-    )
+    if getattr(args, "all", False) or getattr(args, "tail", None):
+        limit = getattr(args, "tail", None)
+        acts = client.get_all_activities(session_id=args.session_id, limit=limit)
+        data = {"activities": acts}
+    else:
+        data = client.list_activities(
+            session_id=args.session_id,
+            page_size=getattr(args, "page_size", None),
+            page_token=getattr(args, "page_token", None),
+        )
     print(format_activities(data, session_id=args.session_id))
 
 
@@ -630,6 +635,18 @@ Authentication:
     p_acts.add_argument(
         "session_id",
         help="Jules session ID to query activities for",
+    )
+    p_acts.add_argument(
+        "--all",
+        action="store_true",
+        help="Fetch all activities across all pages",
+    )
+    p_acts.add_argument(
+        "--tail",
+        type=int,
+        metavar="N",
+        default=None,
+        help="Return only the last N activities (fetches across pages if needed)",
     )
 
     # activity

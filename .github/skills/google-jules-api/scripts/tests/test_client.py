@@ -249,6 +249,22 @@ class TestJulesClient(unittest.TestCase):
         self.assertEqual(acts[1]["id"], "act-2")
 
     @patch("jules.client.urlopen")
+    def test_get_all_activities_with_limit(self, mock_urlopen):
+        resp1 = MagicMock()
+        resp1.getcode.return_value = 200
+        resp1.read.return_value = json.dumps({
+            "activities": [{"id": f"act-{i}"} for i in range(5)],
+            "nextPageToken": "tok2",
+        }).encode("utf-8")
+
+        mock_urlopen.return_value.__enter__.return_value = resp1
+
+        acts = self.client.get_all_activities("4475409647262242777", limit=3)
+        self.assertEqual(len(acts), 3)
+        self.assertEqual(acts[0]["id"], "act-2")
+        self.assertEqual(acts[-1]["id"], "act-4")
+
+    @patch("jules.client.urlopen")
     def test_audit_session(self, mock_urlopen):
         mock_response = MagicMock()
         mock_response.getcode.return_value = 200

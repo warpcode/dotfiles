@@ -257,8 +257,12 @@ class JulesClient:
                 die(f"Ambiguous activity ID prefix '{aid}' matches {len(matches)} activities.")
         return self.call("GET", f"sessions/{sid}/activities/{aid}")
 
-    def get_all_activities(self, session_id: str) -> list[dict[str, Any]]:
-        """Retrieve all activities for a session across all paginated pages in chronological order."""
+    def get_all_activities(self, session_id: str, limit: int | None = None) -> list[dict[str, Any]]:
+        """Retrieve activities for a session across paginated pages in chronological order.
+        
+        If limit is specified, stops pagination early once at least limit activities are fetched
+        and returns the tail slice.
+        """
         sid = session_id.strip().removeprefix("sessions/")
         activities: list[dict[str, Any]] = []
         page_token = None
@@ -269,6 +273,10 @@ class JulesClient:
             page_token = res.get("nextPageToken")
             if not page_token or not acts:
                 break
+            if limit and len(activities) >= limit:
+                return activities[-limit:]
+        if limit and len(activities) > limit:
+            return activities[-limit:]
         return activities
 
     def audit_session(
