@@ -31,7 +31,8 @@ Produce prompts for unattended repo-maintenance agents that run in Google Jules.
 3. For known agents read `references/agents/<name>.md`. Available: bolt, sentinel, docs-auditor, test-smith, workflow-warden, ratchet, flake-hunter, release-scribe. For an existing user prompt, diagnose it against the failure list below, then rewrite it in the same agent-block style.
 4. For a new agent, write an agent block with: mission, how to choose a target, evidence requirement, threshold, do-not-ship list, final message. Keep it short; the protocol carries everything shared. Add an agent offset in the focus-slice line of the protocol if you add an agent (next unused integer).
 5. Build standalone files: `python scripts/build_prompts.py <out_dir> [agent ...]` concatenates agent block + protocol into one `.txt` per agent. Present the files, one per Jules task.
-6. In the reply, state what changed and why, list anything unverified, and keep it short.
+6. Batch dispatch: `python scripts/dispatch_matrix.py [--repos <repo> ...] [--agents <agent> ...]` builds prompts into a temp directory and launches sessions via `google-jules-api` in one call.
+7. In the reply, state what changed and why, list anything unverified, and keep it short.
 
 ## Failure list for diagnosing existing prompts
 

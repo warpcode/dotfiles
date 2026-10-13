@@ -119,11 +119,12 @@ python3 <skill-dir>/scripts/main.py activity 4475409647262242777 <ACTIVITY_ID>
 Approve pending implementation plans or send steering instructions to a running session.
 
 ```bash
-# Approve a generated plan (plan ID is optional)
+# Approve a generated plan (single or batch of sessions)
 python3 <skill-dir>/scripts/main.py approve-plan 4475409647262242777
+python3 <skill-dir>/scripts/main.py approve-plan 4475409647262242777 517949789076236173 8363617059772803577
 
-# Or provide plan ID for explicit confirmation logging
-python3 <skill-dir>/scripts/main.py approve-plan 4475409647262242777 <PLAN_ID>
+# Or provide plan ID for explicit confirmation logging on a single session
+python3 <skill-dir>/scripts/main.py approve-plan 4475409647262242777 --plan-id <PLAN_ID>
 
 # Send clarifying message / guidance
 python3 <skill-dir>/scripts/main.py send-message 4475409647262242777 \
