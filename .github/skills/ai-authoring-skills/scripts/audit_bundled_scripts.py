@@ -185,13 +185,121 @@ def audit_skill_scripts(
     }
 
 
+def audit_multiple_skills(
+    skill_dirs: List[Path],
+    sessions: int = 200,
+    scan_all: bool = False,
+) -> Dict[str, Any]:
+    """Audit empirical usage of multiple skills' bundled scripts in a single batch query."""
+    skill_dirs = [d.resolve() for d in skill_dirs]
+    all_scripts: List[Tuple[Path, Path]] = []  # (skill_dir, script_path)
+    for sd in skill_dirs:
+        for s in get_bundled_scripts(sd):
+            all_scripts.append((sd, s))
+
+    if not all_scripts:
+        reports = {}
+        for sd in skill_dirs:
+            reports[sd.name] = {
+                "skill": sd.name,
+                "skill_path": str(sd),
+                "scripts_count": 0,
+                "scanned_sessions": 0,
+                "matched_sessions": 0,
+                "scripts": {},
+                "verdict": "NO_SCRIPTS",
+            }
+        return {"skills": reports, "total_skills": len(skill_dirs), "total_scripts": 0}
+
+    search_tools_bin = find_search_tools_script()
+    if not search_tools_bin:
+        raise RuntimeError("Could not find search_tools.py in ai-conversation-review skill.")
+
+    script_names = sorted(list({s.name for _, s in all_scripts}))
+    cmd = [
+        sys.executable,
+        str(search_tools_bin),
+        "--scripts", ",".join(script_names),
+        "--json",
+    ]
+    if scan_all:
+        cmd.append("--all")
+    else:
+        cmd.extend(["--sessions", str(sessions)])
+
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode != 0:
+        raise RuntimeError(f"search_tools.py failed:\n{proc.stderr}")
+
+    try:
+        data = json.loads(proc.stdout)
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"Failed to parse search_tools.py output: {e}\n{proc.stdout}")
+
+    results = data.get("results", {})
+    reports: Dict[str, Any] = {}
+
+    for sd in skill_dirs:
+        scripts = get_bundled_scripts(sd)
+        audit_report: Dict[str, Any] = {}
+        for s_path in scripts:
+            s_name = s_path.name
+            s_data = results.get(s_name, {})
+            invocations = s_data.get("invocations", 0)
+            sess_count = s_data.get("sessions", 0)
+            last_seen = s_data.get("last_seen")
+            samples = s_data.get("samples", [])
+            in_docs = check_skill_references(sd, s_name)
+
+            if invocations >= 5:
+                status = "ACTIVE"
+                recommendation = "Keep (frequently invoked in agent workflows)"
+            elif invocations > 0:
+                status = "LOW_USAGE"
+                recommendation = "Consider consolidating into a composite script to reduce tool round-trips"
+            else:
+                if in_docs:
+                    status = "NEVER_USED"
+                    recommendation = "Documented but never invoked; evaluate utility or consider removal"
+                else:
+                    status = "ORPHAN"
+                    recommendation = "Undocumented and never invoked; strong candidate for removal (dead code)"
+
+            audit_report[s_name] = {
+                "path": str(s_path.relative_to(sd)),
+                "invocations": invocations,
+                "sessions": sess_count,
+                "in_documentation": in_docs,
+                "status": status,
+                "last_seen": last_seen,
+                "recommendation": recommendation,
+                "samples": samples,
+            }
+
+        reports[sd.name] = {
+            "skill": sd.name,
+            "skill_path": str(sd),
+            "scripts_count": len(scripts),
+            "scanned_sessions": data.get("scanned_sessions", sessions),
+            "matched_sessions": data.get("matched_sessions", 0),
+            "scripts": audit_report,
+        }
+
+    return {
+        "skills": reports,
+        "total_skills": len(skill_dirs),
+        "total_scripts": len(all_scripts),
+        "scanned_sessions": data.get("scanned_sessions", sessions),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Audit empirical usage of a skill's bundled scripts across conversations.",
+        description="Audit empirical usage of skill bundled scripts across conversations.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    parser.add_argument("skill_dir", type=Path, help="Path to the skill directory")
+    parser.add_argument("skill_dirs", type=Path, nargs="+", help="Path(s) to skill director(y/ies)")
     parser.add_argument("--sessions", type=int, default=200, help="Number of recent sessions to scan (default: 200)")
     parser.add_argument("--all", action="store_true", help="Scan all available conversation sessions")
     parser.add_argument("--json", action="store_true", help="Output results in structured JSON")
@@ -199,12 +307,18 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    if not args.skill_dir.is_dir():
-        print(f"Error: '{args.skill_dir}' is not a directory.", file=sys.stderr)
-        return 1
+    for d in args.skill_dirs:
+        if not d.is_dir():
+            print(f"Error: '{d}' is not a directory.", file=sys.stderr)
+            return 1
 
     try:
-        report = audit_skill_scripts(args.skill_dir, sessions=args.sessions, scan_all=args.all)
+        if len(args.skill_dirs) == 1:
+            report = audit_skill_scripts(args.skill_dirs[0], sessions=args.sessions, scan_all=args.all)
+            multi = False
+        else:
+            report = audit_multiple_skills(args.skill_dirs, sessions=args.sessions, scan_all=args.all)
+            multi = True
     except Exception as e:
         print(f"Error during script audit: {e}", file=sys.stderr)
         return 1
@@ -212,41 +326,52 @@ def main() -> int:
     if args.json:
         print(json.dumps(report, indent=2))
         if args.strict:
-            has_obsolete = any(
-                item["status"] in ("NEVER_USED", "ORPHAN")
-                for item in report.get("scripts", {}).values()
-            )
+            if multi:
+                has_obsolete = any(
+                    item["status"] in ("NEVER_USED", "ORPHAN")
+                    for s_rep in report.get("skills", {}).values()
+                    for item in s_rep.get("scripts", {}).values()
+                )
+            else:
+                has_obsolete = any(
+                    item["status"] in ("NEVER_USED", "ORPHAN")
+                    for item in report.get("scripts", {}).values()
+                )
             return 1 if has_obsolete else 0
         return 0
 
-    print(f"# Bundled Script Usage Audit: `{report['skill']}`")
-    print(f"- **Scanned Sessions:** {report['scanned_sessions']} | **Bundled Scripts:** {report['scripts_count']}\n")
+    skills_to_show = report.get("skills", {report.get("skill"): report}) if multi else {report.get("skill"): report}
+    any_obsolete = False
 
-    if not report.get("scripts"):
-        print("No bundled scripts found in skill.")
-        return 0
+    for s_name, s_rep in skills_to_show.items():
+        print(f"# Bundled Script Usage Audit: `{s_name}`")
+        print(f"- **Scanned Sessions:** {s_rep['scanned_sessions']} | **Bundled Scripts:** {s_rep['scripts_count']}\n")
 
-    print("| Script | Invocations | Sessions | Documented | Status | Recommendation |")
-    print("|---|---:|---:|:---:|---|---|")
+        if not s_rep.get("scripts"):
+            print("No bundled scripts found in skill.\n")
+            continue
 
-    has_obsolete = False
-    for s_name, data in report["scripts"].items():
-        doc_icon = "Yes" if data["in_documentation"] else "No"
-        status = data["status"]
-        if status in ("NEVER_USED", "ORPHAN"):
-            has_obsolete = True
-            badge = f"❌ {status}"
-        elif status == "LOW_USAGE":
-            badge = f"⚠️ {status}"
-        else:
-            badge = f"✅ {status}"
+        print("| Script | Invocations | Sessions | Documented | Status | Recommendation |")
+        print("|---|---:|---:|:---:|---|---|")
 
-        print(f"| `{s_name}` | {data['invocations']} | {data['sessions']} | {doc_icon} | {badge} | {data['recommendation']} |")
+        for s_script, data in s_rep["scripts"].items():
+            doc_icon = "Yes" if data["in_documentation"] else "No"
+            status = data["status"]
+            if status in ("NEVER_USED", "ORPHAN"):
+                any_obsolete = True
+                badge = f"❌ {status}"
+            elif status == "LOW_USAGE":
+                badge = f"⚠️ {status}"
+            else:
+                badge = f"✅ {status}"
 
-    if has_obsolete:
-        print("\n> [!WARNING] Unused or orphan scripts detected. Review for potential removal or consolidation.")
+            print(f"| `{s_script}` | {data['invocations']} | {data['sessions']} | {doc_icon} | {badge} | {data['recommendation']} |")
+        print()
 
-    if args.strict and has_obsolete:
+    if any_obsolete:
+        print("> [!WARNING] Unused or orphan scripts detected. Review for potential removal or consolidation.")
+
+    if args.strict and any_obsolete:
         return 1
     return 0
 

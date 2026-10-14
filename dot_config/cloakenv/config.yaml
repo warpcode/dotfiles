@@ -23,9 +23,22 @@ vaults:
     source_vaults: ["kp"]
     query: '"dotenv:homelab" in tags'
     include_fields: ["url"]
+  jules:
+    provider: "search"
+    source_vaults: ["kp"]
+    query: '"dotenv:jules" in tags'
+    exclude_fields: []
+    mapping:
+      - match: "^env:(.*)$"
+        key: "$1"
 
 # Autoloading configuration: Automatically match commands, mask/transform command lines, and inject vault credentials
 autoload:
+  - match: "^jules(\\s+.*)?$"
+    merge:
+      - "jules://"
+    whitelist:
+      - "JULES_API_KEY"
   # Regex matching + command transformation (Alias masking):
   # Running: `cloakenv run -- litellm --config ~/.config/litellm/config.yaml`
   # Expands to: `uvx --with 'litellm[proxy]' --with 'fastapi<0.116' litellm --config ~/.config/litellm/config.yaml`

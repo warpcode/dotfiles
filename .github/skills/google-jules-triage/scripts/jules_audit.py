@@ -244,6 +244,7 @@ def audit_session(
 
     last_user_time: datetime | None = None
     last_agent_time: datetime | None = None
+    last_agent_msg_time: datetime | None = None
     last_user_msg: str = ""
     last_agent_msg: str = ""
     pending_plan_id: str | None = None
@@ -278,29 +279,33 @@ def audit_session(
             user_messages.append({"content": "Plan approved", "time": act_time})
             last_user_time = act_time
 
+        if "artifacts" in act:
+            for art in act.get("artifacts", []):
+                cs = art.get("changeSet") or {}
+                if cs.get("gitPatch") or cs.get("suggestedCommitMessage"):
+                    has_git_patch = True
+                    break
+
         if "agentMessaged" in act:
             amsg = act["agentMessaged"].get("agentMessage", "").strip()
             agent_messages.append({"content": amsg, "time": act_time})
             agent_activities.append({"type": "Agent Message", "content": amsg, "time": act_time})
             last_agent_msg = amsg
             last_agent_time = act_time
+            last_agent_msg_time = act_time
         elif "planGenerated" in act:
             plan = act["planGenerated"].get("plan", {})
             pending_plan_id = plan.get("id") or "plan"
             agent_activities.append({"type": "Plan Generated", "content": f"Plan {pending_plan_id}", "time": act_time})
             last_agent_time = act_time
         elif "progressUpdated" in act:
+            pending_plan_id = None
             pu = act["progressUpdated"]
             pu_title = pu.get("title", "")
             agent_activities.append({"type": "Progress Update", "content": pu_title, "time": act_time})
             last_agent_time = act_time
         elif "artifacts" in act:
             agent_activities.append({"type": "Artifacts", "content": "Artifacts produced", "time": act_time})
-            for art in act.get("artifacts", []):
-                cs = art.get("changeSet") or {}
-                if cs.get("gitPatch") or cs.get("suggestedCommitMessage"):
-                    has_git_patch = True
-                    break
             last_agent_time = act_time
 
     # Latest activity string
@@ -356,7 +361,7 @@ def audit_session(
 
     # Agent question awaiting reply
     agent_awaiting_reply = False
-    if last_agent_time and (not last_user_time or last_agent_time >= last_user_time):
+    if last_agent_msg_time and (not last_user_time or last_agent_msg_time > last_user_time):
         if last_agent_msg:
             lower_msg = last_agent_msg.lower()
             if any(
@@ -389,19 +394,19 @@ def audit_session(
         verdict = "EMPTY_COMMIT_LOOP"
     elif stale_branch:
         verdict = "STALE_BRANCH"
+    elif pr_url:
+        verdict = "COMPLETED_WITH_PR"
+    elif pending_plan_id or state == "AWAITING_PLAN_APPROVAL":
+        verdict = "PLAN_GATE"
+    elif agent_awaiting_reply or state == "AWAITING_USER_FEEDBACK":
+        verdict = "FEEDBACK_GATE"
     elif state == "COMPLETED":
-        if pr_url:
-            verdict = "COMPLETED_WITH_PR"
-        elif has_git_patch:
+        if has_git_patch:
             verdict = "UNDELIVERED_PATCH"
         else:
             verdict = "CLOSED_NO_PR"
     elif state == "FAILED":
         verdict = "FAILED"
-    elif pending_plan_id or state == "AWAITING_PLAN_APPROVAL":
-        verdict = "PLAN_GATE"
-    elif agent_awaiting_reply or state == "AWAITING_USER_FEEDBACK":
-        verdict = "FEEDBACK_GATE"
     elif user_newer_than_agent:
         verdict = "AWAITING_AGENT"
     elif state == "IN_PROGRESS":

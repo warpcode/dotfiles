@@ -36,7 +36,7 @@ def deliver(session_id: str, apply_branch: bool = False) -> int:
     commit_msg = "auto(jules): deliver undelivered patch"
     source = data.get("sourceContext", {}).get("source", "")
 
-    # Look in outputs first, then fall back to activities
+    # Look in outputs first
     for out in data.get("outputs", []):
         cs = out.get("changeSet") or {}
         if cs.get("gitPatch", {}).get("unidiffPatch"):
@@ -44,8 +44,28 @@ def deliver(session_id: str, apply_branch: bool = False) -> int:
             commit_msg = cs.get("suggestedCommitMessage") or commit_msg
             break
 
+    # If not found in outputs, fall back to checking activities
     if not patch:
-        sys.stderr.write(f"No git patch found in session {sid} outputs.\n")
+        act_cmd = ["python3", str(api_main), "call", "GET", f"sessions/{sid}/activities"]
+        act_proc = subprocess.run(act_cmd, capture_output=True, text=True, check=False)
+        if act_proc.returncode == 0:
+            try:
+                act_data = json.loads(act_proc.stdout)
+                activities = act_data if isinstance(act_data, list) else act_data.get("activities", [])
+                for act in reversed(activities):
+                    for art in act.get("artifacts", []):
+                        cs = art.get("changeSet") or {}
+                        if cs.get("gitPatch", {}).get("unidiffPatch"):
+                            patch = cs["gitPatch"]["unidiffPatch"]
+                            commit_msg = cs.get("suggestedCommitMessage") or commit_msg
+                            break
+                    if patch:
+                        break
+            except Exception:
+                pass
+
+    if not patch:
+        sys.stderr.write(f"No git patch found in session {sid} outputs or activities.\n")
         return 1
 
     patch_path = Path(f"/tmp/jules_{sid}.patch")

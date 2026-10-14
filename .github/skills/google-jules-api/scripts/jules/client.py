@@ -150,11 +150,15 @@ class JulesClient:
         title: str | None = None,
         require_plan_approval: bool | None = None,
         env_vars: dict[str, str] | None = None,
+        automation_mode: str | None = "AUTO_CREATE_PR",
     ) -> dict[str, Any]:
         """Create and initiate a new Jules coding task session."""
         payload: dict[str, Any] = {
             "prompt": prompt,
         }
+
+        if automation_mode:
+            payload["automationMode"] = automation_mode
 
         if source:
             clean_source = source.strip()
@@ -257,7 +261,12 @@ class JulesClient:
                 die(f"Ambiguous activity ID prefix '{aid}' matches {len(matches)} activities.")
         return self.call("GET", f"sessions/{sid}/activities/{aid}")
 
-    def get_all_activities(self, session_id: str, limit: int | None = None) -> list[dict[str, Any]]:
+    def get_all_activities(
+        self,
+        session_id: str,
+        limit: int | None = None,
+        max_pages: int = 50,
+    ) -> list[dict[str, Any]]:
         """Retrieve activities for a session across paginated pages in chronological order.
         
         If limit is specified, stops pagination early once at least limit activities are fetched
@@ -266,15 +275,19 @@ class JulesClient:
         sid = session_id.strip().removeprefix("sessions/")
         activities: list[dict[str, Any]] = []
         page_token = None
-        while True:
+        seen_tokens: set[str] = set()
+        for _ in range(max_pages):
             res = self.list_activities(session_id=sid, page_size=50, page_token=page_token)
             acts = res.get("activities", [])
             activities.extend(acts)
             page_token = res.get("nextPageToken")
             if not page_token or not acts:
                 break
+            if page_token in seen_tokens:
+                break
+            seen_tokens.add(page_token)
             if limit and len(activities) >= limit:
-                return activities[-limit:]
+                break
         if limit and len(activities) > limit:
             return activities[-limit:]
         return activities

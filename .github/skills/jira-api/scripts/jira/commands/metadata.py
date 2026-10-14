@@ -20,18 +20,16 @@ def cmd_statuses(client, args):
     if args.project:
         endpoint = f"rest/api/{JIRA_API_VERSION}/project/{args.project}/statuses"
         response = client.call("GET", endpoint)
-        # Flatten statuses from all issue types
+        # Flatten statuses from all issue types while preserving insertion order.
+        # 'not seen_add(...)' executes set.add() (returning None/falsy) when status ID is unseen.
         seen_ids = set()
-        flattened_response = []
-        for itype in response:
-            statuses = itype.get("statuses")
-            if statuses:
-                for status in statuses:
-                    status_id = status["id"]
-                    if status_id not in seen_ids:
-                        seen_ids.add(status_id)
-                        flattened_response.append(status)
-        response = flattened_response
+        seen_add = seen_ids.add
+        response = [
+            status
+            for itype in response
+            for status in (itype.get("statuses") or [])
+            if status["id"] not in seen_ids and not seen_add(status["id"])
+        ]
     else:
         endpoint = f"rest/api/{JIRA_API_VERSION}/status"
         response = client.call("GET", endpoint)
@@ -43,7 +41,7 @@ def cmd_statuses(client, args):
     result = {
         item["id"]: {
             "name": item["name"],
-            "category": item.get("statusCategory", {}).get("name")
+            "category": (item.get("statusCategory") or {}).get("name")
         }
         for item in response
     }

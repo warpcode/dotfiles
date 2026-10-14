@@ -135,6 +135,29 @@ class TestJulesClient(unittest.TestCase):
         self.assertEqual(data["id"], "9999999999999999999")
         self.assertEqual(data["state"], "QUEUED")
 
+        mock_urlopen.assert_called_once()
+        req = mock_urlopen.call_args[0][0]
+        payload = json.loads(req.data.decode("utf-8"))
+        self.assertEqual(payload.get("automationMode"), "AUTO_CREATE_PR")
+
+    @patch("jules.client.urlopen")
+    def test_create_session_custom_automation_mode(self, mock_urlopen):
+        mock_response = MagicMock()
+        mock_response.getcode.return_value = 200
+        mock_response.read.return_value = json.dumps({
+            "id": "8888888888888888888",
+            "state": "QUEUED",
+        }).encode("utf-8")
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        data = self.client.create_session(
+            prompt="Test prompt",
+            automation_mode=None,
+        )
+        req = mock_urlopen.call_args[0][0]
+        payload = json.loads(req.data.decode("utf-8"))
+        self.assertNotIn("automationMode", payload)
+
     @patch("jules.client.urlopen")
     def test_send_message_success(self, mock_urlopen):
         mock_response = MagicMock()

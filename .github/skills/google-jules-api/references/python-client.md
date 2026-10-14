@@ -44,13 +44,14 @@ sessions_resp = client.list_sessions(page_size=5)
 for s in sessions_resp.get("sessions", []):
     print(s["id"], s.get("state"), s.get("title"))
 
-# Create session with connected repo
+# Create session with connected repo (automation_mode defaults to "AUTO_CREATE_PR")
 session = client.create_session(
     prompt="Refactor sensitive memory buffers to use ZeroBytes",
     source="github/warpcode/cloakenv",
     starting_branch="main",
     title="Memory Scrubbing Refactor",
     require_plan_approval=True,
+    automation_mode="AUTO_CREATE_PR",
 )
 session_id = session["id"]
 

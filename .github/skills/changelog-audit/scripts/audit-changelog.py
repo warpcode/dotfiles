@@ -19,6 +19,19 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 
+# Compiled Regex Patterns
+PROVENANCE_COMMENT_PATTERN = re.compile(r"<!--\s*changelog-provenance:(.*?)-->", re.DOTALL)
+KEY_VAL_PATTERN = re.compile(r"^([a-zA-Z_]+):\s*(.*)$")
+LABEL_KV_PATTERN = re.compile(r"^([^:]+):\s*(.*)$")
+OMIT_SHA_PATTERN = re.compile(r'^- sha:\s*"?([^"]*)"?.*$')
+OMIT_REASON_PATTERN = re.compile(r'^reason:\s*"?([^"]*)"?.*$')
+VERSION_PATTERN = re.compile(r"^##\s+\[(.*?)\](?:\s+-\s+(\d{4}-\d{2}-\d{2}))?", re.MULTILINE)
+PR_REF_PATTERN = re.compile(r"(?:\[#|\(#)(\d+)(?:\]|\))")
+NARRATIVE_SPLIT_PATTERN = re.compile(r"(?:<!--\s*changelog-provenance|<details>)")
+SUBJECT_PR_PATTERN = re.compile(r"\(#(\d+)\)")
+MERGE_PR_PATTERN = re.compile(r"Merge pull request #(\d+)")
+
+
 def run_git_cmd(args: List[str], cwd: Optional[Path] = None) -> str:
     """Execute git command and return stdout."""
     res = subprocess.run(
@@ -35,7 +48,7 @@ def run_git_cmd(args: List[str], cwd: Optional[Path] = None) -> str:
 
 def parse_provenance_block(block_text: str) -> Optional[Dict[str, Any]]:
     """Parse YAML subset inside <!-- changelog-provenance: ... --> comment."""
-    m = re.search(r"<!--\s*changelog-provenance:(.*?)-->", block_text, re.DOTALL)
+    m = PROVENANCE_COMMENT_PATTERN.search(block_text)
     if not m:
         return None
 
@@ -56,7 +69,7 @@ def parse_provenance_block(block_text: str) -> Optional[Dict[str, Any]]:
             continue
 
         # Match key-value
-        kv = re.match(r"^([a-zA-Z_]+):\s*(.*)$", stripped)
+        kv = KEY_VAL_PATTERN.match(stripped)
         if kv:
             key = kv.group(1)
             val = kv.group(2).strip()
@@ -75,7 +88,7 @@ def parse_provenance_block(block_text: str) -> Optional[Dict[str, Any]]:
                 while i < len(lines) and (lines[i].startswith("    ") or lines[i].startswith("\t\t")):
                     lbl_line = lines[i].strip()
                     i += 1
-                    lbl_m = re.match(r"^([^:]+):\s*(.*)$", lbl_line)
+                    lbl_m = LABEL_KV_PATTERN.match(lbl_line)
                     if lbl_m:
                         lbl_name = lbl_m.group(1).strip()
                         lbl_prs_str = lbl_m.group(2).strip()
@@ -93,10 +106,10 @@ def parse_provenance_block(block_text: str) -> Optional[Dict[str, Any]]:
                     if omit_line.startswith("- sha:"):
                         if current_omitted:
                             omitted_list.append(current_omitted)
-                        sha_val = re.sub(r'^- sha:\s*"?([^"]*)"?.*$', r"\1", omit_line)
+                        sha_val = OMIT_SHA_PATTERN.sub(r"\1", omit_line)
                         current_omitted = {"sha": sha_val, "reason": ""}
                     elif omit_line.startswith("reason:"):
-                        r_val = re.sub(r'^reason:\s*"?([^"]*)"?.*$', r"\1", omit_line)
+                        r_val = OMIT_REASON_PATTERN.sub(r"\1", omit_line)
                         if current_omitted:
                             current_omitted["reason"] = r_val
                 if current_omitted:
@@ -110,10 +123,7 @@ def parse_provenance_block(block_text: str) -> Optional[Dict[str, Any]]:
 
 def parse_changelog(content: str) -> List[Dict[str, Any]]:
     """Split changelog into structured release entries."""
-    version_pattern = re.compile(
-        r"^##\s+\[(.*?)\](?:\s+-\s+(\d{4}-\d{2}-\d{2}))?", re.MULTILINE
-    )
-    matches = list(version_pattern.finditer(content))
+    matches = list(VERSION_PATTERN.finditer(content))
     entries = []
 
     for idx, match in enumerate(matches):
@@ -126,7 +136,7 @@ def parse_changelog(content: str) -> List[Dict[str, Any]]:
         provenance = parse_provenance_block(section_text)
 
         # Detect referenced PRs in text: [#123] or (#123)
-        prs = [int(p) for p in re.findall(r"(?:\[#|\(#)(\d+)(?:\]|\))", section_text)]
+        prs = [int(p) for p in PR_REF_PATTERN.findall(section_text)]
 
         has_breaking = "### Breaking Changes" in section_text or "⚠️" in section_text
 
@@ -188,7 +198,7 @@ def audit_version_against_git(
     missing = []
     # Extract only the user-facing narrative (before provenance block or details collapsible)
     raw_text = entry.get("text", "")
-    narrative_text = re.split(r"(?:<!--\s*changelog-provenance|<details>)", raw_text)[0]
+    narrative_text = NARRATIVE_SPLIT_PATTERN.split(raw_text)[0]
 
     for line in lines:
         parts = line.split("|", 3)
@@ -206,11 +216,11 @@ def audit_version_against_git(
                 is_accounted = True
 
             # Check if mentioned PR appears in subject
-            m_pr = re.search(r"\(#(\d+)\)", subject)
+            m_pr = SUBJECT_PR_PATTERN.search(subject)
             if m_pr and int(m_pr.group(1)) in known_prs:
                 is_accounted = True
 
-            m_merge = re.search(r"Merge pull request #(\d+)", subject)
+            m_merge = MERGE_PR_PATTERN.search(subject)
             if m_merge and int(m_merge.group(1)) in known_prs:
                 is_accounted = True
 
