@@ -394,19 +394,19 @@ def audit_session(
         verdict = "EMPTY_COMMIT_LOOP"
     elif stale_branch:
         verdict = "STALE_BRANCH"
+    elif pr_url:
+        verdict = "COMPLETED_WITH_PR"
+    elif pending_plan_id or state == "AWAITING_PLAN_APPROVAL":
+        verdict = "PLAN_GATE"
+    elif agent_awaiting_reply or state == "AWAITING_USER_FEEDBACK":
+        verdict = "FEEDBACK_GATE"
     elif state == "COMPLETED":
-        if pr_url:
-            verdict = "COMPLETED_WITH_PR"
-        elif has_git_patch:
+        if has_git_patch:
             verdict = "UNDELIVERED_PATCH"
         else:
             verdict = "CLOSED_NO_PR"
     elif state == "FAILED":
         verdict = "FAILED"
-    elif pending_plan_id or state == "AWAITING_PLAN_APPROVAL":
-        verdict = "PLAN_GATE"
-    elif agent_awaiting_reply or state == "AWAITING_USER_FEEDBACK":
-        verdict = "FEEDBACK_GATE"
     elif user_newer_than_agent:
         verdict = "AWAITING_AGENT"
     elif state == "IN_PROGRESS":

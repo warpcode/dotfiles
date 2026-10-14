@@ -191,8 +191,9 @@ def cmd_nudge(client: JulesClient, args: argparse.Namespace) -> None:
 
 def cmd_activities(client: JulesClient, args: argparse.Namespace) -> None:
     if getattr(args, "all", False) or getattr(args, "tail", None):
-        limit = getattr(args, "tail", None)
-        acts = client.get_all_activities(session_id=args.session_id, limit=limit)
+        acts = client.get_all_activities(session_id=args.session_id)
+        if getattr(args, "tail", None):
+            acts = acts[-args.tail:]
         data = {"activities": acts}
     else:
         data = client.list_activities(

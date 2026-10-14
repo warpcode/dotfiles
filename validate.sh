@@ -23,6 +23,13 @@
 
 set -uo pipefail
 
+# Guard against rogue test suites or runaway memory allocation.
+# Cap virtual memory at 8GB so any infinite allocation loop fails cleanly with MemoryError
+# rather than exhausting system RAM and triggering the Linux kernel OOM-killer.
+if [ "$(ulimit -v)" = "unlimited" ] || [ "$(ulimit -v)" -gt 8388608 ]; then
+    ulimit -v 8388608 2>/dev/null || true
+fi
+
 FAST=0
 LINT_ONLY=0
 JSON=0
