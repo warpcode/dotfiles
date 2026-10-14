@@ -170,39 +170,11 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
         model = req_data.get("model", "flash_lite")
         self.process_completions(messages, model, is_chat=True)
 
-    def process_completions(self, messages, model, is_chat=True):
-        # Map models to antigravity model options: flash_lite, flash, pro
-        if not isinstance(model, str) or model not in ALLOWED_MODELS:
-            logging.warning("Requested model %r not recognized. Falling back to 'flash_lite'.", model)
-            model = "flash_lite"
-
-        if not messages:
-            self.send_error_response(400, "No messages provided")
-            return
-
-        # Normalize message roles to standard allowed roles upfront so cache
-        # hashing and prompt construction are consistent.
-        #
-        # Non-dict entries are dropped, so the "current" message below is the
-        # last *usable* one rather than necessarily the last one supplied.
-        normalized_messages = []
-        for msg in messages:
-            if not isinstance(msg, dict):
-                continue
-            normalized_messages.append(_normalize_message(msg.get("role"), msg.get("content")))
-
-        if not normalized_messages:
-            self.send_error_response(400, "No valid messages provided")
-            return
-
-        messages = normalized_messages
-
+    def _build_agentapi_cmd(self, messages, model):
+        """Build the agentapi subprocess command for conversation continuation or start."""
         last_msg = messages[-1]
         current_prompt = last_msg.get("content", "")
 
-        # Compute hash of history (excluding last message) to check for a continued conversation.
-        # Every dict here comes from _normalize_message, so key order is fixed and json.dumps
-        # does not need sort_keys; the saving is small and shrinks as message content grows.
         history = messages[:-1]
         history_hash = ""
         if history:
@@ -215,7 +187,6 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
             with cache_lock:
                 conv_id = history_to_conv_id.get(history_hash)
 
-        # Build command to execute agentapi
         if conv_id:
             logging.info(f"Continuing conversation {conv_id} using send-message...")
             cmd = ["agentapi", "send-message", conv_id, current_prompt]
@@ -234,6 +205,88 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
 
             cmd = ["agentapi", "new-conversation", f"--model={model}", initial_prompt]
 
+        return cmd, current_prompt
+
+    def _cache_conversation_history(self, messages, model, parsed_conv_id, parsed_content):
+        """Cache conversation history hash mapped to conversation ID for multi-turn sessions."""
+        if not parsed_conv_id:
+            return
+        new_history = messages + [_normalize_message("assistant", parsed_content)]
+        new_history_str = json.dumps(new_history)
+        new_combined = f"{model}:{new_history_str}"
+        new_hash = hashlib.sha256(new_combined.encode("utf-8")).hexdigest()
+        with cache_lock:
+            history_to_conv_id[new_hash] = parsed_conv_id
+            logging.info(f"Cached history hash {new_hash} to conversation {parsed_conv_id}")
+
+    def _format_completion_response(self, parsed_conv_id, parsed_content, current_prompt, model, is_chat):
+        """Format OpenAI-compatible chat or text completion payload."""
+        response_id = f"chatcmpl-{parsed_conv_id}" if parsed_conv_id else f"chatcmpl-{uuid.uuid4()}"
+        prompt_tokens = len(current_prompt.split())
+        completion_tokens = len(parsed_content.split())
+        usage = {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": prompt_tokens + completion_tokens
+        }
+
+        if is_chat:
+            return {
+                "id": response_id,
+                "object": "chat.completion",
+                "created": int(time.time()),
+                "model": model,
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {
+                            "role": "assistant",
+                            "content": parsed_content
+                        },
+                        "finish_reason": "stop"
+                    }
+                ],
+                "usage": usage
+            }
+        else:
+            return {
+                "id": response_id,
+                "object": "text_completion",
+                "created": int(time.time()),
+                "model": model,
+                "choices": [
+                    {
+                        "text": parsed_content,
+                        "index": 0,
+                        "logprobs": None,
+                        "finish_reason": "stop"
+                    }
+                ],
+                "usage": usage
+            }
+
+    def process_completions(self, messages, model, is_chat=True):
+        if not isinstance(model, str) or model not in ALLOWED_MODELS:
+            logging.warning("Requested model %r not recognized. Falling back to 'flash_lite'.", model)
+            model = "flash_lite"
+
+        if not messages:
+            self.send_error_response(400, "No messages provided")
+            return
+
+        normalized_messages = [
+            _normalize_message(msg.get("role"), msg.get("content"))
+            for msg in messages
+            if isinstance(msg, dict)
+        ]
+
+        if not normalized_messages:
+            self.send_error_response(400, "No valid messages provided")
+            return
+
+        messages = normalized_messages
+        cmd, current_prompt = self._build_agentapi_cmd(messages, model)
+
         logging.info(f"Running command: {' '.join(cmd)}")
         try:
             res = subprocess.run(cmd, capture_output=True, text=True, check=False)
@@ -250,7 +303,6 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
         if stderr:
             logging.warning(f"agentapi stderr: {stderr}")
 
-        # Parse output
         parsed_conv_id, parsed_content = self.parse_agentapi_output(stdout)
 
         if not parsed_content:
@@ -262,62 +314,10 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
             self.send_error_response(500, f"agentapi error: {error_detail}")
             return
 
-        # If we got a conversation ID, update the cache for the next turn
-        if parsed_conv_id:
-            new_history = messages + [_normalize_message("assistant", parsed_content)]
-            new_history_str = json.dumps(new_history)
-            new_combined = f"{model}:{new_history_str}"
-            new_hash = hashlib.sha256(new_combined.encode("utf-8")).hexdigest()
-            with cache_lock:
-                history_to_conv_id[new_hash] = parsed_conv_id
-                logging.info(f"Cached history hash {new_hash} to conversation {parsed_conv_id}")
-
-        # Format OpenAI response
-        response_id = f"chatcmpl-{parsed_conv_id}" if parsed_conv_id else f"chatcmpl-{uuid.uuid4()}"
-        
-        if is_chat:
-            completion_response = {
-                "id": response_id,
-                "object": "chat.completion",
-                "created": int(time.time()),
-                "model": model,
-                "choices": [
-                    {
-                        "index": 0,
-                        "message": {
-                            "role": "assistant",
-                            "content": parsed_content
-                        },
-                        "finish_reason": "stop"
-                    }
-                ],
-                "usage": {
-                    "prompt_tokens": len(current_prompt.split()),
-                    "completion_tokens": len(parsed_content.split()),
-                    "total_tokens": len(current_prompt.split()) + len(parsed_content.split())
-                }
-            }
-        else:
-            completion_response = {
-                "id": response_id,
-                "object": "text_completion",
-                "created": int(time.time()),
-                "model": model,
-                "choices": [
-                    {
-                        "text": parsed_content,
-                        "index": 0,
-                        "logprobs": None,
-                        "finish_reason": "stop"
-                    }
-                ],
-                "usage": {
-                    "prompt_tokens": len(current_prompt.split()),
-                    "completion_tokens": len(parsed_content.split()),
-                    "total_tokens": len(current_prompt.split()) + len(parsed_content.split())
-                }
-            }
-
+        self._cache_conversation_history(messages, model, parsed_conv_id, parsed_content)
+        completion_response = self._format_completion_response(
+            parsed_conv_id, parsed_content, current_prompt, model, is_chat
+        )
         self.send_json(200, completion_response)
 
     def parse_agentapi_output(self, stdout_str):
