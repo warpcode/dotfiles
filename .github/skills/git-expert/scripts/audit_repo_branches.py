@@ -43,6 +43,7 @@ only on a hard failure.
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import re
 import subprocess
@@ -122,17 +123,22 @@ def rev(ref: str) -> str | None:
     return out.strip() if code == 0 else None
 
 
-def merge_base(a: str, b: str) -> str | None:
+@functools.lru_cache(maxsize=None)
+def _merge_base_cached(a: str, b: str) -> str | None:
     code, out, _ = run(["git", "merge-base", a, b])
     return out.strip() if code == 0 else None
 
 
+def merge_base(a: str, b: str) -> str | None:
+    if a > b:
+        a, b = b, a
+    return _merge_base_cached(a, b)
+
+
+@functools.lru_cache(maxsize=None)
 def blob(ref: str, path: str) -> str | None:
-    code, out, _ = run(["git", "cat-file", "-e", f"{ref}:{path}"])
-    if code != 0:
-        return None
-    code2, out2, _ = run(["git", "rev-parse", f"{ref}:{path}"])
-    return out2.strip() if code2 == 0 else None
+    code, out, _ = run(["git", "rev-parse", f"{ref}:{path}"])
+    return out.strip() if code == 0 else None
 
 
 def changed_files(base: str, tip: str, mb: str) -> list[str]:
@@ -140,12 +146,25 @@ def changed_files(base: str, tip: str, mb: str) -> list[str]:
     return out.split() if code == 0 else []
 
 
-def conflict_markers(a: str, b: str) -> int:
+@functools.lru_cache(maxsize=None)
+def _conflict_markers_cached(a: str, b: str) -> int:
     mb = merge_base(a, b)
     if not mb:
         return 0
     _, out, _ = run(["git", "merge-tree", mb, a, b])
     return out.count("<<<<<<<")
+
+
+def conflict_markers(a: str, b: str) -> int:
+    if a > b:
+        a, b = b, a
+    return _conflict_markers_cached(a, b)
+
+
+def clear_caches() -> None:
+    blob.cache_clear()
+    _merge_base_cached.cache_clear()
+    _conflict_markers_cached.cache_clear()
 
 
 def analyse(branch: str, base: str, prmap: dict[str, dict]) -> dict:
@@ -217,9 +236,9 @@ def identical_blobs(a: str, b: str, files: list[str]) -> list[str]:
     """
     same = []
     for path in files:
-        _, ha, _ = run(["git", "rev-parse", f"{a}:{path}"])
-        _, hb, _ = run(["git", "rev-parse", f"{b}:{path}"])
-        if ha.strip() and ha.strip() == hb.strip():
+        ha = blob(a, path)
+        hb = blob(b, path)
+        if ha and ha == hb:
             same.append(path)
     return same
 
@@ -245,12 +264,14 @@ def find_siblings(rows: list[dict], base: str) -> list[dict]:
         if not shared:
             return
         a, b = f"origin/{left['branch']}", f"origin/{right['branch']}"
+        identical = identical_blobs(a, b, shared)
+        markers = 0 if len(identical) == len(shared) else conflict_markers(a, b)
         pairs.append({
             "superseded": superseded["branch"], "superseded_pr": superseded["pr"],
             "by": by["branch"], "by_pr": by["pr"],
             "shared_files": shared,
-            "conflict_markers": conflict_markers(a, b),
-            "identical_files": identical_blobs(a, b, shared),
+            "conflict_markers": markers,
+            "identical_files": identical,
         })
 
     for d in dead:

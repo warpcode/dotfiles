@@ -64,6 +64,9 @@ class TestResolveBaseBranch(unittest.TestCase):
 
 
 class TestBlobComparison(unittest.TestCase):
+    def setUp(self):
+        branches.clear_caches()
+
     def test_blob_returns_oid(self):
         with mock.patch.object(branches, "run", return_value=(0, "abc123\n", "")):
             self.assertEqual(branches.blob("origin/master", "a.py"), "abc123")
@@ -71,6 +74,42 @@ class TestBlobComparison(unittest.TestCase):
     def test_blob_none_when_path_absent(self):
         with mock.patch.object(branches, "run", return_value=(1, "", "")):
             self.assertIsNone(branches.blob("origin/master", "gone.py"))
+
+
+class TestCachingAndOptimization(unittest.TestCase):
+    def setUp(self):
+        branches.clear_caches()
+
+    def test_blob_caches_results(self):
+        with mock.patch.object(branches, "run", return_value=(0, "oid123\n", "")) as mock_run:
+            res1 = branches.blob("ref1", "f.txt")
+            res2 = branches.blob("ref1", "f.txt")
+            self.assertEqual(res1, "oid123")
+            self.assertEqual(res2, "oid123")
+            self.assertEqual(mock_run.call_count, 1)
+
+    def test_merge_base_is_symmetric_and_cached(self):
+        with mock.patch.object(branches, "run", return_value=(0, "sha123\n", "")) as mock_run:
+            mb1 = branches.merge_base("origin/b1", "origin/b2")
+            mb2 = branches.merge_base("origin/b2", "origin/b1")
+            self.assertEqual(mb1, "sha123")
+            self.assertEqual(mb2, "sha123")
+            self.assertEqual(mock_run.call_count, 1)
+
+    def test_conflict_markers_symmetric_and_cached(self):
+        with mock.patch.object(branches, "run", side_effect=[(0, "mb123", ""), (0, "<<<<<<<\n<<<<<<<", "")]):
+            cm1 = branches.conflict_markers("origin/a", "origin/b")
+            cm2 = branches.conflict_markers("origin/b", "origin/a")
+            self.assertEqual(cm1, 2)
+            self.assertEqual(cm2, 2)
+
+    def test_clear_caches_resets_state(self):
+        with mock.patch.object(branches, "run", return_value=(0, "oid1\n", "")) as mock_run:
+            branches.blob("ref", "f")
+            self.assertEqual(mock_run.call_count, 1)
+            branches.clear_caches()
+            branches.blob("ref", "f")
+            self.assertEqual(mock_run.call_count, 2)
 
 
 class TestBranchVerdicts(unittest.TestCase):
