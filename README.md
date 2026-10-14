@@ -26,7 +26,7 @@ This dotfiles repository comes with a wide range of features to enhance your she
     -   `ai.provider.list`, `ai.provider.define`: Manage the provider registry.
     -   `ai.speckit`, `ai.speckit.init`: Run the [spec-kit](https://github.com/github/spec-kit) CLI via `uvx`.
     -   Providers are defined in [`dot_zsh/apps/ai/providers/`](dot_zsh/apps/ai/providers/) (openai, openrouter, groq, docker, ollama, opencode).
--   **Automatic Python Virtualenv:** Automatically activates and deactivates Python virtual environments (`.venv`) as you navigate your filesystem.
+-   **Python Virtualenv Helpers:** Provides helper functions (`python.vrun`, `python.load-venv`) to activate and manage Python virtual environments (`.venv`).
 -   **Project-Specific Workflows:** The [`dot_zsh/projects/`](dot_zsh/projects/) directory allows you to define aliases and functions to streamline workflows for your individual projects.
 -   **FZF Integration:** Integrates [fzf](https://github.com/junegunn/fzf) for powerful fuzzy history search.
 -   **Neovim:** Configurable via [`dot_zsh/projects/neovim.zsh`](dot_zsh/projects/neovim.zsh), which provides `nvim.cd` / `nvim.edit` helpers to clone and edit the [warpcode/vim-config](https://github.com/warpcode/vim-config) repository inside a tmux session.
