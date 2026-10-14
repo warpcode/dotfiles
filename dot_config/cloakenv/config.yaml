@@ -18,6 +18,7 @@ vaults:
   kp:
     provider: "keepass"
     vault_path: "~/.keepass/Accounts.kdbx"
+    resolve_references: true
   homelab:
     provider: "search"
     source_vaults: ["kp"]
@@ -27,7 +28,7 @@ vaults:
     provider: "search"
     source_vaults: ["kp"]
     query: '"dotenv:jules" in tags'
-    exclude_fields: []
+    exclude_fields: ['*']
     mapping:
       - match: "^env:(.*)$"
         key: "$1"
