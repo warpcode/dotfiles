@@ -189,6 +189,78 @@ class TestOpenAIBridgeServer(unittest.TestCase):
         self.assertEqual(self.handler.read_body(), payload)
         self.handler.send_error_response.assert_not_called()
 
+    @patch("subprocess.run")
+    def test_process_completions_agentapi_subprocess_exception(self, mock_subprocess_run):
+        mock_subprocess_run.side_effect = Exception("Command 'agentapi' not found")
+        messages = [{"role": "user", "content": "Hello"}]
+
+        self.handler.process_completions(messages, model="flash_lite", is_chat=True)
+
+        self.handler.send_error_response.assert_called_once_with(
+            500, "Failed to execute agentapi command: Command 'agentapi' not found"
+        )
+
+    @patch("subprocess.run")
+    def test_process_completions_agentapi_json_error(self, mock_subprocess_run):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 1
+        mock_proc.stdout = json.dumps({"error": "Rate limit exceeded"})
+        mock_proc.stderr = ""
+        mock_subprocess_run.return_value = mock_proc
+
+        messages = [{"role": "user", "content": "Hello"}]
+        self.handler.process_completions(messages, model="flash_lite", is_chat=True)
+
+        self.handler.send_error_response.assert_called_once_with(
+            500, "agentapi error: Rate limit exceeded"
+        )
+
+    @patch("subprocess.run")
+    def test_process_completions_agentapi_json_without_error_key(self, mock_subprocess_run):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 1
+        mock_proc.stdout = "{}"
+        mock_proc.stderr = ""
+        mock_subprocess_run.return_value = mock_proc
+
+        messages = [{"role": "user", "content": "Hello"}]
+        self.handler.process_completions(messages, model="flash_lite", is_chat=True)
+
+        self.handler.send_error_response.assert_called_once_with(
+            500, "agentapi error: Unknown error"
+        )
+
+    @patch("subprocess.run")
+    def test_process_completions_agentapi_non_json_error_fallback_stderr(self, mock_subprocess_run):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 1
+        mock_proc.stdout = ""
+        mock_proc.stderr = "Fatal error in agentapi"
+        mock_subprocess_run.return_value = mock_proc
+
+        messages = [{"role": "user", "content": "Hello"}]
+        self.handler.process_completions(messages, model="flash_lite", is_chat=True)
+
+        self.handler.send_error_response.assert_called_once_with(
+            500, "agentapi error: Fatal error in agentapi"
+        )
+
+    @patch("subprocess.run")
+    def test_process_completions_agentapi_non_json_error_fallback_empty_stdout(self, mock_subprocess_run):
+        # When stdout is empty, json.loads fails and error_detail falls back to stderr or stdout or "Unknown error"
+        mock_proc = MagicMock()
+        mock_proc.returncode = 1
+        mock_proc.stdout = ""
+        mock_proc.stderr = ""
+        mock_subprocess_run.return_value = mock_proc
+
+        messages = [{"role": "user", "content": "Hello"}]
+        self.handler.process_completions(messages, model="flash_lite", is_chat=True)
+
+        self.handler.send_error_response.assert_called_once_with(
+            500, "agentapi error: Unknown error"
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
