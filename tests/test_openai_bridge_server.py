@@ -189,6 +189,54 @@ class TestOpenAIBridgeServer(unittest.TestCase):
         self.assertEqual(self.handler.read_body(), payload)
         self.handler.send_error_response.assert_not_called()
 
+    def test_read_body_rejects_empty_request_body(self):
+        self.handler.headers = {"Content-Length": "0"}
+        self.handler.rfile = MagicMock()
+        self.assertIsNone(self.handler.read_body())
+        self.handler.send_error_response.assert_called_once_with(400, "Empty request body")
+
+    def test_handle_completions_invalid_json(self):
+        self.handler.read_body = MagicMock(return_value=b"invalid json{")
+        self.handler.handle_completions()
+        self.handler.send_error_response.assert_called_once()
+        args = self.handler.send_error_response.call_args[0]
+        self.assertEqual(args[0], 400)
+        self.assertTrue(args[1].startswith("Invalid JSON:"))
+
+    def test_handle_chat_completions_invalid_json(self):
+        self.handler.read_body = MagicMock(return_value=b"{bad json")
+        self.handler.handle_chat_completions()
+        self.handler.send_error_response.assert_called_once()
+        args = self.handler.send_error_response.call_args[0]
+        self.assertEqual(args[0], 400)
+        self.assertTrue(args[1].startswith("Invalid JSON:"))
+
+    def test_handle_chat_completions_missing_or_invalid_messages(self):
+        invalid_messages_payloads = [
+            json.dumps({}).encode("utf-8"),
+            json.dumps({"messages": None}).encode("utf-8"),
+            json.dumps({"messages": "not a list"}).encode("utf-8"),
+            json.dumps({"messages": []}).encode("utf-8"),
+        ]
+        for payload in invalid_messages_payloads:
+            with self.subTest(payload=payload):
+                self.handler.send_error_response.reset_mock()
+                self.handler.read_body = MagicMock(return_value=payload)
+                self.handler.handle_chat_completions()
+                self.handler.send_error_response.assert_called_once_with(
+                    400, "Field 'messages' must be a non-empty array"
+                )
+
+    def test_do_get_and_do_post_not_found(self):
+        self.handler.path = "/v1/unknown"
+        self.handler.do_GET()
+        self.handler.send_error_response.assert_called_with(404, "Not Found: /v1/unknown")
+
+        self.handler.send_error_response.reset_mock()
+        self.handler.path = "/v1/unknown"
+        self.handler.do_POST()
+        self.handler.send_error_response.assert_called_with(404, "Not Found: /v1/unknown")
+
 
 if __name__ == "__main__":
     unittest.main()
