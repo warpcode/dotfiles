@@ -25,9 +25,9 @@ script for a step, run it rather than writing an equivalent loop.
 
 ## Validation
 Run `./validate.sh` from the repo root before declaring any change verified — never hand-assemble
-the individual checks. It mirrors CI (`lint.yml`, `python-tests.yml`): `zsh -n`, `bash -n`,
-`shellcheck`, `py_compile`, zsh suites, and `unittest` discovery under `.github/skills/*/scripts`
-and `tests/`. `--fast` skips the test suites, `--lint-only` runs syntax checks only, `--json`
+the individual checks. It mirrors CI (`lint.yml`, `python-tests.yml`): `zsh -n`,
+`py_compile`, zsh suites, and `unittest` discovery under `.github/skills/*/scripts`
+and `tests/` (locally, `./validate.sh` also executes `bash -n` and `shellcheck`). `--fast` skips the test suites, `--lint-only` runs syntax checks only, `--json`
 emits a machine-readable summary.
 
 ## Destructive gates (explicit approval required)
