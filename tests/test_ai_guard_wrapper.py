@@ -273,7 +273,7 @@ class TestAIGuardWrapper(unittest.TestCase):
         with patch.dict(os.environ, {"AI_GUARD_DEBUG": "1"}, clear=True):
             code, data = ai_guard_wrapper.run_guard("file", args=["/path/to/secret.key"])
             self.assertEqual(code, 2)
-            m_open.assert_called_once_with("/tmp/ai-guard-wrapper.log", "a")
+            m_open.assert_called_once_with(os.path.expanduser("~/.local/state/ai-guard-wrapper.log"), "a")
             handle = m_open()
             written = "".join(call.args[0] for call in handle.write.call_args_list)
             self.assertIn("GUARD FAILURE subcmd=file", written)
@@ -305,7 +305,7 @@ class TestAIGuardWrapper(unittest.TestCase):
             with self.assertRaises(SystemExitException):
                 ai_guard_wrapper.handle_prompt_route(payload)
 
-        m_open.assert_called_once_with("/tmp/ai-guard-wrapper.log", "a")
+        m_open.assert_called_once_with(os.path.expanduser("~/.local/state/ai-guard-wrapper.log"), "a")
         handle = m_open()
         written_content = "".join(call.args[0] for call in handle.write.call_args_list)
         self.assertIn("PROMPT SANITIZED", written_content)
