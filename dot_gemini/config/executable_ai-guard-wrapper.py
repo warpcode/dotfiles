@@ -65,7 +65,9 @@ def extract_command(mapping):
         return ""
     for k in ("CommandLine", "commandLine", "command", "cmd"):
         if k in mapping and isinstance(mapping[k], str):
-            return mapping[k].strip().strip("'\"")
+            val = mapping[k].strip().strip("'\"")
+            if val:
+                return val
     return ""
 
 
