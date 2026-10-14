@@ -151,6 +151,17 @@ class TestOpenAIBridgeServer(unittest.TestCase):
         self.assertIn("User: Prev message", initial_prompt)
         self.assertNotIn("System:\n[System Override]:", initial_prompt)
 
+    @patch("subprocess.run")
+    def test_process_completions_subprocess_exception_returns_500(self, mock_subprocess_run):
+        mock_subprocess_run.side_effect = Exception("Command 'agentapi' not found")
+
+        messages = [{"role": "user", "content": "Hello"}]
+        self.handler.process_completions(messages, model="flash_lite", is_chat=True)
+
+        self.handler.send_error_response.assert_called_once_with(
+            500, "Failed to execute agentapi command: Command 'agentapi' not found"
+        )
+
     def test_default_host_is_loopback_only(self):
         # SECURITY: the bridge is unauthenticated and drives `agentapi`, so it
         # must never default to binding every interface.
