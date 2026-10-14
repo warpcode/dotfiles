@@ -4,5 +4,31 @@
   "instructions": [
     "AGENTS.md",
     ".github/copilot-instructions.md"
-  ]
+  ],
+  "agent": {
+    "chat": {
+      "mode": "primary",
+      "description": "Minimal chat agent with a small system prompt.",
+      "prompt": "You are a concise assistant. Answer the user's question directly and briefly.",
+      "permission": {
+        "*": "deny",
+        "read": "allow",
+        "write": "allow",
+        "bash": {
+          "*": "ask"
+        },
+        "skill": "allow"
+      }
+    }
+  },
+  "provider": {
+    "llamacpp": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "llama.cpp (local)",
+      "options": {
+        "baseURL": "http://127.0.0.1:8081/v1",
+        "apiKey": "local"
+      }
+    }
+  }
 }

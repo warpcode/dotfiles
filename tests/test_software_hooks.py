@@ -28,6 +28,7 @@ AGY_HOOKS_JSON = REPO_ROOT / "dot_gemini" / "config" / "hooks.json"
 COPILOT_HOOKS_JSON = REPO_ROOT / "dot_copilot" / "hooks" / "security.json"
 OPENCODE_PLUGIN = REPO_ROOT / "dot_config" / "opencode" / "plugins" / "security-suite.ts"
 OPENCODE_TEST_MJS = REPO_ROOT / "tests" / "test_opencode_plugin.mjs"
+LLAMACPP_TEST_MJS = REPO_ROOT / "tests" / "test_llamacpp_plugin.mjs"
 VSCODE_SETTINGS_TMPL = REPO_ROOT / "dot_config" / "Code" / "User" / "settings.json.tmpl"
 VALIDATE_SCRIPT = Path.home() / ".gemini" / "config" / "skills" / "ai-authoring-hooks" / "scripts" / "validate.py"
 if not VALIDATE_SCRIPT.is_file():
@@ -394,6 +395,19 @@ class TestOpenCodeHooks(unittest.TestCase):
         )
         self.assertEqual(res.returncode, 0, f"OpenCode plugin test suite failed: {res.stderr}\n{res.stdout}")
         self.assertIn("30/30 assertions passed!", res.stdout)
+
+    def test_llamacpp_plugin_suite(self):
+        """Executes node tests/test_llamacpp_plugin.mjs covering llama.cpp model discovery."""
+        self.assertTrue(LLAMACPP_TEST_MJS.is_file(), f"{LLAMACPP_TEST_MJS} must exist")
+        res = subprocess.run(
+            [self.node_bin, str(LLAMACPP_TEST_MJS)],
+            capture_output=True,
+            text=True,
+            env=self.env,
+            timeout=30
+        )
+        self.assertEqual(res.returncode, 0, f"llama.cpp plugin test suite failed: {res.stderr}\n{res.stdout}")
+        self.assertIn("8/8 assertions passed!", res.stdout)
 
 
 # ==============================================================================
