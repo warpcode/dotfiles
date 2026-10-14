@@ -35,10 +35,13 @@ def tool_key(call):
         return name
     args = call.get("args") or call.get("arguments") or {}
     cmd = args.get("command", "") if isinstance(args, dict) else str(args)
-    try:
-        words = [w for w in shlex.split(cmd) if "=" not in w.split("/")[0]]
-    except ValueError:
-        words = cmd.split()
+    if '"' in cmd or "'" in cmd:
+        try:
+            words = [w for w in shlex.split(cmd) if "=" not in w.split("/")[0]]
+        except ValueError:
+            words = cmd.split()
+    else:
+        words = [w for w in cmd.split() if "=" not in w.split("/")[0]]
     if not words:
         return "sh:?"
     head = Path(words[0]).name
