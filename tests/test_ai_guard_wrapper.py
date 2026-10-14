@@ -53,6 +53,13 @@ class TestAiGuardWrapperHelper(unittest.TestCase):
 
         self.assertEqual(cmd, "payload_cmd")
 
+    def test_extract_command_falls_through_empty_string(self):
+        # If a higher precedence key has an empty/whitespace string, extract_command
+        # should fall through to a lower precedence key in the same mapping.
+        mapping = {"CommandLine": "   ", "cmd": " echo fallback "}
+        result = ai_guard_wrapper.extract_command(mapping)
+        self.assertEqual(result, "echo fallback")
+
     def test_extract_command_multi_quote_strip(self):
         # CRITICAL BEHAVIOR: strips all leading and trailing quote characters
         # "\"quoted\"" -> "quoted"
