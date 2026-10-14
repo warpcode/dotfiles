@@ -150,11 +150,15 @@ class JulesClient:
         title: str | None = None,
         require_plan_approval: bool | None = None,
         env_vars: dict[str, str] | None = None,
+        automation_mode: str | None = "AUTO_CREATE_PR",
     ) -> dict[str, Any]:
         """Create and initiate a new Jules coding task session."""
         payload: dict[str, Any] = {
             "prompt": prompt,
         }
+
+        if automation_mode:
+            payload["automationMode"] = automation_mode
 
         if source:
             clean_source = source.strip()

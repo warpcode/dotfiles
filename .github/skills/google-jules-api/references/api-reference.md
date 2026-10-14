@@ -104,6 +104,7 @@ A session represents an asynchronous coding task executed by an isolated cloud V
   ```json
   {
     "prompt": "Refactor auth handler to scrub memory buffers",
+    "automationMode": "AUTO_CREATE_PR",
     "sourceContext": {
       "source": "sources/github/owner/repo",
       "githubRepoContext": {
@@ -114,6 +115,12 @@ A session represents an asynchronous coding task executed by an isolated cloud V
     "requirePlanApproval": false
   }
   ```
+- **Fields:**
+  - `prompt` (string, required): Task description.
+  - `automationMode` (string, optional): Set to `AUTO_CREATE_PR` to automatically create pull requests when code changes are ready.
+  - `title` (string, optional): Short human-readable title.
+  - `requirePlanApproval` (boolean, optional): If true, requires explicit plan approval before proceeding.
+  - `sourceContext` (object, optional): Target source repository and branch context.
 - **Response Body:** Created session object.
 
 ### Approve Plan
