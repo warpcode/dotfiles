@@ -45,3 +45,22 @@
 
 # rsync
 "brew:rsync" = "latest"
+
+# --- Apps ---
+# docker-desktop
+"brew-cask:docker-desktop" = "latest"
+
+# visual-studio-code
+"brew-cask:visual-studio-code" = "latest"
+
+# k8slens
+"brew-cask:lens" = "latest"
+
+# keepassxc
+"brew-cask:keepassxc" = "latest"
+
+# cursor
+"brew-cask:cursor" = "latest"
+
+# discord
+"brew-cask:discord" = "latest"

@@ -220,7 +220,14 @@ main() {
     success "Profile set via argument to: ${dotfiles_profile}"
   fi
 
-  export MISE_ENV="${dotfiles_profile:-default}"
+  # mise loads config.toml / mise.toml unconditionally, plus config.{env}.toml and
+  # mise.{env}.toml for each comma-separated entry in MISE_ENV. Include the OS
+  # env on macOS so mise.macos.toml (brew packages) applies there.
+  if [[ "${OS_NAME}" == "macos" ]]; then
+    export MISE_ENV="macos,${dotfiles_profile:-default}"
+  else
+    export MISE_ENV="${dotfiles_profile:-default}"
+  fi
   info "MISE_ENV set to: ${MISE_ENV}"
 
   info "Detected OS: ${OS_NAME}"
@@ -288,7 +295,11 @@ main() {
     mise_bin="$(command -v mise)"
   fi
   info "Bootstrapping system packages via mise..."
-  "${mise_bin}" bootstrap --only packages -y || true
+  # Report but do not abort: a partial package install should not block the
+  # dotfile apply that follows, but it must not be silently swallowed either.
+  if ! "${mise_bin}" bootstrap --only packages -y; then
+    err "mise bootstrap failed - some system packages were not installed"
+  fi
 
   # Apply dotfiles via chezmoi
   info "Applying dotfiles via Chezmoi..."
@@ -314,7 +325,9 @@ main() {
   chezmoi "${chezmoi_global_args[@]}" init --apply --source "${DOTFILES}"
 
   info "Installing mise tools (llama.cpp, ollama, etc)..."
-  "${mise_bin}" install || true
+  if ! "${mise_bin}" install; then
+    err "mise install failed - some tools were not installed"
+  fi
 
   success "Bootstrap complete! Please restart your terminal or run 'exec zsh'."
 }

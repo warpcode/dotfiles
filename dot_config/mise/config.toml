@@ -7,20 +7,17 @@
 #"brew:ffmpeg"   = "latest"
 
 # k8slens
-"brew-cask:lens" = "latest"
+# brew-cask:lens is in mise.macos.toml
 
 # keepassxc
 "flatpak:org.keepassxc.KeePassXC" = "latest"
-"brew-cask:keepassxc"             = "latest"
 
 # cursor
 "apt:cursor"                = "latest"
 "dnf:cursor"                = "latest"
-"brew-cask:cursor"          = "latest"
 
 # discord
 "flatpak:com.discordapp.Discord" = "latest"
-"brew-cask:discord"              = "latest"
 
 [tools]
 # --- AI CLI Tools ---

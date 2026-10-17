@@ -92,12 +92,10 @@ pre-packages = "bash ~/.config/mise/scripts/setup_repos.sh"
 "dnf:docker-compose-plugin"  = "latest"
 "pacman:docker"              = "latest"
 "pacman:docker-compose"      = "latest"
-"brew-cask:docker-desktop"   = "latest"
 
 # --- Development Tools ---
 "apt:code"                  = "latest"
 "dnf:code"                  = "latest"
-"brew-cask:visual-studio-code" = "latest"
 
 # --- CLI ---
 # openssh

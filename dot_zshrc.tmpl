@@ -3,7 +3,7 @@
 # Load dotfiles
 export DOTFILES="{{ .chezmoi.sourceDir }}"
 export DOTFILES_PROFILE="{{ .profile }}"
-export MISE_ENV="$DOTFILES_PROFILE"
+export MISE_ENV="{{ if eq .chezmoi.os "darwin" }}macos,{{ end }}$DOTFILES_PROFILE"
 export KEEPASS_DB_PATH="{{ .keepass_db }}"
 
 if [[ -f "${HOME}/.zsh/init.zsh" ]]; then
