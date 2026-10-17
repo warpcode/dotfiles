@@ -20,35 +20,61 @@ def cmd_statuses(client, args):
     if args.project:
         endpoint = f"rest/api/{JIRA_API_VERSION}/project/{args.project}/statuses"
         response = client.call("GET", endpoint)
-        # Flatten statuses from all issue types while preserving insertion order.
-        # 'not seen_add(...)' executes set.add() (returning None/falsy) when status ID is unseen.
+
         seen_ids = set()
         seen_add = seen_ids.add
-        response = [
-            status
-            for itype in response
-            for status in (itype.get("statuses") or [])
-            if status["id"] not in seen_ids and not seen_add(status["id"])
-        ]
-    else:
-        endpoint = f"rest/api/{JIRA_API_VERSION}/status"
-        response = client.call("GET", endpoint)
+
+        if args.raw:
+            flattened = []
+            flat_append = flattened.append
+            for itype in response:
+                statuses = itype.get("statuses")
+                if not statuses:
+                    continue
+                for status in statuses:
+                    sid = status["id"]
+                    if sid not in seen_ids:
+                        seen_add(sid)
+                        flat_append(status)
+            print(json.dumps(flattened))
+            return
+
+        cat_filter = args.category.lower().replace(" ", "-") if args.category else None
+        result = {}
+
+        for itype in response:
+            statuses = itype.get("statuses")
+            if not statuses:
+                continue
+            for status in statuses:
+                sid = status["id"]
+                if sid not in seen_ids:
+                    seen_add(sid)
+                    cat_name = (status.get("statusCategory") or {}).get("name")
+                    if cat_filter:
+                        if not cat_name or cat_name.lower().replace(" ", "-") != cat_filter:
+                            continue
+                    result[sid] = {"name": status["name"], "category": cat_name}
+
+        print(json.dumps(result))
+        return
+
+    endpoint = f"rest/api/{JIRA_API_VERSION}/status"
+    response = client.call("GET", endpoint)
 
     if args.raw:
         print(json.dumps(response))
         return
 
-    result = {
-        item["id"]: {
-            "name": item["name"],
-            "category": (item.get("statusCategory") or {}).get("name")
-        }
-        for item in response
-    }
-
-    if args.category:
-        cat = args.category.lower().replace(" ", "-")
-        result = {k: v for k, v in result.items() if v["category"].lower().replace(" ", "-") == cat}
+    cat_filter = args.category.lower().replace(" ", "-") if args.category else None
+    result = {}
+    for item in response:
+        sid = item["id"]
+        cat_name = (item.get("statusCategory") or {}).get("name")
+        if cat_filter:
+            if not cat_name or cat_name.lower().replace(" ", "-") != cat_filter:
+                continue
+        result[sid] = {"name": item["name"], "category": cat_name}
 
     print(json.dumps(result))
 
