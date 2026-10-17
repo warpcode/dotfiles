@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import json
 from datetime import datetime, timezone
 from typing import Any
@@ -6,6 +7,19 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from .utils import die, info, parse_iso_datetime
+
+
+@dataclass
+class CreateSessionConfig:
+    """Configuration options for creating a Jules session."""
+
+    prompt: str
+    source: str | None = None
+    starting_branch: str = "main"
+    title: str | None = None
+    require_plan_approval: bool | None = None
+    env_vars: dict[str, str] | None = None
+    automation_mode: str | None = "AUTO_CREATE_PR"
 
 DEFAULT_BASE_URL = "https://jules.googleapis.com/v1alpha"
 
@@ -144,39 +158,50 @@ class JulesClient:
 
     def create_session(
         self,
-        prompt: str,
-        source: str | None = None,
-        starting_branch: str = "main",
-        title: str | None = None,
-        require_plan_approval: bool | None = None,
-        env_vars: dict[str, str] | None = None,
-        automation_mode: str | None = "AUTO_CREATE_PR",
+        config: CreateSessionConfig | str | None = None,
+        **kwargs: Any,
     ) -> dict[str, Any]:
         """Create and initiate a new Jules coding task session."""
+        if isinstance(config, CreateSessionConfig):
+            cfg = config
+        else:
+            prompt = config or kwargs.pop("prompt", None)
+            if not prompt:
+                die("prompt or config is required to create a session.")
+            cfg = CreateSessionConfig(
+                prompt=prompt,
+                source=kwargs.pop("source", None),
+                starting_branch=kwargs.pop("starting_branch", "main"),
+                title=kwargs.pop("title", None),
+                require_plan_approval=kwargs.pop("require_plan_approval", None),
+                env_vars=kwargs.pop("env_vars", None),
+                automation_mode=kwargs.pop("automation_mode", "AUTO_CREATE_PR") if "automation_mode" in kwargs else "AUTO_CREATE_PR",
+            )
+
         payload: dict[str, Any] = {
-            "prompt": prompt,
+            "prompt": cfg.prompt,
         }
 
-        if automation_mode:
-            payload["automationMode"] = automation_mode
+        if cfg.automation_mode:
+            payload["automationMode"] = cfg.automation_mode
 
-        if source:
-            clean_source = source.strip()
+        if cfg.source:
+            clean_source = cfg.source.strip()
             if not clean_source.startswith("sources/"):
                 clean_source = f"sources/{clean_source}"
             payload["sourceContext"] = {
                 "source": clean_source,
                 "githubRepoContext": {
-                    "startingBranch": starting_branch,
+                    "startingBranch": cfg.starting_branch,
                 },
             }
 
-        if title:
-            payload["title"] = title
-        if require_plan_approval is not None:
-            payload["requirePlanApproval"] = require_plan_approval
-        if env_vars:
-            payload["environmentVariables"] = env_vars
+        if cfg.title:
+            payload["title"] = cfg.title
+        if cfg.require_plan_approval is not None:
+            payload["requirePlanApproval"] = cfg.require_plan_approval
+        if cfg.env_vars:
+            payload["environmentVariables"] = cfg.env_vars
 
         return self.call("POST", "sessions", payload=payload)
 
