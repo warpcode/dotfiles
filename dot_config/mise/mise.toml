@@ -140,7 +140,7 @@ pre-packages = "bash ~/.config/mise/scripts/setup_repos.sh"
 
 # --- AI ---
 "ollama"                   = "latest"
-"llama.cpp"                = "latest"
+"llama.cpp"                = { version = "latest", platforms = { linux-x64 = { asset_pattern = "llama-*-bin-ubuntu-vulkan-x64.tar.gz" }, linux-arm64 = { asset_pattern = "llama-*-bin-ubuntu-vulkan-arm64.tar.gz" } } }
 
 # --- Tooling & Config ---
 "github:warpcode/cloakenv" = { version = "latest", prerelease = true }
