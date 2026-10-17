@@ -356,14 +356,8 @@ def ingest_session(target: ResolvedTarget) -> IngestedSession:
     return sess
 
 
-def _ingest_copilot_jsonl(path: Path, sess: IngestedSession) -> None:
-    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
-    sess.raw_records_count = len(lines)
-    sess.total_bytes = sum(len(ln.encode("utf-8")) for ln in lines)
-
-    tool_completions = {}
-    tool_starts = {}
-
+def _index_copilot_tool_completions(lines: List[str]) -> Dict[str, Tuple[int, Dict[str, Any]]]:
+    completions = {}
     for idx, ln in enumerate(lines, 1):
         if not ln.strip():
             continue
@@ -374,9 +368,105 @@ def _ingest_copilot_jsonl(path: Path, sess: IngestedSession) -> None:
         rtype = rec.get("type", "")
         rdata = rec.get("data", {})
         if rtype == "tool.execution_complete" and rdata.get("toolCallId"):
-            tool_completions[rdata["toolCallId"]] = (idx, rdata)
-        elif rtype == "tool.execution_start" and rdata.get("toolCallId"):
-            tool_starts[rdata["toolCallId"]] = (idx, rdata)
+            completions[rdata["toolCallId"]] = (idx, rdata)
+    return completions
+
+
+def _handle_copilot_user_message(
+    sess: IngestedSession, rdata: Dict[str, Any], idx: int, ts: Any
+) -> str:
+    content = rdata.get("content", "").strip()
+    corr = None if is_injected_prompt(content) else USER_CORRECTION_PATTERN.search(content)
+    sess.user_turns.append({
+        "turn_num": len(sess.user_turns) + 1,
+        "event_idx": idx,
+        "timestamp": ts,
+        "content": content,
+        "is_correction": bool(corr),
+        "correction_keyword": corr.group(0) if corr else None,
+    })
+    return content[:80]
+
+
+def _handle_copilot_assistant_message(
+    sess: IngestedSession, rdata: Dict[str, Any], idx: int, ts: Any
+) -> Tuple[str, bool]:
+    content = rdata.get("content", "").strip()
+    chain_broken = bool(content)
+    sess.assistant_turns.append({
+        "turn_num": len(sess.assistant_turns) + 1,
+        "event_idx": idx,
+        "timestamp": ts,
+        "content": content,
+    })
+    return content[:80], chain_broken
+
+
+def _handle_copilot_tool_execution(
+    sess: IngestedSession,
+    rdata: Dict[str, Any],
+    idx: int,
+    tname: str,
+    segment: int,
+    chain_broken: bool,
+    tool_completions: Dict[str, Tuple[int, Dict[str, Any]]],
+    terminal_cmds: List[str],
+    file_reads: List[str],
+) -> str:
+    cid = rdata.get("toolCallId")
+    raw_args = rdata.get("arguments", {})
+    if isinstance(raw_args, str):
+        try:
+            raw_args = json.loads(raw_args)
+        except Exception:
+            pass
+    tkey = normalize_tool_key(tname, raw_args)
+    asum = summarize_args(tname, raw_args)
+
+    _, comp_data = tool_completions.get(cid, (None, {}))
+    success = comp_data.get("success")
+    failed = (success is False)
+    error_msg = comp_data.get("error") if failed else None
+
+    if tname in SHELL_TOOLS:
+        cmd = raw_args.get("command", "") if isinstance(raw_args, dict) else str(raw_args)
+        sess.command_smells["terminal_executions"] += 1
+        terminal_cmds.append(cmd)
+        if INLINE_PYTHON_PATTERN.search(cmd):
+            sess.command_smells["inline_python"] += 1
+        if shell_pipe_count(cmd) > 2:
+            sess.command_smells["deep_pipelines"] += 1
+
+    if tname in ("read_file", "view_file") and isinstance(raw_args, dict):
+        fpath = raw_args.get("filePath") or raw_args.get("AbsolutePath") or ""
+        if fpath:
+            file_reads.append(fpath)
+
+    call_info = {
+        "call_id": cid,
+        "event_idx": idx,
+        "tool_name": tname,
+        "tool_key": tkey,
+        "args": raw_args,
+        "args_summary": asum,
+        "failed": failed,
+        "error": error_msg,
+        "segment": segment,
+        "chain_start": chain_broken,
+        "result_bytes": 0,
+    }
+    sess.tool_calls.append(call_info)
+    if failed:
+        sess.failed_calls.append(call_info)
+    return asum
+
+
+def _ingest_copilot_jsonl(path: Path, sess: IngestedSession) -> None:
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    sess.raw_records_count = len(lines)
+    sess.total_bytes = sum(len(ln.encode("utf-8")) for ln in lines)
+
+    tool_completions = _index_copilot_tool_completions(lines)
 
     segment = 0
     terminal_cmds = []
@@ -403,78 +493,18 @@ def _ingest_copilot_jsonl(path: Path, sess: IngestedSession) -> None:
         elif rtype == "user.message":
             segment += 1
             chain_broken = True
-            content = rdata.get("content", "").strip()
-            summary = content[:80]
-            corr = None if is_injected_prompt(content) else USER_CORRECTION_PATTERN.search(content)
-            sess.user_turns.append({
-                "turn_num": len(sess.user_turns) + 1,
-                "event_idx": idx,
-                "timestamp": ts,
-                "content": content,
-                "is_correction": bool(corr),
-                "correction_keyword": corr.group(0) if corr else None,
-            })
+            summary = _handle_copilot_user_message(sess, rdata, idx, ts)
 
         elif rtype == "assistant.message":
-            content = rdata.get("content", "").strip()
-            summary = content[:80]
-            if content:
+            summary, msg_chain_broken = _handle_copilot_assistant_message(sess, rdata, idx, ts)
+            if msg_chain_broken:
                 chain_broken = True
-            sess.assistant_turns.append({
-                "turn_num": len(sess.assistant_turns) + 1,
-                "event_idx": idx,
-                "timestamp": ts,
-                "content": content,
-            })
 
         elif rtype == "tool.execution_start":
-            cid = rdata.get("toolCallId")
-            raw_args = rdata.get("arguments", {})
-            if isinstance(raw_args, str):
-                try:
-                    raw_args = json.loads(raw_args)
-                except Exception:
-                    pass
-            tkey = normalize_tool_key(tname, raw_args)
-            asum = summarize_args(tname, raw_args)
-            summary = asum
-
-            _, comp_data = tool_completions.get(cid, (None, {}))
-            success = comp_data.get("success")
-            failed = (success is False)
-            error_msg = comp_data.get("error") if failed else None
-
-            if tname in SHELL_TOOLS:
-                cmd = raw_args.get("command", "") if isinstance(raw_args, dict) else str(raw_args)
-                sess.command_smells["terminal_executions"] += 1
-                terminal_cmds.append(cmd)
-                if INLINE_PYTHON_PATTERN.search(cmd):
-                    sess.command_smells["inline_python"] += 1
-                if shell_pipe_count(cmd) > 2:
-                    sess.command_smells["deep_pipelines"] += 1
-
-            if tname in ("read_file", "view_file") and isinstance(raw_args, dict):
-                fpath = raw_args.get("filePath") or raw_args.get("AbsolutePath") or ""
-                if fpath:
-                    file_reads.append(fpath)
-
-            call_info = {
-                "call_id": cid,
-                "event_idx": idx,
-                "tool_name": tname,
-                "tool_key": tkey,
-                "args": raw_args,
-                "args_summary": asum,
-                "failed": failed,
-                "error": error_msg,
-                "segment": segment,
-                "chain_start": chain_broken,
-                "result_bytes": 0,
-            }
+            summary = _handle_copilot_tool_execution(
+                sess, rdata, idx, tname, segment, chain_broken, tool_completions, terminal_cmds, file_reads
+            )
             chain_broken = False
-            sess.tool_calls.append(call_info)
-            if failed:
-                sess.failed_calls.append(call_info)
 
         sess.records.append((idx, blen, rtype, tname, summary, rec))
 
