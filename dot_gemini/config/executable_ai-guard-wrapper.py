@@ -295,7 +295,7 @@ def main():
 
     if route == "prompt":
         handle_prompt_route(payload)
-    elif route in ("output", "post-tool", "PostToolUse"):
+    elif route in {"output", "post-tool", "PostToolUse"}:
         handle_output_route(payload)
     elif route == "command":
         handle_command_route(payload, tool_args)
