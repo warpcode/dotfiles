@@ -53,7 +53,7 @@ misapplied. Run the script; only read its source if it errors.
 | Script | Purpose | Usage |
 |---|---|---|
 | `scripts/jules_audit.py` | Complete session audit across all pages; flag empty loops, stuck runners, unread user messages | `cloakenv run -- python3 scripts/jules_audit.py --all-pages [--days 30] [--timeout 120] [--include-archived] [--with-pr] [--json]` |
-| `scripts/deliver_patch.py` | Extract undelivered git patches from completed session outputs and apply to branches | `python3 scripts/deliver_patch.py <session_id> [--apply]` |
+| `scripts/deliver_patch.py` | Extract undelivered git patches from completed session outputs onto a `fix/` branch for replacement session handoff | `python3 scripts/deliver_patch.py <session_id> [--apply]` |
 | `scripts/detect_empty_commits.sh` | Count empty commits above a merge base; exits `2` when wedged | `detect_empty_commits.sh <base-ref> <head-ref>` |
 | `scripts/verify_delivery.sh` | Prove from the remote whether a session pushed or opened a PR | `verify_delivery.sh <owner/repo> <source-branch> [base]` |
 | `scripts/bench_compare.sh` | Base-vs-head benchmark table; auto-copies benchmark files that exist on only one side | `bench_compare.sh <base-ref> <head-ref> [--bench RE] [--pkg P] [--count N] [--json]` |
@@ -208,9 +208,7 @@ commit. Write to a fresh `tidy/` branch and start the replacement session there.
    - Deleting the wedged remote branch is optional — keep it until the replacement PR is confirmed merged, so the real work is never unrecoverable.
    - Delete the temporary `tidy/*` branch once the replacement PR is merged or closed, so `tidy/*` never accumulates stale layers from successive escalations.
 
-8. **Escalate further only on a demonstrated failure of this stage.** If the replacement session
-   *also* loops empty, or completes without opening a PR, then take over directly: build another
-   tidy branch off current `main`, squash the salvageable diff yourself, and open the PR.
+8. **Ensure Non-Empty Delta for `AUTO_CREATE_PR`**: Jules only auto-creates a PR if the replacement session commits at least one file modification on top of its starting `--branch`. Always leave at least one concrete finding, test case, or lint fix for the replacement session to implement on the `fix/` or `tidy/` branch — never hand off a branch where 100% of the work is already committed with nothing left for Jules to change, and NEVER open the PR yourself via `gh pr create`.
 
 Watch for CI-gate bypass artifacts in the rebuilt diff — filler files (`dummy.txt` containing
 `Trigger rebuild`, justified in replies by their effect on CI gates rather than content), `.diff`/`.sh`
@@ -241,10 +239,16 @@ gh pr list --state open --json number,headRefName              # no PR for this 
 - `call GET sessions/<id>` → returns only metadata (title, state, prompt, source context); there is
   no diff field and no artifact URL
 
-The patch must be downloaded manually from the Jules web UI. So when a session finishes, check
-`gh pr list` for a branch matching its source branch **before** treating the work as saved.
-
-**Remediation.** Jules cannot run `git push` or `gh` due to lack of remote connectivity. When a session finishes with a patch artifact but no PR, publish it via the **Jules Web UI** ("Create Pull Request" button) or download/apply the unified diff patch from the session's outputs (`changeSet.gitPatch.unidiffPatch`) and open the PR locally. Do NOT instruct the runner to `git push` or `gh pr create`.
+**Remediation — Never Open PRs Yourself.** Jules cannot run `git push` or `gh` inside its VM due to lack of remote connectivity, and the agent MUST NEVER run `gh pr create` on Jules' behalf. When a session finishes without opening a PR (or when a PR has review/CI findings that need fixing):
+1. **Nudge First (Mandatory)**: Dispatch a `pr_reminder` nudge immediately:
+   ```bash
+   python3 <skills-dir>/google-jules-api/scripts/main.py nudge <session-id> pr_reminder
+   ```
+   Sending a nudge revives the cloud runner and often triggers native PR creation within 1–2 minutes without manual branch intervention.
+2. **Escalate only if nudging fails or branch is wedged**: If the session remains silent or fails to create a PR after nudging (or has $\ge 2$ empty commits):
+   a. Prepare a clean `fix/` or `tidy/` branch pushed to `origin`. Do NOT open a PR yourself.
+   b. Spawn a replacement Jules session targeting `--branch <fix-branch> --automation-mode AUTO_CREATE_PR` with explicit remaining work so Jules makes at least one non-empty file edit.
+   c. Archive the old session once the replacement session is spawned.
 
 ---
 

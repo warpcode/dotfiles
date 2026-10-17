@@ -176,17 +176,31 @@ NUDGE_TEMPLATES = {
 
 
 def cmd_nudge(client: JulesClient, args: argparse.Namespace) -> None:
-    template = args.template
+    session_ids = [sid.strip().removeprefix("sessions/") for sid in args.session_ids]
+    template = getattr(args, "template", None)
+    # Support positional syntax: nudge <id1> [id2 ...] <template>
+    if not template and session_ids and session_ids[-1] in NUDGE_TEMPLATES:
+        template = session_ids.pop()
+    if not template:
+        template = "progress_check"
+
     if template not in NUDGE_TEMPLATES:
         die(
             f"Unknown nudge template: {template}. Available: {', '.join(NUDGE_TEMPLATES.keys())}"
         )
 
+    if not session_ids:
+        die("Provide at least one session ID to nudge.")
+
     message = NUDGE_TEMPLATES[template]
-    data = client.send_message(args.session_id, message)
-    print(f"Nudge `{template}` sent to session `{args.session_id}`.")
-    if data:
-        print(json.dumps(data, indent=2))
+    for sid in session_ids:
+        try:
+            data = client.send_message(sid, message)
+            print(f"Nudge `{template}` sent to session `{sid}`.")
+            if data and len(session_ids) == 1:
+                print(json.dumps(data, indent=2))
+        except Exception as e:
+            print(f"Error nudging session `{sid}`: {e}", file=sys.stderr)
 
 
 def cmd_activities(client: JulesClient, args: argparse.Namespace) -> None:
@@ -777,13 +791,16 @@ Authentication:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     p_nudge.add_argument(
-        "session_id",
-        help="Target Jules session ID",
+        "session_ids",
+        nargs="+",
+        help="One or more target Jules session IDs (optionally followed by template name)",
     )
     p_nudge.add_argument(
-        "template",
+        "--template",
+        "-t",
         choices=["plan_stalled", "progress_check", "pr_reminder"],
-        help="Nudge template to use",
+        default=None,
+        help="Nudge template to use (default: progress_check)",
     )
 
     # archive-closed-prs

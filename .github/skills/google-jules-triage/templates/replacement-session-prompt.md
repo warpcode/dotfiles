@@ -88,13 +88,13 @@ Findings {{N}} and {{N+1}} are {{SEVERITY_CLASS}}. Treat them as merge blockers.
 
 ## Delivery — mandatory, do not skip
 
-You MUST `git push -u origin HEAD` and then `gh pr create` against `main`. Do not finish
-without both. If the harness offers to submit a patch artifact INSTEAD of pushing, decline
-it and push to the remote. A PR that exists only inside this session is not a deliverable.
+This session is configured with `AUTO_CREATE_PR`. You MUST commit your changes as a single
+clean, non-empty commit on top of `{{TIDY_BRANCH}}` so the Jules platform automatically
+publishes the Pull Request. Do NOT run `git push` or `gh pr create` manually in the shell.
 
-Before pushing, confirm your diff is non-empty and contains no CI-gate bypass filler (no
+Before finishing, confirm your diff is non-empty and contains no CI-gate bypass filler (no
 `dummy.txt`, no `.diff`/`.sh` helper scripts, no placeholder comments added purely to
-satisfy the `Reject empty commit` check). Every commit you push must change at least one
+satisfy the `Reject empty commit` check). Every commit must change at least one real
 file — the workflow gate fails the PR otherwise.
 ```
 

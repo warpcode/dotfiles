@@ -249,12 +249,16 @@ def audit_session(
     last_agent_msg: str = ""
     pending_plan_id: str | None = None
     has_git_patch: bool = False
+    patch_files: list[str] = []
 
     # Check for git patches in session outputs
     for out in session.get("outputs", []):
         cs = out.get("changeSet") or {}
-        if cs.get("gitPatch") or cs.get("suggestedCommitMessage"):
+        raw_patch = (cs.get("gitPatch") or {}).get("unidiffPatch") or ""
+        if raw_patch or cs.get("suggestedCommitMessage"):
             has_git_patch = True
+            if raw_patch:
+                patch_files = re.findall(r"^diff --git a/(.*?) b/", raw_patch, re.MULTILINE)
             break
 
     # Initial session prompt is Turn 0
@@ -402,7 +406,8 @@ def audit_session(
         verdict = "FEEDBACK_GATE"
     elif state == "COMPLETED":
         if has_git_patch:
-            verdict = "UNDELIVERED_PATCH"
+            files_summary = f" ({len(patch_files)} files: {', '.join(patch_files[:2])}{'...' if len(patch_files) > 2 else ''})" if patch_files else ""
+            verdict = f"UNDELIVERED_PATCH{files_summary}"
         else:
             verdict = "CLOSED_NO_PR"
     elif state == "FAILED":
