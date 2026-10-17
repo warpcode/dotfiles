@@ -7,7 +7,7 @@ import os
 sys.path.insert(0, os.path.dirname(__file__))
 from parse_conversation import (
     parse_markdown_plain_text, ingest_transcript, generate_markdown_summary,
-    parse_opencode_jsonl, normalise_tool_calls,
+    parse_opencode_jsonl, normalise_tool_calls, SummaryOptions,
 )
 
 class TestParseConversation(unittest.TestCase):
@@ -59,6 +59,21 @@ System message
         self.assertIn("**User Turns:** 1", summary)
         self.assertIn("**Assistant Turns:** 2", summary)
         self.assertIn("**Tool Invocations:** 3", summary)
+
+    def test_generate_markdown_summary_options(self):
+        events = [
+            {"role": "user", "content": "Hi", "tool_calls": []},
+            {"role": "assistant", "content": "Hello", "tool_calls": [{"name": "tool", "args": {}}]},
+        ]
+        opts_stats = SummaryOptions(stats_only=True)
+        summary_stats = generate_markdown_summary(events, options=opts_stats)
+        self.assertIn("**Total Events Extracted:** 2", summary_stats)
+        self.assertNotIn("### Turn 1", summary_stats)
+
+        opts_tools = SummaryOptions(tools_only=True)
+        summary_tools = generate_markdown_summary(events, options=opts_tools)
+        self.assertNotIn("### Turn 1", summary_tools)
+        self.assertIn("### Turn 2", summary_tools)
 
 class TestToolArgumentRecovery(unittest.TestCase):
     """Regression cover for the bug where every OpenCode tool call rendered as `{}`.

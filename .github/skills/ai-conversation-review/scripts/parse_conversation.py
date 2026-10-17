@@ -19,11 +19,22 @@ Options:
 """
 
 import argparse
+from dataclasses import dataclass
 import json
 import os
 import re
 import sys
 from typing import Any, Dict, List, Optional, Tuple
+
+
+@dataclass
+class SummaryOptions:
+    """Configuration options for formatting conversation summary."""
+    max_turns: Optional[int] = None
+    tools_only: bool = False
+    errors_only: bool = False
+    user_only: bool = False
+    stats_only: bool = False
 
 
 def parse_antigravity_gemini_jsonl(lines: List[str]) -> List[Dict[str, Any]]:
@@ -335,15 +346,15 @@ def ingest_transcript(raw_text: str) -> List[Dict[str, Any]]:
     return parse_markdown_plain_text(raw_text)
 
 
-def generate_markdown_summary(events: List[Dict[str, Any]], max_turns: Optional[int] = None,
-                              tools_only: bool = False, errors_only: bool = False,
-                              user_only: bool = False, stats_only: bool = False) -> str:
+def generate_markdown_summary(events: List[Dict[str, Any]], options: Optional[SummaryOptions] = None) -> str:
     """Formats events into a clean, token-efficient Markdown summary."""
     if not events:
         return "No conversation events found in transcript."
 
-    if max_turns and max_turns > 0:
-        events = events[-max_turns:]
+    opts = options or SummaryOptions()
+
+    if opts.max_turns and opts.max_turns > 0:
+        events = events[-opts.max_turns:]
 
     output = []
     output.append("# Ingested Conversation Summary")
@@ -376,7 +387,7 @@ def generate_markdown_summary(events: List[Dict[str, Any]], max_turns: Optional[
     output.append("- **Tools:** " + ", ".join(f"{name} ({count})" for name, count in sorted(tool_names.items())) + "\n")
     output.append("---")
 
-    if stats_only:
+    if opts.stats_only:
         return "\n".join(output)
 
     for i, ev in enumerate(events, 1):
@@ -386,18 +397,18 @@ def generate_markdown_summary(events: List[Dict[str, Any]], max_turns: Optional[
         error = ev.get("error")
         has_failed_tool = any(tc.get("status") in ("failed", "error") for tc in tool_calls)
 
-        if user_only and role.lower() != "user":
+        if opts.user_only and role.lower() != "user":
             continue
-        if tools_only and not tool_calls:
+        if opts.tools_only and not tool_calls:
             continue
-        if errors_only and not error and not has_failed_tool and not ("error" in content.lower() or "fail" in content.lower()):
+        if opts.errors_only and not error and not has_failed_tool and not ("error" in content.lower() or "fail" in content.lower()):
             continue
 
         output.append(f"\n### Turn {i} [{role}]")
         
-        if content and not tools_only:
+        if content and not opts.tools_only:
             # Truncate very long blocks for token efficiency
-            if len(content) > 1200 and not errors_only:
+            if len(content) > 1200 and not opts.errors_only:
                 snippet = content[:800] + "\n\n... [Truncated for token efficiency] ...\n\n" + content[-300:]
                 output.append(snippet)
             else:
@@ -459,14 +470,14 @@ def main():
         sys.exit(1)
 
     events = ingest_transcript(raw_text)
-    summary_md = generate_markdown_summary(
-        events,
+    opts = SummaryOptions(
         max_turns=args.max_turns,
         tools_only=args.tools_only,
         errors_only=args.errors_only,
         user_only=args.user_only,
-        stats_only=args.stats
+        stats_only=args.stats,
     )
+    summary_md = generate_markdown_summary(events, options=opts)
     print(summary_md)
 
 
