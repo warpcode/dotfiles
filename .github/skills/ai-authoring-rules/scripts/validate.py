@@ -118,6 +118,88 @@ def split_rule_file(path):
     return meta, lines[close + 1 :], total_chars, total_lines
 
 
+def _check_filename_format(file_path, is_root_memory, add):
+    """Validate filename format for rule files."""
+    if not is_root_memory and not file_path.name.startswith("."):
+        clean_stem = file_path.name
+        for ext in (".instructions.md", ".mdc", ".md", ".rules"):
+            if clean_stem.endswith(ext):
+                clean_stem = clean_stem[: -len(ext)]
+                break
+        if NAME_RE.match(clean_stem):
+            add("filename-format", "PASS")
+        else:
+            add("filename-format", "FAIL", f"{file_path.name!r} does not follow lowercase-hyphenated naming")
+
+
+def _check_cursor_rules(file_path, meta, add):
+    """Validate Cursor .mdc specific frontmatter and extension rules."""
+    name = file_path.name
+    if name.endswith(".mdc") or ".cursor/rules" in str(file_path):
+        if not name.endswith(".mdc"):
+            add("cursor-extension", "FAIL", "Cursor rules must use the .mdc extension")
+        else:
+            add("cursor-extension", "PASS")
+
+        if "alwaysApply" in meta:
+            if isinstance(meta["alwaysApply"], bool):
+                add("cursor-always-apply", "PASS")
+            else:
+                add("cursor-always-apply", "FAIL", "'alwaysApply' must be a boolean (true/false)")
+
+        if "globs" in meta:
+            if isinstance(meta["globs"], (str, list)):
+                add("cursor-globs", "PASS")
+            else:
+                add("cursor-globs", "FAIL", "'globs' must be a string or list of glob patterns")
+
+
+def _check_copilot_rules(file_path, meta, add):
+    """Validate Copilot .instructions.md specific frontmatter rules."""
+    name = file_path.name
+    if name.endswith(".instructions.md") or ".github/instructions" in str(file_path):
+        if not name.endswith(".instructions.md"):
+            add("copilot-extension", "WARN", "Copilot scoped instructions should use .instructions.md")
+        else:
+            add("copilot-extension", "PASS")
+
+        if "applyTo" in meta:
+            if isinstance(meta["applyTo"], (str, list)):
+                add("copilot-apply-to", "PASS")
+            else:
+                add("copilot-apply-to", "FAIL", "'applyTo' must be a string or list of glob patterns")
+
+        if "excludeAgent" in meta:
+            if meta["excludeAgent"] in ("code-review", "cloud-agent"):
+                add("copilot-exclude-agent", "PASS")
+            else:
+                add("copilot-exclude-agent", "WARN", f"unrecognized excludeAgent {meta['excludeAgent']!r}")
+
+
+def _check_antigravity_rules(meta, add):
+    """Validate Antigravity trigger / activation frontmatter rules."""
+    trigger = meta.get("trigger") or meta.get("activation")
+    if trigger is not None:
+        if trigger in ("always_on", "glob", "model_decision", "manual"):
+            add("antigravity-trigger", "PASS")
+        else:
+            add("antigravity-trigger", "FAIL", f"invalid trigger {trigger!r}; expected always_on, glob, model_decision, or manual")
+
+        if trigger == "glob" and not (meta.get("globs") or meta.get("glob_pattern")):
+            add("antigravity-glob-pattern", "FAIL", "trigger: glob requires 'globs' or 'glob_pattern' field")
+        elif trigger == "model_decision" and not meta.get("description"):
+            add("antigravity-description", "WARN", "trigger: model_decision recommends 'description' for relevance evaluation")
+
+
+def _check_claude_rules(meta, add):
+    """Validate Claude Code paths frontmatter rules."""
+    if "paths" in meta:
+        if isinstance(meta["paths"], (list, str)):
+            add("claude-paths", "PASS")
+        else:
+            add("claude-paths", "FAIL", "'paths' must be a list or string of glob patterns")
+
+
 def validate_rule(file_path):
     """Validate a single rule file. Returns list of (check, status, detail)."""
     results = []
@@ -135,20 +217,7 @@ def validate_rule(file_path):
     is_root_memory = name in ("AGENTS.md", "CLAUDE.md", "GEMINI.md", ".cursorrules", "SOUL.md", ".hermes.md")
 
     # Extension & Filename format check
-    stem = file_path.stem
-    if stem.endswith(".instructions"):
-        stem = stem[:-13]
-
-    if not is_root_memory and not file_path.name.startswith("."):
-        clean_stem = file_path.name
-        for ext in (".instructions.md", ".mdc", ".md", ".rules"):
-            if clean_stem.endswith(ext):
-                clean_stem = clean_stem[: -len(ext)]
-                break
-        if NAME_RE.match(clean_stem):
-            add("filename-format", "PASS")
-        else:
-            add("filename-format", "FAIL", f"{file_path.name!r} does not follow lowercase-hyphenated naming")
+    _check_filename_format(file_path, is_root_memory, add)
 
     try:
         meta, body_lines, total_chars, total_lines = split_rule_file(file_path)
@@ -173,63 +242,10 @@ def validate_rule(file_path):
     if is_root_memory and not meta:
         return results
 
-    # Cursor .mdc checks
-    if name.endswith(".mdc") or ".cursor/rules" in str(file_path):
-        if not name.endswith(".mdc"):
-            add("cursor-extension", "FAIL", "Cursor rules must use the .mdc extension")
-        else:
-            add("cursor-extension", "PASS")
-
-        if "alwaysApply" in meta:
-            if isinstance(meta["alwaysApply"], bool):
-                add("cursor-always-apply", "PASS")
-            else:
-                add("cursor-always-apply", "FAIL", "'alwaysApply' must be a boolean (true/false)")
-
-        if "globs" in meta:
-            if isinstance(meta["globs"], (str, list)):
-                add("cursor-globs", "PASS")
-            else:
-                add("cursor-globs", "FAIL", "'globs' must be a string or list of glob patterns")
-
-    # Copilot .instructions.md checks
-    if name.endswith(".instructions.md") or ".github/instructions" in str(file_path):
-        if not name.endswith(".instructions.md"):
-            add("copilot-extension", "WARN", "Copilot scoped instructions should use .instructions.md")
-        else:
-            add("copilot-extension", "PASS")
-
-        if "applyTo" in meta:
-            if isinstance(meta["applyTo"], (str, list)):
-                add("copilot-apply-to", "PASS")
-            else:
-                add("copilot-apply-to", "FAIL", "'applyTo' must be a string or list of glob patterns")
-
-        if "excludeAgent" in meta:
-            if meta["excludeAgent"] in ("code-review", "cloud-agent"):
-                add("copilot-exclude-agent", "PASS")
-            else:
-                add("copilot-exclude-agent", "WARN", f"unrecognized excludeAgent {meta['excludeAgent']!r}")
-
-    # Antigravity trigger / activation checks
-    trigger = meta.get("trigger") or meta.get("activation")
-    if trigger is not None:
-        if trigger in ("always_on", "glob", "model_decision", "manual"):
-            add("antigravity-trigger", "PASS")
-        else:
-            add("antigravity-trigger", "FAIL", f"invalid trigger {trigger!r}; expected always_on, glob, model_decision, or manual")
-
-        if trigger == "glob" and not (meta.get("globs") or meta.get("glob_pattern")):
-            add("antigravity-glob-pattern", "FAIL", "trigger: glob requires 'globs' or 'glob_pattern' field")
-        elif trigger == "model_decision" and not meta.get("description"):
-            add("antigravity-description", "WARN", "trigger: model_decision recommends 'description' for relevance evaluation")
-
-    # Claude Code paths check
-    if "paths" in meta:
-        if isinstance(meta["paths"], (list, str)):
-            add("claude-paths", "PASS")
-        else:
-            add("claude-paths", "FAIL", "'paths' must be a list or string of glob patterns")
+    _check_cursor_rules(file_path, meta, add)
+    _check_copilot_rules(file_path, meta, add)
+    _check_antigravity_rules(meta, add)
+    _check_claude_rules(meta, add)
 
     return results
 
