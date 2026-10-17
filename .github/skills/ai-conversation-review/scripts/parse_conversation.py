@@ -55,12 +55,13 @@ def parse_antigravity_gemini_jsonl(lines: List[str]) -> List[Dict[str, Any]]:
             extracted_tools = []
             if isinstance(tool_calls, list):
                 for tc in tool_calls:
+                    if not isinstance(tc, dict):
+                        continue
                     tool_name = tc.get("name") or tc.get("ToolName") or tc.get("toolAction", "tool_call")
-                    args = tc.get("args") or tc.get("Arguments") or {}
-                    extracted_tools.append({
-                        "name": tool_name,
-                        "args": args
-                    })
+                    tool_call = dict(tc)
+                    tool_call["name"] = tool_name
+                    extracted_tools.append(tool_call)
+            extracted_tools = normalise_tool_calls(extracted_tools)
             
             error = None
             if status == "ERROR" or "Error" in str(content):
@@ -82,7 +83,7 @@ def normalise_tool_calls(tool_calls: List[Dict[str, Any]]) -> List[Dict[str, Any
     dict, not a JSON string), while the VS Code path in ingest_transcript() already
     normalises to "args". The renderer only ever read "args", so every OpenCode tool call
     rendered as `{}` -- which silently blinded the command-efficiency audit to exactly the
-    commands it is supposed to audit. Accept either key and always emit "args".
+    commands it is supposed to audit. Accept any common key and always emit "args".
     """
     out = []
     for tc in tool_calls or []:
@@ -93,11 +94,20 @@ def normalise_tool_calls(tool_calls: List[Dict[str, Any]]) -> List[Dict[str, Any
         # value is non-empty -- is what separates an upstream key mismatch (the bug worth
         # warning about) from a tool genuinely invoked with no arguments, which also
         # normalises to {} and must not trigger a false alarm.
-        had_key = "args" in tc or "arguments" in tc
+        had_key = "args" in tc or "arguments" in tc or "input" in tc or "Arguments" in tc
         if "args" not in tc:
-            tc["args"] = compact_tool_args(tc.get("arguments"))
+            raw_args = tc.get("arguments")
+            if raw_args is None:
+                raw_args = tc.get("input")
+            if raw_args is None:
+                raw_args = tc.get("Arguments")
+            tc["args"] = compact_tool_args(raw_args)
+        else:
+            tc["args"] = compact_tool_args(tc["args"])
         tc["args_recovered"] = had_key
         tc.pop("arguments", None)
+        tc.pop("input", None)
+        tc.pop("Arguments", None)
         out.append(tc)
     return out
 
@@ -149,10 +159,19 @@ def parse_claude_code_session(data: Any) -> List[Dict[str, Any]]:
             raw_tools = rec.get("tools") or rec.get("tool_use") or []
             if isinstance(raw_tools, list):
                 for t in raw_tools:
-                    tool_calls.append({
+                    if not isinstance(t, dict):
+                        continue
+                    tool_call = {
                         "name": t.get("name", "unknown_tool"),
-                        "args": t.get("input", {})
-                    })
+                    }
+                    if "input" in t:
+                        tool_call["input"] = t.get("input")
+                    elif "args" in t:
+                        tool_call["args"] = t.get("args")
+                    elif "arguments" in t:
+                        tool_call["arguments"] = t.get("arguments")
+                    tool_calls.append(tool_call)
+                tool_calls = normalise_tool_calls(tool_calls)
         
         if role in ("user", "human"):
             events.append({"role": "user", "content": content, "tool_calls": [], "error": None})
@@ -286,14 +305,20 @@ def parse_vscode_copilot_jsonl(lines: List[str]) -> List[Dict[str, Any]]:
             err_msg = result.get("error")
             if success is False and not err_msg:
                 err_msg = "Tool execution failed"
+            tool_call = {
+                "name": data.get("toolName", "unknown_tool"),
+                "status": "ok" if success is True else "failed" if success is False else "unknown",
+            }
+            if "arguments" in data:
+                tool_call["arguments"] = data.get("arguments")
+            elif "args" in data:
+                tool_call["args"] = data.get("args")
+            elif "input" in data:
+                tool_call["input"] = data.get("input")
             events.append({
                 "role": "tool",
                 "content": "",
-                "tool_calls": [{
-                    "name": data.get("toolName", "unknown_tool"),
-                    "args": compact_tool_args(data.get("arguments")),
-                    "status": "ok" if success is True else "failed" if success is False else "unknown",
-                }],
+                "tool_calls": normalise_tool_calls([tool_call]),
                 "error": err_msg,
             })
     return events
@@ -408,10 +433,17 @@ def generate_markdown_summary(events: List[Dict[str, Any]], max_turns: Optional[
             for tc in tool_calls:
                 tname = tc.get("name", "tool")
                 # generate_markdown_summary() is public and callers may hand it raw platform
-                # rows, so accept either key instead of trusting upstream normalisation.
-                targs = tc.get("args")
-                if targs is None:
+                # rows, so accept any key instead of trusting upstream normalisation.
+                if "args" in tc:
+                    targs = compact_tool_args(tc.get("args"))
+                elif "arguments" in tc:
                     targs = compact_tool_args(tc.get("arguments"))
+                elif "input" in tc:
+                    targs = compact_tool_args(tc.get("input"))
+                elif "Arguments" in tc:
+                    targs = compact_tool_args(tc.get("Arguments"))
+                else:
+                    targs = {}
                 args_str = json.dumps(targs, separators=(',', ':')) if isinstance(targs, (dict, list)) else str(targs)
                 if len(args_str) > 200:
                     args_str = args_str[:180] + '" ...[truncated]"'
@@ -419,7 +451,12 @@ def generate_markdown_summary(events: List[Dict[str, Any]], max_turns: Optional[
                 suffix = f" ({status})" if status else ""
                 output.append(f"- `{tname}`{suffix}: `{args_str}`")
             # Never let a key mismatch make an efficiency audit look like a clean session.
-            if tool_calls and not any(tc.get("args_recovered") for tc in tool_calls):
+            has_args_recovered = any(
+                tc.get("args_recovered") if tc.get("args_recovered") is not None
+                else ("args" in tc or "arguments" in tc or "input" in tc or "Arguments" in tc)
+                for tc in tool_calls
+            )
+            if tool_calls and not has_args_recovered:
                 output.append(
                     "> [!WARNING]\n> **No tool arguments were recovered for any call in this "
                     "turn.** Efficiency findings drawn from this transcript are NOT reliable: "
