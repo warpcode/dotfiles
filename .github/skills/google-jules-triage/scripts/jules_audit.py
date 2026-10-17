@@ -214,29 +214,34 @@ def inspect_github_pr(pr_url: str) -> dict[str, Any]:
     return result
 
 
-def audit_session(
+def _extract_outputs_info(session: dict[str, Any]) -> tuple[str, bool, list[str]]:
+    """Extract PR URL, patch availability, and modified file list from session outputs."""
+    pr_url = ""
+    has_git_patch = False
+    patch_files: list[str] = []
+
+    for out in session.get("outputs", []):
+        if not pr_url and "pullRequest" in out:
+            pr_url = out["pullRequest"].get("url", "")
+        cs = out.get("changeSet") or {}
+        raw_patch = (cs.get("gitPatch") or {}).get("unidiffPatch") or ""
+        if raw_patch or cs.get("suggestedCommitMessage"):
+            has_git_patch = True
+            if raw_patch:
+                patch_files = re.findall(r"^diff --git a/(.*?) b/", raw_patch, re.MULTILINE)
+
+    return pr_url, has_git_patch, patch_files
+
+
+def _process_activities(
     session: dict[str, Any],
-    activities: list[dict[str, Any]],
-    check_pr: bool = False,
-    stale_threshold_mins: int = 60,
-    max_age_days: int = 30,
+    activities: list[dict[str, Any]] | None,
+    has_git_patch: bool,
 ) -> dict[str, Any]:
-    """Audit a single session, evaluating full activity history and responsiveness."""
-    sid = session.get("id") or session.get("name", "").removeprefix("sessions/")
-    raw_title = session.get("title") or session.get("prompt", "Untitled Session")
-    title = " ".join(raw_title.split())
-    state = session.get("state", "UNKNOWN")
+    """Parse session activity timeline into structured user/agent state and timestamps."""
     created_time = session.get("createTime", "")
     updated_time = session.get("updateTime", "")
-
-    now = datetime.now(timezone.utc)
-
-    # Output PR extraction
-    pr_url = ""
-    for out in session.get("outputs", []):
-        if "pullRequest" in out:
-            pr_url = out["pullRequest"].get("url", "")
-            break
+    state = session.get("state", "UNKNOWN")
 
     user_messages: list[dict[str, Any]] = []
     agent_messages: list[dict[str, Any]] = []
@@ -248,20 +253,7 @@ def audit_session(
     last_user_msg: str = ""
     last_agent_msg: str = ""
     pending_plan_id: str | None = None
-    has_git_patch: bool = False
-    patch_files: list[str] = []
 
-    # Check for git patches in session outputs
-    for out in session.get("outputs", []):
-        cs = out.get("changeSet") or {}
-        raw_patch = (cs.get("gitPatch") or {}).get("unidiffPatch") or ""
-        if raw_patch or cs.get("suggestedCommitMessage"):
-            has_git_patch = True
-            if raw_patch:
-                patch_files = re.findall(r"^diff --git a/(.*?) b/", raw_patch, re.MULTILINE)
-            break
-
-    # Initial session prompt is Turn 0
     prompt = (session.get("prompt") or "").strip()
     if prompt:
         p_time = parse_dt(created_time)
@@ -269,7 +261,9 @@ def audit_session(
         last_user_msg = prompt
         last_user_time = p_time
 
-    for act in activities:
+    safe_activities = activities or []
+
+    for act in safe_activities:
         act_time_str = act.get("createTime", "")
         act_time = parse_dt(act_time_str)
 
@@ -312,15 +306,16 @@ def audit_session(
             agent_activities.append({"type": "Artifacts", "content": "Artifacts produced", "time": act_time})
             last_agent_time = act_time
 
-    # Latest activity string
-    if activities:
-        latest_act = activities[-1]
+    last_activity_display: str = ""
+    latest_act_time: datetime | None = None
+
+    if safe_activities:
+        latest_act = safe_activities[-1]
         lat_time = format_dt(latest_act.get("createTime"))
         type_keys = [
             k for k in latest_act.keys() if k not in ("id", "name", "createTime", "originator")
         ]
         lat_type = type_keys[0] if type_keys else "Activity"
-        # Friendly type names
         type_names = {
             "agentMessaged": "Agent Message",
             "userMessaged": "User Message",
@@ -339,31 +334,127 @@ def audit_session(
         last_activity_display = f"{format_dt(disp_time)} ({disp_type})"
         latest_act_time = parse_dt(disp_time)
 
-    # Inactivity calculation
+    return {
+        "user_messages": user_messages,
+        "agent_messages": agent_messages,
+        "agent_activities": agent_activities,
+        "last_user_time": last_user_time,
+        "last_agent_time": last_agent_time,
+        "last_agent_msg_time": last_agent_msg_time,
+        "last_user_msg": last_user_msg,
+        "last_agent_msg": last_agent_msg,
+        "pending_plan_id": pending_plan_id,
+        "has_git_patch": has_git_patch,
+        "last_activity_display": last_activity_display,
+        "latest_act_time": latest_act_time,
+    }
+
+
+def _is_junk_session(agent_messages: list[dict[str, Any]]) -> bool:
+    """Determine if session consists solely of degenerate / short / CJK / rubber-stamp agent messages."""
+    if not agent_messages or len(agent_messages) < 2:
+        return False
+
+    for m in agent_messages:
+        text = m["content"].strip()
+        is_short = len(text) <= 2
+        is_cjk = any("\u4e00" <= ch <= "\u9fff" for ch in text)
+        is_rubber_stamp = "Code review rating is #Correct#" in text
+        if not (is_short or is_cjk or is_rubber_stamp):
+            return False
+
+    return True
+
+
+def _classify_verdict(
+    is_junk: bool,
+    empty_commit_loop: bool,
+    stale_branch: bool,
+    pr_url: str,
+    pending_plan_id: str | None,
+    state: str,
+    agent_awaiting_reply: bool,
+    has_git_patch: bool,
+    patch_files: list[str],
+    user_newer_than_agent: bool,
+    inactive_mins: float,
+    stale_threshold_mins: int,
+    max_age_days: int,
+    age_days: float,
+) -> str:
+    """Classify the session's health verdict."""
+    if is_junk:
+        return "JUNK"
+    if empty_commit_loop:
+        return "EMPTY_COMMIT_LOOP"
+    if stale_branch:
+        return "STALE_BRANCH"
+    if pr_url:
+        return "COMPLETED_WITH_PR"
+    if pending_plan_id or state == "AWAITING_PLAN_APPROVAL":
+        return "PLAN_GATE"
+    if agent_awaiting_reply or state == "AWAITING_USER_FEEDBACK":
+        return "FEEDBACK_GATE"
+    if state == "COMPLETED":
+        if has_git_patch:
+            files_summary = (
+                f" ({len(patch_files)} files: {', '.join(patch_files[:2])}{'...' if len(patch_files) > 2 else ''})"
+                if patch_files
+                else ""
+            )
+            return f"UNDELIVERED_PATCH{files_summary}"
+        return "CLOSED_NO_PR"
+    if state == "FAILED":
+        return "FAILED"
+    if user_newer_than_agent:
+        return "AWAITING_AGENT"
+    if state == "IN_PROGRESS":
+        if inactive_mins >= stale_threshold_mins:
+            return "STALLED"
+        return "ACTIVE"
+    if max_age_days and age_days > max_age_days:
+        return "INACTIVE"
+    return state
+
+
+def audit_session(
+    session: dict[str, Any],
+    activities: list[dict[str, Any]],
+    check_pr: bool = False,
+    stale_threshold_mins: int = 60,
+    max_age_days: int = 30,
+) -> dict[str, Any]:
+    """Audit a single session, evaluating full activity history and responsiveness."""
+    sid = session.get("id") or session.get("name", "").removeprefix("sessions/")
+    raw_title = session.get("title") or session.get("prompt", "Untitled Session")
+    title = " ".join(raw_title.split())
+    state = session.get("state", "UNKNOWN")
+    created_time = session.get("createTime", "")
+    updated_time = session.get("updateTime", "")
+
+    now = datetime.now(timezone.utc)
+
+    pr_url, initial_patch, patch_files = _extract_outputs_info(session)
+    act_data = _process_activities(session, activities, initial_patch)
+
+    has_git_patch = act_data["has_git_patch"]
+    latest_act_time = act_data["latest_act_time"]
+    last_user_time = act_data["last_user_time"]
+    last_agent_time = act_data["last_agent_time"]
+    last_agent_msg_time = act_data["last_agent_msg_time"]
+    last_user_msg = act_data["last_user_msg"]
+    last_agent_msg = act_data["last_agent_msg"]
+    pending_plan_id = act_data["pending_plan_id"]
+
     inactive_mins = 0.0
     if latest_act_time:
         inactive_mins = max(0.0, (now - latest_act_time).total_seconds() / 60.0)
 
-    # Session age in days
     c_time = parse_dt(created_time or updated_time)
     age_days = (now - c_time).total_seconds() / 86400.0 if c_time else 0.0
 
-    # Junk session check
-    is_junk = False
-    if agent_messages and len(agent_messages) >= 2:
-        all_junk = True
-        for m in agent_messages:
-            text = m["content"].strip()
-            is_short = len(text) <= 2
-            is_cjk = any("\u4e00" <= ch <= "\u9fff" for ch in text)
-            is_rubber_stamp = "Code review rating is #Correct#" in text
-            if not (is_short or is_cjk or is_rubber_stamp):
-                all_junk = False
-                break
-        if all_junk:
-            is_junk = True
+    is_junk = _is_junk_session(act_data["agent_messages"])
 
-    # Agent question awaiting reply
     agent_awaiting_reply = False
     if last_agent_msg_time and (not last_user_time or last_agent_msg_time > last_user_time):
         if last_agent_msg:
@@ -374,13 +465,11 @@ def audit_session(
             ):
                 agent_awaiting_reply = True
 
-    # User message posted after the last agent activity
     user_newer_than_agent = False
     if last_user_time:
         if not last_agent_time or last_user_time > last_agent_time:
             user_newer_than_agent = True
 
-    # PR checks
     empty_commit_loop = False
     stale_branch = False
     pr_details: dict[str, Any] = {}
@@ -391,44 +480,28 @@ def audit_session(
         if pr_details.get("mergeable") == "CONFLICTING":
             stale_branch = True
 
-    # Verdict classification
-    if is_junk:
-        verdict = "JUNK"
-    elif empty_commit_loop:
-        verdict = "EMPTY_COMMIT_LOOP"
-    elif stale_branch:
-        verdict = "STALE_BRANCH"
-    elif pr_url:
-        verdict = "COMPLETED_WITH_PR"
-    elif pending_plan_id or state == "AWAITING_PLAN_APPROVAL":
-        verdict = "PLAN_GATE"
-    elif agent_awaiting_reply or state == "AWAITING_USER_FEEDBACK":
-        verdict = "FEEDBACK_GATE"
-    elif state == "COMPLETED":
-        if has_git_patch:
-            files_summary = f" ({len(patch_files)} files: {', '.join(patch_files[:2])}{'...' if len(patch_files) > 2 else ''})" if patch_files else ""
-            verdict = f"UNDELIVERED_PATCH{files_summary}"
-        else:
-            verdict = "CLOSED_NO_PR"
-    elif state == "FAILED":
-        verdict = "FAILED"
-    elif user_newer_than_agent:
-        verdict = "AWAITING_AGENT"
-    elif state == "IN_PROGRESS":
-        if inactive_mins >= stale_threshold_mins:
-            verdict = "STALLED"
-        else:
-            verdict = "ACTIVE"
-    elif max_age_days and age_days > max_age_days:
-        verdict = "INACTIVE"
-    else:
-        verdict = state
+    verdict = _classify_verdict(
+        is_junk=is_junk,
+        empty_commit_loop=empty_commit_loop,
+        stale_branch=stale_branch,
+        pr_url=pr_url,
+        pending_plan_id=pending_plan_id,
+        state=state,
+        agent_awaiting_reply=agent_awaiting_reply,
+        has_git_patch=has_git_patch,
+        patch_files=patch_files,
+        user_newer_than_agent=user_newer_than_agent,
+        inactive_mins=inactive_mins,
+        stale_threshold_mins=stale_threshold_mins,
+        max_age_days=max_age_days,
+        age_days=age_days,
+    )
 
     return {
         "id": sid,
         "title": title,
         "state": state,
-        "last_activity": last_activity_display,
+        "last_activity": act_data["last_activity_display"],
         "last_user_message": last_user_msg,
         "verdict": verdict,
         "inactive_mins": round(inactive_mins, 1),
