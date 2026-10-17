@@ -292,39 +292,13 @@ class JulesClient:
             return activities[-limit:]
         return activities
 
-    def audit_session(
-        self,
-        session_data: dict[str, Any],
-        stale_threshold_mins: int = 60,
-        max_age_days: int | None = 30,
+    @staticmethod
+    def _analyze_activities(
+        activities: list[dict[str, Any]],
+        prompt: str,
+        created_time: str,
     ) -> dict[str, Any]:
-        """Audit the status, timeline events, and health of a single session."""
-        sid = session_data.get("id") or session_data.get("name", "").removeprefix("sessions/")
-        # Collapse all whitespace to a single line, then truncate. Session titles are often
-        # the entire original task prompt, which floods summary tables with multi-paragraph text.
-        raw_title = session_data.get("title") or session_data.get("prompt", "")
-        title = " ".join(raw_title.split())[:60]
-        state = session_data.get("state", "UNKNOWN")
-        source_ctx = session_data.get("sourceContext", {})
-        source_name = source_ctx.get("source", "").removeprefix("sources/")
-        branch = source_ctx.get("githubRepoContext", {}).get("startingBranch", "")
-
-        created_time = session_data.get("createTime", "")
-        updated_time = session_data.get("updateTime", "")
-
-        pr_url = ""
-        for out in session_data.get("outputs", []):
-            if "pullRequest" in out:
-                pr_url = out["pullRequest"].get("url", "")
-                break
-
-        # Optimization: bypass activity fetching for completed sessions that already produced a PR
-        if state == "COMPLETED" and pr_url:
-            activities = []
-        else:
-            activities = self.get_all_activities(sid)
-        now = datetime.now(timezone.utc)
-
+        """Extract conversation history, plans, reviews, and message statistics from activities."""
         conversation_history: list[dict[str, Any]] = []
         code_reviews: list[dict[str, Any]] = []
         plans: list[dict[str, Any]] = []
@@ -338,7 +312,6 @@ class JulesClient:
         last_agent_time = ""
 
         # Analyze initial task prompt as turn 0 if present
-        prompt = session_data.get("prompt", "").strip()
         if prompt:
             conversation_history.append({
                 "role": "user",
@@ -355,7 +328,6 @@ class JulesClient:
         # Traverse complete chronological timeline
         for a in activities:
             t = a.get("createTime", "")
-            orig = a.get("originator", "")
             aid = a.get("id", "")
 
             if "planGenerated" in a:
@@ -453,6 +425,28 @@ class JulesClient:
             if any(q in lower_msg for q in ["confirm", "approve", "proceed", "look good", "?", "let me know", "feedback"]):
                 agent_awaiting_reply = True
 
+        return {
+            "conversation_history": conversation_history,
+            "code_reviews": code_reviews,
+            "plans": plans,
+            "pending_plan_id": pending_plan_id,
+            "user_message_count": user_message_count,
+            "agent_message_count": agent_message_count,
+            "unanswered_user_messages": unanswered_user_messages,
+            "agent_awaiting_reply": agent_awaiting_reply,
+            "last_speaker": last_speaker,
+            "last_user_message": last_user_message,
+            "last_user_time": last_user_time,
+            "last_agent_message": last_agent_message,
+            "last_agent_time": last_agent_time,
+        }
+
+    @staticmethod
+    def _get_latest_activity_info(
+        activities: list[dict[str, Any]],
+        updated_time: str,
+    ) -> dict[str, Any]:
+        """Summarize the most recent activity in terms of time, type, and detail."""
         latest_activity_time = updated_time
         latest_type = "none"
         latest_detail = ""
@@ -460,7 +454,6 @@ class JulesClient:
         if activities:
             latest = activities[-1]
             latest_activity_time = latest.get("createTime", updated_time)
-            orig = latest.get("originator", "agent")
             type_keys = [k for k in latest.keys() if k not in ("id", "name", "createTime", "originator")]
             latest_type = type_keys[0] if type_keys else "unknown"
 
@@ -476,10 +469,89 @@ class JulesClient:
             elif "sessionCompleted" in latest:
                 latest_detail = "Session completed"
 
+        return {
+            "latest_activity_time": latest_activity_time,
+            "latest_type": latest_type,
+            "latest_detail": latest_detail,
+        }
+
+    @staticmethod
+    def _determine_session_assessment(
+        is_inactive: bool,
+        pr_url: str,
+        state: str,
+        pending_plan_id: Any,
+        agent_awaiting_reply: bool,
+        unanswered_user_messages: int,
+        inactive_mins: float,
+        stale_threshold_mins: int,
+    ) -> str:
+        """Determine health assessment status based on state, inactivity, PR, and conversation flow."""
+        # Determine assessment using state, age, and conversation history.
+        # CRITICAL INVARIANT: In Jules, sessions report state == "COMPLETED" when the runner
+        # goes idle (~20m) waiting for plan approval or feedback. "COMPLETED" does NOT mean
+        # terminal or finished! We must inspect messages and pending actions.
+        if is_inactive:
+            return "INACTIVE"
+        if pr_url:
+            return "COMPLETED_WITH_PR"
+        if state == "AWAITING_PLAN_APPROVAL" or (pending_plan_id and state not in ("FAILED",)):
+            return "AWAITING_PLAN_APPROVAL"
+        if state == "AWAITING_USER_FEEDBACK" or (agent_awaiting_reply and state not in ("FAILED",)):
+            return "AWAITING_USER_FEEDBACK"
+        if state == "IN_PROGRESS":
+            if unanswered_user_messages > 0 and inactive_mins >= 15:
+                return "STALLED"
+            if inactive_mins >= stale_threshold_mins:
+                return "STALLED"
+            return "ACTIVE"
+        if state == "COMPLETED":
+            if unanswered_user_messages > 0:
+                return "STALLED"
+            return "COMPLETED_NO_OUTPUT"
+        return state
+
+    def audit_session(
+        self,
+        session_data: dict[str, Any],
+        stale_threshold_mins: int = 60,
+        max_age_days: int | None = 30,
+    ) -> dict[str, Any]:
+        """Audit the status, timeline events, and health of a single session."""
+        sid = session_data.get("id") or session_data.get("name", "").removeprefix("sessions/")
+        # Collapse all whitespace to a single line, then truncate. Session titles are often
+        # the entire original task prompt, which floods summary tables with multi-paragraph text.
+        raw_title = session_data.get("title") or session_data.get("prompt", "")
+        title = " ".join(raw_title.split())[:60]
+        state = session_data.get("state", "UNKNOWN")
+        source_ctx = session_data.get("sourceContext", {})
+        source_name = source_ctx.get("source", "").removeprefix("sources/")
+        branch = source_ctx.get("githubRepoContext", {}).get("startingBranch", "")
+
+        created_time = session_data.get("createTime", "")
+        updated_time = session_data.get("updateTime", "")
+
+        pr_url = ""
+        for out in session_data.get("outputs", []):
+            if "pullRequest" in out:
+                pr_url = out["pullRequest"].get("url", "")
+                break
+
+        # Optimization: bypass activity fetching for completed sessions that already produced a PR
+        if state == "COMPLETED" and pr_url:
+            activities = []
+        else:
+            activities = self.get_all_activities(sid)
+        now = datetime.now(timezone.utc)
+
+        prompt = session_data.get("prompt", "").strip()
+        analysis = self._analyze_activities(activities, prompt, created_time)
+        latest_info = self._get_latest_activity_info(activities, updated_time)
+
         inactive_mins = 0.0
-        if latest_activity_time:
+        if latest_info["latest_activity_time"]:
             try:
-                act_dt = parse_iso_datetime(latest_activity_time)
+                act_dt = parse_iso_datetime(latest_info["latest_activity_time"])
                 inactive_mins = max(0.0, (now - act_dt).total_seconds() / 60.0)
             except Exception:
                 pass
@@ -496,32 +568,16 @@ class JulesClient:
 
         is_inactive = bool(max_age_days is not None and max_age_days > 0 and age_days > max_age_days)
 
-        # Determine assessment using state, age, and conversation history.
-        # CRITICAL INVARIANT: In Jules, sessions report state == "COMPLETED" when the runner
-        # goes idle (~20m) waiting for plan approval or feedback. "COMPLETED" does NOT mean
-        # terminal or finished! We must inspect messages and pending actions.
-        if is_inactive:
-            assessment = "INACTIVE"
-        elif pr_url:
-            assessment = "COMPLETED_WITH_PR"
-        elif state == "AWAITING_PLAN_APPROVAL" or (pending_plan_id and state not in ("FAILED",)):
-            assessment = "AWAITING_PLAN_APPROVAL"
-        elif state == "AWAITING_USER_FEEDBACK" or (agent_awaiting_reply and state not in ("FAILED",)):
-            assessment = "AWAITING_USER_FEEDBACK"
-        elif state == "IN_PROGRESS":
-            if unanswered_user_messages > 0 and inactive_mins >= 15:
-                assessment = "STALLED"
-            elif inactive_mins >= stale_threshold_mins:
-                assessment = "STALLED"
-            else:
-                assessment = "ACTIVE"
-        elif state == "COMPLETED":
-            if unanswered_user_messages > 0:
-                assessment = "STALLED"
-            else:
-                assessment = "COMPLETED_NO_OUTPUT"
-        else:
-            assessment = state
+        assessment = self._determine_session_assessment(
+            is_inactive=is_inactive,
+            pr_url=pr_url,
+            state=state,
+            pending_plan_id=analysis["pending_plan_id"],
+            agent_awaiting_reply=analysis["agent_awaiting_reply"],
+            unanswered_user_messages=analysis["unanswered_user_messages"],
+            inactive_mins=inactive_mins,
+            stale_threshold_mins=stale_threshold_mins,
+        )
 
         return {
             "id": sid,
@@ -532,27 +588,27 @@ class JulesClient:
             "branch": branch,
             "created_time": created_time,
             "updated_time": updated_time,
-            "latest_activity_time": latest_activity_time,
+            "latest_activity_time": latest_info["latest_activity_time"],
             "inactive_mins": round(inactive_mins, 1),
             "age_days": round(age_days, 1),
             "is_inactive": is_inactive,
             "activity_count": len(activities),
-            "latest_type": latest_type,
-            "latest_detail": latest_detail,
-            "pending_plan_id": pending_plan_id,
+            "latest_type": latest_info["latest_type"],
+            "latest_detail": latest_info["latest_detail"],
+            "pending_plan_id": analysis["pending_plan_id"],
             "pull_request_url": pr_url,
-            "conversation_history": conversation_history,
-            "user_message_count": user_message_count,
-            "agent_message_count": agent_message_count,
-            "unanswered_user_messages": unanswered_user_messages,
-            "agent_awaiting_reply": agent_awaiting_reply,
-            "last_speaker": last_speaker,
-            "last_user_message": last_user_message,
-            "last_user_time": last_user_time,
-            "last_agent_message": last_agent_message,
-            "last_agent_time": last_agent_time,
-            "code_reviews": code_reviews,
-            "plans": plans,
+            "conversation_history": analysis["conversation_history"],
+            "user_message_count": analysis["user_message_count"],
+            "agent_message_count": analysis["agent_message_count"],
+            "unanswered_user_messages": analysis["unanswered_user_messages"],
+            "agent_awaiting_reply": analysis["agent_awaiting_reply"],
+            "last_speaker": analysis["last_speaker"],
+            "last_user_message": analysis["last_user_message"],
+            "last_user_time": analysis["last_user_time"],
+            "last_agent_message": analysis["last_agent_message"],
+            "last_agent_time": analysis["last_agent_time"],
+            "code_reviews": analysis["code_reviews"],
+            "plans": analysis["plans"],
         }
 
     def audit_sessions(
