@@ -43,6 +43,7 @@ import re
 import sqlite3
 import sys
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -60,13 +61,13 @@ VSCODE_STORAGE_PATHS = [
 ]
 
 
+@dataclass
 class SessionRef:
-    def __init__(self, session_id: str, platform: str, location: Path | str, mtime: float, workspace: str = ""):
-        self.session_id = session_id
-        self.platform = platform
-        self.location = location
-        self.mtime = mtime
-        self.workspace = workspace
+    session_id: str
+    platform: str
+    location: Path | str
+    mtime: float
+    workspace: str = ""
 
 
 def discover_sessions(
