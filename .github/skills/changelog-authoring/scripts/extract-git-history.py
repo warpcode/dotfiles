@@ -11,6 +11,7 @@ Standard library only. Optional integration with `gh` CLI for PR labels.
 
 import argparse
 import datetime
+from dataclasses import dataclass
 import json
 import os
 import re
@@ -18,6 +19,17 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
+
+
+@dataclass
+class ChangelogOptions:
+    """Configuration options for building changelog and provenance records."""
+    from_ref: str
+    to_ref: str
+    repo_slug: str
+    version_label: str
+    fetch_gh_labels: bool = True
+    cwd: Optional[Path] = None
 
 
 def run_git_cmd(args: List[str], cwd: Optional[Path] = None) -> str:
@@ -261,16 +273,11 @@ def fetch_git_commits(
 
 def build_provenance_and_changelog(
     commits: List[Dict[str, Any]],
-    from_ref: str,
-    to_ref: str,
-    repo_slug: str,
-    version_label: str,
-    fetch_gh_labels: bool = True,
-    cwd: Optional[Path] = None,
+    options: ChangelogOptions,
 ) -> Tuple[str, Dict[str, Any]]:
     """Build changelog markdown draft and provenance dictionary."""
-    base_sha = get_commit_sha(from_ref, cwd=cwd)
-    head_sha = get_commit_sha(to_ref, cwd=cwd)
+    base_sha = get_commit_sha(options.from_ref, cwd=options.cwd)
+    head_sha = get_commit_sha(options.to_ref, cwd=options.cwd)
     today_str = datetime.date.today().isoformat()
 
     categories: Dict[str, List[Dict[str, Any]]] = {
@@ -292,8 +299,8 @@ def build_provenance_and_changelog(
         pr_num = extract_pr_number(c["subject"], c["body"])
         pr_labels: List[str] = []
         if pr_num:
-            if fetch_gh_labels:
-                pr_labels = fetch_gh_labels_for_pr(pr_num, repo_slug, label_cache)
+            if options.fetch_gh_labels:
+                pr_labels = fetch_gh_labels_for_pr(pr_num, options.repo_slug, label_cache)
             if not pr_labels:
                 # Infer label from conventional commit prefix
                 c_type, scope, _, _ = parse_conventional_commit(c["subject"])
@@ -327,12 +334,12 @@ def build_provenance_and_changelog(
                     if pr_num not in labels_recorded[lbl]:
                         labels_recorded[lbl].append(pr_num)
 
-    compare_url = f"https://github.com/{repo_slug}/compare/{from_ref}...{to_ref}"
+    compare_url = f"https://github.com/{options.repo_slug}/compare/{options.from_ref}...{options.to_ref}"
 
     provenance_data = {
-        "version": version_label,
-        "date": today_str if version_label != "Unreleased" else None,
-        "commit_range": f"{from_ref}..{to_ref}",
+        "version": options.version_label,
+        "date": today_str if options.version_label != "Unreleased" else None,
+        "commit_range": f"{options.from_ref}..{options.to_ref}",
         "base_commit": base_sha,
         "head_commit": head_sha,
         "compare_url": compare_url,
@@ -344,10 +351,10 @@ def build_provenance_and_changelog(
 
     # Format Markdown
     md_lines = []
-    if version_label == "Unreleased":
+    if options.version_label == "Unreleased":
         md_lines.append("## [Unreleased]")
     else:
-        md_lines.append(f"## [{version_label}] - {today_str}")
+        md_lines.append(f"## [{options.version_label}] - {today_str}")
 
     md_lines.append("")
 
@@ -363,9 +370,9 @@ def build_provenance_and_changelog(
             scope_prefix = f"**{e['scope']}**: " if e["scope"] else ""
             ref_suffix = ""
             if e["pr_num"]:
-                ref_suffix = f" ([#{e['pr_num']}](https://github.com/{repo_slug}/pull/{e['pr_num']}))"
+                ref_suffix = f" ([#{e['pr_num']}](https://github.com/{options.repo_slug}/pull/{e['pr_num']}))"
             else:
-                ref_suffix = f" ([`{e['short_sha']}`](https://github.com/{repo_slug}/commit/{e['full_sha']}))"
+                ref_suffix = f" ([`{e['short_sha']}`](https://github.com/{options.repo_slug}/commit/{e['full_sha']}))"
             md_lines.append(f"- {scope_prefix}{e['desc']}{ref_suffix}")
         md_lines.append("")
 
@@ -402,7 +409,7 @@ def build_provenance_and_changelog(
     # Collapsible human-readable audit section
     md_lines.extend([
         "<details>",
-        f"<summary><b>Release Provenance & Audit Trail</b> (commit range: <code>{from_ref}..{to_ref}</code>, {len(commits)} commits)</summary>",
+        f"<summary><b>Release Provenance & Audit Trail</b> (commit range: <code>{options.from_ref}..{options.to_ref}</code>, {len(commits)} commits)</summary>",
         "",
         f"- **Commit Range**: [`{commits[-1]['short_sha'] if commits else 'base'}...{commits[0]['short_sha'] if commits else 'head'}`]({compare_url}) ({len(commits)} total commits)",
         "- **PRs & Labels**:",
@@ -484,13 +491,17 @@ def main():
         path_filter=args.path,
     )
 
-    md_output, prov_data = build_provenance_and_changelog(
-        commits=commits,
+    options = ChangelogOptions(
         from_ref=base_ref,
         to_ref=args.to_ref,
         repo_slug=repo_slug,
         version_label=args.version,
         fetch_gh_labels=not args.no_gh,
+    )
+
+    md_output, prov_data = build_provenance_and_changelog(
+        commits=commits,
+        options=options,
     )
 
     out_content = json.dumps(prov_data, indent=2) if args.json else md_output
