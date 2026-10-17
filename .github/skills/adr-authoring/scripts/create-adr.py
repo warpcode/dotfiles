@@ -11,7 +11,20 @@ import datetime
 import os
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
+
+
+@dataclass
+class ADRContext:
+    """Encapsulates context/metadata for an ADR."""
+
+    title: str
+    number: int = 0
+    status: str = "Proposed"
+    author: str = "Engineering Team"
+    supersedes: Optional[str] = None
 
 
 def slugify(text: str) -> str:
@@ -54,25 +67,21 @@ def get_template_path(template_name: str, skill_root: Path) -> Path:
 
 def render_template(
     template_content: str,
-    number: int,
-    title: str,
-    status: str = "Proposed",
-    author: str = "Engineering Team",
-    supersedes: str = None,
+    context: ADRContext,
 ) -> str:
     """Replace placeholders in template."""
-    num_str = f"{number:04d}"
+    num_str = f"{context.number:04d}"
     now = datetime.date.today().isoformat()
     content = template_content
     content = content.replace("[NUMBER]", num_str)
-    content = content.replace("[Title]", title)
-    content = content.replace("[Status]", status)
+    content = content.replace("[Title]", context.title)
+    content = content.replace("[Status]", context.status)
     content = content.replace("[Date]", now)
-    content = content.replace("[Author / Deciders]", author)
+    content = content.replace("[Author / Deciders]", context.author)
 
-    if supersedes:
+    if context.supersedes:
         content = content.replace(
-            "[Superseded By / Supersedes]", f"Supersedes ADR-{supersedes}"
+            "[Superseded By / Supersedes]", f"Supersedes ADR-{context.supersedes}"
         )
     else:
         content = content.replace(
@@ -82,35 +91,27 @@ def render_template(
 
 
 def scaffold_adr(
-    title: str,
+    context: ADRContext,
     template_name: str = "madr",
     adr_dir_path: str = "docs/adr",
-    status: str = "Proposed",
-    author: str = "Engineering Team",
-    supersedes: str = None,
-    skill_root: Path = None,
+    skill_root: Optional[Path] = None,
 ) -> Path:
     """Generate a new ADR file."""
     if skill_root is None:
         skill_root = Path(__file__).resolve().parent.parent
 
     adr_dir = Path(adr_dir_path)
-    next_num = get_next_adr_number(adr_dir)
-    num_str = f"{next_num:04d}"
-    slug = slugify(title)
+    if not context.number:
+        context.number = get_next_adr_number(adr_dir)
+
+    num_str = f"{context.number:04d}"
+    slug = slugify(context.title)
     filename = f"{num_str}-{slug}.md"
     out_file = adr_dir / filename
 
     tmpl_file = get_template_path(template_name, skill_root)
     template_content = tmpl_file.read_text(encoding="utf-8")
-    rendered = render_template(
-        template_content,
-        number=next_num,
-        title=title,
-        status=status,
-        author=author,
-        supersedes=supersedes,
-    )
+    rendered = render_template(template_content, context)
 
     adr_dir.mkdir(parents=True, exist_ok=True)
     out_file.write_text(rendered, encoding="utf-8")
@@ -131,7 +132,8 @@ def run_self_test(skill_root: Path) -> int:
 
     # Test render
     sample = "# ADR-[NUMBER]: [Title]\nStatus: [Status]\nDate: [Date]"
-    rendered = render_template(sample, 42, "Cache Layer", "Accepted")
+    ctx = ADRContext(title="Cache Layer", number=42, status="Accepted")
+    rendered = render_template(sample, ctx)
     assert "ADR-0042: Cache Layer" in rendered
     assert "Status: Accepted" in rendered
 
@@ -208,13 +210,16 @@ def main() -> int:
         parser.error("--title / -t is required when not running --self-test.")
 
     try:
-        created = scaffold_adr(
+        ctx = ADRContext(
             title=args.title,
-            template_name=args.template,
-            adr_dir_path=args.dir,
             status=args.status,
             author=args.author,
             supersedes=args.supersedes,
+        )
+        created = scaffold_adr(
+            context=ctx,
+            template_name=args.template,
+            adr_dir_path=args.dir,
             skill_root=skill_root,
         )
         print(f"Created ADR at: {created}")
