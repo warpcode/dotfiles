@@ -18,14 +18,14 @@ const ARGS_FIT = ["llama-server", "--fit", "on", "--fit-ctx", "16384"]
 
 const PAYLOAD = {
   data: [
-    // routing endpoint with its own --ctx-size, larger than the fit budget
+    // routing endpoint with its own explicit --ctx-size and --parallel 2 (65536 per slot)
     {
       id: "chat",
       created: 1792002408,
       architecture: { input_modalities: ["text"], output_modalities: ["text"] },
-      status: { args: [...ARGS_FIT, "--ctx-size", "131072"] }
+      status: { args: [...ARGS_FIT, "--ctx-size", "131072", "--parallel", "2"] }
     },
-    // GGUF routed by alias: no --ctx-size, ceiling from context_length
+    // GGUF routed by alias: no --ctx-size, ceiling from context_length bounded by --fit-ctx
     {
       id: "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF:Q4_K_M",
       created: 1792002408,
@@ -40,12 +40,13 @@ const PAYLOAD = {
       context_length: 4096,
       status: { args: ["llama-server"] }
     },
-    // --fit off must leave an explicit --ctx-size authoritative
+    // loaded model exposing meta.n_ctx directly
     {
       id: "code",
       created: 1792002408,
       architecture: { input_modalities: ["text"] },
-      status: { args: ["llama-server", "--fit", "off", "--fit-ctx", "16384", "--ctx-size", "32768"] }
+      meta: { n_ctx: 65536, n_ctx_train: 131072 },
+      status: { args: ["llama-server", "--fit", "on", "--fit-ctx", "16384", "--ctx-size", "131072", "--parallel", "2"] }
     },
     // nothing to go on at all
     { id: "mystery", created: 1792002408, architecture: { input_modalities: ["text"] }, status: { args: ["llama-server"] } },
@@ -153,16 +154,17 @@ async function runTests() {
     assert.equal(m.status, "active")
   })
 
-  await check("--ctx-size is bounded by --fit-ctx while --fit is on", async () => {
-    assert.equal(models.find((m) => m.id === "chat").limit.context, 16384)
+  await check("explicit --ctx-size is divided by --parallel and not clamped by --fit-ctx", async () => {
+    assert.equal(models.find((m) => m.id === "chat").limit.context, 65536)
   })
 
-  await check("context_length is used when the entry has no --ctx-size", async () => {
+  await check("unset --ctx-size uses context_length bounded by --fit-ctx while --fit is on", async () => {
+    assert.equal(models.find((m) => m.id === "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF:Q4_K_M").limit.context, 16384)
     assert.equal(models.find((m) => m.id === "small-model").limit.context, 4096)
   })
 
-  await check("--fit off leaves an explicit --ctx-size authoritative", async () => {
-    assert.equal(models.find((m) => m.id === "code").limit.context, 32768)
+  await check("loaded models report meta.n_ctx directly", async () => {
+    assert.equal(models.find((m) => m.id === "code").limit.context, 65536)
   })
 
   await check("entries with no size information fall back to 8192", async () => {

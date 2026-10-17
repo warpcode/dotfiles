@@ -44,19 +44,26 @@ function flagEnabled(args: readonly string[], flag: string): boolean {
   return value === undefined || !value.startsWith("-") ? value !== "off" : true
 }
 
-// The context the server will actually serve, not the model's ceiling:
-//   1. the entry's own `--ctx-size` — routing endpoints (chat, code, fim) each
-//      carry one, e.g. chat 131072 vs fim 16384
-//   2. the entry's `context_length` — the ceiling of the GGUF it routes to
-// bounded by `--fit-ctx` whenever `--fit` is on: llama.cpp then shrinks the
-// allocation to what fits, and this server also runs --no-context-shift, so an
-// over-reported limit becomes a hard request failure rather than a truncation.
+// The per-slot context the server will actually serve, not the model's ceiling:
+//   1. `meta.n_ctx` when the model is already loaded by llama-server
+//   2. the entry's explicit `--ctx-size` divided by `--parallel` (llama.cpp's
+//      `--fit` only adjusts *unset* arguments, so an explicit `--ctx-size` is
+//      honored and split across parallel slots)
+//   3. the entry's `context_length` — the ceiling of a raw cached GGUF with no
+//      explicit `--ctx-size` — bounded by `--fit-ctx` whenever `--fit` is on
 function contextSize(raw: any): number {
+  const loaded = positive(raw.meta?.n_ctx)
+  if (loaded) return loaded
   const args: readonly string[] = raw.status?.args ?? []
-  const declared = argValue(args, "--ctx-size") ?? positive(raw.context_length)
+  const explicit = argValue(args, "--ctx-size")
+  if (explicit) {
+    const parallel = argValue(args, "--parallel") ?? 1
+    return Math.max(1, Math.floor(explicit / parallel))
+  }
+  const ceiling = positive(raw.context_length)
   const fit = flagEnabled(args, "--fit") ? argValue(args, "--fit-ctx") : undefined
-  if (declared && fit) return Math.min(declared, fit)
-  return declared ?? fit ?? DEFAULT_CONTEXT
+  if (ceiling && fit) return Math.min(ceiling, fit)
+  return ceiling ?? fit ?? DEFAULT_CONTEXT
 }
 
 // llama-server reports no max-output field and defaults -np to unlimited, so
