@@ -2,70 +2,57 @@
 /**
  * Automated test suite for dot_config/opencode/plugins/security-suite.ts
  *
+ * Exercises the real df.ai-guard binary through the OpenCode 2 plugin API: the
+ * default export's setup(ctx) registers one hook per operation, and each hook
+ * receives a single mutable event.
+ *
  * Tests:
  * 1. Safe file reads/writes allowed (do not throw).
  * 2. Sensitive file access blocked (throws Error with SECURITY GUARD message).
  * 3. Safe shell commands allowed (do not throw).
  * 4. Dangerous / blocked shell commands blocked (throws Error with SECURITY GUARD message).
- * 5. shell.env hook sets DOTFILES_AI_GUARD = "1" and WORKSPACE_ROOT = directory.
+ * 5. shell create.before hook sets DOTFILES_AI_GUARD = "1" and WORKSPACE_ROOT = directory.
+ * 6. execute.after scrubs secrets out of tool output.
  */
 
 import assert from "node:assert"
-import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { spawnSync } from "node:child_process"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const REPO_ROOT = path.resolve(__dirname, "..")
 const PLUGIN_PATH = path.join(REPO_ROOT, "dot_config", "opencode", "plugins", "security-suite.ts")
 
-// Helper to load and evaluate security-suite.ts in Node
-async function loadSecurityPlugin() {
-  const tsContent = fs.readFileSync(PLUGIN_PATH, "utf-8")
-  
-  // Strip TS types & import statements for pure JS runtime execution
-  const jsContent = tsContent
-    .replace(/^import\s+.*$/gm, "")
-    .replace(/: Plugin\b/g, "")
-    .replace(/: string\b/g, "")
-    .replace(/: void\b/g, "")
-    .replace(/: any\b/g, "")
-    .replace(/export const SecuritySuitePlugin/, "const SecuritySuitePlugin") +
-    "\nreturn { SecuritySuitePlugin, resolveBinary };"
+// OpenCode runs plugins under Bun, which supplies __dirname to modules. Node's
+// ESM loader does not, so provide it before setup() calls resolveBinary().
+globalThis.__dirname = path.dirname(PLUGIN_PATH)
+globalThis.__filename = PLUGIN_PATH
 
-  const factory = new Function("require", "__dirname", "__filename", "spawnSync", "fs", "os", "path", jsContent)
-  const os = await import("node:os")
-  const moduleExports = factory(
-    (mod) => {
-      if (mod === "child_process") return { spawnSync }
-      if (mod === "fs") return fs
-      if (mod === "os") return os
-      if (mod === "path") return path
-      throw new Error(`Unexpected require: ${mod}`)
-    },
-    path.dirname(PLUGIN_PATH),
-    PLUGIN_PATH,
-    spawnSync,
-    fs,
-    os,
-    path
-  )
+const plugin = (await import(PLUGIN_PATH)).default
 
-  return moduleExports.SecuritySuitePlugin
+// Collects the hooks a plugin registers, standing in for the plugin context.
+async function loadHooks(directory) {
+  const tool = {}
+  const shell = {}
+  const ctx = {
+    location: { directory },
+    tool: { hook: async (name, callback) => ((tool[name] = callback), { dispose: async () => {} }) },
+    shell: { hook: async (name, callback) => ((shell[name] = callback), { dispose: async () => {} }) }
+  }
+  await plugin.setup(ctx)
+  assert.equal(typeof plugin.id, "string", "plugin must expose an id")
+  assert.equal(typeof tool["execute.before"], "function", "plugin must register tool execute.before")
+  assert.equal(typeof tool["execute.after"], "function", "plugin must register tool execute.after")
+  assert.equal(typeof shell["create.before"], "function", "plugin must register shell create.before")
+  return { before: tool["execute.before"], after: tool["execute.after"], shell: shell["create.before"] }
 }
 
 async function runTests() {
   console.log("=== Testing OpenCode Security Suite Plugin ===")
-  const SecuritySuitePlugin = await loadSecurityPlugin()
-  assert(typeof SecuritySuitePlugin === "function", "SecuritySuitePlugin must be a function")
-
   const mockDirectory = REPO_ROOT
-  const plugin = await SecuritySuitePlugin({ directory: mockDirectory })
-  assert(plugin["tool.execute.before"], "Plugin must define tool.execute.before hook")
-  assert(plugin["tool.execute.after"], "Plugin must define tool.execute.after hook")
-  assert(plugin["shell.env"], "Plugin must define shell.env hook")
+  const hooks = await loadHooks(mockDirectory)
+  const before = (tool, input) => hooks.before({ tool, input })
 
   let passed = 0
   let total = 0
@@ -94,9 +81,7 @@ async function runTests() {
 
   for (const sf of safeFiles) {
     await testCase(`Safe access allowed: ${sf.tool} (${sf.path || sf.AbsolutePath})`, async () => {
-      const input = { tool: sf.tool }
-      const output = { args: sf }
-      await plugin["tool.execute.before"](input, output)
+      await before(sf.tool, sf)
     })
   }
 
@@ -113,11 +98,9 @@ async function runTests() {
 
   for (const sf of sensitiveFiles) {
     await testCase(`Sensitive file blocked: ${sf.tool} (${sf.path || sf.AbsolutePath})`, async () => {
-      const input = { tool: sf.tool }
-      const output = { args: sf }
       let threw = false
       try {
-        await plugin["tool.execute.before"](input, output)
+        await before(sf.tool, sf)
       } catch (err) {
         threw = true
         assert(
@@ -142,9 +125,7 @@ async function runTests() {
 
   for (const sc of safeCommands) {
     await testCase(`Safe command allowed: ${sc.tool} (${sc.command || sc.CommandLine})`, async () => {
-      const input = { tool: sc.tool }
-      const output = { args: sc }
-      await plugin["tool.execute.before"](input, output)
+      await before(sc.tool, sc)
     })
   }
 
@@ -163,11 +144,9 @@ async function runTests() {
 
   for (const dc of dangerousCommands) {
     await testCase(`Dangerous/unconfirmed command blocked: ${dc.tool} (${dc.command || dc.CommandLine})`, async () => {
-      const input = { tool: dc.tool }
-      const output = { args: dc }
       let threw = false
       try {
-        await plugin["tool.execute.before"](input, output)
+        await before(dc.tool, dc)
       } catch (err) {
         threw = true
         assert(
@@ -179,47 +158,46 @@ async function runTests() {
     })
   }
 
-  // 5. shell.env hook
-  console.log("\n[5] shell.env Hook Tests")
-  await testCase("shell.env sets DOTFILES_AI_GUARD and WORKSPACE_ROOT", async () => {
-    const output = { env: {} }
-    await plugin["shell.env"]({}, output)
-    assert.strictEqual(output.env.DOTFILES_AI_GUARD, "1", "DOTFILES_AI_GUARD should be '1'")
-    assert.strictEqual(output.env.WORKSPACE_ROOT, mockDirectory, "WORKSPACE_ROOT should match directory")
+  // 5. shell create.before hook
+  console.log("\n[5] shell create.before Hook Tests")
+  await testCase("shell create.before sets DOTFILES_AI_GUARD and WORKSPACE_ROOT", async () => {
+    const event = { command: "ls", cwd: mockDirectory, timeout: 1000, shell: "bash", env: {} }
+    await hooks.shell(event)
+    assert.strictEqual(event.env.DOTFILES_AI_GUARD, "1", "DOTFILES_AI_GUARD should be '1'")
+    assert.strictEqual(event.env.WORKSPACE_ROOT, mockDirectory, "WORKSPACE_ROOT should match directory")
   })
 
-  // 6. tool.execute.after output scrubbing
-  console.log("\n[6] tool.execute.after Output Scrubbing Tests")
+  // 6. execute.after output scrubbing
+  console.log("\n[6] execute.after Output Scrubbing Tests")
+  const scrub = async (result) => {
+    const event = { tool: "bash", status: "completed", result }
+    await hooks.after(event)
+    return event.result
+  }
+
   await testCase("scrubs leaked API keys from tool output", async () => {
-    const input = { tool: "bash" }
-    const output = { result: "Process completed. Secret key: sk-proj-1234567890abcdef1234567890" }
-    await plugin["tool.execute.after"](input, output)
-    assert(!output.result.includes("sk-proj-1234567890abcdef1234567890"), "Raw secret key should be redacted")
-    assert(output.result.includes("[REDACTED_SECRET_OPENAI_API_KEY]"), "Should contain redacted placeholder")
+    const result = await scrub("Process completed. Secret key: sk-proj-1234567890abcdef1234567890")
+    assert(!result.includes("sk-proj-1234567890abcdef1234567890"), "Raw secret key should be redacted")
+    assert(result.includes("[REDACTED_SECRET_OPENAI_API_KEY]"), "Should contain redacted placeholder")
   })
 
   await testCase("scrubs multiline private keys completely from tool output", async () => {
-    const input = { tool: "bash" }
-    const output = { result: "Key:\n-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAA...\n-----END OPENSSH PRIVATE KEY-----" }
-    await plugin["tool.execute.after"](input, output)
-    assert(!output.result.includes("-----BEGIN OPENSSH PRIVATE KEY-----"), "Header should be removed")
-    assert(!output.result.includes("b3BlbnNzaC1rZXktdjEAAAA..."), "Private key body should be redacted")
-    assert(output.result.includes("[REDACTED_PRIVATE_KEY]"), "Should contain redacted placeholder")
+    const result = await scrub(
+      "Key:\n-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAA...\n-----END OPENSSH PRIVATE KEY-----"
+    )
+    assert(!result.includes("-----BEGIN OPENSSH PRIVATE KEY-----"), "Header should be removed")
+    assert(!result.includes("b3BlbnNzaC1rZXktdjEAAAA..."), "Private key body should be redacted")
+    assert(result.includes("[REDACTED_PRIVATE_KEY]"), "Should contain redacted placeholder")
   })
 
   await testCase("scrubs secrets in structured object tool outputs", async () => {
-    const input = { tool: "bash" }
-    const output = { result: { message: "Auth failed", token: "ghp_1234567890abcdefghijklmnopqrstuvwxyz" } }
-    await plugin["tool.execute.after"](input, output)
-    assert(!JSON.stringify(output.result).includes("ghp_1234567890abcdefghijklmnopqrstuvwxyz"), "Raw token should be redacted")
-    assert(JSON.stringify(output.result).includes("[REDACTED_SECRET_GITHUB_TOKEN]"), "Should contain redacted token placeholder")
+    const result = await scrub({ message: "Auth failed", token: "ghp_1234567890abcdefghijklmnopqrstuvwxyz" })
+    assert(!JSON.stringify(result).includes("ghp_1234567890abcdefghijklmnopqrstuvwxyz"), "Raw token should be redacted")
+    assert(JSON.stringify(result).includes("[REDACTED_SECRET_GITHUB_TOKEN]"), "Should contain redacted token placeholder")
   })
 
   await testCase("preserves safe tool output without modification", async () => {
-    const input = { tool: "bash" }
-    const output = { result: "All 15 tests passed successfully." }
-    await plugin["tool.execute.after"](input, output)
-    assert.strictEqual(output.result, "All 15 tests passed successfully.")
+    assert.strictEqual(await scrub("All 15 tests passed successfully."), "All 15 tests passed successfully.")
   })
 
   console.log(`\n========================================`)

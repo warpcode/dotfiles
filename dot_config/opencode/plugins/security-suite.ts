@@ -1,4 +1,20 @@
-import { type Plugin } from "@opencode-ai/plugin"
+// df.ai-guard enforcement for OpenCode 2.
+//
+// OpenCode 2 plugin API: the plugin default-exports a definition with a stable
+// `id`, and `setup(ctx)` registers each hook on the domain that owns the
+// operation it intercepts. V1 returned one object keyed by hook name; V2 passes
+// a single mutable event per hook, so the guard now inspects `event.input`,
+// `event.result` and `event.env` instead of the old `(input, output)` pair.
+//
+// The guard's own decision protocol is unchanged: each check feeds a JSON
+// payload to the binary on stdin and reads back `{ decision, ... }`, where
+// deny/ask throw to block the tool and replace rewrites in place.
+//
+// No `@opencode/plugin` import on purpose: the loader only needs a default
+// export with an `id` and a `setup(ctx)`, so the plugin stays loadable by the
+// loader and directly by the Node test suite. `Plugin.define` is typing sugar
+// over the same shape.
+
 import { spawnSync } from "child_process"
 import * as fs from "fs"
 import * as os from "os"
@@ -47,128 +63,129 @@ const COMMAND_TOOLS = new Set([
   "exec"
 ])
 
-export const SecuritySuitePlugin: Plugin = async ({ directory }) => {
-  const aiGuardBin = resolveBinary("df.ai-guard")
+const GUARD = "SECURITY GUARD"
 
-  return {
-    "tool.execute.before": async (input, output) => {
-      const payload = JSON.stringify({
-        tool: input.tool,
-        args: output.args,
-        directory,
-        cwd: directory
-      })
+// Runs one guard check. `strict` controls how a non-JSON reply is treated:
+// the file and command gates have always ignored unparseable output and let the
+// call through, while the output scrubber refuses to ship an unsanitised result.
+function runGuard(bin: string, kind: "file" | "command" | "output", payload: unknown) {
+  const res = spawnSync(bin, [kind], { input: JSON.stringify(payload), encoding: "utf-8" })
+  if (res.error || res.status !== 0) {
+    throw new Error(res.stderr?.trim() || `${GUARD}: ${kind} check failed.`)
+  }
+  const stdout = res.stdout?.trim()
+  if (!stdout) return undefined
+  try {
+    return JSON.parse(stdout)
+  } catch (err: any) {
+    if (kind === "output") throw new Error(`${GUARD}: Failed to parse sanitized output: ${err.message}`)
+    return undefined
+  }
+}
+
+function assertAllowed(data: any, kind: string) {
+  if (data?.decision === "deny") {
+    throw new Error(data.reason || `${GUARD}: Access blocked by ${kind} guard.`)
+  }
+  if (data?.decision === "ask") {
+    throw new Error(data.reason || `${GUARD}: ${kind} requires manual confirmation.`)
+  }
+}
+
+// The guard may hand back the replacement result as JSON text; keep the raw
+// string when it is not JSON so nothing is lost.
+function parseOrKeep(value: string): unknown {
+  try {
+    return JSON.parse(value)
+  } catch {
+    return value
+  }
+}
+
+// Writes scrubbed text into a tool result's content, preserving its shape.
+// `content` is either a string or an array of parts; a guard scrubs text, it
+// does not re-partition mixed content, so the first text part takes the text
+// and any further text parts are blanked.
+function scrubContent(result: any, text: string): any {
+  if (!result || typeof result !== "object") return text
+  const content = result.content
+  if (typeof content === "string") {
+    result.content = text
+    return result
+  }
+  if (Array.isArray(content)) {
+    let written = false
+    for (const part of content) {
+      if (part?.type !== "text") continue
+      part.text = written ? "" : text
+      written = true
+    }
+    if (!written) content.unshift({ type: "text", text })
+    return result
+  }
+  result.content = text
+  return result
+}
+
+export default {
+  id: "security-suite",
+
+  async setup(ctx) {
+    const aiGuardBin = resolveBinary("df.ai-guard")
+    const directory = ctx.location.directory
+
+    await ctx.tool.hook("execute.before", (event) => {
+      const payload = { tool: event.tool, args: event.input, directory, cwd: directory }
 
       // 1. File guard check
-      const fileRes = spawnSync(aiGuardBin, ["file"], {
-        input: payload,
-        encoding: "utf-8"
-      })
-
-      if (fileRes.error || fileRes.status !== 0) {
-        const msg = fileRes.stderr?.trim() || fileRes.error?.message || "SECURITY GUARD: Access blocked by file guard."
-        throw new Error(msg)
-      }
-
-      if (fileRes.stdout && fileRes.stdout.trim()) {
-        try {
-          const data = JSON.parse(fileRes.stdout.trim())
-          if (data.decision === "deny") {
-            throw new Error(data.reason || "SECURITY GUARD: Access blocked by file guard.")
-          }
-          if (data.decision === "ask") {
-            throw new Error(`SECURITY GUARD: Operation requires manual confirmation: ${data.reason || "Access requires approval."}`)
-          }
-        } catch (e: any) {
-          if (e.message?.startsWith("SECURITY GUARD:")) throw e
-        }
-      }
+      assertAllowed(runGuard(aiGuardBin, "file", payload), "file")
 
       // 2. Command gate check for terminal/command execution tools
-      if (COMMAND_TOOLS.has(input.tool)) {
-        const cmdRes = spawnSync(aiGuardBin, ["command"], {
-          input: payload,
-          encoding: "utf-8"
-        })
+      if (!COMMAND_TOOLS.has(event.tool)) return
+      const decision = runGuard(aiGuardBin, "command", payload)
+      assertAllowed(decision, "command")
 
-        if (cmdRes.error || cmdRes.status !== 0) {
-          const msg = cmdRes.stderr?.trim() || cmdRes.error?.message || "SECURITY GUARD: Command execution blocked by command gate."
-          throw new Error(msg)
-        }
-
-        if (cmdRes.stdout && cmdRes.stdout.trim()) {
-          try {
-            const data = JSON.parse(cmdRes.stdout.trim())
-            if (data.decision === "deny") {
-              throw new Error(data.reason || "SECURITY GUARD: Command execution blocked by command gate.")
+      if (decision?.decision === "replace") {
+        const replacement = decision.command ?? decision.modified ?? decision.CommandLine
+        const input = event.input as Record<string, any> | undefined
+        if (replacement && input && typeof input === "object") {
+          for (const key of ["command", "modified", "cmd"]) {
+            if (key in input) {
+              input[key] = replacement
+              return
             }
-            if (data.decision === "ask") {
-              throw new Error(`SECURITY GUARD: Operation requires manual confirmation: ${data.reason || "Command requires confirmation."}`)
-            }
-            if (data.decision === "replace" && (data.command || data.modified || data.CommandLine)) {
-              if (output.args && typeof output.args === "object") {
-                const rep = data.command || data.modified || data.CommandLine
-                if ("command" in output.args) output.args.command = rep
-                else if ("CommandLine" in output.args) output.args.CommandLine = rep
-                else if ("cmd" in output.args) output.args.cmd = rep
-              }
-            }
-          } catch (e: any) {
-            if (e.message?.startsWith("SECURITY GUARD:")) throw e
           }
         }
       }
-    },
+    })
 
-    "tool.execute.after": async (input, output) => {
-      if (!output || output.result === undefined || output.result === null) {
+    await ctx.tool.hook("execute.after", (event) => {
+      if (event.status !== "completed" || event.result === undefined || event.result === null) return
+
+      const result = event.result as any
+      const decision = runGuard(aiGuardBin, "output", { tool: event.tool, result, output: result, directory, cwd: directory })
+      if (decision?.decision !== "replace") return
+
+      // The guard replies with the scrubbed text, and with a whole replacement
+      // result when the incoming one was structured. A text result keeps its
+      // shape; a structured result is replaced rather than wrapped.
+      const text = decision.sanitized ?? decision.output ?? decision.command ?? decision.modified
+      if (typeof result === "string") {
+        if (text !== undefined) event.result = text
         return
       }
 
-      const isString = typeof output.result === "string"
-      const payload = JSON.stringify({
-        tool: input.tool,
-        result: output.result,
-        output: output.result,
-        directory,
-        cwd: directory
-      })
-
-      const scrubRes = spawnSync(aiGuardBin, ["output"], {
-        input: payload,
-        encoding: "utf-8"
-      })
-
-      if (scrubRes.error || scrubRes.status !== 0) {
-        const msg = scrubRes.stderr?.trim() || scrubRes.error?.message || "SECURITY GUARD: Output scrubbing failed."
-        throw new Error(msg)
+      const structured = decision.payload?.result ?? decision.overwrite?.result
+      if (structured !== undefined) {
+        event.result = typeof structured === "string" ? parseOrKeep(structured) : structured
+        return
       }
+      if (text !== undefined) event.result = scrubContent(result, text)
+    })
 
-      if (scrubRes.stdout && scrubRes.stdout.trim()) {
-        try {
-          const data = JSON.parse(scrubRes.stdout.trim())
-          if (data.decision === "replace") {
-            if (isString) {
-              output.result = data.sanitized ?? data.result ?? data.output ?? output.result
-            } else if (data.payload && data.payload.result !== undefined) {
-              output.result = data.payload.result
-            } else if (data.sanitized) {
-              try {
-                output.result = JSON.parse(data.sanitized)
-              } catch {
-                output.result = data.sanitized
-              }
-            }
-          }
-        } catch (e: any) {
-          throw new Error("SECURITY GUARD: Failed to parse sanitized output: " + e.message)
-        }
-      }
-    },
-
-    "shell.env": async (_input, output) => {
-      output.env.DOTFILES_AI_GUARD = "1"
-      output.env.WORKSPACE_ROOT = directory
-    }
+    await ctx.shell.hook("create.before", (event) => {
+      event.env.DOTFILES_AI_GUARD = "1"
+      event.env.WORKSPACE_ROOT = directory
+    })
   }
 }

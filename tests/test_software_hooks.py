@@ -407,7 +407,7 @@ class TestOpenCodeHooks(unittest.TestCase):
             timeout=30
         )
         self.assertEqual(res.returncode, 0, f"llama.cpp plugin test suite failed: {res.stderr}\n{res.stdout}")
-        self.assertIn("8/8 assertions passed!", res.stdout)
+        self.assertIn("13/13 assertions passed!", res.stdout)
 
 
 # ==============================================================================
