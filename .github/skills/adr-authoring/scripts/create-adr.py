@@ -11,7 +11,22 @@ import datetime
 import os
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
+
+
+@dataclass
+class AdrConfig:
+    """Configuration options for scaffolding an Architecture Decision Record."""
+
+    title: str
+    template_name: str = "madr"
+    adr_dir_path: str = "docs/adr"
+    status: str = "Proposed"
+    author: str = "Engineering Team"
+    supersedes: Optional[str] = None
+    skill_root: Optional[Path] = None
 
 
 def slugify(text: str) -> str:
@@ -55,24 +70,21 @@ def get_template_path(template_name: str, skill_root: Path) -> Path:
 def render_template(
     template_content: str,
     number: int,
-    title: str,
-    status: str = "Proposed",
-    author: str = "Engineering Team",
-    supersedes: str = None,
+    config: AdrConfig,
 ) -> str:
     """Replace placeholders in template."""
     num_str = f"{number:04d}"
     now = datetime.date.today().isoformat()
     content = template_content
     content = content.replace("[NUMBER]", num_str)
-    content = content.replace("[Title]", title)
-    content = content.replace("[Status]", status)
+    content = content.replace("[Title]", config.title)
+    content = content.replace("[Status]", config.status)
     content = content.replace("[Date]", now)
-    content = content.replace("[Author / Deciders]", author)
+    content = content.replace("[Author / Deciders]", config.author)
 
-    if supersedes:
+    if config.supersedes:
         content = content.replace(
-            "[Superseded By / Supersedes]", f"Supersedes ADR-{supersedes}"
+            "[Superseded By / Supersedes]", f"Supersedes ADR-{config.supersedes}"
         )
     else:
         content = content.replace(
@@ -81,35 +93,25 @@ def render_template(
     return content
 
 
-def scaffold_adr(
-    title: str,
-    template_name: str = "madr",
-    adr_dir_path: str = "docs/adr",
-    status: str = "Proposed",
-    author: str = "Engineering Team",
-    supersedes: str = None,
-    skill_root: Path = None,
-) -> Path:
+def scaffold_adr(config: AdrConfig) -> Path:
     """Generate a new ADR file."""
+    skill_root = config.skill_root
     if skill_root is None:
         skill_root = Path(__file__).resolve().parent.parent
 
-    adr_dir = Path(adr_dir_path)
+    adr_dir = Path(config.adr_dir_path)
     next_num = get_next_adr_number(adr_dir)
     num_str = f"{next_num:04d}"
-    slug = slugify(title)
+    slug = slugify(config.title)
     filename = f"{num_str}-{slug}.md"
     out_file = adr_dir / filename
 
-    tmpl_file = get_template_path(template_name, skill_root)
+    tmpl_file = get_template_path(config.template_name, skill_root)
     template_content = tmpl_file.read_text(encoding="utf-8")
     rendered = render_template(
         template_content,
         number=next_num,
-        title=title,
-        status=status,
-        author=author,
-        supersedes=supersedes,
+        config=config,
     )
 
     adr_dir.mkdir(parents=True, exist_ok=True)
@@ -131,11 +133,14 @@ def run_self_test(skill_root: Path) -> int:
 
     # Test render
     sample = "# ADR-[NUMBER]: [Title]\nStatus: [Status]\nDate: [Date]"
-    rendered = render_template(sample, 42, "Cache Layer", "Accepted")
+    rendered = render_template(
+        sample, 42, AdrConfig(title="Cache Layer", status="Accepted")
+    )
     assert "ADR-0042: Cache Layer" in rendered
     assert "Status: Accepted" in rendered
 
     import tempfile
+
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
         assert get_next_adr_number(tmp_path) == 1
@@ -143,6 +148,15 @@ def run_self_test(skill_root: Path) -> int:
         assert get_next_adr_number(tmp_path) == 2
         (tmp_path / "0005-other.md").write_text("dummy", encoding="utf-8")
         assert get_next_adr_number(tmp_path) == 6
+
+        scaffold_adr(
+            AdrConfig(
+                title="Self Test ADR",
+                adr_dir_path=str(tmp_path),
+                skill_root=skill_root,
+            )
+        )
+        assert (tmp_path / "0006-self-test-adr.md").exists()
 
     print("All self-tests passed successfully.")
     return 0
@@ -208,7 +222,7 @@ def main() -> int:
         parser.error("--title / -t is required when not running --self-test.")
 
     try:
-        created = scaffold_adr(
+        config = AdrConfig(
             title=args.title,
             template_name=args.template,
             adr_dir_path=args.dir,
@@ -217,6 +231,7 @@ def main() -> int:
             supersedes=args.supersedes,
             skill_root=skill_root,
         )
+        created = scaffold_adr(config)
         print(f"Created ADR at: {created}")
         return 0
     except Exception as exc:
