@@ -195,7 +195,10 @@ class TestRenderedOutputs(unittest.TestCase):
                 self.assertFalse(item.startswith("unsandboxed("), f"Found unsandboxed item: {item}")
         for item in perms["allow"] + perms.get("deny", []):
             self.assertNotIn("internal/*", item)
-            self.assertNotIn("/home/", item, f"Found /home/ in permission item: {item}")
+            if item.startswith("command("):
+                self.assertNotIn("/home/", item, f"Found /home/ in command permission item: {item}")
+            elif item.startswith(("read_file(", "write_file(")):
+                self.assertNotIn("(~/", item, f"Found unexpanded tilde in file permission item: {item}")
 
     def test_opencode_json(self):
         out = chezmoi_cat(os.path.expanduser("~/.config/opencode/opencode.json"))
@@ -221,26 +224,30 @@ class TestRenderedOutputs(unittest.TestCase):
             self.assertNotIn("/home/", key, f"Found /home/ in opencode bash key: {key}")
 
         # Path permissions: read, edit, write, external_directory
+        home = os.path.expanduser("~")
         perm = data["permission"]
         self.assertIn("read", perm)
         self.assertIsInstance(perm["read"], dict)
         self.assertEqual(perm["read"]["*"], "allow")
-        self.assertEqual(perm["read"]["~/.ssh"], "deny")
+        self.assertEqual(perm["read"][f"{home}/.ssh"], "deny")
         self.assertEqual(perm["read"]["*.env*"], "deny")
-        self.assertEqual(perm["read"]["~/.agents"], "allow")
+        self.assertEqual(perm["read"][f"{home}/.agents"], "allow")
+        for key in perm["read"]:
+            self.assertFalse(key.startswith("~/"), f"Found unexpanded tilde in opencode read key: {key}")
 
         self.assertIn("edit", perm)
         self.assertIsInstance(perm["edit"], dict)
-        self.assertEqual(perm["edit"]["~/.ssh"], "deny")
-        self.assertEqual(perm["edit"]["~/src"], "allow")
+        self.assertEqual(perm["edit"][f"{home}/.ssh"], "deny")
+        self.assertEqual(perm["edit"][f"{home}/src"], "allow")
 
         self.assertIn("external_directory", perm)
         self.assertIsInstance(perm["external_directory"], dict)
         self.assertEqual(perm["external_directory"]["*"], "ask")
-        self.assertEqual(perm["external_directory"]["~/.agents"], "allow")
-        self.assertEqual(perm["external_directory"]["~/.ssh"], "deny")
+        self.assertEqual(perm["external_directory"][f"{home}/.agents"], "allow")
+        self.assertEqual(perm["external_directory"][f"{home}/.ssh"], "deny")
 
     def test_claude_settings(self):
+        home = os.path.expanduser("~")
         out = chezmoi_cat(os.path.expanduser("~/.claude/settings.json"))
         data = json.loads(out)
         assert "permissions" in data
@@ -258,13 +265,17 @@ class TestRenderedOutputs(unittest.TestCase):
         assert "Bash(rm -rf $HOME)" in perms["deny"]
         assert "Bash(git push --force)" in perms["deny"]
         assert any("Read(" in p and "skills" in p for p in perms["allow"])
-        assert "Read(~/.ssh)" in perms["deny"]
+        assert f"Read({home}/.ssh)" in perms["deny"]
         self.assertNotIn("Bash(git checkout * -- internal/*)", perms["allow"])
         self.assertNotIn("Bash(git push *--force*)", perms["ask"])
         for item in perms["allow"] + perms.get("ask", []) + perms.get("deny", []):
-            self.assertNotIn("/home/", item, f"Found /home/ in claude permission item: {item}")
+            if item.startswith("Bash("):
+                self.assertNotIn("/home/", item, f"Found /home/ in claude Bash permission item: {item}")
+            elif item.startswith(("Read(", "Write(")):
+                self.assertNotIn("(~/", item, f"Found unexpanded tilde in claude path permission item: {item}")
 
     def test_copilot_settings(self):
+        home = os.path.expanduser("~")
         out = chezmoi_cat(os.path.expanduser("~/.copilot/settings.json"))
         data = json.loads(out)
         assert "permissions" in data
@@ -275,9 +286,12 @@ class TestRenderedOutputs(unittest.TestCase):
         assert any("Read(" in p and "skills" in p for p in perms["allow"])
         assert "Shell(chezmoi apply)" in perms["ask"]
         assert "Shell(git push --force)" in perms["deny"]
-        assert "Read(~/.ssh)" in perms["deny"]
+        assert f"Read({home}/.ssh)" in perms["deny"]
         for item in perms["allow"] + perms.get("ask", []) + perms.get("deny", []):
-            self.assertNotIn("/home/", item, f"Found /home/ in copilot permission item: {item}")
+            if item.startswith("Shell("):
+                self.assertNotIn("/home/", item, f"Found /home/ in copilot Shell permission item: {item}")
+            elif item.startswith(("Read(", "Write(")):
+                self.assertNotIn("(~/", item, f"Found unexpanded tilde in copilot path permission item: {item}")
 
 
 
@@ -478,8 +492,9 @@ class TestCanonicalCommandsGenerator(unittest.TestCase):
         self.assertTrue(len(matching_keys) > 0)
         for k in matching_keys:
             self.assertTrue(vscode_term[k])
-        self.assertTrue(vscode_edits.get("~/src"))
-        self.assertFalse(vscode_edits.get("~/.ssh"))
+        home = os.path.expanduser("~")
+        self.assertTrue(vscode_edits.get(f"{home}/src"))
+        self.assertFalse(vscode_edits.get(f"{home}/.ssh"))
 
 
 if __name__ == "__main__":
