@@ -769,9 +769,17 @@ class TestJulesBatchOperations(unittest.TestCase):
         opts = AuditSessionsOptions(page_size=5, max_age_days=10, repo="cloakenv")
         with patch.object(client, "list_sessions", return_value=mock_sessions), \
              patch.object(client, "audit_session", return_value={"id": "s10"}):
-            audits = client.audit_sessions(opts)
+            audits = client.audit_sessions(opts, page_size=20)
             self.assertEqual(len(audits), 1)
             self.assertEqual(audits[0]["id"], "s10")
+            # Verify original opts was not mutated
+            self.assertEqual(opts.page_size, 5)
+
+        # Verify invalid kwargs raise TypeError uniformly
+        with self.assertRaises(TypeError):
+            client.audit_sessions(opts, invalid_arg="bad")
+        with self.assertRaises(TypeError):
+            client.audit_sessions(invalid_arg="bad")
 
 
 if __name__ == "__main__":

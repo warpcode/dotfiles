@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import json
 from datetime import datetime, timezone
 from typing import Any
@@ -578,10 +578,7 @@ class JulesClient:
         if options is None:
             options = AuditSessionsOptions(**kwargs)
         elif kwargs:
-            # Overwrite fields specified in kwargs on top of provided options
-            for k, v in kwargs.items():
-                if hasattr(options, k):
-                    setattr(options, k, v)
+            options = replace(options, **kwargs)
 
         filter_expr = options.filter_expr
         if filter_expr is None:
