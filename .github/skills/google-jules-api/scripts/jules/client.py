@@ -163,20 +163,20 @@ class JulesClient:
     ) -> dict[str, Any]:
         """Create and initiate a new Jules coding task session."""
         if isinstance(config, CreateSessionConfig):
+            if kwargs:
+                raise TypeError(f"create_session() got unexpected keyword argument(s) when config is provided: {', '.join(kwargs.keys())}")
             cfg = config
         else:
             prompt = config or kwargs.pop("prompt", None)
             if not prompt:
                 die("prompt or config is required to create a session.")
-            cfg = CreateSessionConfig(
-                prompt=prompt,
-                source=kwargs.pop("source", None),
-                starting_branch=kwargs.pop("starting_branch", "main"),
-                title=kwargs.pop("title", None),
-                require_plan_approval=kwargs.pop("require_plan_approval", None),
-                env_vars=kwargs.pop("env_vars", None),
-                automation_mode=kwargs.pop("automation_mode", "AUTO_CREATE_PR") if "automation_mode" in kwargs else "AUTO_CREATE_PR",
-            )
+            try:
+                cfg = CreateSessionConfig(
+                    prompt=prompt,
+                    **kwargs,
+                )
+            except TypeError as e:
+                die(str(e))
 
         payload: dict[str, Any] = {
             "prompt": cfg.prompt,

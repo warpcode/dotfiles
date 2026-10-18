@@ -159,6 +159,22 @@ class TestJulesClient(unittest.TestCase):
         data = self.client.create_session(config=config)
         self.assertEqual(data["id"], "7777777777777777777")
 
+        mock_urlopen.assert_called_once()
+        req = mock_urlopen.call_args[0][0]
+        payload = json.loads(req.data.decode("utf-8"))
+        self.assertEqual(payload.get("prompt"), "Run test suite")
+        self.assertEqual(payload.get("title"), "Config Task")
+        self.assertEqual(payload.get("sourceContext", {}).get("source"), "sources/github/warpcode/cloakpkg")
+
+    def test_create_session_invalid_kwargs(self):
+        with self.assertRaises(SystemExit):
+            self.client.create_session(prompt="Test", invalid_param=123)
+
+    def test_create_session_config_with_extra_kwargs(self):
+        config = CreateSessionConfig(prompt="Test")
+        with self.assertRaises(TypeError):
+            self.client.create_session(config=config, invalid_param=123)
+
     @patch("jules.client.urlopen")
     def test_create_session_custom_automation_mode(self, mock_urlopen):
         mock_response = MagicMock()
