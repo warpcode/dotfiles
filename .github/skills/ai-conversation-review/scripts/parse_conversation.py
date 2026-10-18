@@ -346,12 +346,22 @@ def ingest_transcript(raw_text: str) -> List[Dict[str, Any]]:
     return parse_markdown_plain_text(raw_text)
 
 
-def generate_markdown_summary(events: List[Dict[str, Any]], options: Optional[SummaryOptions] = None) -> str:
+def generate_markdown_summary(events: List[Dict[str, Any]], options: Any = None, **kwargs: Any) -> str:
     """Formats events into a clean, token-efficient Markdown summary."""
     if not events:
         return "No conversation events found in transcript."
 
-    opts = options or SummaryOptions()
+    if isinstance(options, SummaryOptions):
+        opts = options
+    else:
+        max_turns = options if isinstance(options, int) else kwargs.get("max_turns")
+        opts = SummaryOptions(
+            max_turns=max_turns,
+            tools_only=kwargs.get("tools_only", False),
+            errors_only=kwargs.get("errors_only", False),
+            user_only=kwargs.get("user_only", False),
+            stats_only=kwargs.get("stats_only", False) or kwargs.get("stats", False),
+        )
 
     if opts.max_turns and opts.max_turns > 0:
         events = events[-opts.max_turns:]

@@ -75,6 +75,25 @@ System message
         self.assertNotIn("### Turn 1", summary_tools)
         self.assertIn("### Turn 2", summary_tools)
 
+    def test_generate_markdown_summary_backward_compatibility(self):
+        events = [
+            {"role": "user", "content": "First turn", "tool_calls": []},
+            {"role": "assistant", "content": "Second turn", "tool_calls": [{"name": "bash", "args": {}}]},
+        ]
+        # Test positional max_turns
+        summary_pos = generate_markdown_summary(events, 1)
+        self.assertIn("**Total Events Extracted:** 1", summary_pos)
+        self.assertIn("Second turn", summary_pos)
+
+        # Test legacy keyword arguments
+        summary_kw = generate_markdown_summary(events, max_turns=1, tools_only=True)
+        self.assertIn("### Turn 1 [Assistant]", summary_kw)
+        self.assertIn("bash", summary_kw)
+
+        # Test positional max_turns + legacy keyword argument
+        summary_mix = generate_markdown_summary(events, 1, tools_only=True)
+        self.assertIn("### Turn 1 [Assistant]", summary_mix)
+
 class TestToolArgumentRecovery(unittest.TestCase):
     """Regression cover for the bug where every OpenCode tool call rendered as `{}`.
 
