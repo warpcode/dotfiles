@@ -52,24 +52,38 @@
 {{- $allAsk := $rawAsk | uniq -}}
 {{- $allDeny := $rawDeny | uniq -}}
 
+{{- $home := env "HOME" -}}
+{{- if and (kindIs "map" .) (hasKey . "chezmoi") (hasKey .chezmoi "homeDir") -}}
+  {{- $home = .chezmoi.homeDir -}}
+{{- end -}}
+
 {{- $pathsRead := list -}}
 {{- range $p := (get $paths "read" | default list) -}}
   {{- $p = trim $p -}}
-  {{- if $p }}{{ $pathsRead = append $pathsRead $p }}{{ end -}}
+  {{- if $p -}}
+    {{- $abs := regexReplaceAll "^~(/|$)" $p (printf "%s$1" $home) -}}
+    {{- $pathsRead = append $pathsRead $abs -}}
+  {{- end -}}
 {{- end -}}
 {{- $pathsRead = $pathsRead | uniq -}}
 
 {{- $pathsWrite := list -}}
 {{- range $p := (get $paths "write" | default list) -}}
   {{- $p = trim $p -}}
-  {{- if $p }}{{ $pathsWrite = append $pathsWrite $p }}{{ end -}}
+  {{- if $p -}}
+    {{- $abs := regexReplaceAll "^~(/|$)" $p (printf "%s$1" $home) -}}
+    {{- $pathsWrite = append $pathsWrite $abs -}}
+  {{- end -}}
 {{- end -}}
 {{- $pathsWrite = $pathsWrite | uniq -}}
 
 {{- $pathsDeny := list -}}
 {{- range $p := (get $paths "deny" | default list) -}}
   {{- $p = trim $p -}}
-  {{- if $p }}{{ $pathsDeny = append $pathsDeny $p }}{{ end -}}
+  {{- if $p -}}
+    {{- $abs := regexReplaceAll "^~(/|$)" $p (printf "%s$1" $home) -}}
+    {{- $pathsDeny = append $pathsDeny $abs -}}
+  {{- end -}}
 {{- end -}}
 {{- $pathsDeny = $pathsDeny | uniq -}}
 
