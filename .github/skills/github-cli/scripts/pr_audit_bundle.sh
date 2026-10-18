@@ -73,7 +73,7 @@ done
 # Source issues: closing references + Fixes/Closes/Resolves #N in body.
 {
   jq -r '.closingIssuesReferences[]?.number' "$out/meta.json"
-  jq -r '.body // ""' "$out/meta.json" | grep -oiE '\b(fix(es|ed)?|close[sd]?|resolve[sd]?)\b[: ]*#[0-9]+' | grep -oE '[0-9]+' || true
+  jq -r '.body // ""' "$out/meta.json" | grep -oiE '(^|[^[:alnum:]_])(fix(es|ed)?|close[sd]?|resolve[sd]?)[: ]*#[0-9]+' | grep -oE '[0-9]+' || true
 } | sort -un > "$out/issues/_list.txt"
 
 while IFS= read -r n; do
