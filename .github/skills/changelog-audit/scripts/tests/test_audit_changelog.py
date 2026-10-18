@@ -1,5 +1,7 @@
 import importlib.util
+import io
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 import sys
 
@@ -164,7 +166,8 @@ commit_range: v1.0.0..v1.1.0
             if tmp_path.exists():
                 tmp_path.unlink()
 
-    def test_print_terminal_summary(self):
+    @patch("sys.stdout", new_callable=io.StringIO)
+    def test_print_terminal_summary(self, mock_stdout):
         results_pass = [{
             "version": "1.0.0",
             "has_provenance": True,
@@ -193,6 +196,7 @@ commit_range: v1.0.0..v1.1.0
         }]
         has_failures_fail = print_terminal_summary("CHANGELOG.md", results_fail, [])
         self.assertTrue(has_failures_fail)
+        self.assertIn("Version [1.0.0]: PASS", mock_stdout.getvalue())
 
 
 if __name__ == "__main__":
