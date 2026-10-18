@@ -404,8 +404,9 @@ def _format_audit_trail_details(
         "- **PRs & Labels**:",
     ]
     if prs_included:
+        sorted_labels = sorted(labels_recorded.items())
         for pr_id in sorted(prs_included):
-            pr_lbls = [k for k, v in labels_recorded.items() if pr_id in v]
+            pr_lbls = [k for k, v in sorted_labels if pr_id in v]
             lbl_str = f" `[{', '.join(pr_lbls)}]`" if pr_lbls else ""
             md_lines.append(f"  - #{pr_id}{lbl_str}")
     else:
@@ -462,7 +463,7 @@ def build_provenance_and_changelog(
     md_lines.append("")
     md_lines.extend(
         _format_audit_trail_details(
-            from_ref, to_ref, commits, compare_url, prs_included, labels_recorded, omitted_list
+            from_ref, to_ref, commits, compare_url, prs_included, provenance_data["labels_recorded"], omitted_list
         )
     )
 
