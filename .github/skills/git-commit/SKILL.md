@@ -21,7 +21,7 @@ Collect status with `git status --porcelain`.
 Analyse the filenames for review and raise any issues or concerns to the user. Halt if there are sensitive files or naming rule violations.
 
 ### Step 3: Staged Diff Triage
-Perform a token-efficient diff review of the staged changes.
+Perform a token-efficient diff review of the staged changes using the explicit command: `python3 ~/.gemini/config/skills/git-expert/scripts/git-diff-triage.py --threshold=40 -- --staged`. This limits the context budget by hiding large diff contents.
 
 ### Step 4: Assess Complexity
 Determine whether the commit message should be a single line or multiline based on the decision matrix below:
