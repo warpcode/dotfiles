@@ -13,6 +13,7 @@ driven by a skill's bundled script.
 | Git/PR workflow, branch hygiene, conflict triage | `git-expert` |
 | Security findings, exposure, auth review | `code-security-audit` |
 | Running `gh` commands | `github-cli` |
+| Project/feature planning, ADRs, PRDs, task breakdown & scrutiny | `project-planner` |
 | Post-session skill/instruction improvement | `ai-conversation-review` |
 
 Prefer a loaded skill's bundled script over a hand-rolled command chain — if the skill ships a
@@ -37,8 +38,9 @@ emits a machine-readable summary.
 - See `dot_agents/AGENTS.md` §3 for the full gate.
 
 Approval scope: approval covers **only the actions explicitly enumerated** in the request that
-sought it. A bare "proceed" / "go ahead" authorises nothing on its own — restate the list and
-confirm. Approval does not carry forward to the next gate or to a newly discovered action.
+sought it. Direct confirmation ("confirmed", "proceed", "go ahead") in response to an enumerated
+pre-flight list authorises that exact list; it does not carry forward to the next gate or to a
+newly discovered action.
 
 `~/.gemini/config/skills/` is a direct symlink to `.github/skills/` in this repository; always
 edit and author skill sources directly under `.github/skills/`.
