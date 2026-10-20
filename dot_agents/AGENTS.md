@@ -28,7 +28,8 @@ These instructions capture persistent memories, behavioral guardrails, and techn
 
 5. **Resource Selection & Delegation**:
    - Check whether an existing skill applies before executing and follow its guidelines.
-   - Delegate high-noise exploration (broad searches, large logs, multi-file sweeps) to subagents using light models (`gemini-3.5-flash` with uninherited context).
+   - Delegate simple/mechanical tasks and high-noise exploration (broad searches, large logs, multi-file sweeps, routine validations, and bulk extractions) to subagents using light models (`flash` / `gemini-3.5-flash` with uninherited context) for efficiency and token savings.
+   - **Thinking Effort & Reasoning Calibration**: Always calibrate the model's thinking/reasoning effort level (`effort` / `reasoning_effort` / thinking budget) to match the complexity of the task at hand whenever the platform or agent configuration supports it. Use `none` or `low` effort for simple, mechanical, or lookup tasks, and scale up to `medium` or `high` (or the closest platform equivalent) only after analyzing that the task requires multi-step architectural reasoning, subtle debugging, or complex trade-off evaluation.
    - **Script Execution Efficiency**: Do NOT open/read utility or helper script source code if usage and parameters are documented in `SKILL.md` or instructions. Run them directly.
    - **Skill Script Path Resolution**: When running scripts bundled with a skill (`@scripts/<name>` or `scripts/<name>`), always resolve them relative to the active skill package directory (e.g. `.github/skills/<skill-name>/scripts/<name>` or `~/.gemini/config/skills/<skill-name>/scripts/<name>`), never as `./scripts/<name>` from the workspace root.
 
