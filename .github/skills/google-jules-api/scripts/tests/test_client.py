@@ -12,7 +12,7 @@ if str(scripts_dir) not in sys.path:
     sys.path.insert(0, str(scripts_dir))
 
 from jules.auth import resolve_jules_api_key
-from jules.client import JulesClient
+from jules.client import AuditSessionsOptions, JulesClient
 from jules.formatters import (
     format_activities,
     format_activity,
@@ -742,15 +742,44 @@ class TestJulesBatchOperations(unittest.TestCase):
         ]
 
         candidates = _archive_candidates(client, args)
-        client.audit_sessions.assert_called_once_with(
+        expected_options = AuditSessionsOptions(
             page_size=50,
             max_age_days=None,
             older_than_days=None,
             repo=None,
             all_pages=True,
         )
+        client.audit_sessions.assert_called_once_with(expected_options)
         self.assertEqual(len(candidates), 1)
         self.assertEqual(candidates[0]["id"], "c1")
+
+    def test_audit_sessions_options_dataclass_usage(self):
+        client = JulesClient(api_key="dummy")
+        now = datetime.now(timezone.utc)
+        mock_sessions = {
+            "sessions": [
+                {
+                    "id": "s10",
+                    "sourceContext": {"source": "sources/github/warpcode/cloakenv"},
+                    "createTime": (now - timedelta(days=1)).isoformat(),
+                    "state": "IN_PROGRESS",
+                },
+            ]
+        }
+        opts = AuditSessionsOptions(page_size=5, max_age_days=10, repo="cloakenv")
+        with patch.object(client, "list_sessions", return_value=mock_sessions), \
+             patch.object(client, "audit_session", return_value={"id": "s10"}):
+            audits = client.audit_sessions(opts, page_size=20)
+            self.assertEqual(len(audits), 1)
+            self.assertEqual(audits[0]["id"], "s10")
+            # Verify original opts was not mutated
+            self.assertEqual(opts.page_size, 5)
+
+        # Verify invalid kwargs raise TypeError uniformly
+        with self.assertRaises(TypeError):
+            client.audit_sessions(opts, invalid_arg="bad")
+        with self.assertRaises(TypeError):
+            client.audit_sessions(invalid_arg="bad")
 
 
 if __name__ == "__main__":

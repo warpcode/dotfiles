@@ -19,7 +19,7 @@ if str(scripts_dir) not in sys.path:
     sys.path.insert(0, str(scripts_dir))
 
 from jules.auth import resolve_jules_api_key
-from jules.client import JulesClient
+from jules.client import AuditSessionsOptions, JulesClient
 from jules.formatters import (
     format_activities,
     format_activity,
@@ -84,13 +84,14 @@ def cmd_check_sessions(client: JulesClient, args: argparse.Namespace) -> None:
             )
         ]
     else:
-        audits = client.audit_sessions(
+        opts = AuditSessionsOptions(
             page_size=getattr(args, "page_size", 10),
             stale_threshold_mins=stale_threshold,
             filter_expr=getattr(args, "filter", None),
             max_age_days=max_age_days,
             repo=getattr(args, "repo", None),
         )
+        audits = client.audit_sessions(opts)
 
 
     show_history = getattr(args, "history", False) or bool(session_id)
@@ -261,13 +262,14 @@ def _archive_candidates(client: JulesClient, args: argparse.Namespace) -> list[d
     if older_than:
         max_age = None
         all_pages = True
-    audits = client.audit_sessions(
+    opts = AuditSessionsOptions(
         page_size=page_size,
         max_age_days=max_age,
         older_than_days=older_than,
         repo=getattr(args, "repo", None),
         all_pages=all_pages,
     )
+    audits = client.audit_sessions(opts)
     if older_than:
         return [a for a in audits if not a.get("pull_request_url") or a.get("assessment") in ("CLOSED_NO_PR", "STALLED", "COMPLETED_NO_OUTPUT", "AWAITING_PLAN_APPROVAL", "AWAITING_USER_FEEDBACK", "COMPLETED")]
     return [
@@ -362,12 +364,13 @@ def cmd_archive_closed_prs(client: JulesClient, args: argparse.Namespace) -> Non
         max_age = None
 
     print("Auditing non-archived sessions for PR deliverables...")
-    sessions = client.audit_sessions(
+    opts = AuditSessionsOptions(
         page_size=50,
         max_age_days=max_age,
         repo=getattr(args, "repo", None),
         all_pages=True,
     )
+    sessions = client.audit_sessions(opts)
 
     repo_pr_map: list[tuple[str, str, int, str]] = []
     unique_repos: set[str] = set()

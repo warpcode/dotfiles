@@ -1,3 +1,4 @@
+from dataclasses import dataclass, replace
 import json
 from datetime import datetime, timezone
 from typing import Any
@@ -8,6 +9,19 @@ from urllib.request import Request, urlopen
 from .utils import die, info, parse_iso_datetime
 
 DEFAULT_BASE_URL = "https://jules.googleapis.com/v1alpha"
+
+
+@dataclass
+class AuditSessionsOptions:
+    """Options and filters for auditing sessions in bulk."""
+
+    page_size: int = 10
+    stale_threshold_mins: int = 60
+    filter_expr: str | None = None
+    max_age_days: int | None = 30
+    older_than_days: int | None = None
+    repo: str | None = None
+    all_pages: bool = False
 
 
 class JulesClient:
@@ -613,28 +627,29 @@ class JulesClient:
 
     def audit_sessions(
         self,
-        page_size: int = 10,
-        stale_threshold_mins: int = 60,
-        filter_expr: str | None = None,
-        max_age_days: int | None = 30,
-        older_than_days: int | None = None,
-        repo: str | None = None,
-        all_pages: bool = False,
+        options: AuditSessionsOptions | None = None,
+        **kwargs: Any,
     ) -> list[dict[str, Any]]:
         """List and audit recent sessions, optionally filtered by repo or age limits."""
+        if options is None:
+            options = AuditSessionsOptions(**kwargs)
+        elif kwargs:
+            options = replace(options, **kwargs)
+
+        filter_expr = options.filter_expr
         if filter_expr is None:
             filter_expr = "archived=false"
         sessions: list[dict[str, Any]] = []
         page_token: str | None = None
         while True:
-            res = self.list_sessions(page_size=page_size, page_token=page_token, filter_expr=filter_expr)
+            res = self.list_sessions(page_size=options.page_size, page_token=page_token, filter_expr=filter_expr)
             batch = res.get("sessions", [])
             sessions.extend(batch)
             page_token = res.get("nextPageToken")
-            if not all_pages or not page_token or not batch:
+            if not options.all_pages or not page_token or not batch:
                 break
-        if repo:
-            clean_repo = repo.strip().removeprefix("sources/").removeprefix("github/").lower()
+        if options.repo:
+            clean_repo = options.repo.strip().removeprefix("sources/").removeprefix("github/").lower()
             sessions = [
                 s for s in sessions
                 if clean_repo in s.get("sourceContext", {}).get("source", "").removeprefix("sources/").removeprefix("github/").lower()
@@ -649,15 +664,15 @@ class JulesClient:
                 try:
                     s_dt = parse_iso_datetime(ts)
                     age_days = (now - s_dt).total_seconds() / 86400.0
-                    if max_age_days is not None and max_age_days > 0 and age_days > max_age_days:
+                    if options.max_age_days is not None and options.max_age_days > 0 and age_days > options.max_age_days:
                         continue
-                    if older_than_days is not None and older_than_days > 0 and age_days <= older_than_days:
+                    if options.older_than_days is not None and options.older_than_days > 0 and age_days <= options.older_than_days:
                         continue
                 except Exception:
                     pass
-            elif older_than_days is not None and older_than_days > 0:
+            elif options.older_than_days is not None and options.older_than_days > 0:
                 continue
-            audits.append(self.audit_session(s, stale_threshold_mins=stale_threshold_mins, max_age_days=max_age_days))
+            audits.append(self.audit_session(s, stale_threshold_mins=options.stale_threshold_mins, max_age_days=options.max_age_days))
         return audits
 
 
