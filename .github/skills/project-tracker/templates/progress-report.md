@@ -64,9 +64,9 @@
 ### State Discrepancies (Plan vs Tracker vs Code)
 - `<Item ID>`: Plan says `<Plan Status>`, tracker says `<Tracker Status>`, code shows `<Code Status>`.
 
-### Target Files & Done Command Verification
+### Target Files & Evidence Link Verification
 - [ ] `<TSK-xxx>`: Expected target file `<path>` does not exist in code path.
-- [ ] `<TSK-yyy>`: Done command `<command>` failed with exit code `<n>`.
+- [ ] `<TSK-yyy>`: Task marked Done but missing verified Evidence link (PR / Commit / Ticket).
 
 ### Governance Invariants
 - **Unvalidated Assumptions**: `ASM-xxx` validation pending while dependent `REQ-yyy` is active.

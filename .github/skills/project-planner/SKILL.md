@@ -77,7 +77,7 @@ Status values: `Draft`, `Active`, `Done`, `Abandoned`, `Superseded`.
 | `ASM-*` | Assumption (validation path + if-false impact) | `docs/plans/` (SPEC) |
 | `Q-*` | Open question (blocking or non-blocking) | `docs/plans/` (SPEC) |
 | `M-*` | Milestone (deliverables + exit criteria) | `docs/plans/` (SPEC) |
-| `TSK-*` | Task (context-free, $\le 3$ pt, target files + done command) | `docs/plans/` (SPEC) |
+| `TSK-*` | Task (context-free, $\le 3$ pt, target files + evidence link) | `docs/plans/` (SPEC) |
 | `ADR-NNNN` | Architecture decision (context, forces, choice, fitness function) | `docs/adr/` |
 | `DT-*` | Decision tree (deterministic IF/ELSE classification rule) | `docs/adr/` or SPEC |
 | `REJ-*` | Rejected proposal (conflicts with IDs + rationale) | `docs/adr/` or SPEC |
@@ -136,7 +136,7 @@ Documenting existing work without service lock-in (see `references/planning-refe
 Once a plan passes the **Definition of Ready** (§5):
 1. **Task Execution**: Developers or subagents execute `TSK-*` slices in vertical iterations against `Target Files`.
 2. **External Ticketing**: If the team uses an external tracker (Jira, GitHub Issues, Linear), export `TSK-*` slices via provider skills (`github-issues`, `jira-api`).
-3. **Progress Auditing**: To track progress against tracker dumps, audit code ground truth, verify done commands, or reconcile documentation drift, invoke `project-tracker`.
+3. **Progress Auditing**: To track progress against tracker dumps, audit code ground truth, or reconcile documentation drift, invoke `project-tracker`.
 
 ## 5. Quality Gate: Definition of Ready
 
@@ -145,7 +145,7 @@ Before declaring a plan ready for implementation, verify:
 - [ ] **Requirements**: Every `REQ-*` links to a `G-*`, uses EARS syntax, sets priority (`P0`/`P1`/`P2`), and specifies $\ge 1$ Given/When/Then acceptance criterion.
 - [ ] **NFR Coverage**: 10-dimension NFR checklist evaluated (Security, Privacy, Performance, Reliability, Observability, Compatibility/Rollback, Accessibility, Cross-platform, Docs, Testing).
 - [ ] **Decisions & Governance**: One-way doors have an `ADR-*` with fitness function and rejected alternatives; no blocking `Q-*` open; unvalidated `ASM-*` have validation tasks.
-- [ ] **Actionable Tasks**: Every P0/P1 requirement is broken into context-free `TSK-*` items sized $\le 3$ pt with explicit `Target Files` and verifiable `Done Command`.
+- [ ] **Actionable Tasks**: Every P0/P1 requirement is broken into context-free `TSK-*` items sized $\le 3$ pt with explicit `Target Files`.
 - [ ] **Plan Integrity**: No dependency cycles, no links to superseded items, `README.md` index updated.
 
 ## 6. Templates & References

@@ -63,8 +63,7 @@
 ### `TSK-001`: <Title> [Proposed] — 1.0 pt
 - **Depends On**: `REQ-001`, `ADR-001` · **Milestone**: `M-001`
 - **Target Files**: `path/to/file`
-- **Done Command**: `./validate.sh` (or exact probe)
-- **Evidence**: PR <link/number> · Commit <sha> · Ticket <id> (or "None")
+- **Evidence**: [PR #...](url) · Commit `sha` · [Ticket ...](url) (or "None")
 
 ## Features
 - [`features/YYYY-MM-DD-<slug>`](features/YYYY-MM-DD-<slug>/SPEC.md) — <summary> · <status>

@@ -64,12 +64,11 @@ For every `TSK-*`:
 - Check whether they were actually modified, created, or if they are unchanged stubs.
 - If a task is marked `Done` in the tracker but its `Target Files` do not exist, flag a **Ground-Truth Discrepancy**.
 
-### 2. Done Command Verification
-For every `TSK-*` with a `Done Command:`:
-- Inspect the command (e.g. `./validate.sh`, `python3 -m unittest ...`, linter).
-- If the environment is safe and non-destructive, verify that the command passes.
-- If running the command is prohibited or impractical, statically verify that the referenced test files, scripts, or targets exist and contain relevant assertions.
-- A passing done command is required to verify a task as complete.
+### 2. Evidence Link Verification
+For every completed `TSK-*`:
+- Verify that `- **Evidence**:` is populated with clickable markdown links for PRs and tickets (e.g. `[PR #142](url)`, `[PROJ-101](url)`) and code literals for git commit SHAs (e.g. `Commit \`7fa489b\``; commit SHAs do not need links).
+- Confirm that referenced PRs are merged or that the commit exists in repository history (`git cat-file -e <sha>^{commit}`).
+- If a task is marked `Done` without evidence, flag an **Unsubstantiated Task Completion**.
 
 ### 3. Acceptance Criteria (`AC`) Code Traceability
 For every `REQ-*`:

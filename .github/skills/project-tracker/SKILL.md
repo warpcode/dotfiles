@@ -21,7 +21,7 @@ against project specifications (`docs/plans/`) and architectural invariants (`do
 1. **Service-Agnostic**: Does not depend on any specific issue tracker API. Treats all tracker inputs
    as generic data dumps and normalizes them into canonical states.
 2. **Code Ground Truth Over Claimed Status**: Never trust a "Closed" ticket or "Done" plan item
-   without verifying the target files, passing done commands, and matching test assertions in code.
+   without verifying target files, test assertions in code, and clickable evidence links.
 3. **Three-Way State Reconciliation**:
    ```text
           [ Plan Document (docs/plans/) ]
@@ -54,9 +54,8 @@ Map tracker-specific workflows into four normalized states:
 ### Step 1: Verify Code Ground Truth
 When a code path or worktree is available:
 1. **Target Files**: Verify that paths named in `Target Files:` exist and were modified in the repository.
-2. **Done Commands**: Inspect and run safe done commands (`./validate.sh`, unit tests) or statically verify test assertions.
-3. **Acceptance Criteria Traceability**: Trace each Given/When/Then AC in `REQ-*` to concrete implementation and test assertions in code.
-4. **Fitness Functions**: Verify that automated fitness functions defined in `docs/adr/` exist and pass.
+2. **Acceptance Criteria Traceability**: Trace each Given/When/Then AC in `REQ-*` to concrete implementation and test assertions in code.
+3. **Fitness Functions**: Verify that automated fitness functions defined in `docs/adr/` exist and pass.
 
 ### Step 2: Violation & Guardrail Detection
 Actively audit for four distinct classes of violations:
@@ -80,7 +79,7 @@ Query Git and GitHub to discover all work linked to the plan slug without manual
 1. **Generate Report**: Render audit findings using `templates/progress-report.md`.
 2. **Review Discrepancies**: Present findings, progress percentages, and proposed fixes to the user via `ask_question` (recommended action first).
 3. **Update Documentation**: Upon explicit user approval:
-   - Update `TSK-*` statuses (`[Proposed]` $\to$ `[In Progress]` $\to$ `[Done]`) and backfill `- **Evidence**: PR #<n> · Commit <sha> · Ticket <id>`.
+   - Update `TSK-*` statuses (`[Proposed]` $\to$ `[In Progress]` $\to$ `[Done]`) and backfill `- **Evidence**: [PR #...](url) · Commit `sha` · [Ticket ...](url)` (PRs and tickets formatted as clickable links; git SHAs as code literals).
    - Check off verified acceptance criteria (`- [x] Given...`).
    - Append an audit row with Evidence links to the plan's `## Revision Log`.
 
@@ -89,8 +88,7 @@ Query Git and GitHub to discover all work linked to the plan slug without manual
 Before declaring any task, milestone, or plan complete:
 - [ ] Every completed task has verified target files present in the codebase.
 - [ ] Acceptance criteria checked `[x]` only when implementation and test assertions are confirmed in code.
-- [ ] Done commands executed or statically verified with zero failing exit codes.
-- [ ] Completed tasks have `- **Evidence**:` populated with verified PR, commit SHA, or ticket references.
+- [ ] Completed tasks have `- **Evidence**:` populated with verified PR/ticket links and commit SHAs.
 - [ ] Zero unaddressed Non-Goal (`NG-*`) or Architecture (`ADR-*`/`REJ-*`) violations.
 - [ ] No sequencing violations: all `Depends On` prerequisites completed before downstream work.
 - [ ] Scope creep triaged (rejected, extracted into a new plan, or formally approved).

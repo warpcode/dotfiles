@@ -60,9 +60,8 @@ Use when defining deterministic branching rules:
 Every task must be executable by an isolated engineer or subagent without prior conversational context:
 1. **Explicit File Targets**: Name exact repository paths, scripts, or schemas.
 2. **Traceability**: Link to the `REQ-*` it fulfills and the `ADR-*` it obeys.
-3. **Deterministic Done Command**: Provide a runnable command (`./validate.sh`, unit test) proving completion.
-4. **Evidence & Provenance**: Record `- **Evidence**: PR <number> · Commit <sha> · Ticket <id>` upon completion.
-5. **Git Trailer Linking**: Tag commit messages and PR bodies with `Plan: <slug>:<TSK-xxx>` to enable zero-hunting auto-discovery.
+3. **Evidence Tracking**: Record `- **Evidence**: [PR #...](url) · Commit `sha` · [Ticket ...](url)` upon completion. PRs and issue tracker tickets should be formatted as clickable markdown links; Git commit SHAs are recorded as code literals (no link needed).
+4. **Git Trailer Linking**: Tag commit messages and PR bodies with `Plan: <slug>:<TSK-xxx>` to enable zero-hunting auto-discovery.
 
 ### 3-Factor Sizing Heuristic (Complexity, Effort, Uncertainty)
 

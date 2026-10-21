@@ -54,7 +54,7 @@
 
 ## 5. Milestones & Tasks
 - **`M-001`**: [Phase 1 Title] — Exit criteria: [Checkable condition]
-  - `TSK-001`: [Task Title] (Target files: `path/to/file`, Done command: `./validate.sh`)
+  - `TSK-001`: [Task Title] (Target files: `path/to/file`, Evidence: [PR #...](url))
 
 ---
 
