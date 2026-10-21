@@ -167,8 +167,12 @@ class TestJulesClient(unittest.TestCase):
         self.assertEqual(payload.get("sourceContext", {}).get("source"), "sources/github/warpcode/cloakpkg")
 
     def test_create_session_invalid_kwargs(self):
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(TypeError):
             self.client.create_session(prompt="Test", invalid_param=123)
+
+    def test_create_session_missing_prompt(self):
+        with self.assertRaises(TypeError):
+            self.client.create_session()
 
     def test_create_session_config_with_extra_kwargs(self):
         config = CreateSessionConfig(prompt="Test")

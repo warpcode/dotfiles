@@ -169,14 +169,11 @@ class JulesClient:
         else:
             prompt = config or kwargs.pop("prompt", None)
             if not prompt:
-                die("prompt or config is required to create a session.")
-            try:
-                cfg = CreateSessionConfig(
-                    prompt=prompt,
-                    **kwargs,
-                )
-            except TypeError as e:
-                die(str(e))
+                raise TypeError("create_session() missing required argument: 'prompt'")
+            cfg = CreateSessionConfig(
+                prompt=prompt,
+                **kwargs,
+            )
 
         payload: dict[str, Any] = {
             "prompt": cfg.prompt,
