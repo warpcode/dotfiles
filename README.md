@@ -50,7 +50,7 @@ This script will:
 1. Detect your OS and install core dependencies (`git`, `zsh`, `curl`, `jq`).
 2. Clone this repository to `${DOTFILES_INSTALL_DIR:-~/.dotfiles}` (overridable).
 3. Install `chezmoi` and `mise` if missing.
-4. Run `mise bootstrap --only packages` for system packages.
+4. Run `mise bootstrap --only packages -y` for system packages.
 5. Apply the dotfiles via `chezmoi init --apply` (this is what sets `zsh` as the default shell and runs the `run_once_after_*` scripts).
 
 ### Manual Installation (Optional)
@@ -74,7 +74,7 @@ Helper functions in [`dot_zsh/functions/github.zsh`](dot_zsh/functions/github.zs
 
 - `github.get_latest_release <owner>/<repo>` — returns the latest tag.
 - `github.get_asset_url <owner>/<repo> <version> [pattern...]` — resolves release asset URLs for `<version>`, filtered by optional `[pattern...]` globs.
-- `github.install_release <app> <owner>/<repo> <version>` — auto-detects OS/architecture, downloads matching asset, extracts `.tar.gz`/`.zip`, flattens a single nested `bin/` or `lib/` wrapper dir, and symlinks top-level executables into `bin/` when `bin/` is absent or empty.
+- `github.install_release <app> <owner>/<repo> <version>` — auto-detects OS/architecture, downloads matching asset, extracts `.tar.gz`/`.zip`/`.tgz`, flattens a single nested `bin/` or `lib/` wrapper dir, and symlinks top-level executables into `bin/` when `bin/` is absent or empty.
 
 Extraction lands in `$GITHUB_RELEASES_INSTALL_DIR/<app>` (default base `~/.local/opt`). Set the variable to override.
 
