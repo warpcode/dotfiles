@@ -417,52 +417,7 @@ def cmd_archive_closed_prs(client: JulesClient, args: argparse.Namespace) -> Non
 
 
 
-def setup_parser() -> argparse.ArgumentParser:
-    # Common flags inherited across root and subparsers with suppress default
-    common_parser = argparse.ArgumentParser(add_help=False)
-    common_parser.add_argument(
-        "--verbose",
-        "-v",
-        action="store_true",
-        default=argparse.SUPPRESS,
-        help="Enable verbose HTTP request/response logging to stderr",
-    )
-    common_parser.add_argument(
-        "--page-size",
-        "-n",
-        type=int,
-        default=argparse.SUPPRESS,
-        help="Maximum number of items to return in a single page",
-    )
-    common_parser.add_argument(
-        "--page-token",
-        "-p",
-        default=argparse.SUPPRESS,
-        help="Pagination token for retrieving the next page of results",
-    )
-
-    main_description = """Google Jules REST API Client & CLI Utility (v1alpha)
-
-Interact with Google Jules to manage connected repositories, list sessions,
-track activity timelines, approve plans, send messages, and fetch diff patches.
-
-Authentication:
-    Resolves API key from the JULES_API_KEY environment variable."""
-
-    parser = argparse.ArgumentParser(
-        prog="main.py",
-        description=main_description,
-        parents=[common_parser],
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-
-    subparsers = parser.add_subparsers(
-        dest="subcommand",
-        required=True,
-        title="Available Subcommands",
-        description="Choose a subcommand to execute:",
-    )
-
+def _add_source_subparsers(subparsers: argparse._SubParsersAction, common_parser: argparse.ArgumentParser) -> None:
     # sources
     p_sources = subparsers.add_parser(
         "sources",
@@ -489,6 +444,8 @@ Authentication:
         help="Source identifier in the format 'github/owner/repo' or 'sources/github/owner/repo'",
     )
 
+
+def _add_session_subparsers(subparsers: argparse._SubParsersAction, common_parser: argparse.ArgumentParser) -> None:
     # sessions
     p_sessions = subparsers.add_parser(
         "sessions",
@@ -647,6 +604,29 @@ Authentication:
         help="Feedback, guidance, or instruction message text",
     )
 
+    # nudge
+    p_nudge = subparsers.add_parser(
+        "nudge",
+        parents=[common_parser],
+        help="Send a standardized nudge message to a session",
+        description="Send a pre-defined nudge template to a Jules session. Templates: plan_stalled, progress_check, pr_reminder.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p_nudge.add_argument(
+        "session_ids",
+        nargs="+",
+        help="One or more target Jules session IDs (optionally followed by template name)",
+    )
+    p_nudge.add_argument(
+        "--template",
+        "-t",
+        choices=["plan_stalled", "progress_check", "pr_reminder"],
+        default=None,
+        help="Nudge template to use (default: progress_check)",
+    )
+
+
+def _add_activity_subparsers(subparsers: argparse._SubParsersAction, common_parser: argparse.ArgumentParser) -> None:
     # activities
     p_acts = subparsers.add_parser(
         "activities",
@@ -689,6 +669,8 @@ Authentication:
         help="Activity event ID (e.g. ea05126655df43eab990cce1d8a32a0f)",
     )
 
+
+def _add_admin_subparsers(subparsers: argparse._SubParsersAction, common_parser: argparse.ArgumentParser) -> None:
     # call (escape hatch)
     p_call = subparsers.add_parser(
         "call",
@@ -706,6 +688,7 @@ Authentication:
         "endpoint",
         help="API endpoint path relative to /v1alpha (e.g. sources, sessions/4475409647262242777/activities)",
     )
+
     # delete-session (destructive, irreversible)
     p_del = subparsers.add_parser(
         "delete-session",
@@ -782,27 +765,6 @@ Authentication:
         help="Archive sessions older than N days across all pages (overrides --max-age-days)",
     )
 
-    # nudge
-    p_nudge = subparsers.add_parser(
-        "nudge",
-        parents=[common_parser],
-        help="Send a standardized nudge message to a session",
-        description="Send a pre-defined nudge template to a Jules session. Templates: plan_stalled, progress_check, pr_reminder.",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    p_nudge.add_argument(
-        "session_ids",
-        nargs="+",
-        help="One or more target Jules session IDs (optionally followed by template name)",
-    )
-    p_nudge.add_argument(
-        "--template",
-        "-t",
-        choices=["plan_stalled", "progress_check", "pr_reminder"],
-        default=None,
-        help="Nudge template to use (default: progress_check)",
-    )
-
     # archive-closed-prs
     p_arch_prs = subparsers.add_parser(
         "archive-closed-prs",
@@ -826,6 +788,58 @@ Authentication:
         default=30,
         help="Ignore sessions older than this threshold in days (default: 30; set 0 to disable)",
     )
+
+
+def setup_parser() -> argparse.ArgumentParser:
+    # Common flags inherited across root and subparsers with suppress default
+    common_parser = argparse.ArgumentParser(add_help=False)
+    common_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help="Enable verbose HTTP request/response logging to stderr",
+    )
+    common_parser.add_argument(
+        "--page-size",
+        "-n",
+        type=int,
+        default=argparse.SUPPRESS,
+        help="Maximum number of items to return in a single page",
+    )
+    common_parser.add_argument(
+        "--page-token",
+        "-p",
+        default=argparse.SUPPRESS,
+        help="Pagination token for retrieving the next page of results",
+    )
+
+    main_description = """Google Jules REST API Client & CLI Utility (v1alpha)
+
+Interact with Google Jules to manage connected repositories, list sessions,
+track activity timelines, approve plans, send messages, and fetch diff patches.
+
+Authentication:
+    Resolves API key from the JULES_API_KEY environment variable."""
+
+    parser = argparse.ArgumentParser(
+        prog="main.py",
+        description=main_description,
+        parents=[common_parser],
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
+    subparsers = parser.add_subparsers(
+        dest="subcommand",
+        required=True,
+        title="Available Subcommands",
+        description="Choose a subcommand to execute:",
+    )
+
+    _add_source_subparsers(subparsers, common_parser)
+    _add_session_subparsers(subparsers, common_parser)
+    _add_activity_subparsers(subparsers, common_parser)
+    _add_admin_subparsers(subparsers, common_parser)
 
     return parser
 
