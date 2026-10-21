@@ -79,7 +79,8 @@
 
 Checklist of exact edits required to align documentation with reality:
 
-- [ ] Update `SPEC.md`: Mark `TSK-xxx` as `[Done]`
-- [ ] Update `SPEC.md`: Check off verified AC `<n>` in `REQ-xxx`
-- [ ] Update `DECISIONS.md`: Resolve or log architectural violation `<ref>`
-- [ ] Append row to `REVISIONS.md` recording progress audit and changes made
+- [ ] Update Plan: Mark `TSK-xxx` as `[Done]`
+- [ ] Backfill Evidence: Record PR #`<n>`, Commit `<sha>`, and Ticket `<id>` on `TSK-xxx`
+- [ ] Update Plan: Check off verified AC `<n>` in `REQ-xxx`
+- [ ] Resolve or log architectural violation `<ref>` in `docs/adr/`
+- [ ] Append row with Evidence links to plan's `## Revision Log`

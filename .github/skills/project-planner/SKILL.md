@@ -1,208 +1,162 @@
 ---
 name: project-planner
 description: >
-  Plan projects and features as dated, self-contained plan folders
-  (docs/plans/YYYY-MM-DD-<slug>/ with SPEC.md, DECISIONS.md, REVISIONS.md),
-  with mandatory scrutiny of every new idea against Goals, Non-Goals, ADRs,
-  Decision Trees and Rejected Ideas, staged progression from problem framing
-  to tasks, explicit risks, assumptions, open questions and acceptance
-  criteria, service-agnostic progress tracking from issue tracking data dumps
-  and code worktrees, ground-truth code verification, violation detection, and
-  documentation reconciliation. Use when planning a project or feature,
-  creating an ADR or PRD, breaking down tasks or estimating story points,
-  scrutinizing a new idea, tracking progress, or auditing compliance and
-  documentation accuracy against code.
+  Plan projects and features as dated, self-contained specifications in docs/plans/
+  and architecture decisions in docs/adr/, using adaptive fast-path planning,
+  charter framing, measurable goals, explicit non-goals, EARS requirements with
+  Given/When/Then acceptance criteria, NFR checklists, and context-free task
+  breakdowns. Use when planning a project or feature, drafting technical specs,
+  creating an ADR, breaking down tasks, or scrutinizing new proposals against
+  existing architectural constraints. For tracking progress, ground-truth code
+  auditing, or issue dump reconciliation, use project-tracker.
 ---
 
 # Project Planner
 
-A procedure-only skill: plans are plain Markdown files edited directly. There is no CLI or service lock-in.
-The instructions below guide human engineers and agents to plan, scrutinize, track progress, and audit
-compliance against codebases and arbitrary issue tracking data.
+A procedure-only skill: plans are plain Markdown files edited directly with zero service lock-in.
+The instructions below guide human engineers and agents to plan, scrutinize, track progress, and
+audit compliance against codebases and arbitrary issue tracking data.
 
-## 1. Plans folder layout
+## 1. Documentation Layout
 
-Default root: `<repo>/docs/plans/`. Use another root only if the user names one.
+Plans and architecture decisions live under `<repo>/docs/`:
 
 ```text
-docs/plans/
-├── README.md                              # Index of all plans (one row per plan)
-├── 2026-10-19-plugin-sandbox/             # YYYY-MM-DD-<slug>
-│   ├── SPEC.md                            # Charter, G, NG, REQ, RSK, ASM, Q, M, TSK
-│   ├── DECISIONS.md                       # ADR, DT, REJ
-│   ├── REVISIONS.md                       # Append-only change log
-│   └── features/
-│       └── 2026-11-02-network-policy/     # Same naming rule, same 3 files
-│           ├── SPEC.md
-│           ├── DECISIONS.md
-│           └── REVISIONS.md
-└── 2026-10-25-secrets-rotation/
+docs/
+├── adr/                                   # Durable repository-wide architecture decisions
+│   ├── README.md                          # Index of all ADRs (number, status, title)
+│   ├── 0001-record-architecture-decisions.md
+│   └── 0002-standardize-on-madr.md
+└── plans/                                 # Outcome-oriented feature and project plans
+    ├── README.md                          # Index of all plans (plan link, status, summary)
+    ├── 2026-10-19-plugin-sandbox.md       # Self-contained single-file plan
+    └── 2026-10-25-secrets-rotation/       # Folder layout when child features/assets exist
+        ├── SPEC.md
+        └── features/
+            └── 2026-11-02-network-policy.md
 ```
 
-Naming rules (apply to plans and features alike):
-1. **Prefix** = the date the plan is *created*, in `YYYY-MM-DD` format (local date, from the
-   session's current time — never guessed). The prefix never changes, even if the plan is renamed or
-   finished later.
-2. **Slug** = lowercase kebab-case, 2–5 words, `[a-z0-9-]` only, describing the outcome
-   (`plugin-sandbox`, not `jira-142` or `new-stuff`).
-3. **Before creating**, list the root and search existing slugs for the same topic. If a plan for
-   the same topic already exists, extend it (or add a `features/` child) instead of creating a
-   duplicate. If the exact `YYYY-MM-DD-<slug>` already exists, pick a more specific slug.
-4. A feature lives under `features/` only when it needs its own goals/requirements/tasks.
-   Small additions are just `REQ-*` items in the parent `SPEC.md`.
-5. Never delete a plan folder. Mark it `Done`, `Abandoned` or `Superseded` in its SPEC header and in
-   `README.md`.
+### Naming & Location Rules
+1. **Durable Architecture Decisions (`docs/adr/`)**:
+   - Numbered sequentially zero-padded: `0001-<slug>.md`.
+   - Never tied to a feature date; ADRs outlive individual feature projects.
+   - Formatted using the canonical MADR template (`templates/adr.md`).
+2. **Feature & Project Plans (`docs/plans/`)**:
+   - **Prefix**: The date created in `YYYY-MM-DD` format (from session local time — never guessed).
+   - **Slug**: Lowercase kebab-case, 2–5 words, `[a-z0-9-]` describing the outcome (`plugin-sandbox`).
+   - **Single File vs. Folder**: Use `docs/plans/YYYY-MM-DD-<slug>.md` by default. Use a folder (`YYYY-MM-DD-<slug>/SPEC.md`) only when child sub-features (`features/`) or standalone diagrams/assets exist.
+   - **De-duplication**: Search existing plans before creating. If a plan exists for the topic, extend it rather than duplicating.
+   - **Plan Lifecycle**: Never delete a plan. Mark it `Done`, `Abandoned`, or `Superseded` in the header and index.
 
-`README.md` index format (keep sorted by folder name, newest last):
+`docs/plans/README.md` index format:
 
 ```markdown
 | Plan | Status | Summary |
 |---|---|---|
-| [2026-10-19-plugin-sandbox](2026-10-19-plugin-sandbox/SPEC.md) | Active | Isolate plugin execution |
+| [2026-10-19-plugin-sandbox](2026-10-19-plugin-sandbox.md) | Active | Isolate plugin execution |
+```
+
+`docs/adr/README.md` index format:
+
+```markdown
+| ADR | Status | Date | Title |
+|---|---|---|---|
+| [0001](0001-record-architecture-decisions.md) | Accepted | 2026-10-19 | Record architecture decisions |
 ```
 
 Status values: `Draft`, `Active`, `Done`, `Abandoned`, `Superseded`.
 
-## 2. Item IDs
+## 2. Item IDs & Relationships
 
-| Kind | Meaning | File |
+| Kind | Meaning | Location |
 |---|---|---|
-| `G-*` | Goal (with a measurable success metric) | SPEC.md |
-| `NG-*` | Non-Goal (explicitly out of scope) | SPEC.md |
-| `REQ-*` | Requirement (EARS statement + acceptance criteria + priority) | SPEC.md |
-| `RSK-*` | Risk (likelihood, impact, mitigation, owner) | SPEC.md |
-| `ASM-*` | Assumption (and how it will be validated) | SPEC.md |
-| `Q-*` | Open question (blocking or non-blocking) | SPEC.md |
-| `M-*` | Milestone (deliverables + exit criteria) | SPEC.md |
-| `TSK-*` | Task (context-free, see `templates/ticket-task.md`) | SPEC.md |
-| `ADR-*` | Architecture decision | DECISIONS.md |
-| `DT-*` | Decision tree / classification rule | DECISIONS.md |
-| `REJ-*` | Rejected proposal | DECISIONS.md |
+| `G-*` | Goal (with measurable success metric) | `docs/plans/` (SPEC) |
+| `NG-*` | Non-Goal (explicit negative boundary out of scope) | `docs/plans/` (SPEC) |
+| `REQ-*` | Requirement (EARS statement + Given/When/Then AC + P0/P1/P2) | `docs/plans/` (SPEC) |
+| `RSK-*` | Risk (likelihood, impact, mitigation, owner) | `docs/plans/` (SPEC) |
+| `ASM-*` | Assumption (validation path + if-false impact) | `docs/plans/` (SPEC) |
+| `Q-*` | Open question (blocking or non-blocking) | `docs/plans/` (SPEC) |
+| `M-*` | Milestone (deliverables + exit criteria) | `docs/plans/` (SPEC) |
+| `TSK-*` | Task (context-free, $\le 3$ pt, target files + done command) | `docs/plans/` (SPEC) |
+| `ADR-NNNN` | Architecture decision (context, forces, choice, fitness function) | `docs/adr/` |
+| `DT-*` | Decision tree (deterministic IF/ELSE classification rule) | `docs/adr/` or SPEC |
+| `REJ-*` | Rejected proposal (conflicts with IDs + rationale) | `docs/adr/` or SPEC |
 
-ID rules:
-- IDs are numbered per plan folder, zero-padded (`REQ-001`), and **never reused or renumbered**.
-  The next ID = highest existing number for that kind + 1, including superseded items.
-- Refer to items in a parent plan by qualified ID: `2026-10-19-plugin-sandbox:NG-002`.
-- Every item has a `Status`: `Proposed`, `Accepted`, `Done`, `Superseded by <ID>`, `Deprecated`,
-  or `Rejected`. Only `Accepted`/`Done` items count as binding.
-- `Depends On` may only reference `Accepted`/`Done` items. Never link to a superseded item.
+### Lifecycle & Status Rules
+- **Plan Lifecycle (`docs/plans/`)**: `Draft` (in development) $\to$ `Active` (passes Definition of Ready) $\to$ `Done` (passes Definition of Done, archived) | `Abandoned` | `Superseded`. Plans are historical records.
+- **ADR Lifecycle (`docs/adr/`)**: `Proposed` (under review) $\to$ `Accepted` (binding permanent constraint) $\to$ `Superseded by ADR-xxxx` | `Deprecated` | `Rejected`. ADRs outlive plans.
+- **Item Lifecycle (`REQ-*`, `TSK-*`)**: `Proposed` $\to$ `Accepted` $\to$ `Done`. Only `Accepted`/`Done` items are binding.
+- **Dependencies**: `Depends On` may only reference active `Accepted`/`Done` items. Never link to superseded items or introduce cycles.
+- **Numbering & Immutability**: Zero-padded per plan (`REQ-001`), immutable, and **never reused or renumbered**. The next ID is highest existing $+ 1$.
 
-## 3. Procedure
+## 3. Discovery & Planning (Adaptive Fast-Path)
 
-### Workflow A — New plan
-1. Get today's date from the session time, choose the slug (§1 rules), and confirm both with the user.
-2. Create the folder from `templates/SPEC.md`, `templates/DECISIONS.md`, `templates/REVISIONS.md`;
-   add the row to `docs/plans/README.md` (create it if missing).
-3. Work through the stages in §4 in order. Do not draft later-stage items early.
+Avoid rigid, multi-turn interrogation when intent is clear. Calibrate interaction to the problem's ambiguity:
 
-### Workflow B — Scrutinize every new idea or change (mandatory)
-Before agreeing to any new idea, refinement or pivot:
-1. **Read** the plan's `SPEC.md` and `DECISIONS.md`, plus every ancestor plan's (feature → parent).
-   Search `REJ-*` and each ADR's *Rejected* field for the idea's keywords.
-2. **Report an Impact & Contradiction Check** to the user covering:
-   - **Premise** — which `G-*`/`REQ-*` gap does this close? If none, it is scope creep.
-   - **Contradictions** — any inherited `NG-*`, `ADR-*` or `DT-*` it violates.
-   - **Prior art** — was it already rejected (`REJ-*`, ADR *Rejected* field)? Re-opening needs
-     *new evidence*, stated explicitly.
-   - **Blast radius** — every item (in this plan, sibling features and the parent) whose
-     `Depends On` chain includes what changes, transitively.
-   - **Alternatives** — the cheapest option and "do nothing"; why they are insufficient.
-   - **Failure modes** — a one-line pre-mortem: "This failed because…".
-   - **Reversibility** — one-way or two-way door; one-way doors need an ADR.
-3. **Ask for explicit approval** (`ask_question`, recommended option first). No edits before approval.
-4. **Record the outcome**:
-   - Approved, new → add the item with the next ID.
-   - Approved, changes an existing item → mark the old item `Superseded by <new-ID>`, add the new item,
-     then mark every dependent from step 2 `Needs Review` until re-checked.
-   - Rejected → add a `REJ-*` with *Conflicts With* IDs and the rationale.
-   - Always append a `REVISIONS.md` row (date, action, IDs, rationale).
+1. **Adaptive Fast-Path (Default when requirements are understood)**:
+   - If the user's intent, constraints, and architecture are clear, draft the complete initial plan (`docs/plans/YYYY-MM-DD-<slug>.md`) directly.
+   - Capture unknowns as explicit `ASM-*` (assumptions with validation checks) and `Q-*` (open questions), and highlight them for user feedback.
+2. **Frontier Questions (When genuinely ambiguous or branching)**:
+   - If a proposal contains true architectural crossroads (one-way doors, unknown negative boundaries, competing options), ask targeted questions before locking decisions.
+   - **Facts are the agent's job; choices are the user's**: Never ask the user for facts discoverable from the codebase, environment, or git history. Look them up first.
+   - Present options using the interactive question tool (`ask_question`) listing the recommended choice first with underlying rationale.
+3. **Confirm & Persist**: Present the draft plan for user review. Once confirmed, persist the plan files and update `docs/plans/README.md`.
 
-### Workflow C — Retrospective documentation of existing work
-1. Gather context with the matching provider skill (`jira-api`, `github-cli`, `git-expert`, or by
-   reading local docs). See `references/retrospective-context.md` for what to extract.
-2. Use the date of the **earliest evidence** (first commit, ticket or doc) as the folder prefix,
-   and say in the SPEC header that it was documented retrospectively, with today's date.
-3. Present the proposed items to the user grouped by kind, each with `Source` provenance.
-   After approval, write them with Status `Accepted (Retrospective)`. Stage gates apply to new work
-   only, but list the gaps (missing NG, AC, risks) as `Q-*` items.
+## 4. Procedures
 
-### Workflow D — Track progress, audit compliance & reconcile documentation (In-flight / Review)
-Use when provided an issue tracker data dump (in any format: JSON, CSV, TSV, XML, markdown tables, or plain text) and/or a project code path (such as a git worktree or repository checkout). This workflow is service-agnostic and relies on instructional heuristics rather than service APIs.
+### Workflow A — New Plan
+1. Get today's local date, choose a slug (§1), and verify no duplicate plan exists.
+2. Create `docs/plans/YYYY-MM-DD-<slug>.md` from `templates/SPEC.md` (or folder `YYYY-MM-DD-<slug>/SPEC.md` if child features/assets exist).
+3. If the initiative introduces durable architectural decisions or one-way doors, scaffold `docs/adr/NNNN-<slug>.md` from `templates/adr.md`, add a row to `docs/adr/README.md`, and link the ADR in the plan.
+4. Add the row to `docs/plans/README.md` (create index if missing).
+5. Formulate charter, goals (`G-*`), non-goals (`NG-*`), requirements (`REQ-*`), decisions (`ADR-*`), and tasks (`TSK-*`) satisfying the **Definition of Ready** (§5).
 
-1. **Ingest & Normalize Context** (see `references/progress-and-compliance.md`):
-   - Extract core fields regardless of format: unique ID, title/summary, status (normalize to `OPEN`, `IN_PROGRESS`, `BLOCKED`, `DONE`), story points/estimate, dependencies, linked PRs/commits, and target paths.
-   - Map external issues to plan items (`TSK-*`, `REQ-*`, `M-*`, `G-*`). Flag unmapped external issues as potential **Scope Creep**.
-2. **Audit Code Ground Truth** (when code path / worktree is available):
-   - **Target Files**: Verify whether paths named in each `TSK-*` `Target Files:` actually exist and were modified in the repository.
-   - **Done Command**: Inspect and verify deterministic done commands (`Done Command:`). Run safe commands (`./validate.sh`, tests) if permitted, or verify script/assertion existence statically.
-   - **Acceptance Criteria**: Trace each Given/When/Then AC in `REQ-*` against implementation and test assertions in the codebase.
-   - **Fitness Functions**: Confirm automated fitness functions in `ADR-*` exist and pass.
-3. **Audit for Violations & Invariants**:
-   - **Non-Goal (`NG-*`) Violations**: Cross-reference issue titles, descriptions, and code changes against all active and inherited `NG-*` items.
-   - **Architecture & Decision Violations**: Check if code or issues revive rejected proposals (`REJ-*` or ADR *Rejected* fields) or contradict `DT-*` decision trees.
-   - **Sequencing Violations**: Verify whether tasks marked `IN_PROGRESS` or `DONE` have unfinished upstream prerequisites (`Depends On:`).
-   - **Scope Creep**: Review unmapped issues or untracked codebase changes that lack an approved `G-*` or `REQ-*`.
-4. **Audit Governance Gates & Documentation Drift**:
-   - Check for discrepancies between the tracker status, plan document status (`SPEC.md`), and actual code ground truth.
-   - Verify that no active requirement has unvalidated assumptions (`ASM-*`), open blocking questions (`Q-*`), or unmitigated high risks (`RSK-*`).
-   - Check plan integrity (no cycles, no links to superseded items).
-5. **Report & Reconcile**:
-   - Format the audit findings using `templates/progress-report.md`.
-   - Present findings, discrepancies, and recommended reconciliation actions to the user via `ask_question` (recommended option first).
-   - Upon explicit approval, update `SPEC.md` (task statuses, AC checkboxes `[x]`), `DECISIONS.md`, and append an audit row to `REVISIONS.md`.
+### Workflow B — Scrutinize Every New Idea or Change (Mandatory)
+Before agreeing to any new idea, scope change, or architectural pivot:
+1. **Read & Check Constraints**: Review the active plan and all active ADRs in `docs/adr/`. Search `NG-*`, `REJ-*`, and ADR *Rejected* sections.
+2. **Run Impact & Contradiction Check**:
+   - **Premise**: Which `G-*`/`REQ-*` gap does this close? (If none, flag as scope creep).
+   - **Contradictions**: Any active `NG-*` or global `ADR-*` it violates?
+   - **Prior Art**: Was this previously rejected (`REJ-*`)? Reopening requires new evidence.
+   - **Blast Radius**: Every item whose `Depends On` graph transitively includes the changed item.
+   - **Alternatives & Pre-Mortem**: Cheapest alternative, "do nothing", and failure mode ("This failed because...").
+   - **Reversibility**: One-way door vs. two-way door (one-way doors require an `ADR-*` in `docs/adr/`).
+3. **Seek Approval**: Present the check via `ask_question` (recommended option first).
+4. **Record Outcome**:
+   - Approved: Add new ID or supersede existing item (`Superseded by <ID>`), mark dependents `Needs Review`, append revision entry. If architectural, create or supersede the relevant ADR in `docs/adr/`.
+   - Rejected: Record a `REJ-*` entry with *Conflicts With* IDs and rationale.
 
-## 4. Stage gates (self-enforced)
+### Workflow C — Retrospective Documentation
+Documenting existing work without service lock-in (see `references/planning-reference.md`):
+1. Extract evidence from git history, PRs, Jira dumps, or docs via provider skills (`git-expert`, `github-cli`, `jira-api`).
+2. Use the date of the earliest evidence as the folder prefix; note today's documentation date in the SPEC header.
+3. Mark imported items `Accepted (Retrospective)` with explicit `Source:` provenance links. Record unverified items as `Q-*` or `ASM-*`.
 
-Do not move to a stage until the previous gate passes. State the gate result when moving on.
+### Workflow D — Handoff to Implementation & Tracking
+Once a plan passes the **Definition of Ready** (§5):
+1. **Task Execution**: Developers or subagents execute `TSK-*` slices in vertical iterations against `Target Files`.
+2. **External Ticketing**: If the team uses an external tracker (Jira, GitHub Issues, Linear), export `TSK-*` slices via provider skills (`github-issues`, `jira-api`).
+3. **Progress Auditing**: To track progress against tracker dumps, audit code ground truth, verify done commands, or reconcile documentation drift, invoke `project-tracker`.
 
-| Stage | Gate to exit |
-|---|---|
-| 1. Problem framing | Charter (problem, who is affected, why now) · ≥1 `G-*` with a success metric · ≥1 `NG-*` · key `ASM-*` listed |
-| 2. Requirements | Every `REQ-*` depends on a `G-*`, has an EARS statement, a priority (P0/P1/P2) and ≥1 Given/When/Then AC · NFR checklist (§5) answered · every `G-*` covered by ≥1 `REQ-*` |
-| 3. Architecture & risk | One-way-door choices have an `ADR-*` with rejected alternatives · `RSK-*` recorded for each P0 `REQ-*` (or "none identified" stated) · no blocking `Q-*` open |
-| 4. Milestones & tasks | `M-*` with exit criteria · every P0/P1 `REQ-*` covered by ≥1 `TSK-*` · every `TSK-*` sized ≤3 pts (split anything larger into a spike + tasks), names target files and a done-command |
+## 5. Quality Gate: Definition of Ready
 
-Features also pass Stage 1 on their own: a feature needs its own charter and at least one
-feature-specific `NG-*`. Inheriting the parent's is not enough.
+Before declaring a plan ready for implementation, verify:
+- [ ] **Charter & Scope**: Problem, affected users, and why now clearly defined; $\ge 1$ `G-*` with measurable metric; $\ge 1$ `NG-*` defining explicit negative boundaries.
+- [ ] **Requirements**: Every `REQ-*` links to a `G-*`, uses EARS syntax, sets priority (`P0`/`P1`/`P2`), and specifies $\ge 1$ Given/When/Then acceptance criterion.
+- [ ] **NFR Coverage**: 10-dimension NFR checklist evaluated (Security, Privacy, Performance, Reliability, Observability, Compatibility/Rollback, Accessibility, Cross-platform, Docs, Testing).
+- [ ] **Decisions & Governance**: One-way doors have an `ADR-*` with fitness function and rejected alternatives; no blocking `Q-*` open; unvalidated `ASM-*` have validation tasks.
+- [ ] **Actionable Tasks**: Every P0/P1 requirement is broken into context-free `TSK-*` items sized $\le 3$ pt with explicit `Target Files` and verifiable `Done Command`.
+- [ ] **Plan Integrity**: No dependency cycles, no links to superseded items, `README.md` index updated.
 
-## 5. NFR checklist (Stage 2)
+## 6. Templates & References
 
-For each item, record a `REQ-*`, an `NG-*`, or "N/A — reason" in SPEC.md:
-security & authz · privacy/secrets handling · performance & scale limits · reliability & failure
-handling · observability (logs/metrics) · migration, backward compatibility & rollback ·
-accessibility · cross-platform (Linux/macOS) · docs & user communication · testing strategy.
-
-## 6. Completeness checks
-
-### 6.1 Pre-execution completeness check (Stage 4 Exit)
-Before declaring a plan ready to execute, check and report each item:
-- [ ] Every `G-*` → ≥1 `REQ-*`; every P0/P1 `REQ-*` → ≥1 `TSK-*`
-- [ ] Every `REQ-*` has AC; every `TSK-*` has a done-command
-- [ ] No `Depends On` points at a superseded/rejected item; no dependency cycles
-- [ ] No item left `Needs Review`; no blocking `Q-*` open; every high-impact `RSK-*` has a mitigation
-- [ ] Unvalidated `ASM-*` each have a validation task or spike
-- [ ] `README.md` index row and SPEC status are current; `REVISIONS.md` has the latest change
-
-### 6.2 In-flight progress & compliance audit check (Workflow D)
-Before declaring an audit complete or updating documentation status:
-- [ ] Every task marked `Done` has verified `Target Files` present in the codebase
-- [ ] Acceptance criteria checked `[x]` only when implementation and test assertions are verified in code
-- [ ] Done commands executed or statically verified; no failing exit codes
-- [ ] Zero unaddressed Non-Goal (`NG-*`) or Architecture (`ADR-*`/`REJ-*`) violations
-- [ ] No sequencing violations: all `Depends On` prerequisites are completed before downstream work
-- [ ] Scope creep identified: all unmapped issues/files triaged (rejected, extracted, or approved via Workflow B)
-- [ ] Governance gates intact: no active work proceeding under unvalidated `ASM-*` or open blocking `Q-*`
-- [ ] Three-way reconciliation complete: discrepancies between tracker, `SPEC.md`, and code resolved
-- [ ] `REVISIONS.md` updated with audit record and rationale
-
-## 7. Templates & references
-
-- Plan files: `templates/SPEC.md`, `templates/DECISIONS.md`, `templates/REVISIONS.md`
-- Standalone exports: `templates/prd-full.md`, `templates/prd-lightweight.md`,
-  `templates/adr-madr.md`, `templates/adr-nygard.md`, `templates/ticket-task.md`,
-  `templates/progress-report.md`
-- `references/prd-and-requirements.md` — EARS, MoSCoW, Non-Goals
-- `references/adr-and-decisions.md` — ADR wording, decision trees, supersession
-- `references/task-and-lifecycle.md` — task slicing, sizing, lifecycle
-- `references/retrospective-context.md` — what to extract for retrospective documentation
-- `references/progress-and-compliance.md` — service-agnostic tracking, ground-truth code auditing, violations, drift reconciliation
+- **Core Plan Files**:
+  - `templates/SPEC.md` — Charter, goals, non-goals, requirements, NFR checklist, risks, tasks
+  - `templates/DECISIONS.md` — ADRs, decision trees, rejected proposals (when using folder layout)
+  - `templates/REVISIONS.md` — Append-only change log (when using folder layout)
+- **Standalone Exports**:
+  - `templates/ticket-task.md` — Standalone context-free task specification
+  - `templates/prd.md` — Standalone Product Requirements Document
+  - `templates/adr.md` — Standalone Architecture Decision Record (MADR format for `docs/adr/`)
+- **Reference Guide**:
+  - `references/planning-reference.md` — EARS requirements, MoSCoW, ADR drivers, 3-factor sizing, retrospective mapping

@@ -61,7 +61,7 @@ Pattern: `<optional-prefix>-<domain>-<task-or-type>` (lowercase, hyphen-separate
 | `git-` / `github-` | Version control & GitHub platform operations | `git-expert`, `github-cli`, `github` |
 | `shell-` | Shell scripting, idioms, and environment configuration | `shell-scripting` |
 | `database-` | Schema migration, query optimization, data modeling | `database-architecture` |
-| `project-` / `task-` / `pm-` | Project planning, PRDs, ADRs, task decomposition, ticket authoring | `project-planner` |
+| `project-` / `task-` / `pm-` | Project planning, PRDs, ADRs, task decomposition, progress tracking | `project-planner`, `project-tracker` |
 | (none) | Standalone tools, products, or converters | `email-classifier`, `google-jules-api` |
 
 ### Description Rules

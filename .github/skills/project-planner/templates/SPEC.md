@@ -64,6 +64,12 @@
 - **Depends On**: `REQ-001`, `ADR-001` · **Milestone**: `M-001`
 - **Target Files**: `path/to/file`
 - **Done Command**: `./validate.sh` (or exact probe)
+- **Evidence**: PR <link/number> · Commit <sha> · Ticket <id> (or "None")
 
 ## Features
 - [`features/YYYY-MM-DD-<slug>`](features/YYYY-MM-DD-<slug>/SPEC.md) — <summary> · <status>
+
+## Revision Log
+| Date | Action | IDs | Evidence | Rationale |
+|---|---|---|---|---|
+| YYYY-MM-DD | Created plan | G-001, NG-001 | — | Baseline charter and scope |

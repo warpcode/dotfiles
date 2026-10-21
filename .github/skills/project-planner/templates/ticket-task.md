@@ -4,6 +4,8 @@
 - **Fulfills Requirement(s)**: `REQ-xxx` *(Mandatory upstream requirement link)*
 - **Governed By Decision(s)**: `ADR-xxx`, `DT-xxx`
 - **3-Factor Estimate**: `[0.5 | 1.0 | 2.0 | 3.0 pt]` *(Complexity: Low/Med/High, Effort: S/M/L, Uncertainty: Low/Med/High)*
+- **Git Trailer**: `Plan: <slug>:TSK-xxx`
+- **Evidence**: PR <link/number> · Commit <sha> · Ticket <id>
 
 ## 1. Context & Problem Statement
 [Self-contained background, user story, or defect reproduction steps. Zero tacit memory dependency.]

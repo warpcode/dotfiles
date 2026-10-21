@@ -6,7 +6,7 @@ Guidelines for service-agnostic progress tracking, code ground-truth verificatio
 
 ## 1. Principles of Service-Agnostic Tracking
 
-`project-planner` is service-blind. It does not integrate with or assume the API, schema, or quirks of any specific issue tracker (Jira, Linear, GitHub Issues, GitLab, Asana, Bugzilla, etc.). Instead, it treats all external issue information as a **generic data dump** and reconciles it against the plan's single source of truth (`SPEC.md`, `DECISIONS.md`, `REVISIONS.md`) and the **code ground truth** in the project directory or worktree.
+`project-tracker` is service-blind. It does not integrate with or assume the API, schema, or quirks of any specific issue tracker (Jira, Linear, GitHub Issues, GitLab, Asana, Bugzilla, etc.). Instead, it treats all external issue information as a **generic data dump** and reconciles it against the project plans (`docs/plans/`), architectural invariants (`docs/adr/`), and the **code ground truth** in the project directory or worktree.
 
 ### Input Sources
 
@@ -157,8 +157,9 @@ When the audit is complete:
 1. **Produce the Audit Report**: Render using `templates/progress-report.md`.
 2. **Review with User**: Present findings, progress metrics, and discovered violations (`ask_question`, recommended action first).
 3. **Update Plan Documents**:
-   - Update `TSK-*` statuses (`[Proposed]` → `[Accepted]` → `[In Progress]` → `[Done]`).
+   - Query commits (`git log --grep="<slug>" --format="%h %s"`) and PRs (`gh pr list --search "<slug> in:body"`) to discover linked evidence.
+   - Update `TSK-*` statuses (`[Proposed]` → `[Accepted]` → `[In Progress]` → `[Done]`) and backfill `- **Evidence**: PR <number> · Commit <sha> · Ticket <id>`.
    - Check off verified acceptance criteria (`- [x] Given ...`).
    - If scope creep is approved, add new items with the next consecutive IDs.
-   - If non-goal or architectural violations are found, document them in `DECISIONS.md` or reject the invalid work.
-   - Append a row to `REVISIONS.md` recording the audit, date, reconciled items, and rationale.
+   - If non-goal or architectural violations are found, resolve them via `docs/adr/` or reject the invalid work.
+   - Append an audit row with Evidence links to the plan's `## Revision Log`.
