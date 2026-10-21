@@ -259,20 +259,12 @@ def fetch_git_commits(
     return commits
 
 
-def build_provenance_and_changelog(
+def _categorize_commits(
     commits: List[Dict[str, Any]],
-    from_ref: str,
-    to_ref: str,
     repo_slug: str,
-    version_label: str,
-    fetch_gh_labels: bool = True,
-    cwd: Optional[Path] = None,
-) -> Tuple[str, Dict[str, Any]]:
-    """Build changelog markdown draft and provenance dictionary."""
-    base_sha = get_commit_sha(from_ref, cwd=cwd)
-    head_sha = get_commit_sha(to_ref, cwd=cwd)
-    today_str = datetime.date.today().isoformat()
-
+    fetch_gh_labels: bool,
+) -> Tuple[Dict[str, List[Dict[str, Any]]], List[Dict[str, str]], Set[int], Dict[str, List[int]]]:
+    """Group commits into categories and track PR numbers, labels, and omitted commits."""
     categories: Dict[str, List[Dict[str, Any]]] = {
         "Breaking Changes": [],
         "Added": [],
@@ -285,7 +277,6 @@ def build_provenance_and_changelog(
     omitted_list: List[Dict[str, str]] = []
     prs_included: Set[int] = set()
     labels_recorded: Dict[str, List[int]] = {}
-
     label_cache: Dict[int, List[str]] = {}
 
     for c in commits:
@@ -295,7 +286,6 @@ def build_provenance_and_changelog(
             if fetch_gh_labels:
                 pr_labels = fetch_gh_labels_for_pr(pr_num, repo_slug, label_cache)
             if not pr_labels:
-                # Infer label from conventional commit prefix
                 c_type, scope, _, _ = parse_conventional_commit(c["subject"])
                 if c_type:
                     pr_labels.append(c_type)
@@ -327,22 +317,16 @@ def build_provenance_and_changelog(
                     if pr_num not in labels_recorded[lbl]:
                         labels_recorded[lbl].append(pr_num)
 
-    compare_url = f"https://github.com/{repo_slug}/compare/{from_ref}...{to_ref}"
+    return categories, omitted_list, prs_included, labels_recorded
 
-    provenance_data = {
-        "version": version_label,
-        "date": today_str if version_label != "Unreleased" else None,
-        "commit_range": f"{from_ref}..{to_ref}",
-        "base_commit": base_sha,
-        "head_commit": head_sha,
-        "compare_url": compare_url,
-        "commit_count": len(commits),
-        "prs_included": sorted(list(prs_included)),
-        "labels_recorded": {k: sorted(v) for k, v in sorted(labels_recorded.items())},
-        "omitted_or_internal": omitted_list,
-    }
 
-    # Format Markdown
+def _format_changelog_header_and_entries(
+    version_label: str,
+    today_str: str,
+    categories: Dict[str, List[Dict[str, Any]]],
+    repo_slug: str,
+) -> List[str]:
+    """Format Markdown release header and categorized entry lists."""
     md_lines = []
     if version_label == "Unreleased":
         md_lines.append("## [Unreleased]")
@@ -361,7 +345,6 @@ def build_provenance_and_changelog(
 
         for e in entries:
             scope_prefix = f"**{e['scope']}**: " if e["scope"] else ""
-            ref_suffix = ""
             if e["pr_num"]:
                 ref_suffix = f" ([#{e['pr_num']}](https://github.com/{repo_slug}/pull/{e['pr_num']}))"
             else:
@@ -369,7 +352,11 @@ def build_provenance_and_changelog(
             md_lines.append(f"- {scope_prefix}{e['desc']}{ref_suffix}")
         md_lines.append("")
 
-    # Provenance YAML block inside HTML comment
+    return md_lines
+
+
+def _format_provenance_yaml_comment(provenance_data: Dict[str, Any]) -> List[str]:
+    """Format YAML provenance metadata block inside HTML comments."""
     yaml_lines = [
         "<!--",
         "changelog-provenance:",
@@ -396,20 +383,30 @@ def build_provenance_and_changelog(
         yaml_lines.append(f"      reason: \"{safe_reason}\"")
     yaml_lines.append("-->")
 
-    md_lines.extend(yaml_lines)
-    md_lines.append("")
+    return yaml_lines
 
-    # Collapsible human-readable audit section
-    md_lines.extend([
+
+def _format_audit_trail_details(
+    from_ref: str,
+    to_ref: str,
+    commits: List[Dict[str, Any]],
+    compare_url: str,
+    prs_included: Set[int],
+    labels_recorded: Dict[str, List[int]],
+    omitted_list: List[Dict[str, str]],
+) -> List[str]:
+    """Format collapsible human-readable provenance and audit details block."""
+    md_lines = [
         "<details>",
         f"<summary><b>Release Provenance & Audit Trail</b> (commit range: <code>{from_ref}..{to_ref}</code>, {len(commits)} commits)</summary>",
         "",
         f"- **Commit Range**: [`{commits[-1]['short_sha'] if commits else 'base'}...{commits[0]['short_sha'] if commits else 'head'}`]({compare_url}) ({len(commits)} total commits)",
         "- **PRs & Labels**:",
-    ])
+    ]
     if prs_included:
+        sorted_labels = sorted(labels_recorded.items())
         for pr_id in sorted(prs_included):
-            pr_lbls = [k for k, v in provenance_data["labels_recorded"].items() if pr_id in v]
+            pr_lbls = [k for k, v in sorted_labels if pr_id in v]
             lbl_str = f" `[{', '.join(pr_lbls)}]`" if pr_lbls else ""
             md_lines.append(f"  - #{pr_id}{lbl_str}")
     else:
@@ -425,6 +422,50 @@ def build_provenance_and_changelog(
         "</details>",
         "",
     ])
+    return md_lines
+
+
+def build_provenance_and_changelog(
+    commits: List[Dict[str, Any]],
+    from_ref: str,
+    to_ref: str,
+    repo_slug: str,
+    version_label: str,
+    fetch_gh_labels: bool = True,
+    cwd: Optional[Path] = None,
+) -> Tuple[str, Dict[str, Any]]:
+    """Build changelog markdown draft and provenance dictionary."""
+    base_sha = get_commit_sha(from_ref, cwd=cwd)
+    head_sha = get_commit_sha(to_ref, cwd=cwd)
+    today_str = datetime.date.today().isoformat()
+
+    categories, omitted_list, prs_included, labels_recorded = _categorize_commits(
+        commits, repo_slug, fetch_gh_labels
+    )
+
+    compare_url = f"https://github.com/{repo_slug}/compare/{from_ref}...{to_ref}"
+
+    provenance_data = {
+        "version": version_label,
+        "date": today_str if version_label != "Unreleased" else None,
+        "commit_range": f"{from_ref}..{to_ref}",
+        "base_commit": base_sha,
+        "head_commit": head_sha,
+        "compare_url": compare_url,
+        "commit_count": len(commits),
+        "prs_included": sorted(list(prs_included)),
+        "labels_recorded": {k: sorted(v) for k, v in sorted(labels_recorded.items())},
+        "omitted_or_internal": omitted_list,
+    }
+
+    md_lines = _format_changelog_header_and_entries(version_label, today_str, categories, repo_slug)
+    md_lines.extend(_format_provenance_yaml_comment(provenance_data))
+    md_lines.append("")
+    md_lines.extend(
+        _format_audit_trail_details(
+            from_ref, to_ref, commits, compare_url, prs_included, provenance_data["labels_recorded"], omitted_list
+        )
+    )
 
     return "\n".join(md_lines), provenance_data
 
