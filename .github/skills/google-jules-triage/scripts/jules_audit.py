@@ -546,7 +546,8 @@ def format_table(audits: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-def main() -> None:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Audit Google Jules coding sessions for completeness, health state, and stuck runners."
     )
@@ -615,35 +616,20 @@ def main() -> None:
         help="Minutes without activity before in-progress session is STALLED (default: 60).",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     setattr(args, "days", args.max_age_days)
     setattr(args, "all", args.all_pages)
+    return args
 
-    import socket
-    socket.setdefaulttimeout(args.timeout)
 
-    # Secret handling: must come from environment, never invoke secret provider
-    api_key = os.environ.get("JULES_API_KEY")
-    if not api_key or not api_key.strip():
-        sys.stderr.write(
-            "Error: JULES_API_KEY environment variable is required.\n"
-            "Export JULES_API_KEY or run via 'cloakenv run -- ...'.\n"
-        )
-        sys.exit(1)
-
-    target_sessions = list(args.session) + list(args.positional_sessions)
-
-    if not args.all_pages and not target_sessions:
-        sys.stderr.write(
-            "Error: Must specify --all-pages or at least one --session ID.\n"
-            "Use --help for usage information.\n"
-        )
-        sys.exit(1)
-
-    client = get_client(api_key.strip(), timeout=args.timeout)
-
+def fetch_target_sessions(
+    client: Any,
+    args: argparse.Namespace,
+    target_sessions: list[str],
+    now: datetime,
+) -> list[dict[str, Any]]:
+    """Fetch session objects from Google Jules API based on CLI target selection."""
     session_items: list[dict[str, Any]] = []
-    now = datetime.now(timezone.utc)
 
     if args.all_pages:
         page_token: str | None = None
@@ -685,56 +671,91 @@ def main() -> None:
             s_data = client.get_session(sid)
             session_items.append(s_data)
 
-    if args.repo:
-        clean_repo = args.repo.strip().removeprefix("sources/").removeprefix("github/").lower()
-        session_items = [
+    return session_items
+
+
+def filter_sessions(
+    sessions: list[dict[str, Any]],
+    repo_filter: str | None,
+    max_age_days: int,
+    now: datetime,
+) -> list[dict[str, Any]]:
+    """Filter session objects by repository name and creation/update age limit."""
+    filtered = sessions
+    if repo_filter:
+        clean_repo = repo_filter.strip().removeprefix("sources/").removeprefix("github/").lower()
+        filtered = [
             s
-            for s in session_items
+            for s in filtered
             if clean_repo
             in s.get("sourceContext", {}).get("source", "").removeprefix("sources/").removeprefix("github/").lower()
         ]
 
-    filtered_sessions: list[dict[str, Any]] = []
-    for s in session_items:
-        if args.max_age_days and args.max_age_days > 0:
+    if max_age_days and max_age_days > 0:
+        res = []
+        for s in filtered:
             ts = s.get("createTime") or s.get("updateTime")
             if ts:
                 dt = parse_dt(ts)
                 if dt:
                     age_days = (now - dt).total_seconds() / 86400.0
-                    if age_days > args.max_age_days:
+                    if age_days > max_age_days:
                         continue
-        filtered_sessions.append(s)
+            res.append(s)
+        filtered = res
 
-    # Batch pre-populate PR cache if checking PRs
-    if getattr(args, "with_pr", False):
-        repos_seen = set()
-        for s in filtered_sessions:
-            src = s.get("sourceContext", {}).get("source", "").removeprefix("sources/").removeprefix("github/")
-            if src and "/" in src:
-                repos_seen.add(src)
-        for repo_slug in repos_seen:
-            try:
-                proc = subprocess.run(
-                    ["gh", "pr", "list", "--repo", repo_slug, "--state", "all", "--limit", "100", "--json", "number,url,mergeable,commits,state"],
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                )
-                if proc.returncode == 0 and proc.stdout.strip():
-                    for item in json.loads(proc.stdout):
-                        u = item.get("url")
-                        if u:
-                            commits = item.get("commits", [])
-                            _PR_CACHE[u] = {
-                                "mergeable": item.get("mergeable", "UNKNOWN"),
-                                "pr_state": item.get("state", "UNKNOWN"),
-                                "commits_count": len(commits),
-                                "empty_commits_count": 0,
-                            }
-            except Exception:
-                pass
+    return filtered
 
+
+def prepopulate_pr_cache(filtered_sessions: list[dict[str, Any]]) -> None:
+    """Batch pre-populate PR details cache via gh CLI for unique repositories."""
+    repos_seen = set()
+    for s in filtered_sessions:
+        src = s.get("sourceContext", {}).get("source", "").removeprefix("sources/").removeprefix("github/")
+        if src and "/" in src:
+            repos_seen.add(src)
+
+    for repo_slug in repos_seen:
+        try:
+            proc = subprocess.run(
+                [
+                    "gh",
+                    "pr",
+                    "list",
+                    "--repo",
+                    repo_slug,
+                    "--state",
+                    "all",
+                    "--limit",
+                    "100",
+                    "--json",
+                    "number,url,mergeable,commits,state",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if proc.returncode == 0 and proc.stdout.strip():
+                for item in json.loads(proc.stdout):
+                    u = item.get("url")
+                    if u:
+                        commits = item.get("commits", [])
+                        _PR_CACHE[u] = {
+                            "mergeable": item.get("mergeable", "UNKNOWN"),
+                            "pr_state": item.get("state", "UNKNOWN"),
+                            "commits_count": len(commits),
+                            "empty_commits_count": 0,
+                        }
+        except Exception:
+            pass
+
+
+def run_audit_pipeline(
+    client: Any,
+    filtered_sessions: list[dict[str, Any]],
+    args: argparse.Namespace,
+) -> list[dict[str, Any]]:
+    """Audit all filtered sessions and collect structured verdict dicts."""
     audits: list[dict[str, Any]] = []
     total = len(filtered_sessions)
     for idx, s in enumerate(filtered_sessions, 1):
@@ -763,6 +784,43 @@ def main() -> None:
             max_age_days=args.max_age_days,
         )
         audits.append(audit_res)
+
+    return audits
+
+
+def main() -> None:
+    args = parse_args()
+
+    import socket
+    socket.setdefaulttimeout(args.timeout)
+
+    # Secret handling: must come from environment, never invoke secret provider
+    api_key = os.environ.get("JULES_API_KEY")
+    if not api_key or not api_key.strip():
+        sys.stderr.write(
+            "Error: JULES_API_KEY environment variable is required.\n"
+            "Export JULES_API_KEY or run via 'cloakenv run -- ...'.\n"
+        )
+        sys.exit(1)
+
+    target_sessions = list(args.session) + list(args.positional_sessions)
+    if not args.all_pages and not target_sessions:
+        sys.stderr.write(
+            "Error: Must specify --all-pages or at least one --session ID.\n"
+            "Use --help for usage information.\n"
+        )
+        sys.exit(1)
+
+    client = get_client(api_key.strip(), timeout=args.timeout)
+    now = datetime.now(timezone.utc)
+
+    session_items = fetch_target_sessions(client, args, target_sessions, now)
+    filtered_sessions = filter_sessions(session_items, args.repo, args.max_age_days, now)
+
+    if getattr(args, "with_pr", False):
+        prepopulate_pr_cache(filtered_sessions)
+
+    audits = run_audit_pipeline(client, filtered_sessions, args)
 
     if args.json:
         print(json.dumps(audits, indent=2))
