@@ -341,6 +341,43 @@ class IngestedSession:
 # Platform Ingestion Engines
 # ---------------------------------------------------------------------------
 
+def _track_tool_smells(
+    sess: IngestedSession,
+    tname: str,
+    args: Any,
+    terminal_cmds: List[str],
+    file_reads: Optional[List[str]] = None,
+) -> None:
+    """Track terminal command and file read smells for ingested tool invocations."""
+    if tname in SHELL_TOOLS:
+        if isinstance(args, dict):
+            cmd = args.get("command") or args.get("CommandLine") or ""
+        else:
+            cmd = str(args)
+        sess.command_smells["terminal_executions"] += 1
+        terminal_cmds.append(cmd)
+        if INLINE_PYTHON_PATTERN.search(cmd):
+            sess.command_smells["inline_python"] += 1
+        if shell_pipe_count(cmd) > 2:
+            sess.command_smells["deep_pipelines"] += 1
+
+    if file_reads is not None and tname in ("read_file", "view_file") and isinstance(args, dict):
+        fp = args.get("filePath") or args.get("AbsolutePath") or ""
+        if fp:
+            file_reads.append(fp)
+
+
+def _finalize_command_smells(
+    sess: IngestedSession,
+    terminal_cmds: List[str],
+    file_reads: Optional[List[str]] = None,
+) -> None:
+    """Compute aggregate counts for repeated commands and duplicate file reads."""
+    sess.command_smells["repeated_commands"] = sum(c - 1 for c in Counter(terminal_cmds).values() if c > 1)
+    if file_reads is not None:
+        sess.command_smells["duplicate_file_reads"] = sum(c - 1 for c in Counter(file_reads).values() if c > 1)
+
+
 def ingest_session(target: ResolvedTarget) -> IngestedSession:
     sess = IngestedSession(target)
     if target.kind == "opencode_db":
@@ -356,41 +393,35 @@ def ingest_session(target: ResolvedTarget) -> IngestedSession:
     return sess
 
 
+def _preprocess_copilot_records(lines: List[str]) -> Tuple[Dict[str, Tuple[int, Dict[str, Any]]], List[Tuple[int, int, Dict[str, Any]]]]:
+    """Index tool completions and filter valid records from JSONL lines."""
+    tool_completions = {}
+    parsed_records = []
+    for idx, ln in enumerate(lines, 1):
+        if not ln.strip():
+            continue
+        try:
+            rec = json.loads(ln)
+        except Exception:
+            continue
+        blen = len(ln.encode("utf-8"))
+        parsed_records.append((idx, blen, rec))
+        rtype = rec.get("type", "")
+        rdata = rec.get("data", {})
+        if rtype == "tool.execution_complete" and rdata.get("toolCallId"):
+            tool_completions[rdata["toolCallId"]] = (idx, rdata)
+    return tool_completions, parsed_records
+
+
 def _ingest_copilot_jsonl(path: Path, sess: IngestedSession) -> None:
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     sess.raw_records_count = len(lines)
     sess.total_bytes = sum(len(ln.encode("utf-8")) for ln in lines)
 
-    tool_completions = {}
-    tool_starts = {}
+    tool_completions, parsed_records = _preprocess_copilot_records(lines)
+    segment, terminal_cmds, file_reads, chain_broken = 0, [], [], True
 
-    for idx, ln in enumerate(lines, 1):
-        if not ln.strip():
-            continue
-        try:
-            rec = json.loads(ln)
-        except Exception:
-            continue
-        rtype = rec.get("type", "")
-        rdata = rec.get("data", {})
-        if rtype == "tool.execution_complete" and rdata.get("toolCallId"):
-            tool_completions[rdata["toolCallId"]] = (idx, rdata)
-        elif rtype == "tool.execution_start" and rdata.get("toolCallId"):
-            tool_starts[rdata["toolCallId"]] = (idx, rdata)
-
-    segment = 0
-    terminal_cmds = []
-    file_reads = []
-    chain_broken = True
-
-    for idx, ln in enumerate(lines, 1):
-        blen = len(ln.encode("utf-8"))
-        if not ln.strip():
-            continue
-        try:
-            rec = json.loads(ln)
-        except Exception:
-            continue
+    for idx, blen, rec in parsed_records:
         rtype = rec.get("type", "unknown")
         rdata = rec.get("data", {})
         ts = rec.get("timestamp")
@@ -444,19 +475,7 @@ def _ingest_copilot_jsonl(path: Path, sess: IngestedSession) -> None:
             failed = (success is False)
             error_msg = comp_data.get("error") if failed else None
 
-            if tname in SHELL_TOOLS:
-                cmd = raw_args.get("command", "") if isinstance(raw_args, dict) else str(raw_args)
-                sess.command_smells["terminal_executions"] += 1
-                terminal_cmds.append(cmd)
-                if INLINE_PYTHON_PATTERN.search(cmd):
-                    sess.command_smells["inline_python"] += 1
-                if shell_pipe_count(cmd) > 2:
-                    sess.command_smells["deep_pipelines"] += 1
-
-            if tname in ("read_file", "view_file") and isinstance(raw_args, dict):
-                fpath = raw_args.get("filePath") or raw_args.get("AbsolutePath") or ""
-                if fpath:
-                    file_reads.append(fpath)
+            _track_tool_smells(sess, tname, raw_args, terminal_cmds, file_reads)
 
             call_info = {
                 "call_id": cid,
@@ -478,8 +497,7 @@ def _ingest_copilot_jsonl(path: Path, sess: IngestedSession) -> None:
 
         sess.records.append((idx, blen, rtype, tname, summary, rec))
 
-    sess.command_smells["repeated_commands"] = sum(c - 1 for c in Counter(terminal_cmds).values() if c > 1)
-    sess.command_smells["duplicate_file_reads"] = sum(c - 1 for c in Counter(file_reads).values() if c > 1)
+    _finalize_command_smells(sess, terminal_cmds, file_reads)
 
 
 def _ingest_antigravity_jsonl(path: Path, sess: IngestedSession) -> None:
@@ -554,19 +572,7 @@ def _ingest_antigravity_jsonl(path: Path, sess: IngestedSession) -> None:
                 status = rec.get("status", "")
                 failed = (status == "ERROR" or "error" in str(status).lower())
 
-                if tname in SHELL_TOOLS:
-                    cmd = args.get("CommandLine", "") or args.get("command", "")
-                    sess.command_smells["terminal_executions"] += 1
-                    terminal_cmds.append(cmd)
-                    if INLINE_PYTHON_PATTERN.search(cmd):
-                        sess.command_smells["inline_python"] += 1
-                    if shell_pipe_count(cmd) > 2:
-                        sess.command_smells["deep_pipelines"] += 1
-
-                if tname in ("read_file", "view_file") and isinstance(args, dict):
-                    fp = args.get("AbsolutePath") or args.get("filePath") or ""
-                    if fp:
-                        file_reads.append(fp)
+                _track_tool_smells(sess, tname, args, terminal_cmds, file_reads)
 
                 call_info = {
                     "call_id": tc.get("id"),
@@ -588,8 +594,7 @@ def _ingest_antigravity_jsonl(path: Path, sess: IngestedSession) -> None:
 
         sess.records.append((idx, blen, stype, tname, summary, rec))
 
-    sess.command_smells["repeated_commands"] = sum(c - 1 for c in Counter(terminal_cmds).values() if c > 1)
-    sess.command_smells["duplicate_file_reads"] = sum(c - 1 for c in Counter(file_reads).values() if c > 1)
+    _finalize_command_smells(sess, terminal_cmds, file_reads)
 
 
 def _ingest_opencode_db(sess: IngestedSession) -> None:
@@ -654,14 +659,7 @@ def _ingest_opencode_db(sess: IngestedSession) -> None:
             res_len = len(output_str.encode("utf-8"))
             sess.total_result_bytes += res_len
 
-            if tname in SHELL_TOOLS:
-                cmd = args.get("command", "") if isinstance(args, dict) else str(args)
-                sess.command_smells["terminal_executions"] += 1
-                terminal_cmds.append(cmd)
-                if INLINE_PYTHON_PATTERN.search(cmd):
-                    sess.command_smells["inline_python"] += 1
-                if shell_pipe_count(cmd) > 2:
-                    sess.command_smells["deep_pipelines"] += 1
+            _track_tool_smells(sess, tname, args, terminal_cmds)
 
             call_info = {
                 "call_id": part.get("callID"),
@@ -683,7 +681,7 @@ def _ingest_opencode_db(sess: IngestedSession) -> None:
 
         sess.records.append((idx, blen, ptype, tname, summary, part))
 
-    sess.command_smells["repeated_commands"] = sum(c - 1 for c in Counter(terminal_cmds).values() if c > 1)
+    _finalize_command_smells(sess, terminal_cmds)
 
 
 def _ingest_generic_file(path: Path, sess: IngestedSession) -> None:
