@@ -44,18 +44,16 @@ class CloakEnvSecretSource(SecretSource):
         if not self.path or not self.token:
             return FetchResult(status=FetchStatus.ERROR, error="Missing path or token")
 
-        old_cloak_token = os.environ.get("CLOAK_TOKEN")
-        os.environ["CLOAK_TOKEN"] = self.token
+        env = {**os.environ, "CLOAK_TOKEN": self.token}
         try:
             cmd = ["cloakenv", "read", "--namespace", self.namespace, self.path, "--format", "json"]
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=30)
 
             if result.returncode != 0:
                 stderr_lower = result.stderr.lower()
                 is_auth_error = (
                     "unauthorized" in stderr_lower or
-                    "auth" in stderr_lower or
-                    result.returncode in (401, 403)
+                    "auth" in stderr_lower
                 )
                 if is_auth_error:
                     return FetchResult(status=FetchStatus.AUTH_ERROR, error=result.stderr)
@@ -69,6 +67,9 @@ class CloakEnvSecretSource(SecretSource):
                 parsed_data = json.loads(raw_data)
             except json.JSONDecodeError as e:
                 return FetchResult(status=FetchStatus.ERROR, error=f"Invalid JSON: {e}")
+
+            if not isinstance(parsed_data, dict):
+                return FetchResult(status=FetchStatus.ERROR, error="Expected JSON object from cloakenv")
 
             if not parsed_data:
                 return FetchResult(status=FetchStatus.EMPTY_VALUE, error="Vault is empty")
@@ -84,9 +85,5 @@ class CloakEnvSecretSource(SecretSource):
                 fetched_secrets = parsed_data
 
             return FetchResult(status=FetchStatus.SUCCESS, secrets=fetched_secrets)
-        finally:
-            if old_cloak_token is None:
-                if "CLOAK_TOKEN" in os.environ:
-                    del os.environ["CLOAK_TOKEN"]
-            else:
-                os.environ["CLOAK_TOKEN"] = old_cloak_token
+        except (FileNotFoundError, OSError, subprocess.TimeoutExpired) as e:
+            return FetchResult(status=FetchStatus.ERROR, error=f"Failed to execute cloakenv: {e}")

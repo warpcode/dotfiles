@@ -36,24 +36,6 @@ class TestCloakEnvSecretSource(unittest.TestCase):
         self.assertEqual(plugin1.get_cache_key(), plugin2.get_cache_key())
 
     @patch("plugin.subprocess.run")
-    def test_os_environ_restoration(self, mock_run):
-        mock_run.return_value = MagicMock(returncode=0, stdout='{"A": "B"}')
-        plugin = CloakEnvSecretSource(self.config_base)
-
-        # Test clean environment restoration (was none)
-        if "CLOAK_TOKEN" in os.environ:
-            del os.environ["CLOAK_TOKEN"]
-
-        plugin.fetch()
-        self.assertNotIn("CLOAK_TOKEN", os.environ)
-
-        # Test clean environment restoration (was present)
-        os.environ["CLOAK_TOKEN"] = "existing_token"
-        plugin.fetch()
-        self.assertEqual(os.environ["CLOAK_TOKEN"], "existing_token")
-        del os.environ["CLOAK_TOKEN"] # Cleanup
-
-    @patch("plugin.subprocess.run")
     def test_empty_vault_handling_empty_stdout(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0, stdout="")
         plugin = CloakEnvSecretSource(self.config_base)
@@ -77,13 +59,6 @@ class TestCloakEnvSecretSource(unittest.TestCase):
         self.assertEqual(result.status, FetchStatus.SUCCESS)
         self.assertEqual(result.secrets, {})
 
-    @patch("plugin.subprocess.run")
-    def test_error_classification_auth_error_code(self, mock_run):
-        mock_run.return_value = MagicMock(returncode=401, stderr="Oops")
-        plugin = CloakEnvSecretSource(self.config_base)
-        result = plugin.fetch()
-        self.assertEqual(result.status, FetchStatus.AUTH_ERROR)
-        self.assertEqual(result.error, "Oops")
 
     @patch("plugin.subprocess.run")
     def test_error_classification_auth_error_message(self, mock_run):
@@ -108,6 +83,22 @@ class TestCloakEnvSecretSource(unittest.TestCase):
         result = plugin.fetch()
         self.assertEqual(result.status, FetchStatus.SUCCESS)
         self.assertEqual(result.secrets, {"X": "B"})
+
+    @patch("plugin.subprocess.run")
+    def test_execution_error_handling(self, mock_run):
+        mock_run.side_effect = FileNotFoundError("Executable not found")
+        plugin = CloakEnvSecretSource(self.config_base)
+        result = plugin.fetch()
+        self.assertEqual(result.status, FetchStatus.ERROR)
+        self.assertIn("Failed to execute cloakenv: Executable not found", result.error)
+
+    @patch("plugin.subprocess.run")
+    def test_non_dict_json_handling(self, mock_run):
+        mock_run.return_value = MagicMock(returncode=0, stdout='["A", "B"]')
+        plugin = CloakEnvSecretSource(self.config_base)
+        result = plugin.fetch()
+        self.assertEqual(result.status, FetchStatus.ERROR)
+        self.assertEqual(result.error, "Expected JSON object from cloakenv")
 
 if __name__ == '__main__':
     unittest.main()
