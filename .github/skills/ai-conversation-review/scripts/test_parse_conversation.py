@@ -7,7 +7,8 @@ import os
 sys.path.insert(0, os.path.dirname(__file__))
 from parse_conversation import (
     parse_markdown_plain_text, ingest_transcript, generate_markdown_summary,
-    parse_opencode_jsonl, normalise_tool_calls,
+    parse_opencode_jsonl, parse_antigravity_gemini_jsonl, parse_claude_code_session,
+    parse_vscode_copilot_jsonl, normalise_tool_calls,
 )
 
 class TestParseConversation(unittest.TestCase):
@@ -122,6 +123,78 @@ class TestToolArgumentRecovery(unittest.TestCase):
 
     def test_non_dict_entries_are_skipped_not_crashed(self):
         self.assertEqual(normalise_tool_calls(["garbage", None]), [])
+
+    def test_vscode_copilot_arguments_recovery(self):
+        lines = [
+            json.dumps({
+                "type": "tool.execution_start",
+                "data": {
+                    "toolCallId": "c1",
+                    "toolName": "read_file",
+                    "arguments": {"filePath": "/a/b.txt"}
+                }
+            }),
+            json.dumps({
+                "type": "tool.execution_complete",
+                "data": {"toolCallId": "c1", "success": True}
+            })
+        ]
+        events = parse_vscode_copilot_jsonl(lines)
+        self.assertEqual(events[0]["tool_calls"][0]["args"], {"filePath": "/a/b.txt"})
+        self.assertTrue(events[0]["tool_calls"][0]["args_recovered"])
+        summary = generate_markdown_summary(events)
+        self.assertIn("/a/b.txt", summary)
+        self.assertNotIn("No tool arguments were recovered", summary)
+
+    def test_antigravity_gemini_arguments_recovery(self):
+        lines = [
+            json.dumps({
+                "type": "MODEL",
+                "tool_calls": [
+                    {"ToolName": "execute_bash", "Arguments": {"command": "git status"}}
+                ]
+            })
+        ]
+        events = parse_antigravity_gemini_jsonl(lines)
+        self.assertEqual(events[0]["tool_calls"][0]["args"], {"command": "git status"})
+        self.assertTrue(events[0]["tool_calls"][0]["args_recovered"])
+        summary = generate_markdown_summary(events)
+        self.assertIn("git status", summary)
+        self.assertNotIn("No tool arguments were recovered", summary)
+
+    def test_claude_code_input_key_recovery(self):
+        data = [{
+            "role": "assistant",
+            "tools": [{"name": "Bash", "input": {"command": "pytest"}}]
+        }]
+        events = parse_claude_code_session(data)
+        self.assertEqual(events[0]["tool_calls"][0]["args"], {"command": "pytest"})
+        self.assertTrue(events[0]["tool_calls"][0]["args_recovered"])
+        summary = generate_markdown_summary(events)
+        self.assertIn("pytest", summary)
+        self.assertNotIn("No tool arguments were recovered", summary)
+
+    def test_normalise_tool_calls_handles_various_keys(self):
+        tc_input = normalise_tool_calls([{"name": "t1", "input": {"x": 1}}])
+        self.assertEqual(tc_input[0]["args"], {"x": 1})
+        self.assertTrue(tc_input[0]["args_recovered"])
+        self.assertNotIn("input", tc_input[0])
+
+        tc_arguments_cap = normalise_tool_calls([{"name": "t2", "Arguments": {"y": 2}}])
+        self.assertEqual(tc_arguments_cap[0]["args"], {"y": 2})
+        self.assertTrue(tc_arguments_cap[0]["args_recovered"])
+        self.assertNotIn("Arguments", tc_arguments_cap[0])
+
+        tc_no_key = normalise_tool_calls([{"name": "t3"}])
+        self.assertEqual(tc_no_key[0]["args"], {})
+        self.assertFalse(tc_no_key[0]["args_recovered"])
+
+    def test_renderer_handles_raw_input_and_Arguments_keys(self):
+        events = [{"role": "assistant", "content": "",
+                   "tool_calls": [{"name": "bash", "input": {"command": "whoami"}}]}]
+        out = generate_markdown_summary(events)
+        self.assertIn("whoami", out)
+        self.assertNotIn("No tool arguments were recovered", out)
 
 
 if __name__ == "__main__":
