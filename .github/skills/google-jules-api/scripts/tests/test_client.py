@@ -655,6 +655,53 @@ class TestJulesFormatters(unittest.TestCase):
         self.assertNotIn("#### Stalled / Silent Sessions", md)
         self.assertNotIn("### Actionable Items", md)
 
+    def test_format_session_check_show_history_and_feedback(self):
+        audits = [
+            {
+                "id": "444",
+                "title": "Feedback Task",
+                "state": "IN_PROGRESS",
+                "assessment": "AWAITING_USER_FEEDBACK",
+                "inactive_mins": 15.0,
+                "latest_detail": "Please review",
+                "last_agent_message": "Need input",
+                "pull_request_url": "",
+                "user_message_count": 2,
+                "agent_message_count": 3,
+                "unanswered_user_messages": 0,
+                "agent_awaiting_reply": True,
+                "conversation_history": [
+                    {"role": "user", "time": "2026-03-01T10:00:00Z", "type": "message", "content": "Hello"},
+                    {"role": "agent", "time": "2026-03-01T10:01:00Z", "type": "message", "content": "Which approach do you prefer?"},
+                ],
+            }
+        ]
+        md = format_session_check(audits, show_history=True)
+        self.assertIn("FEEDBACK_GATE", md)
+        self.assertIn("Sessions Awaiting User Guidance", md)
+        self.assertIn("Detailed Conversation Histories", md)
+        self.assertIn("Which approach do you prefer?", md)
+
+    def test_format_session_check_flag_unmerged(self):
+        audits = [
+            {
+                "id": "555",
+                "title": "Completed Task No PR",
+                "state": "COMPLETED",
+                "assessment": "COMPLETED_NO_OUTPUT",
+                "inactive_mins": 120.0,
+                "latest_detail": "Done",
+                "pull_request_url": "",
+                "conversation_history": [
+                    {"role": "agent", "time": "2026-03-01T12:00:00Z", "type": "message", "content": "Completed pre-commit steps successfully."},
+                ],
+            }
+        ]
+        md = format_session_check(audits, flag_unmerged=True)
+        self.assertIn("CLOSED_NO_PR", md)
+        self.assertIn("CLOSED_NO_PR Sessions with Deliverables (Unmerged Work)", md)
+        self.assertIn("555", md)
+
 
 class TestJulesBatchOperations(unittest.TestCase):
     def test_audit_sessions_repo_filter(self):
