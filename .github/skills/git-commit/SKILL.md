@@ -21,7 +21,7 @@ Collect status with `git status --porcelain`.
 Analyse the filenames for review and raise any issues or concerns to the user. Halt if there are sensitive files or naming rule violations.
 
 ### Step 3: Staged Diff Triage
-Perform a token-efficient diff review of the staged changes using the explicit command: `python3 ~/.gemini/config/skills/git-expert/scripts/git-diff-triage.py --threshold=40 -- --staged`. This limits the context budget by hiding large diff contents.
+Perform a token-efficient diff review of the staged changes using the diff triage helper if present (e.g. `python3 <skill-dir>/scripts/git-diff-triage.py --threshold=40 -- --staged` or `python3 .github/skills/git-expert/scripts/git-diff-triage.py --threshold=40 -- --staged`), or run `git diff --staged --stat` prior to inspecting hunks to avoid context budget exhaustion.
 
 ### Step 4: Assess Complexity
 Determine whether the commit message should be a single line or multiline based on the decision matrix below:
@@ -41,6 +41,9 @@ Never use shell redirection (`>`).
 
 ### Step 7: Present Command for Approval
 Present the exact command `git commit -F /tmp/... && rm /tmp/...` to the user and await explicit approval.
+
+### Step 8: Post-Commit / Push Delegation
+After the commit command succeeds, do not push automatically. If the user requests pushing, delegate to `push.sh` in `git-expert` (`bash <skill-dir>/scripts/push.sh`) to ensure preflight commit inspection and safety gates are executed.
 
 ### Hard Operational Constraints
 - Never run `git commit` without explicit user approval.
