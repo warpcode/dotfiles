@@ -1,33 +1,44 @@
 ---
 name: project-planner
 description: >
-  Plan projects and features as dated, self-contained specifications in docs/plans/
-  and architecture decisions in docs/adr/, using adaptive fast-path planning,
-  charter framing, measurable goals, explicit non-goals, EARS requirements with
-  Given/When/Then acceptance criteria, NFR checklists, and context-free task
-  breakdowns. Use when planning a project or feature, drafting technical specs,
-  creating an ADR, breaking down tasks, or scrutinizing new proposals against
-  existing architectural constraints. For tracking progress, ground-truth code
-  auditing, or issue dump reconciliation, use project-tracker.
+  Plan projects and features as dated specifications in docs/plans/. Grills and
+  tests ideas through interactive Socratic questioning, exposes conflicts and
+  edge cases, manages plan resumption and amendments, locks EARS requirements,
+  and coordinates ADRs. Use when proposing a feature, grilling an idea,
+  refining a plan, or breaking down tasks. For progress tracking, use
+  project-tracker.
+user-invocable: false
 ---
 
 # Project Planner
 
 A procedure-only skill: plans are plain Markdown files edited directly with zero service lock-in.
-The instructions below guide human engineers and agents to plan, scrutinize, track progress, and
-audit compliance against codebases and arbitrary issue tracking data.
+The instructions below guide human engineers and agents to grill proposals, challenge assumptions,
+refine specifications across multiple sessions, and outline actionable tasks.
 
-## 1. Documentation Layout
+## 1. Documentation Boundaries & Layout
 
-Plans and architecture decisions live under `<repo>/docs/`:
+Plans, architecture, and operational records live under `<repo>/docs/`. This skill strictly manages **engineering-centric documentation** that requires version control and evolves with the code.
+
+### The Rollback Test
+When deciding whether a document belongs in the repository or in external tooling, apply the **Rollback Test**:
+> *"If I rolled back our application code by 6 months to fix a massive bug, should this document roll back with it?"*
+
+- **In-Repo (`docs/`)**: ADRs, system architecture, operational runbooks, API contracts, and dated **Technical Design Specs (RFCs)** version-controlled alongside code.
+- **External Trackers (Jira, GitHub Issues, Notion, Confluence)**: Business PRDs, user stories, customer research, sprint backlogs, roadmaps, and UI/UX mockups.
 
 ```text
 docs/
+├── README.md                              # Documentation guide & rollback test
 ├── adr/                                   # Durable repository-wide architecture decisions
 │   ├── README.md                          # Index of all ADRs (number, status, title)
 │   ├── 0001-record-architecture-decisions.md
 │   └── 0002-standardize-on-madr.md
-└── plans/                                 # Outcome-oriented feature and project plans
+├── architecture/                          # System topology, module contracts, data flows
+│   └── README.md
+├── runbooks/                              # Operational runbooks, deployment, triage
+│   └── README.md
+└── plans/                                 # Technical Design Specs (RFCs) & implementation plans
     ├── README.md                          # Index of all plans (plan link, status, summary)
     ├── 2026-10-19-plugin-sandbox.md       # Self-contained single-file plan
     └── 2026-10-25-secrets-rotation/       # Folder layout when child features/assets exist
@@ -41,7 +52,7 @@ docs/
    - Numbered sequentially zero-padded: `0001-<slug>.md`.
    - Never tied to a feature date; ADRs outlive individual feature projects.
    - Formatted using the canonical MADR template (`templates/adr.md`).
-2. **Feature & Project Plans (`docs/plans/`)**:
+2. **Technical Plans & RFCs (`docs/plans/`)**:
    - **Prefix**: The date created in `YYYY-MM-DD` format (from session local time — never guessed).
    - **Slug**: Lowercase kebab-case, 2–5 words, `[a-z0-9-]` describing the outcome (`plugin-sandbox`).
    - **Single File vs. Folder**: Use `docs/plans/YYYY-MM-DD-<slug>.md` by default. Use a folder (`YYYY-MM-DD-<slug>/SPEC.md`) only when child sub-features (`features/`) or standalone diagrams/assets exist.
@@ -89,18 +100,31 @@ Status values: `Draft`, `Active`, `Done`, `Abandoned`, `Superseded`.
 - **Dependencies**: `Depends On` may only reference active `Accepted`/`Done` items. Never link to superseded items or introduce cycles.
 - **Numbering & Immutability**: Zero-padded per plan (`REQ-001`), immutable, and **never reused or renumbered**. The next ID is highest existing $+ 1$.
 
-## 3. Discovery & Planning (Adaptive Fast-Path)
+## 3. Socratic Grilling & Resumption Protocol
 
-Avoid rigid, multi-turn interrogation when intent is clear. Calibrate interaction to the problem's ambiguity:
+Never rush to rubber-stamp a proposal. The primary duty of this skill is to act as an active sparring partner: grill premises, uncover edge cases, detect contradictions, and refine the plan iteratively.
 
-1. **Adaptive Fast-Path (Default when requirements are understood)**:
-   - If the user's intent, constraints, and architecture are clear, draft the complete initial plan (`docs/plans/YYYY-MM-DD-<slug>.md`) directly.
-   - Capture unknowns as explicit `ASM-*` (assumptions with validation checks) and `Q-*` (open questions), and highlight them for user feedback.
-2. **Frontier Questions (When genuinely ambiguous or branching)**:
-   - If a proposal contains true architectural crossroads (one-way doors, unknown negative boundaries, competing options), ask targeted questions before locking decisions.
-   - **Facts are the agent's job; choices are the user's**: Never ask the user for facts discoverable from the codebase, environment, or git history. Look them up first.
-   - Present options using the interactive question tool (`ask_question`) listing the recommended choice first with underlying rationale.
-3. **Confirm & Persist**: Present the draft plan for user review. Once confirmed, persist the plan files and update `docs/plans/README.md`.
+### Phase 1: Active Grilling & Stress-Testing
+When an idea or proposal is presented, do not simply agree or generate boilerplate:
+1. **Contradiction & Conflict Check**: Read active ADRs in `docs/adr/` and existing plans. Check whether the proposal contradicts an established architectural invariant or non-goal.
+2. **Edge Cases & Failure Modes**: Probe edge cases: What happens on network disconnects? Race conditions? Invalid inputs? Service timeouts? How does it behave under 10x load?
+3. **Non-Goals (`NG-*`)**: Force negative boundaries: "What is explicitly out of scope for this initiative?"
+4. **Targeted Probing**: Ask 2–3 high-signal, probing questions per turn. Challenge assumptions: "Why add a new dependency instead of using utility X already in the tree?"
+
+### Phase 2: Stateful Persistence & Resumption (Walk Away & Return)
+Plans are persisted in `docs/plans/YYYY-MM-DD-<slug>/SPEC.md`, recording agreed elements alongside open questions (`Q-*`) and unvalidated assumptions (`ASM-*`). The user can walk away at any time.
+
+When returning days or weeks later to amend or expand:
+1. **Ground Context**: Read the existing `SPEC.md` and related ADRs.
+2. **Identify the Delta**: Compare the user's new input against the recorded plan.
+3. **Resume Grilling**: Interview the user on the implications of the change: "How does this amendment impact previously agreed goal G-002?", "Does this invalidate assumption ASM-001?", "What is the blast radius on dependent components?"
+
+### Phase 3: Final Requirements & Task Agreement
+Once grilling resolves open questions and ambiguity:
+1. Formulate final requirements in unambiguous EARS format with Given/When/Then acceptance criteria.
+2. Outline all required tasks (`TSK-*`) for the epic or set of individual issues.
+3. If one-way-door decisions exist, invoke `project-adr` to investigate trade-offs, agree on options, and approve a canonical MADR before implementation begins.
+
 
 ## 4. Procedures
 
@@ -132,11 +156,13 @@ Documenting existing work without service lock-in (see `references/planning-refe
 2. Use the date of the earliest evidence as the folder prefix; note today's documentation date in the SPEC header.
 3. Mark imported items `Accepted (Retrospective)` with explicit `Source:` provenance links. Record unverified items as `Q-*` or `ASM-*`.
 
-### Workflow D — Handoff to Implementation & Tracking
+### Workflow D — Handoff to ADRs, Tickets & Tracking
 Once a plan passes the **Definition of Ready** (§5):
-1. **Task Execution**: Developers or subagents execute `TSK-*` slices in vertical iterations against `Target Files`.
-2. **External Ticketing**: If the team uses an external tracker (Jira, GitHub Issues, Linear), export `TSK-*` slices via provider skills (`github-issues`, `jira-api`).
-3. **Progress Auditing**: To track progress against tracker dumps, audit code ground truth, or reconcile documentation drift, invoke `project-tracker`.
+1. **Architectural Decisions**: For any one-way door choices or structural patterns, invoke `project-adr` to formalize decisions in `docs/adr/` with automated fitness functions.
+2. **Ticket Decomposition**: Invoke `project-tickets` to decompose requirements into vertical slices with Given/When/Then acceptance criteria and batch-create issues in Jira or GitHub Issues.
+3. **Task Execution**: Engineers or subagents execute slices against target files, tagging commits and PRs with `Plan: <slug>:<TSK-xxx>`.
+4. **Progress Auditing**: To audit code ground truth against ticket tracker dumps and detect scope drift, invoke `project-tracker`.
+
 
 ## 5. Quality Gate: Definition of Ready
 
@@ -155,8 +181,10 @@ Before declaring a plan ready for implementation, verify:
   - `templates/DECISIONS.md` — ADRs, decision trees, rejected proposals (when using folder layout)
   - `templates/REVISIONS.md` — Append-only change log (when using folder layout)
 - **Standalone Exports**:
+  - `templates/tech-spec.md` — Standalone Technical Design Spec (RFC) for in-repo plans
   - `templates/ticket-task.md` — Standalone context-free task specification
-  - `templates/prd.md` — Standalone Product Requirements Document
+  - `templates/prd.md` — Product Requirements Document (for external trackers: Jira/Notion)
   - `templates/adr.md` — Standalone Architecture Decision Record (MADR format for `docs/adr/`)
 - **Reference Guide**:
   - `references/planning-reference.md` — EARS requirements, MoSCoW, ADR drivers, 3-factor sizing, retrospective mapping
+

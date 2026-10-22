@@ -91,3 +91,16 @@ When documenting existing work retrospectively (Workflow C), extract evidence wi
 
 - Cite **Source** for every item (`jira://KEY-123`, `gh://owner/repo#45`, commit SHA).
 - Mark items as `Accepted (Retrospective)`. Gaps (missing AC, unverified assumptions) become `Q-*` items.
+
+---
+
+## 5. Engineering Documentation vs. Product Documentation (The Rollback Test)
+
+Apply the **Rollback Test** to determine document placement:
+> *"If I rolled back our application code by 6 months to fix a massive bug, should this document roll back with it?"*
+
+| Boundary | Storage | Content | Lifecycle |
+|---|---|---|---|
+| **In-Repo (`docs/`)** | Git (`docs/adr/`, `docs/architecture/`, `docs/runbooks/`, `docs/plans/`) | Technical Design Specs (RFCs), ADRs, system architecture, data flows, operational runbooks, API schemas | Version-controlled with code; evolves or reverts with commits |
+| **External Trackers** | Jira, GitHub Issues, Notion, Confluence | Product PRDs, user stories, customer research, sprint backlogs, release roadmaps, Figma links | Living product collaboration; comments and priority shifts without git commits |
+

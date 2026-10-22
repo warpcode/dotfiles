@@ -1,5 +1,8 @@
 # PRD: [Product / Feature Name]
 
+> [!NOTE]
+> **Storage Guidance**: Product Requirements Documents (PRDs) describe business intent, user journeys, and feature roadmaps. They belong in external product software (Jira, Confluence, Notion). For in-repo engineering specifications and technical design docs, use [`templates/tech-spec.md`](tech-spec.md) or [`templates/SPEC.md`](SPEC.md).
+
 | Metadata | Details |
 |---|---|
 | **Author / Team** | [Author / Team] |
