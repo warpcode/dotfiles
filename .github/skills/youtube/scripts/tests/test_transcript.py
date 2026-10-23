@@ -39,6 +39,7 @@ class TestTranscript(unittest.TestCase):
 
         info = fetch_video_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
         self.assertEqual(info, {"title": "Test Title"})
+        mock_youtube_dl.assert_called_once_with({'quiet': True})
         mock_ydl_instance.extract_info.assert_called_once_with(
             "https://www.youtube.com/watch?v=dQw4w9WgXcQ", download=False
         )
@@ -52,6 +53,7 @@ class TestTranscript(unittest.TestCase):
         with self.assertRaises(SystemExit) as cm:
             fetch_video_info("https://www.youtube.com/watch?v=invalid")
         self.assertEqual(cm.exception.code, 1)
+        mock_youtube_dl.assert_called_once_with({'quiet': True})
 
     @patch("transcript.YouTubeTranscriptApi")
     def test_fetch_transcript_get_transcript_success(self, mock_api):
