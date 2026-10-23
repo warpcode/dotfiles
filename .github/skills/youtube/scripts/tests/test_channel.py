@@ -78,7 +78,36 @@ class TestChannelScript(unittest.TestCase):
         self.assertEqual(result["entries"][0]["duration"], 200)
 
     @patch("yt_dlp.YoutubeDL")
-    def test_list_videos(self, mock_youtube_dl):
+    def test_list_videos_default_args(self, mock_youtube_dl):
+        mock_ydl_instance = MagicMock()
+        mock_youtube_dl.return_value.__enter__.return_value = mock_ydl_instance
+        mock_ydl_instance.extract_info.return_value = {
+            "title": "Channel Name",
+            "uploader": "Uploader Name",
+            "entries": [
+                {
+                    "title": "Video A",
+                    "id": "vA",
+                    "duration": 100,
+                }
+            ],
+        }
+
+        url = "https://www.youtube.com/c/testchannel"
+        res = channel.list_videos(url)
+
+        mock_youtube_dl.assert_called_once_with({
+            "quiet": True,
+            "extract_flat": True,
+            "dump_single_json": True,
+            "playlist_items": "1-10",
+        })
+        mock_ydl_instance.extract_info.assert_called_once_with(url, download=False)
+        self.assertEqual(res["title"], "Channel Name")
+        self.assertEqual(res["entries"][0]["id"], "vA")
+
+    @patch("yt_dlp.YoutubeDL")
+    def test_list_videos_custom_count(self, mock_youtube_dl):
         mock_ydl_instance = MagicMock()
         mock_youtube_dl.return_value.__enter__.return_value = mock_ydl_instance
         mock_ydl_instance.extract_info.return_value = {
@@ -105,6 +134,56 @@ class TestChannelScript(unittest.TestCase):
         mock_ydl_instance.extract_info.assert_called_once_with(url, download=False)
         self.assertEqual(res["title"], "Channel Name")
         self.assertEqual(res["entries"][0]["id"], "vA")
+
+    @patch("yt_dlp.YoutubeDL")
+    def test_list_videos_raw(self, mock_youtube_dl):
+        mock_ydl_instance = MagicMock()
+        mock_youtube_dl.return_value.__enter__.return_value = mock_ydl_instance
+        mock_ydl_instance.extract_info.return_value = {
+            "title": "Channel Name",
+            "uploader": "Uploader Name",
+            "entries": [],
+        }
+
+        url = "https://www.youtube.com/c/testchannel"
+        res = channel.list_videos(url, raw=True)
+
+        mock_youtube_dl.assert_called_once_with({
+            "quiet": True,
+            "extract_flat": True,
+            "dump_single_json": True,
+        })
+        mock_ydl_instance.extract_info.assert_called_once_with(url, download=False)
+
+    @patch("yt_dlp.YoutubeDL")
+    def test_list_videos_single_video(self, mock_youtube_dl):
+        mock_ydl_instance = MagicMock()
+        mock_youtube_dl.return_value.__enter__.return_value = mock_ydl_instance
+        mock_ydl_instance.extract_info.return_value = {
+            "title": "Single Video Title",
+            "uploader": "Single Uploader",
+            "id": "single_id_123",
+            "duration": 250,
+        }
+
+        url = "https://www.youtube.com/watch?v=single_id_123"
+        res = channel.list_videos(url)
+
+        self.assertEqual(res["title"], "Single Video Title")
+        self.assertEqual(len(res["entries"]), 1)
+        self.assertEqual(res["entries"][0]["id"], "single_id_123")
+        self.assertEqual(res["entries"][0]["url"], url)
+
+    @patch("yt_dlp.YoutubeDL")
+    def test_list_videos_exception(self, mock_youtube_dl):
+        mock_ydl_instance = MagicMock()
+        mock_youtube_dl.return_value.__enter__.return_value = mock_ydl_instance
+        mock_ydl_instance.extract_info.side_effect = Exception("yt-dlp extraction failed")
+
+        url = "https://www.youtube.com/c/invalidchannel"
+        with self.assertRaises(Exception) as cm:
+            channel.list_videos(url)
+        self.assertEqual(str(cm.exception), "yt-dlp extraction failed")
 
     @patch("channel.list_videos")
     def test_main_default(self, mock_list_videos):
