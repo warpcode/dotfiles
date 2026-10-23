@@ -561,6 +561,124 @@ class TestAIGuardWrapper(unittest.TestCase):
         self.assertIn("PROMPT SANITIZED", written_content)
         self.assertNotIn("sensitive_data_12345", written_content)
 
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_prompt_route_uses_text_field(self, mock_stdout, mock_run_guard):
+        mock_run_guard.return_value = (0, {"decision": "allow"})
+        payload = {"text": "prompt via text key"}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_prompt_route(payload)
+
+        mock_run_guard.assert_called_once_with("prompt", stdin_str=json.dumps({"text": "prompt via text key"}))
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {})
+        self.mock_exit.assert_called_with(0)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_handle_prompt_route_deny_default_reason(self, mock_stderr, mock_stdout, mock_run_guard):
+        mock_run_guard.return_value = (0, {"decision": "deny"})
+        payload = {"prompt": "blocked prompt"}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_prompt_route(payload)
+
+        self.assertEqual(
+            json.loads(mock_stdout.getvalue()),
+            {"decision": "deny", "reason": "Content blocked by security guard"}
+        )
+        self.assertIn("SECURITY GUARD: Content blocked by security guard", mock_stderr.getvalue())
+        self.mock_exit.assert_called_with(2)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_prompt_route_replace_identical_sanitized_does_not_inject(self, mock_stdout, mock_run_guard):
+        mock_run_guard.return_value = (0, {"decision": "replace", "sanitized": "identical text"})
+        payload = {"prompt": "identical text"}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_prompt_route(payload)
+
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {})
+        self.mock_exit.assert_called_with(0)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_handle_prompt_route_transcript_generic_type_omits_user_message(self, mock_stderr, mock_stdout, mock_run_guard):
+        import tempfile
+        mock_run_guard.return_value = (
+            0,
+            {
+                "decision": "replace",
+                "sanitized": "generic prompt sanitized",
+                "reasons": ["Secret Leak"]
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            transcript_file = os.path.join(tmpdir, "transcript.jsonl")
+            lines = [
+                json.dumps({"type": "GENERIC", "content": "generic prompt secret"}) + "\n"
+            ]
+            with open(transcript_file, "w", encoding="utf-8") as f:
+                f.writelines(lines)
+
+            payload = {"transcriptPath": transcript_file}
+
+            with self.assertRaises(SystemExitException):
+                ai_guard_wrapper.handle_prompt_route(payload)
+
+            self.mock_exit.assert_called_with(0)
+            resp = json.loads(mock_stdout.getvalue())
+            self.assertIn("injectSteps", resp)
+            self.assertEqual(len(resp["injectSteps"]), 1)
+            self.assertIn("Security Notice: Redacted sensitive items (Secret Leak)", resp["injectSteps"][0]["ephemeralMessage"])
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_handle_prompt_route_transcript_corrupted_line_during_stype_check(self, mock_stderr, mock_stdout, mock_run_guard):
+        import tempfile
+        mock_run_guard.return_value = (
+            0,
+            {
+                "decision": "replace",
+                "sanitized": "safe content",
+                "reasons": []
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            transcript_file = os.path.join(tmpdir, "transcript.jsonl")
+            lines = [
+                json.dumps({"type": "USER_INPUT", "content": "user secret"}) + "\n"
+            ]
+            with open(transcript_file, "w", encoding="utf-8") as f:
+                f.writelines(lines)
+
+            payload = {"transcriptPath": transcript_file}
+
+            # Mock builtins.open so readlines works, but subsequent read in stype check receives corrupt line
+            original_open = open
+            def custom_open(path, mode='r', *args, **kwargs):
+                if mode == 'w':
+                    # Corrupt line in place when written
+                    f = original_open(path, mode, *args, **kwargs)
+                    f.write("corrupt json line\n")
+                    f.close()
+                    return original_open(os.devnull, 'w')
+                return original_open(path, mode, *args, **kwargs)
+
+            with patch('builtins.open', side_effect=custom_open):
+                with self.assertRaises(SystemExitException):
+                    ai_guard_wrapper.handle_prompt_route(payload)
+
+            self.mock_exit.assert_called_with(0)
+            resp = json.loads(mock_stdout.getvalue())
+            self.assertIn("injectSteps", resp)
+
 
 if __name__ == '__main__':
     unittest.main()
