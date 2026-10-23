@@ -12,10 +12,15 @@ def calculate_metrics(issue, status_map=None, now=None):
     fields = issue.get("fields", {})
     val = issue["changelog"]
 
-    # Pre-parse history timestamps to avoid duplicate parsing during sorting and processing
-    parsed_histories = [
-        (parse_jira_time(h.get("created")), h) for h in val.get("histories", [])
-    ]
+    # Pre-parse history timestamps and filter status items to avoid unnecessary processing
+    parsed_histories = []
+    for h in val.get("histories", []):
+        status_items = [
+            item for item in h.get("items", []) if item.get("field") == "status"
+        ]
+        if status_items:
+            parsed_histories.append((parse_jira_time(h.get("created")), status_items))
+
     # Handle None dates safely during sorting without causing TypeError when comparing Nones
     parsed_histories.sort(key=lambda x: (x[0] is None, x[0] or datetime.min.replace(tzinfo=timezone.utc)))
 
@@ -24,16 +29,15 @@ def calculate_metrics(issue, status_map=None, now=None):
     transition_count = 0
     found_initial = False
 
-    for created_dt, h in parsed_histories:
-        for item in h.get("items", []):
-            if item.get("field") == "status":
-                if not found_initial:
-                    from_str = item.get("fromString")
-                    if from_str:
-                        timeline[0]["status"] = from_str
-                        found_initial = True
-                timeline.append({"status": item.get("toString"), "time": created_dt})
-                transition_count += 1
+    for created_dt, status_items in parsed_histories:
+        for item in status_items:
+            if not found_initial:
+                from_str = item.get("fromString")
+                if from_str:
+                    timeline[0]["status"] = from_str
+                    found_initial = True
+            timeline.append({"status": item.get("toString"), "time": created_dt})
+            transition_count += 1
 
     # Calculate time in each status
     time_in_status = {}
