@@ -64,6 +64,73 @@ class TestGitDiffTriage(unittest.TestCase):
         self.assertEqual(chunks[0], "diff --git a/file1 b/file1\nindex 123..456 100644\n--- a/file1\n+++ b/file1\n")
         self.assertEqual(chunks[1], "diff --git a/file2 b/file2\nindex 789..abc 100644\n")
 
+    def test_split_diff_into_chunks_with_preamble(self):
+        diff = (
+            "Some header or notice before first diff\n"
+            "diff --git a/file1 b/file1\n"
+            "index 123..456 100644\n"
+            "--- a/file1\n"
+            "+++ b/file1\n"
+        )
+        chunks = split_diff_into_chunks(diff)
+        self.assertEqual(len(chunks), 2)
+        self.assertEqual(chunks[0], "Some header or notice before first diff\n")
+        self.assertEqual(chunks[1], "diff --git a/file1 b/file1\nindex 123..456 100644\n--- a/file1\n+++ b/file1\n")
+
+    def test_split_diff_into_chunks_realistic_multifile(self):
+        diff = (
+            "diff --git a/src/main.py b/src/main.py\n"
+            "index 0000000..1111111 100644\n"
+            "--- a/src/main.py\n"
+            "+++ b/src/main.py\n"
+            "@@ -1,2 +1,3 @@\n"
+            " import os\n"
+            "+import sys\n"
+            " print('hello')\n"
+            "diff --git a/README.md b/README.md\n"
+            "index 2222222..3333333 100644\n"
+            "--- a/README.md\n"
+            "+++ b/README.md\n"
+            "@@ -5,3 +5,3 @@\n"
+            "-Old docs\n"
+            "+New docs\n"
+            "diff --git a/deleted.txt b/deleted.txt\n"
+            "deleted file mode 100644\n"
+            "index 4444444..0000000\n"
+            "--- a/deleted.txt\n"
+            "+++ /dev/null\n"
+            "@@ -1 +0,0 @@\n"
+            "-bye\n"
+        )
+        chunks = split_diff_into_chunks(diff)
+        self.assertEqual(len(chunks), 3)
+        self.assertTrue(chunks[0].startswith("diff --git a/src/main.py"))
+        self.assertIn("+import sys\n", chunks[0])
+        self.assertTrue(chunks[1].startswith("diff --git a/README.md"))
+        self.assertIn("+New docs\n", chunks[1])
+        self.assertTrue(chunks[2].startswith("diff --git a/deleted.txt"))
+        self.assertIn("-bye\n", chunks[2])
+        self.assertEqual("".join(chunks), diff)
+
+    def test_split_diff_into_chunks_diff_git_substring_in_hunk(self):
+        # A line in the diff hunk might contain "diff --git " not at line start or modified line
+        diff = (
+            "diff --git a/script.py b/script.py\n"
+            "index 111..222 100644\n"
+            "--- a/script.py\n"
+            "+++ b/script.py\n"
+            "@@ -10,3 +10,3 @@\n"
+            " # Run diff --git command here\n"
+            "-cmd = 'diff --git a b'\n"
+            "+cmd = 'git diff a b'\n"
+            "diff --git a/other.py b/other.py\n"
+            "index 333..444 100644\n"
+        )
+        chunks = split_diff_into_chunks(diff)
+        self.assertEqual(len(chunks), 2)
+        self.assertIn("-cmd = 'diff --git a b'\n", chunks[0])
+        self.assertEqual(chunks[1], "diff --git a/other.py b/other.py\nindex 333..444 100644\n")
+
     def test_count_body_lines(self):
         chunk = (
             "diff --git a/f b/f\n"
