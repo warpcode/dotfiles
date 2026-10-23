@@ -165,15 +165,16 @@ ensure_dotfiles() {
 }
 
 #######################################
-# Main execution function.
+# Parses command-line arguments.
+# Globals:
+#   dotfiles_profile - Set if --profile passed.
+#   git_name         - Set if --git-name passed.
+#   git_email        - Set if --git-email passed.
+#   keepass_db       - Set if --keepass-db passed.
 # Arguments:
-#   $@ - All arguments passed to the script.
+#   $@ - Command line arguments passed to script.
 #######################################
-main() {
-  local dotfiles_profile=""
-  local git_name=""
-  local git_email=""
-  local keepass_db=""
+parse_args() {
   while [[ "$#" -gt 0 ]]; do
     case "$1" in
       --profile)
@@ -215,6 +216,105 @@ main() {
       *) err "Unknown parameter: $1"; exit 1 ;;
     esac
   done
+}
+
+#######################################
+# Ensures chezmoi is installed on the system.
+#######################################
+ensure_chezmoi() {
+  if command -v chezmoi >/dev/null; then
+    return 0
+  fi
+
+  info "Installing chezmoi..."
+  if [[ "${OS_NAME}" == "macos" ]]; then
+    brew install -y chezmoi || true
+  else
+    mkdir -p "${HOME}/.local/bin"
+    local chezmoi_install_script
+    chezmoi_install_script="$(mktemp -t chezmoi-bootstrap-XXXXXX.sh)"
+    if curl -fsSL https://chezmoi.io/get > "${chezmoi_install_script}"; then
+      sh "${chezmoi_install_script}" -b "${HOME}/.local/bin"
+      rm -f "${chezmoi_install_script}"
+    else
+      err "Failed to download chezmoi installer"
+      rm -f "${chezmoi_install_script}"
+      exit 1
+    fi
+  fi
+}
+
+#######################################
+# Ensures mise is installed on the system.
+#######################################
+ensure_mise() {
+  if [[ -f "${HOME}/.local/bin/mise" ]] || [[ "${OS_NAME}" == "macos" && -x "$(command -v mise)" ]]; then
+    success "Mise is already installed, skipping installation."
+    return 0
+  fi
+
+  info "Installing mise..."
+  if [[ "${OS_NAME}" == "macos" ]]; then
+    brew install -y mise || true
+  else
+    mkdir -p "${HOME}/.local/bin"
+    if ! curl -fsSL https://mise.run | sh; then
+      err "Failed to install mise"
+      exit 1
+    fi
+  fi
+  hash -r 2>/dev/null || true
+}
+
+#######################################
+# Applies dotfiles configuration via chezmoi.
+# Arguments:
+#   $1 - Dotfiles profile.
+#   $2 - Git name.
+#   $3 - Git email.
+#   $4 - KeePass database path.
+#######################################
+apply_chezmoi_dotfiles() {
+  local profile="$1"
+  local git_name="$2"
+  local git_email="$3"
+  local keepass_db="$4"
+
+  info "Applying dotfiles via Chezmoi..."
+  # This will trigger:
+  # - run_once_after_05-system.sh (install system pkgs)
+  # - run_once_after_06-repositories.sh (setup 3rd party repos)
+  # - run_once_after_10-set-zsh.sh (set default shell)
+  local -a chezmoi_global_args=()
+  # Build --override-data JSON for template variables
+  # chezmoi --override-data accepts a JSON string as a global flag (before subcommand)
+  local override_data="{}"
+  if [[ -n "${profile}" || -n "${git_name}" || -n "${git_email}" || -n "${keepass_db}" ]]; then
+    override_data="$(jq -cn \
+      --arg profile "${profile}" \
+      --arg git_name "${git_name}" \
+      --arg git_email "${git_email}" \
+      --arg keepass_db "${keepass_db}" \
+      '{profile: $profile, git_name: $git_name, git_email: $git_email, keepass_db: $keepass_db} | with_entries(select(.value != ""))')"
+    chezmoi_global_args+=(--override-data "${override_data}")
+  fi
+
+  export PAGER=cat
+  chezmoi "${chezmoi_global_args[@]}" init --apply --source "${DOTFILES}"
+}
+
+#######################################
+# Main execution function.
+# Arguments:
+#   $@ - All arguments passed to the script.
+#######################################
+main() {
+  local dotfiles_profile=""
+  local git_name=""
+  local git_email=""
+  local keepass_db=""
+
+  parse_args "$@"
 
   if [[ -n "${dotfiles_profile}" ]]; then
     success "Profile set via argument to: ${dotfiles_profile}"
@@ -249,45 +349,14 @@ main() {
       git config --global --add safe.directory "${DOTFILES}"
     fi
   fi
-  
-  # install chezmoi if not already installed
-  if ! command -v chezmoi >/dev/null; then
-    info "Installing chezmoi..."
-    if [[ "${OS_NAME}" == "macos" ]]; then
-      brew install -y chezmoi || true
-    else
-      mkdir -p "${HOME}/.local/bin"
-      local chezmoi_install_script
-      chezmoi_install_script="$(mktemp -t chezmoi-bootstrap-XXXXXX.sh)"
-      if curl -fsSL https://chezmoi.io/get > "${chezmoi_install_script}"; then
-        sh "${chezmoi_install_script}" -b "${HOME}/.local/bin"
-        rm -f "${chezmoi_install_script}"
-      else
-        err "Failed to download chezmoi installer"
-        rm -f "${chezmoi_install_script}"
-        exit 1
-      fi
-    fi
-  fi
+
+  # Install chezmoi if not already installed
+  ensure_chezmoi
 
   export PATH="${HOME}/.local/bin:${PATH}"
 
-  # install mise if not already installed
-  if [[ -f "${HOME}/.local/bin/mise" ]] || [[ "${OS_NAME}" == "macos" && -x "$(command -v mise)" ]]; then
-    success "Mise is already installed, skipping installation."
-  else
-    info "Installing mise..."
-    if [[ "${OS_NAME}" == "macos" ]]; then
-      brew install -y mise || true
-    else
-      mkdir -p "${HOME}/.local/bin"
-      if ! curl -fsSL https://mise.run | sh; then
-        err "Failed to install mise"
-        exit 1
-      fi
-    fi
-    hash -r 2>/dev/null || true
-  fi
+  # Install mise if not already installed
+  ensure_mise
 
   # Bootstrap system packages via mise before chezmoi applies dotfiles
   local mise_bin="${HOME}/.local/bin/mise"
@@ -302,27 +371,7 @@ main() {
   fi
 
   # Apply dotfiles via chezmoi
-  info "Applying dotfiles via Chezmoi..."
-  # This will trigger:
-  # - run_once_after_05-system.sh (install system pkgs)
-  # - run_once_after_06-repositories.sh (setup 3rd party repos)
-  # - run_once_after_10-set-zsh.sh (set default shell)
-  local -a chezmoi_global_args=()
-  # Build --override-data JSON for template variables
-  # chezmoi --override-data accepts a JSON string as a global flag (before subcommand)
-  local override_data="{}"
-  if [[ -n "${dotfiles_profile}" || -n "${git_name}" || -n "${git_email}" || -n "${keepass_db}" ]]; then
-    override_data="$(jq -cn \
-      --arg profile "${dotfiles_profile}" \
-      --arg git_name "${git_name}" \
-      --arg git_email "${git_email}" \
-      --arg keepass_db "${keepass_db}" \
-      '{profile: $profile, git_name: $git_name, git_email: $git_email, keepass_db: $keepass_db} | with_entries(select(.value != ""))')"
-    chezmoi_global_args+=(--override-data "${override_data}")
-  fi
-
-  export PAGER=cat
-  chezmoi "${chezmoi_global_args[@]}" init --apply --source "${DOTFILES}"
+  apply_chezmoi_dotfiles "${dotfiles_profile}" "${git_name}" "${git_email}" "${keepass_db}"
 
   info "Installing mise tools (llama.cpp, ollama, etc)..."
   if ! "${mise_bin}" install; then
