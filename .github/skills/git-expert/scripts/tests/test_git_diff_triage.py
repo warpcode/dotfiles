@@ -90,6 +90,78 @@ class TestGitDiffTriage(unittest.TestCase):
         self.assertEqual(added, 1)
         self.assertEqual(removed, 1)
 
+    def test_count_body_lines_empty(self):
+        added, removed = count_body_lines("")
+        self.assertEqual(added, 0)
+        self.assertEqual(removed, 0)
+
+    def test_count_body_lines_header_only(self):
+        chunk = (
+            "diff --git a/file b/file\n"
+            "old mode 100644\n"
+            "new mode 100755\n"
+            "index 1234567..89abcdef 100644\n"
+        )
+        added, removed = count_body_lines(chunk)
+        self.assertEqual(added, 0)
+        self.assertEqual(removed, 0)
+
+    def test_count_body_lines_pure_additions(self):
+        chunk = (
+            "diff --git a/newfile b/newfile\n"
+            "--- /dev/null\n"
+            "+++ b/newfile\n"
+            "@@ -0,0 +1,3 @@\n"
+            "+line 1\n"
+            "+line 2\n"
+            "+line 3\n"
+        )
+        added, removed = count_body_lines(chunk)
+        self.assertEqual(added, 3)
+        self.assertEqual(removed, 0)
+
+    def test_count_body_lines_pure_deletions(self):
+        chunk = (
+            "diff --git a/oldfile b/oldfile\n"
+            "--- a/oldfile\n"
+            "+++ /dev/null\n"
+            "@@ -1,2 +0,0 @@\n"
+            "-deleted line 1\n"
+            "-deleted line 2\n"
+        )
+        added, removed = count_body_lines(chunk)
+        self.assertEqual(added, 0)
+        self.assertEqual(removed, 2)
+
+    def test_count_body_lines_context_only(self):
+        chunk = (
+            "@@ -1,3 +1,3 @@\n"
+            " line 1\n"
+            " line 2\n"
+            " line 3\n"
+        )
+        added, removed = count_body_lines(chunk)
+        self.assertEqual(added, 0)
+        self.assertEqual(removed, 0)
+
+    def test_count_body_lines_multiple_hunks(self):
+        chunk = (
+            "diff --git a/f b/f\n"
+            "--- a/f\n"
+            "+++ b/f\n"
+            "@@ -1,3 +1,4 @@\n"
+            " unchanged\n"
+            "-old line\n"
+            "+new line 1\n"
+            "+new line 2\n"
+            "@@ -20,3 +21,2 @@\n"
+            "-removed line\n"
+            " unchanged\n"
+        )
+        added, removed = count_body_lines(chunk)
+        self.assertEqual(added, 2)
+        self.assertEqual(removed, 2)
+
     def test_header_only(self):
         chunk = (
             "diff --git a/file b/file\n"
