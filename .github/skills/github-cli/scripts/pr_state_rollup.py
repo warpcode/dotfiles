@@ -196,13 +196,14 @@ def main() -> None:
         if not args.wait:
             break
         pending = [p["number"] for p in prs if rollup_status(p)[0] == PENDING]
-        if not pending or time.time() > deadline:
+        now = time.time()
+        if not pending or now >= deadline:
             if pending:
                 sys.stderr.write(
                     f"--wait timed out with checks still pending on "
                     f"{', '.join('#' + str(n) for n in pending)}\n")
             break
-        time.sleep(args.interval)
+        time.sleep(min(args.interval, max(0.0, deadline - now)))
 
     bad = False
     if args.json:
