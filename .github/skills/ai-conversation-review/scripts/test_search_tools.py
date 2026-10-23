@@ -10,10 +10,18 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(__file__))
+import io
+from unittest.mock import patch
+
 from search_tools import (
     discover_sessions,
     extract_tool_calls_from_jsonl,
     match_tool_call,
+    parse_args,
+    print_json_output,
+    print_markdown_output,
+    process_sessions,
+    resolve_target_scripts,
     SessionRef,
 )
 
@@ -152,6 +160,103 @@ class TestSearchTools(unittest.TestCase):
                 self.assertEqual(sids, {"session-1", "session-2"})
             finally:
                 search_tools.ANTIGRAVITY_BRAIN_PATHS = old_roots
+
+    def test_parse_args(self):
+        args = parse_args(["--tool", "run_command", "--sessions", "50", "--json"])
+        self.assertEqual(args.tool, "run_command")
+        self.assertEqual(args.sessions, 50)
+        self.assertTrue(args.json)
+
+    def test_resolve_target_scripts_single_script(self):
+        args = parse_args(["--script", "my_script.py"])
+        scripts, err = resolve_target_scripts(args)
+        self.assertIsNone(err)
+        self.assertEqual(scripts, {"my_script.py"})
+
+    def test_resolve_target_scripts_multiple_scripts(self):
+        args = parse_args(["--scripts", "a.py, b.sh, c.zsh"])
+        scripts, err = resolve_target_scripts(args)
+        self.assertIsNone(err)
+        self.assertEqual(scripts, {"a.py", "b.sh", "c.zsh"})
+
+    def test_resolve_target_scripts_directory(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            p1 = Path(tmpdir) / "helper.py"
+            p2 = Path(tmpdir) / "runner.sh"
+            p3 = Path(tmpdir) / "test_ignore.py"
+            p1.write_text("# py")
+            p2.write_text("# sh")
+            p3.write_text("# test")
+
+            args = parse_args(["--scripts-dir", tmpdir])
+            scripts, err = resolve_target_scripts(args)
+            self.assertIsNone(err)
+            self.assertEqual(scripts, {"helper.py", "runner.sh"})
+
+    def test_resolve_target_scripts_invalid_directory(self):
+        args = parse_args(["--scripts-dir", "/nonexistent/path/to/dir"])
+        scripts, err = resolve_target_scripts(args)
+        self.assertIsNone(scripts)
+        self.assertIn("not a directory", err)
+
+    def test_process_sessions(self):
+        with tempfile.NamedTemporaryFile("w+", suffix=".jsonl", delete=False) as tf:
+            record = {
+                "created_at": "2026-10-07T12:00:00Z",
+                "tool_calls": [
+                    {"name": "run_command", "args": {"CommandLine": "python3 script.py"}}
+                ]
+            }
+            tf.write(json.dumps(record) + "\n")
+            path = Path(tf.name)
+
+        try:
+            sref = SessionRef("sess1", "antigravity", path, 100.0)
+            tool_re = re.compile("run_command")
+            stats, matched_sessions, total_invocations = process_sessions([sref], tool_re=tool_re)
+
+            self.assertEqual(total_invocations, 1)
+            self.assertIn("sess1", matched_sessions)
+            self.assertEqual(stats["run_command"]["invocations"], 1)
+        finally:
+            path.unlink(missing_ok=True)
+
+    def test_print_json_output(self):
+        sref = SessionRef("sess1", "antigravity", "/tmp/log", 100.0)
+        stats = {
+            "run_command": {
+                "invocations": 6,
+                "sessions": {"sess1"},
+                "first_seen": "2026-01-01T00:00:00Z",
+                "last_seen": "2026-01-02T00:00:00Z",
+                "errors": 0,
+                "samples": ["git status"],
+            }
+        }
+        with patch("sys.stdout", new=io.StringIO()) as fake_out:
+            print_json_output([sref], {"sess1"}, 6, stats)
+            output = json.loads(fake_out.getvalue())
+            self.assertEqual(output["scanned_sessions"], 1)
+            self.assertEqual(output["results"]["run_command"]["status"], "ACTIVE")
+
+    def test_print_markdown_output(self):
+        args = parse_args(["--tool", "run_command"])
+        sref = SessionRef("sess1", "antigravity", "/tmp/log", 100.0)
+        stats = {
+            "run_command": {
+                "invocations": 1,
+                "sessions": {"sess1"},
+                "first_seen": "2026-01-01T00:00:00Z",
+                "last_seen": "2026-01-02T00:00:00Z",
+                "errors": 0,
+                "samples": ["git status"],
+            }
+        }
+        with patch("sys.stdout", new=io.StringIO()) as fake_out:
+            print_markdown_output(args, [sref], {"sess1"}, 1, stats, None)
+            text = fake_out.getvalue()
+            self.assertIn("# Tool Usage Audit: tool='run_command'", text)
+            self.assertIn("| `run_command` | 1 | 1 | ⚠️ LOW USAGE |", text)
 
 
 if __name__ == "__main__":

@@ -210,19 +210,60 @@ class TestAIGuardWrapper(unittest.TestCase):
                         ai_guard_wrapper.main()
                     mock_handle_prompt.assert_called_once_with({})
 
-    @patch('os.path.isfile', return_value=True)
-    @patch('builtins.open', new_callable=mock_open, read_data='{"type": "USER_INPUT", "content": "What is the capital of France?"}\n')
     @patch('ai_guard_wrapper.run_guard')
     @patch('sys.stdout', new_callable=StringIO)
-    def test_handle_prompt_route_with_transcript_path(self, mock_stdout, mock_run_guard, mock_file, mock_isfile):
+    def test_handle_prompt_route_transcript_extracts_last_valid_prompt(self, mock_stdout, mock_run_guard):
+        import tempfile
         mock_run_guard.return_value = (0, {"decision": "allow"})
-        payload = {"transcriptPath": "/path/to/transcript.jsonl"}
 
+        with tempfile.TemporaryDirectory() as tmpdir:
+            transcript_file = os.path.join(tmpdir, "transcript.jsonl")
+            lines = [
+                "corrupt json line\n",
+                json.dumps({"type": "USER_INPUT", "content": "first user input"}) + "\n",
+                json.dumps({"type": "SYSTEM", "content": "system message"}) + "\n",
+                json.dumps({"type": "GENERIC", "content": "last generic prompt"}) + "\n",
+                json.dumps({"type": "USER_INPUT"}) + "\n"  # missing content
+            ]
+            with open(transcript_file, "w", encoding="utf-8") as f:
+                f.writelines(lines)
+
+            payload = {"transcriptPath": transcript_file}
+
+            with self.assertRaises(SystemExitException):
+                ai_guard_wrapper.handle_prompt_route(payload)
+
+            mock_run_guard.assert_called_once_with("prompt", stdin_str=json.dumps({"text": "last generic prompt"}))
+            self.assertEqual(json.loads(mock_stdout.getvalue()), {})
+            self.mock_exit.assert_called_with(0)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_prompt_route_transcript_missing_file_or_invalid_json(self, mock_stdout, mock_run_guard):
+        import tempfile
+        # Scenario 1: Non-existent file
+        payload1 = {"transcriptPath": "/nonexistent/path/transcript.jsonl"}
         with self.assertRaises(SystemExitException):
-            ai_guard_wrapper.handle_prompt_route(payload)
-
+            ai_guard_wrapper.handle_prompt_route(payload1)
         self.assertEqual(json.loads(mock_stdout.getvalue()), {})
         self.mock_exit.assert_called_with(0)
+        mock_run_guard.assert_not_called()
+
+        # Scenario 2: File with no matching prompt lines
+        with tempfile.TemporaryDirectory() as tmpdir:
+            transcript_file = os.path.join(tmpdir, "transcript.jsonl")
+            with open(transcript_file, "w", encoding="utf-8") as f:
+                f.write('{"type": "SYSTEM", "content": "hello"}\ncorrupt json\n')
+
+            payload2 = {"transcriptPath": transcript_file}
+            mock_stdout.seek(0)
+            mock_stdout.truncate(0)
+            with self.assertRaises(SystemExitException):
+                ai_guard_wrapper.handle_prompt_route(payload2)
+
+            self.assertEqual(json.loads(mock_stdout.getvalue()), {})
+            self.mock_exit.assert_called_with(0)
+            mock_run_guard.assert_not_called()
 
     @patch('sys.stdout', new_callable=StringIO)
     def test_handle_prompt_route_empty_no_transcript(self, mock_stdout):
@@ -273,6 +314,79 @@ class TestAIGuardWrapper(unittest.TestCase):
         self.assertTrue("injectSteps" in json.loads(mock_stdout.getvalue()))
         self.mock_exit.assert_called_with(0)
 
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_handle_prompt_route_transcript_rewrites_file_and_injects_user_message(self, mock_stderr, mock_stdout, mock_run_guard):
+        import tempfile
+        mock_run_guard.return_value = (
+            0,
+            {
+                "decision": "replace",
+                "sanitized": "safe prompt [REDACTED]",
+                "reasons": ["API Key Leak"]
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            transcript_file = os.path.join(tmpdir, "transcript.jsonl")
+            lines = [
+                json.dumps({"type": "SYSTEM", "content": "system prompt"}) + "\n",
+                json.dumps({"type": "USER_INPUT", "content": "my secret is secret123"}) + "\n",
+            ]
+            with open(transcript_file, "w", encoding="utf-8") as f:
+                f.writelines(lines)
+
+            payload = {"transcriptPath": transcript_file}
+
+            with self.assertRaises(SystemExitException):
+                ai_guard_wrapper.handle_prompt_route(payload)
+
+            self.mock_exit.assert_called_with(0)
+
+            # Check rewritten transcript file content
+            with open(transcript_file, "r", encoding="utf-8") as f:
+                updated_lines = f.readlines()
+
+            updated_data = json.loads(updated_lines[1])
+            self.assertEqual(updated_data["content"], "safe prompt [REDACTED]")
+            self.assertEqual(updated_data["type"], "USER_INPUT")
+
+            # Check printed JSON response
+            resp = json.loads(mock_stdout.getvalue())
+            self.assertIn("injectSteps", resp)
+            self.assertEqual(len(resp["injectSteps"]), 2)
+            self.assertIn("Security Notice: Redacted sensitive items (API Key Leak)", resp["injectSteps"][0]["ephemeralMessage"])
+            self.assertEqual(resp["injectSteps"][1], {"userMessage": "safe prompt [REDACTED]"})
+
+    @patch('builtins.open', side_effect=[
+        mock_open(read_data='{"type": "USER_INPUT", "content": "my secret is secret123"}\n')(),
+        IOError("Write failed")
+    ])
+    @patch('os.path.isfile', return_value=True)
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_handle_prompt_route_transcript_rewrite_write_error_handled(
+        self, mock_stderr, mock_stdout, mock_run_guard, mock_isfile, mock_open_file
+    ):
+        mock_run_guard.return_value = (
+            0,
+            {
+                "decision": "replace",
+                "sanitized": "safe prompt",
+                "reasons": []
+            }
+        )
+        payload = {"transcriptPath": "/fake/transcript.jsonl"}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_prompt_route(payload)
+
+        self.mock_exit.assert_called_with(0)
+        resp = json.loads(mock_stdout.getvalue())
+        self.assertIn("injectSteps", resp)
+
     @patch('subprocess.run')
     def test_run_guard_success_with_json_output(self, mock_subprocess):
         mock_proc = MagicMock()
@@ -292,6 +406,68 @@ class TestAIGuardWrapper(unittest.TestCase):
         mock_subprocess.return_value = mock_proc
 
         code, data = ai_guard_wrapper.run_guard("file", args=["/path/to/file.txt"])
+        self.assertEqual(code, 0)
+        self.assertEqual(data, {})
+
+    @patch('subprocess.run')
+    def test_run_guard_nonzero_returncode_with_json_output(self, mock_subprocess):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 2
+        mock_proc.stdout = '{"decision": "deny", "reason": "blocked"}'
+        mock_subprocess.return_value = mock_proc
+
+        code, data = ai_guard_wrapper.run_guard("prompt", args=["--check"])
+        self.assertEqual(code, 2)
+        self.assertEqual(data, {"decision": "deny", "reason": "blocked"})
+
+    @patch('subprocess.run')
+    def test_run_guard_nonzero_returncode_with_non_json_output(self, mock_subprocess):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 1
+        mock_proc.stdout = 'Fatal error: guard failed'
+        mock_subprocess.return_value = mock_proc
+
+        code, data = ai_guard_wrapper.run_guard("prompt")
+        self.assertEqual(code, 1)
+        self.assertEqual(data, {})
+
+    @patch('subprocess.run')
+    def test_run_guard_whitespace_padded_json(self, mock_subprocess):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = '  \n\t {"decision": "allow"} \n\n '
+        mock_subprocess.return_value = mock_proc
+
+        code, data = ai_guard_wrapper.run_guard("command", args=["ls"])
+        self.assertEqual(code, 0)
+        self.assertEqual(data, {"decision": "allow"})
+
+    @patch('subprocess.run')
+    def test_run_guard_arguments_and_stdin_passing(self, mock_subprocess):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = '{"decision": "allow"}'
+        mock_subprocess.return_value = mock_proc
+
+        code, data = ai_guard_wrapper.run_guard("prompt", args=["arg1", "arg2"], stdin_str='{"text": "test"}')
+        self.assertEqual(code, 0)
+        self.assertEqual(data, {"decision": "allow"})
+        mock_subprocess.assert_called_once_with(
+            [ai_guard_wrapper.AI_GUARD_BIN, "prompt", "arg1", "arg2"],
+            input='{"text": "test"}',
+            text=True,
+            capture_output=True,
+            check=False
+        )
+
+    @patch('subprocess.run')
+    def test_run_guard_truncated_json_output(self, mock_subprocess):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = '{"decision": "allow"'
+        mock_subprocess.return_value = mock_proc
+
+        code, data = ai_guard_wrapper.run_guard("file", args=["/test.txt"])
         self.assertEqual(code, 0)
         self.assertEqual(data, {})
 

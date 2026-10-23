@@ -2,7 +2,7 @@
 name: git-expert
 description: >
   Expert local Git operations: branch strategies, rebase and merge conflict
-  resolution, reflog triage, submodules, and Conventional Commits.
+  resolution, reflog triage, and submodules.
   Use when executing local Git operations, or load FIRST for "fix my conflict",
   "rebase conflict", "unmerged paths", "MERGING/REBASING state",
   "cherry-pick in progress" — run `scripts/merge_state.sh` before reading diffs.
@@ -27,8 +27,7 @@ responding:
 | Merge strategies | `@references/merge-strategies.md` | Explicit merges, fast-forward, rebase, squash-on-merge, decision matrix |
 | Branch strategies & handling | `@references/branching-strategies.md` | Git Flow vs trunk-based vs GitHub Flow, branch naming rules, merge vs rebase |
 | Worktrees | Delegated to `git-worktrees` skill | Detect existing isolation, create/manage worktrees, directory ignore checks |
-| Commit message workflow | `@references/commit-workflow.md` | Steps, strategy selection (Conventional vs Work-Based), operational constraints (preflight, staged-only, no auto-commit) |
-| Commit message format | `@references/commit-message-format.md` | Generate/draft a commit message; format rules for type/scope/subject/body/footer, type table, hard constraints |
+| Commit message workflow | Delegated to `git-commit` skill | Generate/draft a commit message, format rules, staged-only enforcement |
 
 Read only the reference(s) needed for the query. Never load all references
 upfront.
@@ -92,7 +91,7 @@ plus a `git show <sha>:<path>` per side — that is four calls and ~25 KB of con
 script answers it in one. Only then read the conflicted blobs themselves; choosing how two
 divergent revisions compose is judgement and stays with you.
 
-`git rebase --continue` is not commit authoring — the `commit` skill does not apply to it.
+`git rebase --continue` is not commit authoring — the `git-commit` skill does not apply to it.
 Approval is still required where the repo instructions demand it, and always pass
 `GIT_EDITOR=true` (or `-c core.editor=true`) so the editor never opens.
 
@@ -114,19 +113,3 @@ Additional rules:
 - NEVER run `git commit` without explicit user permission.
 - NEVER rebase or force-push shared/public branches.
 - Prefer `git push --force-with-lease` over `git push --force`.
-
-## Commit Message Workflow
-
-When checking the current status of the repository, run the bundled status
-script to collect repo metadata and staged/unstaged change information in a
-single call:
-
-```bash
-bash <skill-dir>/scripts/status.sh
-```
-
-IF no staged changes or `NO_STAGED_CHANGES` → stop, tell the user to
-`git add` files first. Then read `@references/commit-workflow.md`
-for the workflow and `@references/commit-message-format.md` for the
-format rules. Write the message to a file and present the commit command —
-never commit automatically.

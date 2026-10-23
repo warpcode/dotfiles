@@ -135,6 +135,28 @@ commit_range: v1.0.0..v1.1.0
         self.assertIn("# Changelog Audit Report: `CHANGELOG.md`", report)
         self.assertIn("PASS", report)
 
+    def test_generate_markdown_report_with_missing_commits(self):
+        cl_path = Path("CHANGELOG.md")
+        entries = [{"version": "1.1.0", "date": "2026-01-15"}]
+        results = [{
+            "version": "1.1.0",
+            "has_provenance": True,
+            "format_ok": True,
+            "git_commit_count": 3,
+            "audited_commit_count": 2,
+            "missing_commits": [{
+                "short_sha": "abc1234",
+                "full_sha": "abc123456789",
+                "author": "Alice",
+                "subject": "feat: add widget",
+                "severity": "High",
+            }],
+        }]
+        report = generate_markdown_report(cl_path, entries, results, [])
+        self.assertIn("## 2. Missing Pieces & Unaccounted Commits", report)
+        self.assertIn("| `abc1234` | Alice | feat: add widget | **High** |", report)
+        self.assertIn("FAIL", report)
+
 
 if __name__ == "__main__":
     unittest.main()

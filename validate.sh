@@ -83,15 +83,20 @@ have() {
 # Shell / Zsh syntax (mirrors lint.yml)
 # ---------------------------------------------------------------------------
 
-lint_zsh() {
-    local failed=0
-    while IFS= read -r f; do
-        if ! zsh -n "$f"; then
-            failed=1
-        fi
-    done < <(find . -name '*.zsh' -not -path './.git/*')
-    return $failed
-}
+if have zsh; then
+    lint_zsh() {
+        local failed=0
+        while IFS= read -r f; do
+            if ! zsh -n "$f"; then
+                failed=1
+            fi
+        done < <(find . -name '*.zsh' -not -path './.git/*')
+        return $failed
+    }
+    run "zsh -n (syntax)" lint_zsh
+else
+    printf '\nSKIP zsh -n (syntax) (zsh not installed)\n'
+fi
 
 lint_bash() {
     local failed=0
@@ -103,7 +108,6 @@ lint_bash() {
     return $failed
 }
 
-run "zsh -n (syntax)" lint_zsh
 run "bash -n (syntax)" lint_bash
 
 check_stray_artifacts() {
@@ -123,27 +127,31 @@ run "stray-artifacts" check_stray_artifacts
 # ---------------------------------------------------------------------------
 
 if [ "$LINT_ONLY" -eq 0 ]; then
-    run_zsh_tests() {
-        [ -d dot_zsh/tests ] || {
-            printf 'dot_zsh/tests/ not found\n' >&2
-            return 1
-        }
-        local failed=0 ran=0
-        for suite in dot_zsh/tests/*.zsh; do
-            [ -f "$suite" ] || continue
-            ran=$((ran + 1))
-            printf -- '--- %s\n' "$suite"
-            if ! zsh "$suite"; then
-                failed=1
+    if have zsh; then
+        run_zsh_tests() {
+            [ -d dot_zsh/tests ] || {
+                printf 'dot_zsh/tests/ not found\n' >&2
+                return 1
+            }
+            local failed=0 ran=0
+            for suite in dot_zsh/tests/*.zsh; do
+                [ -f "$suite" ] || continue
+                ran=$((ran + 1))
+                printf -- '--- %s\n' "$suite"
+                if ! zsh "$suite"; then
+                    failed=1
+                fi
+            done
+            if [ "$ran" -eq 0 ]; then
+                printf 'no zsh test suites found\n' >&2
+                return 1
             fi
-        done
-        if [ "$ran" -eq 0 ]; then
-            printf 'no zsh test suites found\n' >&2
-            return 1
-        fi
-        return $failed
-    }
-    run "zsh tests (dot_zsh/tests)" run_zsh_tests
+            return $failed
+        }
+        run "zsh tests (dot_zsh/tests)" run_zsh_tests
+    else
+        printf '\nSKIP zsh tests (zsh not installed)\n'
+    fi
 fi
 
 # ---------------------------------------------------------------------------

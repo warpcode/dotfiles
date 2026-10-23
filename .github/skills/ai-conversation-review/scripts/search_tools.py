@@ -43,6 +43,7 @@ import re
 import sqlite3
 import sys
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -60,13 +61,13 @@ VSCODE_STORAGE_PATHS = [
 ]
 
 
+@dataclass
 class SessionRef:
-    def __init__(self, session_id: str, platform: str, location: Path | str, mtime: float, workspace: str = ""):
-        self.session_id = session_id
-        self.platform = platform
-        self.location = location
-        self.mtime = mtime
-        self.workspace = workspace
+    session_id: str
+    platform: str
+    location: Path | str
+    mtime: float
+    workspace: str = ""
 
 
 def discover_sessions(
@@ -279,7 +280,8 @@ def match_tool_call(
     return True, target_key
 
 
-def main() -> int:
+def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+    """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         description="Search conversation transcripts across sessions for tool and script usage.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -298,42 +300,35 @@ def main() -> int:
     parser.add_argument("--json", action="store_true", help="Output results in structured JSON")
     parser.add_argument("--details", action="store_true", help="Include per-session details in output")
 
-    args = parser.parse_args()
+    return parser.parse_args(argv)
 
-    # Resolve target script names
-    target_scripts: Optional[Set[str]] = None
+
+def resolve_target_scripts(args: argparse.Namespace) -> Tuple[Optional[Set[str]], Optional[str]]:
+    """Resolve target script names from command-line arguments. Returns (scripts_set, error_message)."""
     if args.script:
-        target_scripts = {Path(args.script).name}
-    elif args.scripts:
-        target_scripts = {s.strip() for s in args.scripts.split(",") if s.strip()}
-    elif args.scripts_dir:
+        return {Path(args.script).name}, None
+    if args.scripts:
+        return {s.strip() for s in args.scripts.split(",") if s.strip()}, None
+    if args.scripts_dir:
         scripts_dir = args.scripts_dir.resolve()
         if not scripts_dir.is_dir():
-            print(f"Error: --scripts-dir '{scripts_dir}' is not a directory.", file=sys.stderr)
-            return 1
+            return None, f"Error: --scripts-dir '{scripts_dir}' is not a directory."
         found_scripts = {
             p.name for p in scripts_dir.iterdir()
             if p.is_file() and not p.name.startswith(".") and not p.name.startswith("test_") and p.suffix in (".py", ".sh", ".zsh", ".bash", ".awk")
         }
-        target_scripts = found_scripts
+        return found_scripts, None
+    return None, None
 
-    tool_re = re.compile(args.tool, re.I) if args.tool else None
-    command_re = re.compile(args.command, re.I) if args.command else None
 
-    # Pre-compile script target regex patterns once for all sessions
-    script_patterns: Optional[Dict[str, re.Pattern]] = None
-    if target_scripts:
-        script_patterns = {
-            s: re.compile(rf"(?:^|[\s/\"']){re.escape(s)}(?:[\s\"']|$)")
-            for s in target_scripts
-        }
-
-    # Discover sessions
-    scan_limit = None if args.all else args.sessions
-    sessions = discover_sessions(limit=scan_limit, workspace_filter=args.workspace, platform_filter=args.platform)
-
-    # Initialize stats per target
-    # target -> {invocations, sessions: set(), first_seen, last_seen, samples: list(), errors}
+def process_sessions(
+    sessions: List[SessionRef],
+    tool_re: Optional[re.Pattern] = None,
+    command_re: Optional[re.Pattern] = None,
+    target_scripts: Optional[Set[str]] = None,
+    script_patterns: Optional[Dict[str, re.Pattern]] = None,
+) -> Tuple[Dict[str, Dict[str, Any]], Set[str], int]:
+    """Scan sessions for tool calls matching query filters and aggregate statistics."""
     stats: Dict[str, Dict[str, Any]] = defaultdict(lambda: {
         "invocations": 0,
         "sessions": set(),
@@ -343,7 +338,6 @@ def main() -> int:
         "errors": 0,
     })
 
-    # Pre-seed explicit script targets with 0 counts so unused scripts are surfaced
     if target_scripts:
         for s in target_scripts:
             _ = stats[s]
@@ -352,7 +346,7 @@ def main() -> int:
     total_invocations = 0
 
     for sref in sessions:
-        if sref.platform == "antigravity" or sref.platform == "copilot":
+        if sref.platform in ("antigravity", "copilot"):
             tcs = extract_tool_calls_from_jsonl(Path(sref.location))
         elif sref.platform == "opencode":
             tcs = extract_tool_calls_from_opencode(str(sref.location), sref.session_id)
@@ -397,50 +391,70 @@ def main() -> int:
         if session_had_match:
             matched_sessions.add(sref.session_id)
 
-    # Output formatting
-    if args.json:
-        results_payload: Dict[str, Any] = {}
-        for target, data in stats.items():
-            sess_count = len(data["sessions"])
-            inv_count = data["invocations"]
-            status = "ACTIVE" if inv_count >= 5 else ("LOW_USAGE" if inv_count > 0 else "NEVER_USED")
-            results_payload[target] = {
-                "invocations": inv_count,
-                "sessions": sess_count,
-                "status": status,
-                "first_seen": data["first_seen"],
-                "last_seen": data["last_seen"],
-                "errors": data["errors"],
-                "samples": data["samples"],
-            }
+    return stats, matched_sessions, total_invocations
 
-        payload = {
-            "scanned_sessions": len(sessions),
-            "matched_sessions": len(matched_sessions),
-            "total_invocations": total_invocations,
-            "results": results_payload,
+
+def print_json_output(
+    sessions: List[SessionRef],
+    matched_sessions: Set[str],
+    total_invocations: int,
+    stats: Dict[str, Dict[str, Any]],
+) -> None:
+    """Format and print audit results as structured JSON."""
+    results_payload: Dict[str, Any] = {}
+    for target, data in stats.items():
+        sess_count = len(data["sessions"])
+        inv_count = data["invocations"]
+        status = "ACTIVE" if inv_count >= 5 else ("LOW_USAGE" if inv_count > 0 else "NEVER_USED")
+        results_payload[target] = {
+            "invocations": inv_count,
+            "sessions": sess_count,
+            "status": status,
+            "first_seen": data["first_seen"],
+            "last_seen": data["last_seen"],
+            "errors": data["errors"],
+            "samples": data["samples"],
         }
-        print(json.dumps(payload, indent=2))
-        return 0
 
-    # Markdown / Terminal output
+    payload = {
+        "scanned_sessions": len(sessions),
+        "matched_sessions": len(matched_sessions),
+        "total_invocations": total_invocations,
+        "results": results_payload,
+    }
+    print(json.dumps(payload, indent=2))
+
+
+def print_markdown_output(
+    args: argparse.Namespace,
+    sessions: List[SessionRef],
+    matched_sessions: Set[str],
+    total_invocations: int,
+    stats: Dict[str, Dict[str, Any]],
+    target_scripts: Optional[Set[str]],
+) -> None:
+    """Format and print audit results as a Markdown table."""
     query_desc = []
-    if args.tool: query_desc.append(f"tool='{args.tool}'")
-    if args.command: query_desc.append(f"command='{args.command}'")
-    if target_scripts: query_desc.append(f"{len(target_scripts)} script target(s)")
+    if args.tool:
+        query_desc.append(f"tool='{args.tool}'")
+    if args.command:
+        query_desc.append(f"command='{args.command}'")
+    if target_scripts:
+        query_desc.append(f"{len(target_scripts)} script target(s)")
     query_str = " & ".join(query_desc) if query_desc else "all tools"
 
     print(f"# Tool Usage Audit: {query_str}")
-    print(f"- **Scanned Sessions:** {len(sessions)} | **Matched Sessions:** {len(matched_sessions)} | **Total Invocations:** {total_invocations}\n")
+    print(
+        f"- **Scanned Sessions:** {len(sessions)} | **Matched Sessions:** {len(matched_sessions)} | **Total Invocations:** {total_invocations}\n"
+    )
 
     if not stats:
         print("No matching tool calls found across the scanned sessions.")
-        return 0
+        return
 
     print("| Target / Script | Invocations | Sessions | Status | Last Seen | Sample Command |")
     print("|---|---:|---:|---|---|---|")
 
-    # Sort: active first, then by invocations desc, then name
     sorted_targets = sorted(
         stats.items(),
         key=lambda item: (item[1]["invocations"] > 0, item[1]["invocations"], len(item[1]["sessions"])),
@@ -461,6 +475,43 @@ def main() -> int:
         sample = data["samples"][0].replace("|", "\\|") if data["samples"] else "-"
         print(f"| `{target}` | {inv} | {sess_cnt} | {status} | {last_seen} | `{sample[:45]}` |")
 
+
+def main(argv: Optional[List[str]] = None) -> int:
+    args = parse_args(argv)
+
+    target_scripts, err = resolve_target_scripts(args)
+    if err:
+        print(err, file=sys.stderr)
+        return 1
+
+    tool_re = re.compile(args.tool, re.I) if args.tool else None
+    command_re = re.compile(args.command, re.I) if args.command else None
+
+    # Pre-compile script target regex patterns once for all sessions
+    script_patterns: Optional[Dict[str, re.Pattern]] = None
+    if target_scripts:
+        script_patterns = {
+            s: re.compile(rf"(?:^|[\s/\"']){re.escape(s)}(?:[\s\"']|$)")
+            for s in target_scripts
+        }
+
+    # Discover sessions
+    scan_limit = None if args.all else args.sessions
+    sessions = discover_sessions(limit=scan_limit, workspace_filter=args.workspace, platform_filter=args.platform)
+
+    stats, matched_sessions, total_invocations = process_sessions(
+        sessions,
+        tool_re=tool_re,
+        command_re=command_re,
+        target_scripts=target_scripts,
+        script_patterns=script_patterns,
+    )
+
+    if args.json:
+        print_json_output(sessions, matched_sessions, total_invocations, stats)
+        return 0
+
+    print_markdown_output(args, sessions, matched_sessions, total_invocations, stats, target_scripts)
     return 0
 
 

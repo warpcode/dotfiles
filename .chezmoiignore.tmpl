@@ -10,6 +10,7 @@ Makefile
 README.md
 cache/
 conductor/
+docs/
 generic/
 install.sh
 validate.sh
@@ -42,12 +43,6 @@ Library/
 # Antigravity files
 .local/share/applications/antigravity-hub.desktop
 .local/share/icons/antigravity-hub.png
-{{ end }}
-
-# Ignore the Antigravity Hub extracted directory if it exists in the destination to prevent chezmoi
-# from prompting about changes when the app auto-updates itself.
-{{ if stat (joinPath .chezmoi.homeDir ".local/opt/antigravity-hub") }}
-.local/opt/antigravity-hub/**
 {{ end }}
 
 # Hermes Agent state, caches, databases, and logs

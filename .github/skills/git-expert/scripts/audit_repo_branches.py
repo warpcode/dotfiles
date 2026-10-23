@@ -35,6 +35,8 @@ Usage
   audit_repo_branches.py --repo owner/name
   audit_repo_branches.py --repo owner/name --json
   audit_repo_branches.py --repo owner/name --base main --include-open
+  audit_repo_branches.py --repo owner/name --fetch   # required to see OPEN PR siblings:
+                                                     # unfetched open branches are skipped
 
 Requires: git, gh (authenticated). Exits 0 even when REVIEW rows exist; exits 1
 only on a hard failure.
@@ -419,6 +421,19 @@ def main() -> None:
         raise SystemExit(1)
 
     prmap = fetch_pr_map(repo)
+    # Open PR branches that were never fetched are invisible to list_branches(), so
+    # they are silently excluded from sibling detection (observed 2026-10-18: a run
+    # without --fetch reported only closed PRs while 29 were open).
+    unfetched = sorted(
+        pr["number"] for br, pr in prmap.items()
+        if pr.get("state", "").upper() == "OPEN" and not rev(f"origin/{br}")
+    )
+    if unfetched:
+        sys.stderr.write(
+            f"WARNING: {len(unfetched)} open PR(s) have no local origin/<branch> ref and are "
+            f"excluded from sibling detection: "
+            f"{', '.join(f'#{n}' for n in unfetched)}. Re-run with --fetch.\n"
+        )
     rows = [analyse(b, base, prmap) for b in list_branches()]
     pairs = find_siblings(rows, base)
 

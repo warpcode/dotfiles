@@ -13,7 +13,7 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 SKILL_DIR = Path(__file__).resolve().parent.parent
 JULES_API_DIR = SKILL_DIR.parent / "google-jules-api"
@@ -134,7 +134,8 @@ def discover_active_repos(client: Any, sources_map: Dict[str, Dict[str, Any]], d
     return active_sources
 
 
-def main() -> None:
+def parse_args(args: Optional[List[str]] = None) -> argparse.Namespace:
+    """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         description="Batch dispatch Jules maintenance agents across repositories.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -174,22 +175,20 @@ def main() -> None:
         action="store_false",
         help="Do not require plan approval",
     )
+    return parser.parse_args(args)
 
-    args = parser.parse_args()
 
-    if not JULES_CLI.exists():
-        sys.exit(f"Error: Jules CLI not found at {JULES_CLI}")
-
-    client = get_jules_client()
-    sources_map = fetch_connected_sources(client)
-
-    if not sources_map:
-        sys.exit("Error: No connected repository sources found in Jules.")
-
+def resolve_target_repos(
+    cli_repos: Optional[List[str]],
+    client: Any,
+    sources_map: Dict[str, Dict[str, Any]],
+    days_active: int,
+) -> List[Tuple[str, str]]:
+    """Determine list of target (repo_id, default_branch) tuples based on CLI arguments or activity discovery."""
     target_repos: List[Tuple[str, str]] = []
 
-    if args.repos:
-        for r in args.repos:
+    if cli_repos:
+        for r in cli_repos:
             clean_r = r.removeprefix("sources/")
             source_info = sources_map.get(clean_r)
             if not source_info:
@@ -202,10 +201,106 @@ def main() -> None:
             target_repos.append((clean_r, branch))
     else:
         # Dynamically discover active repos in the last month
-        target_repos = discover_active_repos(client, sources_map, days_active=args.days_active)
+        target_repos = discover_active_repos(client, sources_map, days_active=days_active)
         if not target_repos:
-            print(f"No repositories active in the last {args.days_active} days detected in Jules. Falling back to all connected sources.")
+            print(
+                f"No repositories active in the last {days_active} days detected in Jules. "
+                "Falling back to all connected sources."
+            )
             target_repos = [(s["id"], s["default_branch"]) for s in sources_map.values()]
+
+    return target_repos
+
+
+def build_prompts(tmp_path: Path, agents: List[str]) -> None:
+    """Build prompt files in target temporary directory using build_prompts.py script."""
+    build_cmd = [sys.executable, str(BUILD_PROMPTS), str(tmp_path)] + agents
+    res = subprocess.run(build_cmd, capture_output=True, text=True)
+    if res.returncode != 0:
+        sys.exit(f"Failed to build prompts: {res.stderr.strip()}")
+
+
+def dispatch_agent_session(
+    repo: str,
+    branch: str,
+    agent: str,
+    prompt_file: Path,
+    require_approval: bool,
+) -> None:
+    """Create a single Jules session for a given repository and agent."""
+    repo_slug = repo.split("/")[-1]
+    title = f"[{repo_slug}] {agent.replace('-', ' ').title()} Agent"
+    cmd = [
+        sys.executable,
+        str(JULES_CLI),
+        "create-session",
+        "--source",
+        repo,
+        "--branch",
+        branch,
+        "--title",
+        title,
+    ]
+    if require_approval:
+        cmd.append("--require-approval")
+
+    print(f"Launching {agent} on {repo}...")
+    with open(prompt_file, "r") as pf:
+        proc = subprocess.run(cmd, stdin=pf, capture_output=True, text=True)
+
+    if proc.returncode != 0:
+        print(f"Error launching {agent} on {repo}: {proc.stderr.strip()}", file=sys.stderr)
+    else:
+        lines = proc.stdout.strip().splitlines()
+        first_line = lines[0] if lines else "Session dispatched"
+        print(f"✓ {first_line}")
+
+
+def dispatch_agents(
+    target_repos: List[Tuple[str, str]],
+    agents: List[str],
+    require_approval: bool,
+) -> None:
+    """Build prompt files and dispatch agents across all target repositories."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_path = Path(tmp_dir)
+        build_prompts(tmp_path, agents)
+
+        for repo, branch in target_repos:
+            print(f"=== Dispatching to {repo} ({branch}) ===")
+            for agent in agents:
+                prompt_file = tmp_path / f"{agent}.txt"
+                if not prompt_file.exists():
+                    print(f"Skipping {agent}: prompt not found", file=sys.stderr)
+                    continue
+
+                dispatch_agent_session(
+                    repo=repo,
+                    branch=branch,
+                    agent=agent,
+                    prompt_file=prompt_file,
+                    require_approval=require_approval,
+                )
+
+
+def main() -> None:
+    args = parse_args()
+
+    if not JULES_CLI.exists():
+        sys.exit(f"Error: Jules CLI not found at {JULES_CLI}")
+
+    client = get_jules_client()
+    sources_map = fetch_connected_sources(client)
+
+    if not sources_map:
+        sys.exit("Error: No connected repository sources found in Jules.")
+
+    target_repos = resolve_target_repos(
+        cli_repos=args.repos,
+        client=client,
+        sources_map=sources_map,
+        days_active=args.days_active,
+    )
 
     if args.list_active:
         print(f"Discovered active repositories in Jules (past {args.days_active} days):")
@@ -218,48 +313,11 @@ def main() -> None:
         print(f"  - {repo_id} (branch: {branch})")
     print()
 
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        tmp_path = Path(tmp_dir)
-        # Build prompt files
-        build_cmd = [sys.executable, str(BUILD_PROMPTS), str(tmp_path)] + args.agents
-        res = subprocess.run(build_cmd, capture_output=True, text=True)
-        if res.returncode != 0:
-            sys.exit(f"Failed to build prompts: {res.stderr.strip()}")
-
-        for repo, branch in target_repos:
-            repo_slug = repo.split("/")[-1]
-            print(f"=== Dispatching to {repo} ({branch}) ===")
-            for agent in args.agents:
-                prompt_file = tmp_path / f"{agent}.txt"
-                if not prompt_file.exists():
-                    print(f"Skipping {agent}: prompt not found", file=sys.stderr)
-                    continue
-
-                title = f"[{repo_slug}] {agent.replace('-', ' ').title()} Agent"
-                cmd = [
-                    sys.executable,
-                    str(JULES_CLI),
-                    "create-session",
-                    "--source",
-                    repo,
-                    "--branch",
-                    branch,
-                    "--title",
-                    title,
-                ]
-                if args.require_approval:
-                    cmd.append("--require-approval")
-
-                print(f"Launching {agent} on {repo}...")
-                with open(prompt_file, "r") as pf:
-                    proc = subprocess.run(cmd, stdin=pf, capture_output=True, text=True)
-
-                if proc.returncode != 0:
-                    print(f"Error launching {agent} on {repo}: {proc.stderr.strip()}", file=sys.stderr)
-                else:
-                    lines = proc.stdout.strip().splitlines()
-                    first_line = lines[0] if lines else "Session dispatched"
-                    print(f"✓ {first_line}")
+    dispatch_agents(
+        target_repos=target_repos,
+        agents=args.agents,
+        require_approval=args.require_approval,
+    )
 
 
 if __name__ == "__main__":
