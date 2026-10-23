@@ -144,6 +144,48 @@ class TestTranscript(unittest.TestCase):
         result = format_with_template(data)
         self.assertEqual(result, "Rendered Content")
 
+    def test_format_with_template_real_template_rendering(self):
+        data = {
+            "title": "Sample Video Title",
+            "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "uploader": "Test Channel",
+            "upload_date": "20231001",
+            "duration_string": "03:45",
+            "description": "This is a test description.",
+            "transcript": [
+                {"start": 0.0, "start_display": "00:00", "text": "Hello world"},
+                {"start": 12.0, "start_display": "00:12", "text": "Welcome to the test"},
+            ],
+        }
+        result = format_with_template(data)
+        expected = (
+            "# Sample Video Title\n\n"
+            "**URL:** https://www.youtube.com/watch?v=dQw4w9WgXcQ\n"
+            "**Channel:** Test Channel\n"
+            "**Published:** 20231001\n"
+            "**Duration:** 03:45\n\n"
+            "## Description\n\n"
+            "This is a test description.\n\n"
+            "## Transcript\n\n"
+            "[00:00] Hello world\n"
+            "[00:12] Welcome to the test"
+        )
+        self.assertEqual(result, expected)
+
+    def test_format_with_template_real_template_empty_transcript(self):
+        data = {
+            "title": "No Transcript Video",
+            "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "uploader": "Test Channel",
+            "upload_date": "20231001",
+            "duration_string": "01:00",
+            "description": "",
+            "transcript": [],
+        }
+        result = format_with_template(data)
+        self.assertIn("# No Transcript Video", result)
+        self.assertIn("## Transcript", result)
+
     @patch("sys.stdout", new_callable=StringIO)
     @patch("transcript.get_transcript_data")
     def test_main_raw_flag(self, mock_get_data, mock_stdout):
