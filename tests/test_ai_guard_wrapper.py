@@ -167,6 +167,66 @@ class TestAIGuardWrapper(unittest.TestCase):
 
     @patch('ai_guard_wrapper.run_guard')
     @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_command_route_no_command(self, mock_stdout, mock_run_guard):
+        payload = {"toolCall": {"name": "run_command", "args": {}}}
+        tool_args = payload["toolCall"]["args"]
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_command_route(payload, tool_args)
+
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {"decision": "allow"})
+        self.mock_exit.assert_called_with(0)
+        mock_run_guard.assert_not_called()
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_command_route_none_tool_args(self, mock_stdout, mock_run_guard):
+        payload = {"toolCall": {"name": "run_command"}}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_command_route(payload, None)
+
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {"decision": "allow"})
+        self.mock_exit.assert_called_with(0)
+        mock_run_guard.assert_not_called()
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_handle_command_route_file_deny(self, mock_stderr, mock_stdout, mock_run_guard):
+        mock_run_guard.return_value = (2, {"decision": "deny", "reason": "Restricted file in command"})
+
+        payload = {"toolCall": {"name": "run_command", "args": {"cmd": "cat /etc/shadow"}}}
+        tool_args = payload["toolCall"]["args"]
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_command_route(payload, tool_args)
+
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {"decision": "deny", "reason": "Restricted file in command"})
+        self.mock_exit.assert_called_with(2)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_command_route_replace(self, mock_stdout, mock_run_guard):
+        mock_run_guard.side_effect = [
+            (0, {"decision": "allow"}),
+            (0, {"decision": "replace", "modified": "echo sanitized"})
+        ]
+
+        payload = {"toolCall": {"name": "run_command", "args": {"cmd": "echo secret"}}}
+        tool_args = payload["toolCall"]["args"]
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_command_route(payload, tool_args)
+
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {
+            "decision": "allow",
+            "overwrite": {"CommandLine": "echo sanitized"}
+        })
+        self.mock_exit.assert_called_with(0)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
     def test_handle_file_route_allow(self, mock_stdout, mock_run_guard):
         mock_run_guard.return_value = (0, {"decision": "allow"})
 
