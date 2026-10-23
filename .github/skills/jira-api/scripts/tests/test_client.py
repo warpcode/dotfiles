@@ -97,6 +97,25 @@ class TestGetStatusMap(unittest.TestCase):
             "Review": None
         })
 
+    def test_status_map_caching(self):
+        client = DummyClient(responses={
+            "rest/api/3/project/CACHE_PROJ/statuses": [
+                {
+                    "name": "Task",
+                    "statuses": [
+                        {"name": "In Progress", "statusCategory": {"name": "In Progress"}}
+                    ]
+                }
+            ]
+        })
+
+        mapping1 = get_status_map(client, "CACHE_PROJ")
+        mapping2 = get_status_map(client, "CACHE_PROJ")
+
+        self.assertEqual(mapping1, {"In Progress": "In Progress"})
+        self.assertEqual(mapping2, {"In Progress": "In Progress"})
+        self.assertEqual(len(client.calls), 1)
+
 class TestJiraClient(unittest.TestCase):
     def test_rejects_absolute_endpoint_before_sending_credentials(self):
         client = JiraClient("https://jira.example", "user", "token")
