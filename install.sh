@@ -303,7 +303,8 @@ main() {
       mkdir -p "${HOME}/.local/bin"
       local chezmoi_install_script
       chezmoi_install_script="$(mktemp -t chezmoi-bootstrap-XXXXXX.sh)"
-      local expected_chezmoi_sha256="${CHEZMOI_INSTALL_SHA256:-d5558cd419c8d46bdc958064cb97f963d1ea793866414c025906ec15033512ed}"
+      local default_chezmoi_hashes="d92ac6044ecfcd716c0c1d0512693e7d91c3002591cd6c871bb94ef227919982 d5558cd419c8d46bdc958064cb97f963d1ea793866414c025906ec15033512ed"
+      local expected_chezmoi_sha256="${CHEZMOI_INSTALL_SHA256:-${default_chezmoi_hashes}}"
       if curl -fsSL https://chezmoi.io/get > "${chezmoi_install_script}"; then
         if verify_checksum "${chezmoi_install_script}" ${expected_chezmoi_sha256}; then
           sh "${chezmoi_install_script}" -b "${HOME}/.local/bin"
