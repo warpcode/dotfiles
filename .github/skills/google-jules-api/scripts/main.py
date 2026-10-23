@@ -19,7 +19,7 @@ if str(scripts_dir) not in sys.path:
     sys.path.insert(0, str(scripts_dir))
 
 from jules.auth import resolve_jules_api_key
-from jules.client import AuditSessionsOptions, JulesClient
+from jules.client import AuditSessionsOptions, CreateSessionConfig, JulesClient
 from jules.formatters import (
     format_activities,
     format_activity,
@@ -127,7 +127,7 @@ def cmd_create_session(client: JulesClient, args: argparse.Namespace) -> None:
 
     automation_mode = getattr(args, "automation_mode", "AUTO_CREATE_PR")
 
-    data = client.create_session(
+    config = CreateSessionConfig(
         prompt=prompt,
         source=args.source,
         starting_branch=args.branch,
@@ -135,6 +135,8 @@ def cmd_create_session(client: JulesClient, args: argparse.Namespace) -> None:
         require_plan_approval=args.require_approval,
         automation_mode=automation_mode,
     )
+
+    data = client.create_session(config=config)
     print(format_session(data))
 
 

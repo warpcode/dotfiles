@@ -8,6 +8,19 @@ from urllib.request import Request, urlopen
 
 from .utils import die, info, parse_iso_datetime
 
+
+@dataclass
+class CreateSessionConfig:
+    """Configuration options for creating a Jules session."""
+
+    prompt: str
+    source: str | None = None
+    starting_branch: str = "main"
+    title: str | None = None
+    require_plan_approval: bool | None = None
+    env_vars: dict[str, str] | None = None
+    automation_mode: str | None = "AUTO_CREATE_PR"
+
 DEFAULT_BASE_URL = "https://jules.googleapis.com/v1alpha"
 
 
@@ -158,39 +171,47 @@ class JulesClient:
 
     def create_session(
         self,
-        prompt: str,
-        source: str | None = None,
-        starting_branch: str = "main",
-        title: str | None = None,
-        require_plan_approval: bool | None = None,
-        env_vars: dict[str, str] | None = None,
-        automation_mode: str | None = "AUTO_CREATE_PR",
+        config: CreateSessionConfig | str | None = None,
+        **kwargs: Any,
     ) -> dict[str, Any]:
         """Create and initiate a new Jules coding task session."""
+        if isinstance(config, CreateSessionConfig):
+            if kwargs:
+                raise TypeError(f"create_session() got unexpected keyword argument(s) when config is provided: {', '.join(kwargs.keys())}")
+            cfg = config
+        else:
+            prompt = config or kwargs.pop("prompt", None)
+            if not prompt:
+                raise TypeError("create_session() missing required argument: 'prompt'")
+            cfg = CreateSessionConfig(
+                prompt=prompt,
+                **kwargs,
+            )
+
         payload: dict[str, Any] = {
-            "prompt": prompt,
+            "prompt": cfg.prompt,
         }
 
-        if automation_mode:
-            payload["automationMode"] = automation_mode
+        if cfg.automation_mode:
+            payload["automationMode"] = cfg.automation_mode
 
-        if source:
-            clean_source = source.strip()
+        if cfg.source:
+            clean_source = cfg.source.strip()
             if not clean_source.startswith("sources/"):
                 clean_source = f"sources/{clean_source}"
             payload["sourceContext"] = {
                 "source": clean_source,
                 "githubRepoContext": {
-                    "startingBranch": starting_branch,
+                    "startingBranch": cfg.starting_branch,
                 },
             }
 
-        if title:
-            payload["title"] = title
-        if require_plan_approval is not None:
-            payload["requirePlanApproval"] = require_plan_approval
-        if env_vars:
-            payload["environmentVariables"] = env_vars
+        if cfg.title:
+            payload["title"] = cfg.title
+        if cfg.require_plan_approval is not None:
+            payload["requirePlanApproval"] = cfg.require_plan_approval
+        if cfg.env_vars:
+            payload["environmentVariables"] = cfg.env_vars
 
         return self.call("POST", "sessions", payload=payload)
 

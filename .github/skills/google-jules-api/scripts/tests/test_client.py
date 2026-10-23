@@ -12,7 +12,7 @@ if str(scripts_dir) not in sys.path:
     sys.path.insert(0, str(scripts_dir))
 
 from jules.auth import resolve_jules_api_key
-from jules.client import AuditSessionsOptions, JulesClient
+from jules.client import AuditSessionsOptions, CreateSessionConfig, JulesClient
 from jules.formatters import (
     format_activities,
     format_activity,
@@ -139,6 +139,45 @@ class TestJulesClient(unittest.TestCase):
         req = mock_urlopen.call_args[0][0]
         payload = json.loads(req.data.decode("utf-8"))
         self.assertEqual(payload.get("automationMode"), "AUTO_CREATE_PR")
+
+    @patch("jules.client.urlopen")
+    def test_create_session_with_config(self, mock_urlopen):
+        mock_response = MagicMock()
+        mock_response.getcode.return_value = 200
+        mock_response.read.return_value = json.dumps({
+            "id": "7777777777777777777",
+            "title": "Config Task",
+            "state": "QUEUED",
+        }).encode("utf-8")
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        config = CreateSessionConfig(
+            prompt="Run test suite",
+            source="github/warpcode/cloakpkg",
+            title="Config Task",
+        )
+        data = self.client.create_session(config=config)
+        self.assertEqual(data["id"], "7777777777777777777")
+
+        mock_urlopen.assert_called_once()
+        req = mock_urlopen.call_args[0][0]
+        payload = json.loads(req.data.decode("utf-8"))
+        self.assertEqual(payload.get("prompt"), "Run test suite")
+        self.assertEqual(payload.get("title"), "Config Task")
+        self.assertEqual(payload.get("sourceContext", {}).get("source"), "sources/github/warpcode/cloakpkg")
+
+    def test_create_session_invalid_kwargs(self):
+        with self.assertRaises(TypeError):
+            self.client.create_session(prompt="Test", invalid_param=123)
+
+    def test_create_session_missing_prompt(self):
+        with self.assertRaises(TypeError):
+            self.client.create_session()
+
+    def test_create_session_config_with_extra_kwargs(self):
+        config = CreateSessionConfig(prompt="Test")
+        with self.assertRaises(TypeError):
+            self.client.create_session(config=config, invalid_param=123)
 
     @patch("jules.client.urlopen")
     def test_create_session_custom_automation_mode(self, mock_urlopen):
