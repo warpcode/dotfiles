@@ -130,9 +130,52 @@ class TestTranscript(unittest.TestCase):
         result = format_with_template(data)
         self.assertEqual(result, json.dumps(data, indent=2))
 
+    def test_format_with_template_real_template_rendering(self):
+        data = {
+            "title": "Awesome Video Title",
+            "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "uploader": "Test Channel",
+            "upload_date": "20231025",
+            "duration_string": "03:45",
+            "description": "This is a test description for the video.",
+            "transcript": [
+                {"start": 0.0, "start_display": "00:00", "text": "Hello world"},
+                {"start": 5.5, "start_display": "00:05", "text": "Welcome to the test"},
+            ],
+        }
+        expected_output = (
+            "# Awesome Video Title\n\n"
+            "**URL:** https://www.youtube.com/watch?v=dQw4w9WgXcQ\n"
+            "**Channel:** Test Channel\n"
+            "**Published:** 20231025\n"
+            "**Duration:** 03:45\n\n"
+            "## Description\n\n"
+            "This is a test description for the video.\n\n"
+            "## Transcript\n\n"
+            "[00:00] Hello world\n"
+            "[00:05] Welcome to the test"
+        )
+        result = format_with_template(data)
+        self.assertEqual(result, expected_output)
+
+    def test_format_with_template_empty_transcript(self):
+        data = {
+            "title": "No Transcript Video",
+            "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "uploader": "Test Channel",
+            "upload_date": "20231025",
+            "duration_string": "01:00",
+            "description": "No transcript available.",
+            "transcript": [],
+        }
+        result = format_with_template(data)
+        self.assertIn("# No Transcript Video", result)
+        self.assertIn("## Transcript", result)
+        self.assertTrue(result.endswith("## Transcript"))
+
     @patch("transcript.Environment")
     @patch("os.path.exists")
-    def test_format_with_template_success(self, mock_exists, mock_env_cls):
+    def test_format_with_template_mocked_env(self, mock_exists, mock_env_cls):
         mock_exists.return_value = True
         mock_env = MagicMock()
         mock_template = MagicMock()
