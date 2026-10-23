@@ -197,12 +197,22 @@ else
     # master -- do not use this list to hide a new failure.
     skip_root_suites="test_ai_guard test_software_hooks"
 
-    run_python_tests() {
+    exec_skill_unittest() {
+        local scripts_dir="$1"
+        shift
+        if [ -f "$scripts_dir/pyproject.toml" ]; then
+            (cd "$scripts_dir" && PYTHONPATH=. uv run --locked python3 -m unittest "$@")
+        else
+            (cd "$scripts_dir" && PYTHONPATH=. python3 -m unittest "$@")
+        fi
+    }
+
+    run_skill_tests() {
         local failed=0
+        local scripts_dir skill test_file
 
         for scripts_dir in .github/skills/*/scripts; do
             [ -d "$scripts_dir" ] || continue
-            local skill
             skill="$(basename "$(dirname "$scripts_dir")")"
 
             # Suites use both layouts. Discovery must run from inside scripts/ --
@@ -210,33 +220,27 @@ else
             # with "Start directory is not importable".
             if [ -d "$scripts_dir/tests" ]; then
                 printf -- '--- %s tests/\n' "$skill"
-                if [ -f "$scripts_dir/pyproject.toml" ]; then
-                    (cd "$scripts_dir" && PYTHONPATH=. uv run --locked python -m unittest discover -s tests) ||
-                        failed=1
-                else
-                    (cd "$scripts_dir" && PYTHONPATH=. python3 -m unittest discover -s tests) ||
-                        failed=1
-                fi
+                exec_skill_unittest "$scripts_dir" discover -s tests || failed=1
             fi
 
             for test_file in "$scripts_dir"/test_*.py; do
                 [ -e "$test_file" ] || continue
                 printf -- '--- %s %s\n' "$skill" "$(basename "$test_file")"
-                if [ -f "$scripts_dir/pyproject.toml" ]; then
-                    (cd "$scripts_dir" && PYTHONPATH=. uv run --locked python3 -m unittest "$(basename "$test_file" .py)") ||
-                        failed=1
-                else
-                    (cd "$scripts_dir" && PYTHONPATH=. python3 -m unittest "$(basename "$test_file" .py)") ||
-                        failed=1
-                fi
+                exec_skill_unittest "$scripts_dir" "$(basename "$test_file" .py)" || failed=1
             done
         done
+
+        return $failed
+    }
+
+    run_root_python_tests() {
+        local failed=0
+        local test_file module
 
         # Repo-root tests/ is a flat set of modules with no __init__.py, so it
         # is invoked as tests.<module>.
         for test_file in tests/test_*.py; do
             [ -e "$test_file" ] || continue
-            local module
             module="$(basename "$test_file" .py)"
             case " $skip_root_suites " in
                 *" $module "*)
@@ -248,6 +252,13 @@ else
             PYTHONPATH=. python3 -m unittest "tests.$module" || failed=1
         done
 
+        return $failed
+    }
+
+    run_python_tests() {
+        local failed=0
+        run_skill_tests || failed=1
+        run_root_python_tests || failed=1
         return $failed
     }
 
