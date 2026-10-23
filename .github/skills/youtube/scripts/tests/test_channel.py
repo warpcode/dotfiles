@@ -106,6 +106,28 @@ class TestChannelScript(unittest.TestCase):
         self.assertEqual(res["title"], "Channel Name")
         self.assertEqual(res["entries"][0]["id"], "vA")
 
+    @patch("yt_dlp.YoutubeDL")
+    def test_list_videos_error_raw_false(self, mock_youtube_dl):
+        mock_ydl_instance = MagicMock()
+        mock_youtube_dl.return_value.__enter__.return_value = mock_ydl_instance
+        mock_ydl_instance.extract_info.side_effect = Exception("Download error")
+
+        url = "https://www.youtube.com/c/testchannel"
+        res = channel.list_videos(url, count=5, raw=False)
+
+        self.assertEqual(res, [{"error": "Download error"}])
+
+    @patch("yt_dlp.YoutubeDL")
+    def test_list_videos_error_raw_true(self, mock_youtube_dl):
+        mock_ydl_instance = MagicMock()
+        mock_youtube_dl.return_value.__enter__.return_value = mock_ydl_instance
+        mock_ydl_instance.extract_info.side_effect = Exception("Download error")
+
+        url = "https://www.youtube.com/c/testchannel"
+        res = channel.list_videos(url, count=5, raw=True)
+
+        self.assertEqual(res, "Download error")
+
     @patch("channel.list_videos")
     def test_main_default(self, mock_list_videos):
         mock_list_videos.return_value = {

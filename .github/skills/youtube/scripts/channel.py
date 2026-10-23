@@ -52,9 +52,14 @@ def _format_video_data(info, url):
 def list_videos(url, count=None, raw=False):
     ydl_opts = _get_ydl_opts(count, raw)
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=False)
-        return _format_video_data(info, url)
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            return _format_video_data(info, url)
+    except Exception as e:
+        if raw:
+            return str(e)
+        return [{"error": str(e)}]
 
 
 def main():
