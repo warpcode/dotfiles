@@ -127,5 +127,62 @@ class TestGitDiffTriage(unittest.TestCase):
         )
         self.assertEqual(header_only(chunk), chunk)
 
+    def test_header_only_all_prefixes(self):
+        chunk = (
+            "diff --git a/file b/file\n"
+            "index 123..456 100644\n"
+            "deleted file mode 100644\n"
+            "new file mode 100644\n"
+            "old mode 100644\n"
+            "new mode 100755\n"
+            "rename from file1\n"
+            "rename to file2\n"
+            "copy from file1\n"
+            "copy to file2\n"
+            "similarity index 100%\n"
+            "dissimilarity index 50%\n"
+            "--- a/file\n"
+            "+++ b/file\n"
+            "@@ -1 +1 @@\n"
+            "Binary files a/bin and b/bin differ\n"
+        )
+        self.assertEqual(header_only(chunk), chunk)
+
+    def test_header_only_body_stripping(self):
+        chunk = (
+            "diff --git a/file b/file\n"
+            "--- a/file\n"
+            "+++ b/file\n"
+            "@@ -1,3 +1,3 @@\n"
+            " unchanged context line\n"
+            "-removed line\n"
+            "+added line\n"
+            "another context line\n"
+        )
+        expected = (
+            "diff --git a/file b/file\n"
+            "--- a/file\n"
+            "+++ b/file\n"
+            "@@ -1,3 +1,3 @@\n"
+        )
+        self.assertEqual(header_only(chunk), expected)
+
+    def test_header_only_edge_cases(self):
+        # Empty input string
+        self.assertEqual(header_only(""), "")
+
+        # Chunk without header lines
+        no_headers = " unchanged line\n-deleted line\n+inserted line\n"
+        self.assertEqual(header_only(no_headers), "")
+
+        # Chunk with only header lines
+        only_headers = (
+            "diff --git a/file b/file\n"
+            "index 123..456 100644\n"
+            "--- a/file\n"
+            "+++ b/file\n"
+        )
+        self.assertEqual(header_only(only_headers), only_headers)
+
 if __name__ == "__main__":
     unittest.main()
