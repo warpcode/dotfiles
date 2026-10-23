@@ -90,6 +90,50 @@ class TestGitDiffTriage(unittest.TestCase):
         self.assertEqual(added, 1)
         self.assertEqual(removed, 1)
 
+    def test_count_body_lines_empty(self):
+        added, removed = count_body_lines("")
+        self.assertEqual(added, 0)
+        self.assertEqual(removed, 0)
+
+    def test_count_body_lines_no_changes(self):
+        chunk = (
+            "diff --git a/f b/f\n"
+            "index 1234567..89abcdef 100644\n"
+            "--- a/f\n"
+            "+++ b/f\n"
+            "@@ -1,2 +1,2 @@\n"
+            " line1\n"
+            " line2\n"
+        )
+        added, removed = count_body_lines(chunk)
+        self.assertEqual(added, 0)
+        self.assertEqual(removed, 0)
+
+    def test_count_body_lines_additions_only(self):
+        chunk = (
+            "--- /dev/null\n"
+            "+++ b/f\n"
+            "@@ -0,0 +1,3 @@\n"
+            "+line 1\n"
+            "+line 2\n"
+            "+line 3\n"
+        )
+        added, removed = count_body_lines(chunk)
+        self.assertEqual(added, 3)
+        self.assertEqual(removed, 0)
+
+    def test_count_body_lines_deletions_only(self):
+        chunk = (
+            "--- a/f\n"
+            "+++ /dev/null\n"
+            "@@ -1,2 +0,0 @@\n"
+            "-line 1\n"
+            "-line 2\n"
+        )
+        added, removed = count_body_lines(chunk)
+        self.assertEqual(added, 0)
+        self.assertEqual(removed, 2)
+
     def test_header_only(self):
         chunk = (
             "diff --git a/file b/file\n"
