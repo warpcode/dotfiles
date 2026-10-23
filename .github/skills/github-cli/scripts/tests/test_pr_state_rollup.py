@@ -55,6 +55,87 @@ class TestPRStateRollup(unittest.TestCase):
         self.assertEqual(failing, "")
         self.assertEqual(pending, "test")
 
+    def test_rollup_status_missing_and_none(self):
+        # Missing key
+        self.assertEqual(prs.rollup_status({}), (prs.NONE, "", ""))
+        # None value
+        self.assertEqual(prs.rollup_status({"statusCheckRollup": None}), (prs.NONE, "", ""))
+
+    def test_rollup_status_multiple_failing_and_pending(self):
+        pr = {
+            "statusCheckRollup": [
+                {"conclusion": "FAILURE", "name": "lint"},
+                {"conclusion": "ERROR", "name": "test"},
+                {"status": "IN_PROGRESS", "name": "deploy"},
+                {"status": "QUEUED", "name": "docs"},
+            ]
+        }
+        overall, failing, pending = prs.rollup_status(pr)
+        self.assertEqual(overall, prs.FAIL)
+        self.assertEqual(failing, "lint,test")
+        self.assertEqual(pending, "")
+
+    def test_rollup_status_multiple_pending_only(self):
+        pr = {
+            "statusCheckRollup": [
+                {"status": "IN_PROGRESS", "name": "deploy"},
+                {"status": "QUEUED", "name": "docs"},
+            ]
+        }
+        overall, failing, pending = prs.rollup_status(pr)
+        self.assertEqual(overall, prs.PENDING)
+        self.assertEqual(failing, "")
+        self.assertEqual(pending, "deploy,docs")
+
+    def test_rollup_status_name_fallbacks(self):
+        pr = {
+            "statusCheckRollup": [
+                {"conclusion": "FAILURE", "name": "explicit_name"},
+                {"conclusion": "FAILURE", "context": "context_name"},
+                {"conclusion": "FAILURE"},
+            ]
+        }
+        overall, failing, pending = prs.rollup_status(pr)
+        self.assertEqual(overall, prs.FAIL)
+        self.assertEqual(failing, "explicit_name,context_name,?")
+
+    def test_rollup_status_state_fallbacks(self):
+        pr = {
+            "statusCheckRollup": [
+                {"conclusion": "FAILURE", "state": "SUCCESS", "status": "PENDING", "name": "c1"},
+                {"state": "FAILURE", "status": "SUCCESS", "name": "c2"},
+                {"status": "FAILURE", "name": "c3"},
+            ]
+        }
+        overall, failing, pending = prs.rollup_status(pr)
+        self.assertEqual(overall, prs.FAIL)
+        self.assertEqual(failing, "c1,c2,c3")
+
+    def test_rollup_status_all_fail_and_pending_states(self):
+        for state in prs.FAIL_STATES:
+            pr = {"statusCheckRollup": [{"state": state, "name": "check"}]}
+            overall, failing, pending = prs.rollup_status(pr)
+            self.assertEqual(overall, prs.FAIL, f"Failed for fail state: {state}")
+            self.assertEqual(failing, "check")
+
+        for state in prs.PENDING_STATES:
+            pr = {"statusCheckRollup": [{"state": state, "name": "check"}]}
+            overall, failing, pending = prs.rollup_status(pr)
+            self.assertEqual(overall, prs.PENDING, f"Failed for pending state: {state}")
+            self.assertEqual(pending, "check")
+
+    def test_rollup_status_unknown_state(self):
+        pr = {
+            "statusCheckRollup": [
+                {"conclusion": "SUCCESS", "name": "build"},
+                {"state": "UNKNOWN_CUSTOM_STATE", "name": "custom_check"},
+            ]
+        }
+        overall, failing, pending = prs.rollup_status(pr)
+        self.assertEqual(overall, prs.OK)
+        self.assertEqual(failing, "")
+        self.assertEqual(pending, "")
+
     def test_attention_reasons(self):
         pr = {
             "number": 101,
