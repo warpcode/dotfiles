@@ -98,8 +98,16 @@ setup_macos() {
   info "Setting up macOS..."
   if ! command -v brew >/dev/null; then
     info "Installing Homebrew..."
-    /bin/bash -c "$(curl -fsSL \
-      https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    local brew_install_script
+    brew_install_script="$(mktemp -t homebrew-bootstrap-XXXXXX.sh)"
+    if curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh > "${brew_install_script}"; then
+      /bin/bash "${brew_install_script}"
+      rm -f "${brew_install_script}"
+    else
+      err "Failed to download Homebrew installer"
+      rm -f "${brew_install_script}"
+      exit 1
+    fi
   fi
   brew update || true
 }
@@ -281,8 +289,14 @@ main() {
       brew install -y mise || true
     else
       mkdir -p "${HOME}/.local/bin"
-      if ! curl -fsSL https://mise.run | sh; then
-        err "Failed to install mise"
+      local mise_install_script
+      mise_install_script="$(mktemp -t mise-bootstrap-XXXXXX.sh)"
+      if curl -fsSL https://mise.run > "${mise_install_script}"; then
+        sh "${mise_install_script}"
+        rm -f "${mise_install_script}"
+      else
+        err "Failed to download mise installer"
+        rm -f "${mise_install_script}"
         exit 1
       fi
     fi
