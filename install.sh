@@ -51,6 +51,50 @@ run_as_root() {
   fi
 }
 
+#######################################
+# Verifies the SHA-256 checksum of a file against expected hash(es).
+# Arguments:
+#   $1 - File path.
+#   $2.. - Expected SHA-256 hash(es).
+# Returns:
+#   0 if file matches any expected hash, 1 otherwise.
+#######################################
+verify_checksum() {
+  local filepath="$1"
+  shift
+  if [[ ! -f "${filepath}" ]]; then
+    err "Checksum verification failed: file does not exist: ${filepath}"
+    return 1
+  fi
+
+  local actual_hash=""
+  if command -v sha256sum >/dev/null 2>&1; then
+    actual_hash="$(sha256sum "${filepath}" | awk '{print $1}')"
+  elif command -v shasum >/dev/null 2>&1; then
+    actual_hash="$(shasum -a 256 "${filepath}" | awk '{print $1}')"
+  elif command -v openssl >/dev/null 2>&1; then
+    actual_hash="$(openssl dgst -sha256 "${filepath}" | awk '{print $NF}')"
+  else
+    err "Checksum verification failed: no SHA-256 tool available (sha256sum, shasum, openssl)"
+    return 1
+  fi
+
+  actual_hash="$(echo "${actual_hash}" | tr '[:upper:]' '[:lower:]')"
+
+  local expected_hash
+  for expected_hash in "$@"; do
+    expected_hash="$(echo "${expected_hash}" | tr '[:upper:]' '[:lower:]')"
+    if [[ "${actual_hash}" == "${expected_hash}" ]]; then
+      return 0
+    fi
+  done
+
+  err "Integrity check failed for ${filepath}"
+  err "Actual SHA-256:   ${actual_hash}"
+  err "Expected SHA-256: $*"
+  return 1
+}
+
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -259,9 +303,16 @@ main() {
       mkdir -p "${HOME}/.local/bin"
       local chezmoi_install_script
       chezmoi_install_script="$(mktemp -t chezmoi-bootstrap-XXXXXX.sh)"
+      local expected_chezmoi_sha256="${CHEZMOI_INSTALL_SHA256:-d5558cd419c8d46bdc958064cb97f963d1ea793866414c025906ec15033512ed}"
       if curl -fsSL https://chezmoi.io/get > "${chezmoi_install_script}"; then
-        sh "${chezmoi_install_script}" -b "${HOME}/.local/bin"
-        rm -f "${chezmoi_install_script}"
+        if verify_checksum "${chezmoi_install_script}" ${expected_chezmoi_sha256}; then
+          sh "${chezmoi_install_script}" -b "${HOME}/.local/bin"
+          rm -f "${chezmoi_install_script}"
+        else
+          err "Failed integrity check for chezmoi installer"
+          rm -f "${chezmoi_install_script}"
+          exit 1
+        fi
       else
         err "Failed to download chezmoi installer"
         rm -f "${chezmoi_install_script}"
@@ -332,4 +383,6 @@ main() {
   success "Bootstrap complete! Please restart your terminal or run 'exec zsh'."
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi
