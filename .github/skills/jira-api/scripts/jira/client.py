@@ -62,6 +62,17 @@ class JiraClient:
 
 def get_status_map(client, project_key=None):
     """Fetch all statuses and their categories to build a mapping."""
+    cache = getattr(client, "_status_map_cache", None)
+    if not isinstance(cache, dict):
+        cache = {}
+        try:
+            client._status_map_cache = cache
+        except AttributeError:
+            pass
+
+    if project_key in cache:
+        return cache[project_key].copy()
+
     if project_key:
         endpoint = f"rest/api/{JIRA_API_VERSION}/project/{project_key}/statuses"
         try:
@@ -77,7 +88,8 @@ def get_status_map(client, project_key=None):
                     if name and name not in status_map:
                         cat = status.get("statusCategory")
                         status_map[name] = cat.get("name") if isinstance(cat, dict) else None
-            return status_map
+            cache[project_key] = status_map
+            return status_map.copy()
         except:
             pass
 
@@ -91,6 +103,7 @@ def get_status_map(client, project_key=None):
             if name:
                 cat = item.get("statusCategory")
                 status_map[name] = cat.get("name") if isinstance(cat, dict) else None
-        return status_map
+        cache[project_key] = status_map
+        return status_map.copy()
     except:
         return {}
