@@ -162,6 +162,11 @@ commit_range: v1.0.0..v1.1.0
             self.assertEqual(len(entries), 2)
             self.assertEqual(len(targets_ver), 1)
             self.assertEqual(targets_ver[0]["version"], "1.1.0")
+
+            with patch("sys.stderr", new_callable=io.StringIO):
+                with self.assertRaises(SystemExit) as cm:
+                    load_changelog_entries(tmp_path, target_version="9.9.9")
+            self.assertEqual(cm.exception.code, 1)
         finally:
             if tmp_path.exists():
                 tmp_path.unlink()
@@ -196,7 +201,18 @@ commit_range: v1.0.0..v1.1.0
         }]
         has_failures_fail = print_terminal_summary("CHANGELOG.md", results_fail, [])
         self.assertTrue(has_failures_fail)
-        self.assertIn("Version [1.0.0]: PASS", mock_stdout.getvalue())
+
+        continuity_findings = [{
+            "from_version": "1.2.0",
+            "to_version": "1.1.0",
+            "gap": "base_commit mismatch",
+        }]
+        has_failures_gap = print_terminal_summary("CHANGELOG.md", results_pass, continuity_findings)
+        self.assertTrue(has_failures_gap)
+
+        out = mock_stdout.getvalue()
+        self.assertIn("Version [1.0.0]: PASS", out)
+        self.assertIn("Range Continuity Gaps:", out)
 
 
 if __name__ == "__main__":
