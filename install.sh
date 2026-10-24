@@ -259,8 +259,12 @@ main() {
       mkdir -p "${HOME}/.local/bin"
       local chezmoi_install_script
       chezmoi_install_script="$(mktemp -t chezmoi-bootstrap-XXXXXX.sh)"
-      if curl -fsSL https://chezmoi.io/get > "${chezmoi_install_script}"; then
-        sh "${chezmoi_install_script}" -b "${HOME}/.local/bin"
+      if curl -fsSL https://chezmoi.io/get > "${chezmoi_install_script}" && [[ -s "${chezmoi_install_script}" ]]; then
+        if ! sh "${chezmoi_install_script}" -b "${HOME}/.local/bin"; then
+          err "Failed to execute chezmoi installer"
+          rm -f "${chezmoi_install_script}"
+          exit 1
+        fi
         rm -f "${chezmoi_install_script}"
       else
         err "Failed to download chezmoi installer"
@@ -281,8 +285,18 @@ main() {
       brew install -y mise || true
     else
       mkdir -p "${HOME}/.local/bin"
-      if ! curl -fsSL https://mise.run | sh; then
-        err "Failed to install mise"
+      local mise_install_script
+      mise_install_script="$(mktemp -t mise-bootstrap-XXXXXX.sh)"
+      if curl -fsSL https://mise.run > "${mise_install_script}" && [[ -s "${mise_install_script}" ]]; then
+        if ! sh "${mise_install_script}"; then
+          err "Failed to execute mise installer"
+          rm -f "${mise_install_script}"
+          exit 1
+        fi
+        rm -f "${mise_install_script}"
+      else
+        err "Failed to download mise installer"
+        rm -f "${mise_install_script}"
         exit 1
       fi
     fi
