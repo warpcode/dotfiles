@@ -96,6 +96,64 @@ class TestAIGuardWrapper(unittest.TestCase):
         self.assertEqual(json.loads(mock_stdout.getvalue()), {"decision": "allow"})
         self.mock_exit.assert_called_with(0)
 
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_file_route_no_targets(self, mock_stdout, mock_run_guard):
+        payload = {"toolCall": {"name": "read_file", "args": {}}}
+        tool_args = payload["toolCall"]["args"]
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_file_route(payload, "read_file", tool_args)
+
+        mock_run_guard.assert_not_called()
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {"decision": "allow"})
+        self.mock_exit.assert_called_with(0)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_file_route_command_tool(self, mock_stdout, mock_run_guard):
+        payload = {"toolCall": {"name": "bash", "args": {"cmd": "ls"}}}
+        tool_args = payload["toolCall"]["args"]
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_file_route(payload, "bash", tool_args)
+
+        mock_run_guard.assert_not_called()
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {"decision": "allow"})
+        self.mock_exit.assert_called_with(0)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_handle_file_route_deny(self, mock_stderr, mock_stdout, mock_run_guard):
+        mock_run_guard.return_value = (2, {"decision": "deny", "reason": "Restricted file access"})
+
+        payload = {"toolCall": {"name": "read_file", "args": {"filePath": "/etc/passwd"}}}
+        tool_args = payload["toolCall"]["args"]
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_file_route(payload, "read_file", tool_args)
+
+        mock_run_guard.assert_called_once_with("file", args=["/etc/passwd"], stdin_str=json.dumps(payload))
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {"decision": "deny", "reason": "Restricted file access"})
+        self.assertIn("SECURITY GUARD: Restricted file access", mock_stderr.getvalue())
+        self.mock_exit.assert_called_with(2)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_file_route_replace(self, mock_stdout, mock_run_guard):
+        mock_run_guard.return_value = (0, {"decision": "replace", "replacement": "/safe/path.txt"})
+
+        payload = {"toolCall": {"name": "read_file", "args": {"filePath": "/sensitive/path.txt"}}}
+        tool_args = payload["toolCall"]["args"]
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_file_route(payload, "read_file", tool_args)
+
+        mock_run_guard.assert_called_once_with("file", args=["/sensitive/path.txt"], stdin_str=json.dumps(payload))
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {"decision": "allow", "overwrite": {"filePath": "/safe/path.txt"}})
+        self.mock_exit.assert_called_with(0)
+
     @patch('ai_guard_wrapper.handle_prompt_route')
     def test_main_dispatch_prompt_route(self, mock_handle_prompt):
         with patch('sys.argv', ['ai-guard-wrapper.py']):
