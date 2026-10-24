@@ -363,6 +363,69 @@ def generate_markdown_report(
     return "\n".join(lines)
 
 
+def load_changelog_entries(
+    cl_path: Path, target_version: Optional[str] = None
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """Load, parse, and filter changelog entries from path."""
+    if not cl_path.exists():
+        print(f"Error: Changelog file not found: {cl_path}", file=sys.stderr)
+        sys.exit(1)
+
+    content = cl_path.read_text(encoding="utf-8")
+    entries = parse_changelog(content)
+
+    if not entries:
+        print(f"Error: No valid release entries found in {cl_path}", file=sys.stderr)
+        sys.exit(1)
+
+    target_entries = entries
+    if target_version:
+        target_entries = [e for e in entries if e["version"] == target_version]
+        if not target_entries:
+            print(f"Error: Version '{target_version}' not found in changelog.", file=sys.stderr)
+            sys.exit(1)
+
+    return entries, target_entries
+
+
+def print_terminal_summary(
+    cl_name: str,
+    audit_results: List[Dict[str, Any]],
+    continuity_findings: List[Dict[str, Any]],
+) -> bool:
+    """Print human-readable audit summary to stdout and return whether failures exist."""
+    print(f"=== Changelog Audit: {cl_name} ===")
+    has_failures = False
+
+    for r in audit_results:
+        missing_count = len(r["missing_commits"])
+        status_str = "PASS" if missing_count == 0 and r["format_ok"] else "FAIL"
+        if status_str == "FAIL":
+            has_failures = True
+        print(f"\nVersion [{r['version']}]: {status_str}")
+        print(f"  Provenance block: {'Present' if r['has_provenance'] else 'Missing'}")
+        print(f"  Git commits in range: {r['git_commit_count']}")
+        print(f"  Accounted for: {r['audited_commit_count']}")
+        print(f"  Missing / Unaccounted: {missing_count}")
+
+        if r["format_errors"]:
+            for err in r["format_errors"]:
+                print(f"  [ERROR] {err}")
+
+        if r["missing_commits"]:
+            print("  Missing Commits:")
+            for m in r["missing_commits"]:
+                print(f"    - [{m['severity']}] {m['short_sha']} ({m['author']}): {m['subject']}")
+
+    if continuity_findings:
+        has_failures = True
+        print("\nRange Continuity Gaps:")
+        for cf in continuity_findings:
+            print(f"  - [{cf['from_version']} -> {cf['to_version']}]: {cf['gap']}")
+
+    return has_failures
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Audit CHANGELOG.md against Git history, verify provenance, and detect missing pieces."
@@ -399,28 +462,12 @@ def main():
     args = parser.parse_args()
 
     cl_path = Path(args.changelog).resolve()
-    if not cl_path.exists():
-        print(f"Error: Changelog file not found: {cl_path}", file=sys.stderr)
-        sys.exit(1)
+    entries, target_entries = load_changelog_entries(cl_path, args.version)
 
-    content = cl_path.read_text(encoding="utf-8")
-    entries = parse_changelog(content)
-
-    if not entries:
-        print(f"Error: No valid release entries found in {cl_path}", file=sys.stderr)
-        sys.exit(1)
-
-    target_entries = entries
-    if args.version:
-        target_entries = [e for e in entries if e["version"] == args.version]
-        if not target_entries:
-            print(f"Error: Version '{args.version}' not found in changelog.", file=sys.stderr)
-            sys.exit(1)
-
-    audit_results = []
-    for entry in target_entries:
-        res = audit_version_against_git(entry, path_filter=args.path, cwd=cl_path.parent)
-        audit_results.append(res)
+    audit_results = [
+        audit_version_against_git(entry, path_filter=args.path, cwd=cl_path.parent)
+        for entry in target_entries
+    ]
 
     continuity_findings = check_continuity(entries) if not args.version else []
 
@@ -433,34 +480,7 @@ def main():
         print(json.dumps(payload, indent=2))
         return
 
-    # Terminal output
-    print(f"=== Changelog Audit: {cl_path.name} ===")
-    has_failures = False
-    for r in audit_results:
-        missing_count = len(r["missing_commits"])
-        status_str = "PASS" if missing_count == 0 and r["format_ok"] else "FAIL"
-        if status_str == "FAIL":
-            has_failures = True
-        print(f"\nVersion [{r['version']}]: {status_str}")
-        print(f"  Provenance block: {'Present' if r['has_provenance'] else 'Missing'}")
-        print(f"  Git commits in range: {r['git_commit_count']}")
-        print(f"  Accounted for: {r['audited_commit_count']}")
-        print(f"  Missing / Unaccounted: {missing_count}")
-
-        if r["format_errors"]:
-            for err in r["format_errors"]:
-                print(f"  [ERROR] {err}")
-
-        if r["missing_commits"]:
-            print("  Missing Commits:")
-            for m in r["missing_commits"]:
-                print(f"    - [{m['severity']}] {m['short_sha']} ({m['author']}): {m['subject']}")
-
-    if continuity_findings:
-        has_failures = True
-        print("\nRange Continuity Gaps:")
-        for cf in continuity_findings:
-            print(f"  - [{cf['from_version']} -> {cf['to_version']}]: {cf['gap']}")
+    has_failures = print_terminal_summary(cl_path.name, audit_results, continuity_findings)
 
     if args.report:
         report_text = generate_markdown_report(cl_path, entries, audit_results, continuity_findings)

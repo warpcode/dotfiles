@@ -1,5 +1,7 @@
 import importlib.util
+import io
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 import sys
 
@@ -14,6 +16,8 @@ parse_provenance_block = audit_changelog.parse_provenance_block
 parse_changelog = audit_changelog.parse_changelog
 check_continuity = audit_changelog.check_continuity
 generate_markdown_report = audit_changelog.generate_markdown_report
+load_changelog_entries = audit_changelog.load_changelog_entries
+print_terminal_summary = audit_changelog.print_terminal_summary
 
 
 class TestAuditChangelog(unittest.TestCase):
@@ -134,6 +138,81 @@ commit_range: v1.0.0..v1.1.0
         report = generate_markdown_report(cl_path, entries, results, [])
         self.assertIn("# Changelog Audit Report: `CHANGELOG.md`", report)
         self.assertIn("PASS", report)
+
+    def test_load_changelog_entries(self):
+        import tempfile
+        content = """# Changelog
+
+## [1.1.0] - 2026-01-15
+- Feature test
+
+## [1.0.0] - 2026-01-01
+- Initial release
+"""
+        with tempfile.NamedTemporaryFile("w+", delete=False, suffix=".md") as tmp:
+            tmp.write(content)
+            tmp_path = Path(tmp.name)
+
+        try:
+            entries, targets = load_changelog_entries(tmp_path)
+            self.assertEqual(len(entries), 2)
+            self.assertEqual(len(targets), 2)
+
+            entries, targets_ver = load_changelog_entries(tmp_path, target_version="1.1.0")
+            self.assertEqual(len(entries), 2)
+            self.assertEqual(len(targets_ver), 1)
+            self.assertEqual(targets_ver[0]["version"], "1.1.0")
+
+            with patch("sys.stderr", new_callable=io.StringIO):
+                with self.assertRaises(SystemExit) as cm:
+                    load_changelog_entries(tmp_path, target_version="9.9.9")
+            self.assertEqual(cm.exception.code, 1)
+        finally:
+            if tmp_path.exists():
+                tmp_path.unlink()
+
+    @patch("sys.stdout", new_callable=io.StringIO)
+    def test_print_terminal_summary(self, mock_stdout):
+        results_pass = [{
+            "version": "1.0.0",
+            "has_provenance": True,
+            "format_ok": True,
+            "git_commit_count": 5,
+            "audited_commit_count": 5,
+            "missing_commits": [],
+            "format_errors": [],
+        }]
+        has_failures = print_terminal_summary("CHANGELOG.md", results_pass, [])
+        self.assertFalse(has_failures)
+
+        results_fail = [{
+            "version": "1.0.0",
+            "has_provenance": False,
+            "format_ok": False,
+            "git_commit_count": 5,
+            "audited_commit_count": 4,
+            "missing_commits": [{
+                "short_sha": "abc1234",
+                "author": "Alice",
+                "subject": "feat: new feature",
+                "severity": "High",
+            }],
+            "format_errors": ["Missing date"],
+        }]
+        has_failures_fail = print_terminal_summary("CHANGELOG.md", results_fail, [])
+        self.assertTrue(has_failures_fail)
+
+        continuity_findings = [{
+            "from_version": "1.2.0",
+            "to_version": "1.1.0",
+            "gap": "base_commit mismatch",
+        }]
+        has_failures_gap = print_terminal_summary("CHANGELOG.md", results_pass, continuity_findings)
+        self.assertTrue(has_failures_gap)
+
+        out = mock_stdout.getvalue()
+        self.assertIn("Version [1.0.0]: PASS", out)
+        self.assertIn("Range Continuity Gaps:", out)
 
     def test_generate_markdown_report_with_missing_commits(self):
         cl_path = Path("CHANGELOG.md")
