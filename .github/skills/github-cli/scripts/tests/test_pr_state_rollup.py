@@ -1,6 +1,7 @@
 import unittest
 import sys
 from pathlib import Path
+from unittest.mock import patch, MagicMock
 
 # Add script directory to sys.path
 script_dir = Path(__file__).resolve().parent.parent
@@ -85,6 +86,65 @@ class TestPRStateRollup(unittest.TestCase):
         # Precomputed ok bypasses rollup_status(pr) lookup
         reasons_ok = prs.attention_reasons(pr, expect, overall=prs.OK, failing="")
         self.assertEqual(reasons_ok, [])
+
+    @patch("pr_state_rollup.subprocess.run")
+    def test_run_success(self, mock_sub_run):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = "hello stdout"
+        mock_proc.stderr = ""
+        mock_sub_run.return_value = mock_proc
+
+        code, stdout, stderr = prs.run(["echo", "hello"], check=False)
+        self.assertEqual(code, 0)
+        self.assertEqual(stdout, "hello stdout")
+        self.assertEqual(stderr, "")
+        mock_sub_run.assert_called_once_with(["echo", "hello"], capture_output=True, text=True)
+
+    @patch("pr_state_rollup.subprocess.run")
+    def test_run_check_failure(self, mock_sub_run):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 1
+        mock_proc.stdout = ""
+        mock_proc.stderr = "some error"
+        mock_sub_run.return_value = mock_proc
+
+        with self.assertRaises(SystemExit) as cm:
+            prs.run(["false"], check=True)
+        self.assertEqual(cm.exception.code, 1)
+
+    @patch("pr_state_rollup.run")
+    def test_fetch_success(self, mock_run):
+        mock_json_data = '[{"number": 1, "title": "Test PR"}]'
+        mock_run.return_value = (0, mock_json_data, "")
+
+        result = prs.fetch("owner/repo", "open")
+        self.assertEqual(result, [{"number": 1, "title": "Test PR"}])
+        mock_run.assert_called_once()
+        args, _ = mock_run.call_args
+        cmd = args[0]
+        self.assertEqual(cmd[0], "gh")
+        self.assertEqual(cmd[1], "pr")
+        self.assertEqual(cmd[2], "list")
+        self.assertIn("--repo", cmd)
+        self.assertIn("owner/repo", cmd)
+        self.assertIn("--state", cmd)
+        self.assertIn("open", cmd)
+
+    @patch("pr_state_rollup.run")
+    def test_fetch_empty_output(self, mock_run):
+        mock_run.return_value = (0, "", "")
+
+        result = prs.fetch("owner/repo", "open")
+        self.assertEqual(result, [])
+
+    @patch("pr_state_rollup.run")
+    def test_fetch_error(self, mock_run):
+        mock_run.return_value = (1, "", "gh pr list failed")
+
+        with self.assertRaises(SystemExit) as cm:
+            prs.fetch("owner/repo", "open")
+        self.assertEqual(cm.exception.code, 1)
 
     def test_render(self):
         prs_list = [
