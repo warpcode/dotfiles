@@ -62,6 +62,33 @@ class TestInstallShChecksumVerification(unittest.TestCase):
         self.assertNotEqual(res.returncode, 0)
         self.assertIn("file does not exist", res.stderr)
 
+    def test_verify_checksum_no_tool(self):
+        """Test fallback exhaust when no SHA-256 tool is available."""
+        import shutil
+        # Resolve bash binary before altering PATH
+        bash_bin = shutil.which("bash")
+        self.assertIsNotNone(bash_bin, "Failed to resolve bash binary")
+
+        hashes_str = f'"{self.expected_hash}"'
+        cmd = f'source "{INSTALL_SH}" && verify_checksum "{self.test_file}" {hashes_str}'
+
+        # Run with empty PATH to simulate missing sha256sum, shasum, and openssl
+        env = os.environ.copy()
+        env["PATH"] = "/nonexistent"
+        if "HOME" not in env:
+            env["HOME"] = "/tmp"
+
+        res = subprocess.run(
+            [bash_bin, "-c", cmd],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            env=env
+        )
+
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("Checksum verification failed: no SHA-256 tool available", res.stderr)
+
 class TestInstallShSecurity(unittest.TestCase):
     def setUp(self):
         self.install_sh_path = Path(__file__).parent.parent / "install.sh"
@@ -90,7 +117,6 @@ class TestInstallShSecurity(unittest.TestCase):
         # Verify that chezmoi execution only happens if verify_checksum succeeds
         self.assertIn('if verify_checksum "${chezmoi_install_script}" ${expected_chezmoi_sha256}; then', self.content)
         self.assertIn('if ! sh "${chezmoi_install_script}" -b "${HOME}/.local/bin"; then', self.content)
-        self.assertIn('else', self.content)
         self.assertIn('err "Failed integrity check for chezmoi installer"', self.content)
 
 

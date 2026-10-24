@@ -10,10 +10,6 @@ trap 'printf "\n"; exit 130' INT TERM
 # ---------------------------------------------------------------------------
 
 #######################################
-# Detects the operating system and returns a normalised identifier.
-# Outputs:
-#   Writes OS identifier to stdout (macos, debian, fedora, arch, termux, linux).
-#######################################
 # Verifies the SHA-256 checksum of a downloaded file.
 # Arguments:
 #   $1 - File path to verify.
@@ -59,6 +55,8 @@ verify_checksum() {
 
 #######################################
 # Detects the operating system and returns a normalised identifier.
+# Outputs:
+#   Writes OS identifier to stdout (macos, debian, fedora, arch, termux, linux).
 #######################################
 detect_os() {
   case "${OSTYPE}" in
