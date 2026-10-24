@@ -26,6 +26,25 @@ class TestAiGuardWrapperHelper(unittest.TestCase):
         result = ai_guard_wrapper.extract_command(mapping)
         self.assertEqual(result, "echo first")
 
+    def test_extract_command_key_precedence(self):
+        # Keys precedence: CommandLine > commandLine > command > cmd
+        mapping = {
+            "CommandLine": "cmd_line",
+            "commandLine": "cmd_line_lower",
+            "command": "cmd_val",
+            "cmd": "short_cmd",
+        }
+        self.assertEqual(ai_guard_wrapper.extract_command(mapping), "cmd_line")
+
+        del mapping["CommandLine"]
+        self.assertEqual(ai_guard_wrapper.extract_command(mapping), "cmd_line_lower")
+
+        del mapping["commandLine"]
+        self.assertEqual(ai_guard_wrapper.extract_command(mapping), "cmd_val")
+
+        del mapping["command"]
+        self.assertEqual(ai_guard_wrapper.extract_command(mapping), "short_cmd")
+
     def test_extract_command_fallthrough_key(self):
         mapping = {"ignore": "this", "cmd": " echo fallback "}
         result = ai_guard_wrapper.extract_command(mapping)
@@ -33,7 +52,12 @@ class TestAiGuardWrapperHelper(unittest.TestCase):
 
     def test_extract_command_skips_non_string(self):
         # Even if CommandLine is present, if it's not a string, it should fall through to cmd
-        mapping = {"CommandLine": {"complex": "object"}, "cmd": " echo real "}
+        mapping = {
+            "CommandLine": {"complex": "object"},
+            "commandLine": ["list", "of", "cmds"],
+            "command": 12345,
+            "cmd": " echo real ",
+        }
         result = ai_guard_wrapper.extract_command(mapping)
         self.assertEqual(result, "echo real")
 
@@ -56,7 +80,7 @@ class TestAiGuardWrapperHelper(unittest.TestCase):
     def test_extract_command_falls_through_empty_string(self):
         # If a higher precedence key has an empty/whitespace string, extract_command
         # should fall through to a lower precedence key in the same mapping.
-        mapping = {"CommandLine": "   ", "cmd": " echo fallback "}
+        mapping = {"CommandLine": "   ", "commandLine": "", "cmd": " echo fallback "}
         result = ai_guard_wrapper.extract_command(mapping)
         self.assertEqual(result, "echo fallback")
 
@@ -67,12 +91,26 @@ class TestAiGuardWrapperHelper(unittest.TestCase):
         result = ai_guard_wrapper.extract_command(mapping)
         self.assertEqual(result, "echo multi")
 
+        # Double quotes
+        mapping_double = {"command": '"ls -la"'}
+        self.assertEqual(ai_guard_wrapper.extract_command(mapping_double), "ls -la")
+
+        # Single quotes
+        mapping_single = {"command": "'cat /etc/passwd'"}
+        self.assertEqual(ai_guard_wrapper.extract_command(mapping_single), "cat /etc/passwd")
+
     def test_extract_command_guards_against_non_dict(self):
         # We explicitly test that if mapping is None or not a dict, it returns empty string
         # without crashing
         self.assertEqual(ai_guard_wrapper.extract_command(None), "")
         self.assertEqual(ai_guard_wrapper.extract_command(["list", "of", "items"]), "")
         self.assertEqual(ai_guard_wrapper.extract_command("CommandLine string"), "")
+        self.assertEqual(ai_guard_wrapper.extract_command(12345), "")
+        self.assertEqual(ai_guard_wrapper.extract_command(True), "")
+
+    def test_extract_command_no_matching_keys(self):
+        self.assertEqual(ai_guard_wrapper.extract_command({}), "")
+        self.assertEqual(ai_guard_wrapper.extract_command({"other_key": "val", "foo": "bar"}), "")
 
 
 class TestAIGuardWrapper(unittest.TestCase):
