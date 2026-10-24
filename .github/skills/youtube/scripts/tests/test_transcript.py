@@ -83,11 +83,25 @@ class TestTranscript(unittest.TestCase):
         self.assertEqual(result[0]["text"], "Fallback text")
 
     @patch("transcript.YouTubeTranscriptApi")
-    def test_fetch_transcript_exception_returns_empty(self, mock_api):
+    def test_fetch_transcript_timestamp_formatting(self, mock_api):
+        mock_api.get_transcript.return_value = [
+            {"start": 0.0, "text": "Start snippet"},
+            {"start": 3661.8, "text": "Long video snippet"},
+        ]
+
+        result = fetch_transcript("dQw4w9WgXcQ")
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["start_display"], "00:00")
+        self.assertEqual(result[1]["start_display"], "61:01")
+
+    @patch("sys.stderr", new_callable=StringIO)
+    @patch("transcript.YouTubeTranscriptApi")
+    def test_fetch_transcript_exception_returns_empty_and_logs_stderr(self, mock_api, mock_stderr):
         mock_api.get_transcript.side_effect = Exception("No transcript available")
 
         result = fetch_transcript("dQw4w9WgXcQ")
         self.assertEqual(result, [])
+        self.assertIn("Error fetching transcript: No transcript available", mock_stderr.getvalue())
 
     @patch("transcript.fetch_transcript")
     @patch("transcript.fetch_video_info")
