@@ -23,12 +23,47 @@ class TestTranscript(unittest.TestCase):
         url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
         self.assertEqual(extract_video_id(url), "dQw4w9WgXcQ")
 
+    def test_extract_video_id_watch_url_with_query_params(self):
+        url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=120s&feature=shared"
+        self.assertEqual(extract_video_id(url), "dQw4w9WgXcQ")
+
     def test_extract_video_id_valid_short_url(self):
         url = "https://youtu.be/dQw4w9WgXcQ"
         self.assertEqual(extract_video_id(url), "dQw4w9WgXcQ")
 
+    def test_extract_video_id_short_url_with_query_params(self):
+        url = "https://youtu.be/dQw4w9WgXcQ?t=120"
+        self.assertEqual(extract_video_id(url), "dQw4w9WgXcQ")
+
+    def test_extract_video_id_shorts_url(self):
+        url = "https://www.youtube.com/shorts/dQw4w9WgXcQ"
+        self.assertEqual(extract_video_id(url), "dQw4w9WgXcQ")
+
+    def test_extract_video_id_embed_url(self):
+        url = "https://www.youtube.com/embed/dQw4w9WgXcQ"
+        self.assertEqual(extract_video_id(url), "dQw4w9WgXcQ")
+
+    def test_extract_video_id_live_url(self):
+        url = "https://www.youtube.com/live/dQw4w9WgXcQ"
+        self.assertEqual(extract_video_id(url), "dQw4w9WgXcQ")
+
+    def test_extract_video_id_mobile_url(self):
+        url = "https://m.youtube.com/watch?v=dQw4w9WgXcQ"
+        self.assertEqual(extract_video_id(url), "dQw4w9WgXcQ")
+
+    def test_extract_video_id_with_hyphens_and_underscores(self):
+        url = "https://www.youtube.com/watch?v=-a_B1c2D3e4"
+        self.assertEqual(extract_video_id(url), "-a_B1c2D3e4")
+
     def test_extract_video_id_invalid_url(self):
         url = "https://example.com/abc"
+        self.assertIsNone(extract_video_id(url))
+
+    def test_extract_video_id_empty_string(self):
+        self.assertIsNone(extract_video_id(""))
+
+    def test_extract_video_id_too_short_id(self):
+        url = "https://www.youtube.com/watch?v=12345"
         self.assertIsNone(extract_video_id(url))
 
     @patch("yt_dlp.YoutubeDL")
