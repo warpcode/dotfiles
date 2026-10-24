@@ -10,10 +10,16 @@ git_diff_triage = importlib.util.module_from_spec(spec)
 sys.modules["git_diff_triage"] = git_diff_triage
 spec.loader.exec_module(git_diff_triage)
 
+from io import StringIO
+import subprocess
+from unittest.mock import MagicMock, patch
+
 parse_args = git_diff_triage.parse_args
 split_diff_into_chunks = git_diff_triage.split_diff_into_chunks
 count_body_lines = git_diff_triage.count_body_lines
 header_only = git_diff_triage.header_only
+run_git_diff = git_diff_triage.run_git_diff
+DEFAULT_DIFF_FLAGS = git_diff_triage.DEFAULT_DIFF_FLAGS
 
 
 class TestGitDiffTriage(unittest.TestCase):
@@ -343,6 +349,56 @@ class TestGitDiffTriage(unittest.TestCase):
             "+++ b/file\n"
         )
         self.assertEqual(header_only(only_headers), only_headers)
+    @patch("subprocess.run")
+    def test_run_git_diff_success(self, mock_run):
+        mock_result = MagicMock()
+        mock_result.stdout = "diff --git a/a b/a\n"
+        mock_run.return_value = mock_result
+
+        extra_args = ["--staged", "HEAD"]
+        output = run_git_diff(extra_args)
+
+        mock_run.assert_called_once_with(
+            ["git", "diff"] + DEFAULT_DIFF_FLAGS + extra_args,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        self.assertEqual(output, "diff --git a/a b/a\n")
+
+    @patch("sys.stderr", new_callable=StringIO)
+    @patch("subprocess.run")
+    def test_run_git_diff_called_process_error_with_stderr(self, mock_run, mock_stderr):
+        error = subprocess.CalledProcessError(
+            returncode=128,
+            cmd=["git", "diff"],
+            output="",
+            stderr="fatal: not a git repository\n",
+        )
+        mock_run.side_effect = error
+
+        with self.assertRaises(SystemExit) as cm:
+            run_git_diff([])
+
+        self.assertEqual(cm.exception.code, 1)
+        self.assertIn("fatal: not a git repository", mock_stderr.getvalue())
+
+    @patch("sys.stderr", new_callable=StringIO)
+    @patch("subprocess.run")
+    def test_run_git_diff_called_process_error_without_stderr(self, mock_run, mock_stderr):
+        error = subprocess.CalledProcessError(
+            returncode=2,
+            cmd=["git", "diff"],
+            output="",
+            stderr="",
+        )
+        mock_run.side_effect = error
+
+        with self.assertRaises(SystemExit) as cm:
+            run_git_diff([])
+
+        self.assertEqual(cm.exception.code, 1)
+        self.assertIn("git diff failed with exit code 2", mock_stderr.getvalue())
 
 if __name__ == "__main__":
     unittest.main()
