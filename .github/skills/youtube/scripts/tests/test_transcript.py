@@ -79,8 +79,9 @@ class TestTranscript(unittest.TestCase):
             "https://www.youtube.com/watch?v=dQw4w9WgXcQ", download=False
         )
 
+    @patch("sys.stderr", new_callable=StringIO)
     @patch("yt_dlp.YoutubeDL")
-    def test_fetch_video_info_error(self, mock_youtube_dl):
+    def test_fetch_video_info_error(self, mock_youtube_dl, mock_stderr):
         mock_ydl_instance = MagicMock()
         mock_youtube_dl.return_value.__enter__.return_value = mock_ydl_instance
         mock_ydl_instance.extract_info.side_effect = Exception("DL error")
@@ -89,6 +90,7 @@ class TestTranscript(unittest.TestCase):
             fetch_video_info("https://www.youtube.com/watch?v=invalid")
         self.assertEqual(cm.exception.code, 1)
         mock_youtube_dl.assert_called_once_with({'quiet': True})
+        self.assertIn("Error fetching video info: DL error", mock_stderr.getvalue())
 
     @patch("transcript.YouTubeTranscriptApi")
     def test_fetch_transcript_get_transcript_success(self, mock_api):
