@@ -185,6 +185,28 @@ class TestChannelScript(unittest.TestCase):
                     channel.main()
                 self.assertEqual(cm.exception.code, 1)
 
+    @patch("channel.list_videos")
+    def test_main_list_videos_error_raw_false(self, mock_list_videos):
+        mock_list_videos.return_value = [{"error": "Fetch failed"}]
+
+        test_args = ["channel.py", "https://www.youtube.com/channel/UC123"]
+        with patch.object(sys, "argv", test_args):
+            with patch("sys.stderr.write"):
+                with self.assertRaises(SystemExit) as cm:
+                    channel.main()
+                self.assertEqual(cm.exception.code, 1)
+
+    @patch("channel.list_videos")
+    def test_main_list_videos_error_raw_true(self, mock_list_videos):
+        mock_list_videos.return_value = "Fetch failed"
+
+        test_args = ["channel.py", "https://www.youtube.com/channel/UC123", "--raw"]
+        with patch.object(sys, "argv", test_args):
+            with patch("sys.stderr.write"):
+                with self.assertRaises(SystemExit) as cm:
+                    channel.main()
+                self.assertEqual(cm.exception.code, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -72,11 +72,14 @@ def main():
     try:
         output = list_videos(args.url, args.count, args.raw)
         if args.raw:
-            # In raw mode, we might want to return the full yt-dlp info
-            # but for now, let's just return our structured output as it's cleaner
+            if isinstance(output, str):
+                print(f'Error fetching channel info: {output}', file=sys.stderr)
+                sys.exit(1)
             print(json.dumps(output, indent=2))
         else:
-            # Print as a single JSON object for easier parsing by jq
+            if isinstance(output, list) and len(output) > 0 and isinstance(output[0], dict) and "error" in output[0]:
+                print(f'Error fetching channel info: {output[0]["error"]}', file=sys.stderr)
+                sys.exit(1)
             print(json.dumps(output))
     except Exception as e:
         print(f'Error fetching channel info: {e}', file=sys.stderr)
