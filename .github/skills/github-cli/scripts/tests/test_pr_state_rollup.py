@@ -86,6 +86,50 @@ class TestPRStateRollup(unittest.TestCase):
         reasons_ok = prs.attention_reasons(pr, expect, overall=prs.OK, failing="")
         self.assertEqual(reasons_ok, [])
 
+    def test_wait_loop_bounded_sleep(self):
+        # Verify that sleeping in wait loop does not exceed remaining time before deadline
+        import time
+        from unittest.mock import patch, MagicMock
+
+        mock_pr = {
+            "number": 1,
+            "statusCheckRollup": [{"status": "IN_PROGRESS", "name": "build"}],
+        }
+
+        # Setup mock args for main()
+        test_args = ["pr_state_rollup.py", "--repo", "owner/repo", "--wait", "--timeout", "10", "--interval", "20"]
+
+        slept_durations = []
+
+        def fake_sleep(seconds):
+            slept_durations.append(seconds)
+
+        # Mock time.time to advance by slept_durations or fixed increments
+        curr_time = 1000.0
+
+        def fake_time():
+            nonlocal curr_time
+            return curr_time
+
+        def fake_sleep_advance(seconds):
+            nonlocal curr_time
+            slept_durations.append(seconds)
+            curr_time += seconds
+
+        with patch.object(sys, "argv", test_args), \
+             patch("pr_state_rollup.resolve_repo", return_value="owner/repo"), \
+             patch("pr_state_rollup.fetch", return_value=[mock_pr]), \
+             patch("time.time", side_effect=fake_time), \
+             patch("time.sleep", side_effect=fake_sleep_advance), \
+             patch("sys.stderr.write"):
+            with self.assertRaises(SystemExit):
+                prs.main()
+
+        # The interval is 20s, but timeout is 10s. Time remaining was 10s.
+        # Slept duration should be capped at 10s (the remaining time until deadline).
+        self.assertEqual(len(slept_durations), 1)
+        self.assertAlmostEqual(slept_durations[0], 10.0, places=4)
+
     def test_render(self):
         prs_list = [
             {
