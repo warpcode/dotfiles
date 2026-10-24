@@ -1,6 +1,7 @@
 import unittest
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 # Add script directory to sys.path
 script_dir = Path(__file__).resolve().parent.parent
@@ -10,6 +11,38 @@ import pr_state_rollup as prs
 
 
 class TestPRStateRollup(unittest.TestCase):
+    def test_resolve_repo_explicit(self):
+        self.assertEqual(prs.resolve_repo("explicit/repo"), "explicit/repo")
+
+    @patch("pr_state_rollup.run")
+    def test_resolve_repo_git_remote_ssh(self, mock_run):
+        mock_run.return_value = (0, "git@github.com:owner/repo.git\n", "")
+        self.assertEqual(prs.resolve_repo(None), "owner/repo")
+        mock_run.assert_called_once_with(["git", "remote", "get-url", "origin"])
+
+    @patch("pr_state_rollup.run")
+    def test_resolve_repo_git_remote_https(self, mock_run):
+        mock_run.return_value = (0, "https://github.com/owner/repo\n", "")
+        self.assertEqual(prs.resolve_repo(None), "owner/repo")
+
+    @patch("sys.stderr.write")
+    @patch("pr_state_rollup.run")
+    def test_resolve_repo_git_remote_failure(self, mock_run, mock_stderr):
+        mock_run.return_value = (1, "", "fatal: not a git repository")
+        with self.assertRaises(SystemExit) as cm:
+            prs.resolve_repo(None)
+        self.assertEqual(cm.exception.code, 1)
+        mock_stderr.assert_called()
+
+    @patch("sys.stderr.write")
+    @patch("pr_state_rollup.run")
+    def test_resolve_repo_git_remote_unparseable(self, mock_run, mock_stderr):
+        mock_run.return_value = (0, "https://gitlab.com/owner/repo.git\n", "")
+        with self.assertRaises(SystemExit) as cm:
+            prs.resolve_repo(None)
+        self.assertEqual(cm.exception.code, 1)
+        mock_stderr.assert_called()
+
     def test_rollup_status_empty(self):
         pr = {"statusCheckRollup": []}
         overall, failing, pending = prs.rollup_status(pr)
