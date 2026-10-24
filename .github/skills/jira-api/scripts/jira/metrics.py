@@ -22,24 +22,36 @@ def calculate_metrics(issue, status_map=None, now=None):
                 if not created_parsed:
                     created_dt = parse_jira_time(h.get("created"))
                     created_parsed = True
+<<<<<<< HEAD
                 parsed_items.append((created_dt, item))
+=======
+                parsed_histories.append((created_dt, item))
+>>>>>>> 6b40d3d7 (perf(jira-api): flatten history items in calculate_metrics)
 
     # Handle None dates safely during sorting without causing TypeError when comparing Nones
     parsed_items.sort(key=lambda x: (x[0] is None, x[0] or datetime.min.replace(tzinfo=timezone.utc)))
 
     # Build timeline of status changes in a single pass over flattened status items
     timeline = [{"status": "New", "time": parse_jira_time(fields.get("created"))}]
-    transition_count = 0
     found_initial = False
 
+<<<<<<< HEAD
     for created_dt, item in parsed_items:
+=======
+    for created_dt, item in parsed_histories:
+>>>>>>> 6b40d3d7 (perf(jira-api): flatten history items in calculate_metrics)
         if not found_initial:
             from_str = item.get("fromString")
             if from_str:
                 timeline[0]["status"] = from_str
                 found_initial = True
         timeline.append({"status": item.get("toString"), "time": created_dt})
+<<<<<<< HEAD
         transition_count += 1
+=======
+
+    transition_count = len(parsed_histories)
+>>>>>>> 6b40d3d7 (perf(jira-api): flatten history items in calculate_metrics)
 
     # Calculate time in each status
     time_in_status = {}
