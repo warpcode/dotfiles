@@ -1,6 +1,93 @@
+import hashlib
+import os
+import subprocess
+import tempfile
 import unittest
 import re
 from pathlib import Path
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+INSTALL_SH = os.path.join(REPO_ROOT, "install.sh")
+
+class TestInstallShChecksumVerification(unittest.TestCase):
+    """Test verify_checksum shell function in install.sh."""
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+        self.test_file = os.path.join(self.temp_dir, "sample.sh")
+        self.content = b"#!/bin/sh\necho 'hello world'\n"
+        with open(self.test_file, "wb") as f:
+            f.write(self.content)
+        self.expected_hash = hashlib.sha256(self.content).hexdigest()
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def _run_verify_checksum(self, filepath, *expected_hashes):
+        """Helper to invoke verify_checksum function within bash session sourcing install.sh."""
+        hashes_str = " ".join(f'"{h}"' for h in expected_hashes)
+        cmd = f'source "{INSTALL_SH}" && verify_checksum "{filepath}" {hashes_str}'
+        res = subprocess.run(
+            ["bash", "-c", cmd],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+        )
+        return res
+
+    def test_verify_checksum_valid(self):
+        res = self._run_verify_checksum(self.test_file, self.expected_hash)
+        self.assertEqual(res.returncode, 0, msg=f"Stderr: {res.stderr}")
+
+    def test_verify_checksum_valid_uppercase(self):
+        res = self._run_verify_checksum(self.test_file, self.expected_hash.upper())
+        self.assertEqual(res.returncode, 0, msg=f"Stderr: {res.stderr}")
+
+    def test_verify_checksum_multiple_hashes_one_matching(self):
+        dummy_hash = "0" * 64
+        res = self._run_verify_checksum(self.test_file, dummy_hash, self.expected_hash)
+        self.assertEqual(res.returncode, 0, msg=f"Stderr: {res.stderr}")
+
+    def test_verify_checksum_invalid(self):
+        bad_hash = "a" * 64
+        res = self._run_verify_checksum(self.test_file, bad_hash)
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("Integrity check failed", res.stderr)
+        self.assertIn(self.expected_hash, res.stderr)
+
+    def test_verify_checksum_nonexistent_file(self):
+        non_existent = os.path.join(self.temp_dir, "does_not_exist.sh")
+        res = self._run_verify_checksum(non_existent, self.expected_hash)
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("file does not exist", res.stderr)
+
+    def test_verify_checksum_no_tool(self):
+        """Test fallback exhaust when no SHA-256 tool is available."""
+        import shutil
+        # Resolve bash binary before altering PATH
+        bash_bin = shutil.which("bash")
+        self.assertIsNotNone(bash_bin, "Failed to resolve bash binary")
+
+        hashes_str = f'"{self.expected_hash}"'
+        cmd = f'source "{INSTALL_SH}" && verify_checksum "{self.test_file}" {hashes_str}'
+
+        # Run with empty PATH to simulate missing sha256sum, shasum, and openssl
+        env = os.environ.copy()
+        env["PATH"] = "/nonexistent"
+        if "HOME" not in env:
+            env["HOME"] = "/tmp"
+
+        res = subprocess.run(
+            [bash_bin, "-c", cmd],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            env=env
+        )
+
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("Checksum verification failed: no SHA-256 tool available", res.stderr)
 
 class TestInstallShSecurity(unittest.TestCase):
     def setUp(self):
@@ -25,6 +112,13 @@ class TestInstallShSecurity(unittest.TestCase):
 
         # Verify error handling on script execution failure
         self.assertIn("if ! sh \"${mise_install_script}\"; then", self.content)
+
+    def test_chezmoi_wiring(self):
+        # Verify that chezmoi execution only happens if verify_checksum succeeds
+        self.assertIn('if verify_checksum "${chezmoi_install_script}" ${expected_chezmoi_sha256}; then', self.content)
+        self.assertIn('if ! sh "${chezmoi_install_script}" -b "${HOME}/.local/bin"; then', self.content)
+        self.assertIn('err "Failed integrity check for chezmoi installer"', self.content)
+
 
 if __name__ == "__main__":
     unittest.main()
