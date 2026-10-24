@@ -19,7 +19,7 @@ if str(scripts_dir) not in sys.path:
     sys.path.insert(0, str(scripts_dir))
 
 from jules.auth import resolve_jules_api_key
-from jules.client import JulesClient
+from jules.client import AuditSessionsOptions, CreateSessionConfig, JulesClient
 from jules.formatters import (
     format_activities,
     format_activity,
@@ -84,13 +84,14 @@ def cmd_check_sessions(client: JulesClient, args: argparse.Namespace) -> None:
             )
         ]
     else:
-        audits = client.audit_sessions(
+        opts = AuditSessionsOptions(
             page_size=getattr(args, "page_size", 10),
             stale_threshold_mins=stale_threshold,
             filter_expr=getattr(args, "filter", None),
             max_age_days=max_age_days,
             repo=getattr(args, "repo", None),
         )
+        audits = client.audit_sessions(opts)
 
 
     show_history = getattr(args, "history", False) or bool(session_id)
@@ -126,7 +127,7 @@ def cmd_create_session(client: JulesClient, args: argparse.Namespace) -> None:
 
     automation_mode = getattr(args, "automation_mode", "AUTO_CREATE_PR")
 
-    data = client.create_session(
+    config = CreateSessionConfig(
         prompt=prompt,
         source=args.source,
         starting_branch=args.branch,
@@ -134,6 +135,8 @@ def cmd_create_session(client: JulesClient, args: argparse.Namespace) -> None:
         require_plan_approval=args.require_approval,
         automation_mode=automation_mode,
     )
+
+    data = client.create_session(config=config)
     print(format_session(data))
 
 
@@ -261,13 +264,14 @@ def _archive_candidates(client: JulesClient, args: argparse.Namespace) -> list[d
     if older_than:
         max_age = None
         all_pages = True
-    audits = client.audit_sessions(
+    opts = AuditSessionsOptions(
         page_size=page_size,
         max_age_days=max_age,
         older_than_days=older_than,
         repo=getattr(args, "repo", None),
         all_pages=all_pages,
     )
+    audits = client.audit_sessions(opts)
     if older_than:
         return [a for a in audits if not a.get("pull_request_url") or a.get("assessment") in ("CLOSED_NO_PR", "STALLED", "COMPLETED_NO_OUTPUT", "AWAITING_PLAN_APPROVAL", "AWAITING_USER_FEEDBACK", "COMPLETED")]
     return [
@@ -362,12 +366,13 @@ def cmd_archive_closed_prs(client: JulesClient, args: argparse.Namespace) -> Non
         max_age = None
 
     print("Auditing non-archived sessions for PR deliverables...")
-    sessions = client.audit_sessions(
+    opts = AuditSessionsOptions(
         page_size=50,
         max_age_days=max_age,
         repo=getattr(args, "repo", None),
         all_pages=True,
     )
+    sessions = client.audit_sessions(opts)
 
     repo_pr_map: list[tuple[str, str, int, str]] = []
     unique_repos: set[str] = set()
@@ -417,52 +422,7 @@ def cmd_archive_closed_prs(client: JulesClient, args: argparse.Namespace) -> Non
 
 
 
-def setup_parser() -> argparse.ArgumentParser:
-    # Common flags inherited across root and subparsers with suppress default
-    common_parser = argparse.ArgumentParser(add_help=False)
-    common_parser.add_argument(
-        "--verbose",
-        "-v",
-        action="store_true",
-        default=argparse.SUPPRESS,
-        help="Enable verbose HTTP request/response logging to stderr",
-    )
-    common_parser.add_argument(
-        "--page-size",
-        "-n",
-        type=int,
-        default=argparse.SUPPRESS,
-        help="Maximum number of items to return in a single page",
-    )
-    common_parser.add_argument(
-        "--page-token",
-        "-p",
-        default=argparse.SUPPRESS,
-        help="Pagination token for retrieving the next page of results",
-    )
-
-    main_description = """Google Jules REST API Client & CLI Utility (v1alpha)
-
-Interact with Google Jules to manage connected repositories, list sessions,
-track activity timelines, approve plans, send messages, and fetch diff patches.
-
-Authentication:
-    Resolves API key from the JULES_API_KEY environment variable."""
-
-    parser = argparse.ArgumentParser(
-        prog="main.py",
-        description=main_description,
-        parents=[common_parser],
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-
-    subparsers = parser.add_subparsers(
-        dest="subcommand",
-        required=True,
-        title="Available Subcommands",
-        description="Choose a subcommand to execute:",
-    )
-
+def _add_source_subparsers(subparsers: argparse._SubParsersAction, common_parser: argparse.ArgumentParser) -> None:
     # sources
     p_sources = subparsers.add_parser(
         "sources",
@@ -489,6 +449,8 @@ Authentication:
         help="Source identifier in the format 'github/owner/repo' or 'sources/github/owner/repo'",
     )
 
+
+def _add_session_subparsers(subparsers: argparse._SubParsersAction, common_parser: argparse.ArgumentParser) -> None:
     # sessions
     p_sessions = subparsers.add_parser(
         "sessions",
@@ -647,6 +609,29 @@ Authentication:
         help="Feedback, guidance, or instruction message text",
     )
 
+    # nudge
+    p_nudge = subparsers.add_parser(
+        "nudge",
+        parents=[common_parser],
+        help="Send a standardized nudge message to a session",
+        description="Send a pre-defined nudge template to a Jules session. Templates: plan_stalled, progress_check, pr_reminder.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p_nudge.add_argument(
+        "session_ids",
+        nargs="+",
+        help="One or more target Jules session IDs (optionally followed by template name)",
+    )
+    p_nudge.add_argument(
+        "--template",
+        "-t",
+        choices=["plan_stalled", "progress_check", "pr_reminder"],
+        default=None,
+        help="Nudge template to use (default: progress_check)",
+    )
+
+
+def _add_activity_subparsers(subparsers: argparse._SubParsersAction, common_parser: argparse.ArgumentParser) -> None:
     # activities
     p_acts = subparsers.add_parser(
         "activities",
@@ -689,6 +674,8 @@ Authentication:
         help="Activity event ID (e.g. ea05126655df43eab990cce1d8a32a0f)",
     )
 
+
+def _add_admin_subparsers(subparsers: argparse._SubParsersAction, common_parser: argparse.ArgumentParser) -> None:
     # call (escape hatch)
     p_call = subparsers.add_parser(
         "call",
@@ -706,6 +693,7 @@ Authentication:
         "endpoint",
         help="API endpoint path relative to /v1alpha (e.g. sources, sessions/4475409647262242777/activities)",
     )
+
     # delete-session (destructive, irreversible)
     p_del = subparsers.add_parser(
         "delete-session",
@@ -782,27 +770,6 @@ Authentication:
         help="Archive sessions older than N days across all pages (overrides --max-age-days)",
     )
 
-    # nudge
-    p_nudge = subparsers.add_parser(
-        "nudge",
-        parents=[common_parser],
-        help="Send a standardized nudge message to a session",
-        description="Send a pre-defined nudge template to a Jules session. Templates: plan_stalled, progress_check, pr_reminder.",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    p_nudge.add_argument(
-        "session_ids",
-        nargs="+",
-        help="One or more target Jules session IDs (optionally followed by template name)",
-    )
-    p_nudge.add_argument(
-        "--template",
-        "-t",
-        choices=["plan_stalled", "progress_check", "pr_reminder"],
-        default=None,
-        help="Nudge template to use (default: progress_check)",
-    )
-
     # archive-closed-prs
     p_arch_prs = subparsers.add_parser(
         "archive-closed-prs",
@@ -826,6 +793,58 @@ Authentication:
         default=30,
         help="Ignore sessions older than this threshold in days (default: 30; set 0 to disable)",
     )
+
+
+def setup_parser() -> argparse.ArgumentParser:
+    # Common flags inherited across root and subparsers with suppress default
+    common_parser = argparse.ArgumentParser(add_help=False)
+    common_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help="Enable verbose HTTP request/response logging to stderr",
+    )
+    common_parser.add_argument(
+        "--page-size",
+        "-n",
+        type=int,
+        default=argparse.SUPPRESS,
+        help="Maximum number of items to return in a single page",
+    )
+    common_parser.add_argument(
+        "--page-token",
+        "-p",
+        default=argparse.SUPPRESS,
+        help="Pagination token for retrieving the next page of results",
+    )
+
+    main_description = """Google Jules REST API Client & CLI Utility (v1alpha)
+
+Interact with Google Jules to manage connected repositories, list sessions,
+track activity timelines, approve plans, send messages, and fetch diff patches.
+
+Authentication:
+    Resolves API key from the JULES_API_KEY environment variable."""
+
+    parser = argparse.ArgumentParser(
+        prog="main.py",
+        description=main_description,
+        parents=[common_parser],
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
+    subparsers = parser.add_subparsers(
+        dest="subcommand",
+        required=True,
+        title="Available Subcommands",
+        description="Choose a subcommand to execute:",
+    )
+
+    _add_source_subparsers(subparsers, common_parser)
+    _add_session_subparsers(subparsers, common_parser)
+    _add_activity_subparsers(subparsers, common_parser)
+    _add_admin_subparsers(subparsers, common_parser)
 
     return parser
 

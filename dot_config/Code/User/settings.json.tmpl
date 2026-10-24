@@ -74,8 +74,9 @@
   "chat.implicitContext.includeActiveEditor": false,
   "github.copilot.chat.virtualTools.threshold": 40,
 {{ if eq .profile "default" -}}
-  "chat.utilitySmallModel": "customendpoint/@preset/code-free",
-  "chat.utilityModel": "customendpoint/@preset/code-free",
+  "chat.utilitySmallModel": "copilot-llm-gateway/code",
+  "chat.utilityModel": "copilot-llm-gateway/code",
+  "github.copilot.llm-gateway.serverUrl": "http://localhost:8081",
 {{ end -}}
   "antigravity.enableTelemetry": false,
   "chat.tools.terminal.enableAutoApprove": true,

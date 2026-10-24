@@ -1,9 +1,8 @@
 {{- if .is_default_linux }}
 
 # ==============================================================================
-# ANTIGRAVITY HUB (Native Tarball) - Extract once if missing, then let app self-update
+# ANTIGRAVITY HUB (Native Tarball)
 # ==============================================================================
-{{- if not (stat (joinPath .chezmoi.homeDir ".local/opt/antigravity-hub/antigravity")) }}
 {{- $hub_json := output "curl" "-fsSL" "https://antigravity-hub-auto-updater-974169037036.us-central1.run.app/releases" }}
 {{- $hub_payload := fromJson $hub_json }}
 {{- $hub := index $hub_payload 0 }}
@@ -13,6 +12,6 @@
     url = {{ printf "https://storage.googleapis.com/antigravity-public/antigravity-hub/%s-%s/linux-x64/Antigravity.tar.gz" $hub.version $hub.execution_id | quote }}
     stripComponents = 1
     exact = true
-{{- end }}
+    refreshPeriod = "24h"
 
 {{- end }}

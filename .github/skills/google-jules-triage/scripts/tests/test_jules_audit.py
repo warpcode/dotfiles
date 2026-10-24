@@ -329,6 +329,56 @@ class TestJulesAudit(unittest.TestCase):
         # Both arch-1 and live-1 should be processed
         self.assertEqual(mock_client.get_all_activities.call_count, 2)
 
+    def test_extract_outputs_info(self):
+        """Test _extract_outputs_info parsing PR URLs and git patches from session outputs."""
+        session_data = {
+            "outputs": [
+                {"pullRequest": {"url": "https://github.com/foo/bar/pull/10"}},
+                {
+                    "changeSet": {
+                        "gitPatch": {
+                            "unidiffPatch": "diff --git a/src/main.py b/src/main.py\ndiff --git a/tests/test.py b/tests/test.py"
+                        }
+                    }
+                },
+            ]
+        }
+        pr_url, has_patch, patch_files = jules_audit._extract_outputs_info(session_data)
+        self.assertEqual(pr_url, "https://github.com/foo/bar/pull/10")
+        self.assertTrue(has_patch)
+        self.assertEqual(patch_files, ["src/main.py", "tests/test.py"])
+
+    def test_is_junk_session_helpers(self):
+        """Test _is_junk_session with valid and degenerate agent messages."""
+        self.assertFalse(jules_audit._is_junk_session([]))
+        self.assertFalse(jules_audit._is_junk_session([{"content": "ok"}]))
+
+        junk_msgs = [
+            {"content": "x"},
+            {"content": "Code review rating is #Correct#"},
+            {"content": "部件"},
+        ]
+        self.assertTrue(jules_audit._is_junk_session(junk_msgs))
+
+        real_msgs = [
+            {"content": "x"},
+            {"content": "I have created the requested pull request with all unit tests passing."},
+        ]
+        self.assertFalse(jules_audit._is_junk_session(real_msgs))
+
+    def test_process_activities_empty_or_none(self):
+        """Test _process_activities with empty and None activities list."""
+        session_data = {
+            "id": "empty-act-sess",
+            "state": "COMPLETED",
+            "createTime": "2026-10-11T10:00:00Z",
+        }
+        res_empty = jules_audit._process_activities(session_data, [], False)
+        self.assertIn("2026-10-11 10:00 (Completed)", res_empty["last_activity_display"])
+
+        res_none = jules_audit._process_activities(session_data, None, False)
+        self.assertIn("2026-10-11 10:00 (Completed)", res_none["last_activity_display"])
+
 
 if __name__ == "__main__":
     unittest.main()

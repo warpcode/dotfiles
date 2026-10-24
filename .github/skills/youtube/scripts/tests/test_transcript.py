@@ -23,12 +23,47 @@ class TestTranscript(unittest.TestCase):
         url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
         self.assertEqual(extract_video_id(url), "dQw4w9WgXcQ")
 
+    def test_extract_video_id_watch_url_with_query_params(self):
+        url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=120s&feature=shared"
+        self.assertEqual(extract_video_id(url), "dQw4w9WgXcQ")
+
     def test_extract_video_id_valid_short_url(self):
         url = "https://youtu.be/dQw4w9WgXcQ"
         self.assertEqual(extract_video_id(url), "dQw4w9WgXcQ")
 
+    def test_extract_video_id_short_url_with_query_params(self):
+        url = "https://youtu.be/dQw4w9WgXcQ?t=120"
+        self.assertEqual(extract_video_id(url), "dQw4w9WgXcQ")
+
+    def test_extract_video_id_shorts_url(self):
+        url = "https://www.youtube.com/shorts/dQw4w9WgXcQ"
+        self.assertEqual(extract_video_id(url), "dQw4w9WgXcQ")
+
+    def test_extract_video_id_embed_url(self):
+        url = "https://www.youtube.com/embed/dQw4w9WgXcQ"
+        self.assertEqual(extract_video_id(url), "dQw4w9WgXcQ")
+
+    def test_extract_video_id_live_url(self):
+        url = "https://www.youtube.com/live/dQw4w9WgXcQ"
+        self.assertEqual(extract_video_id(url), "dQw4w9WgXcQ")
+
+    def test_extract_video_id_mobile_url(self):
+        url = "https://m.youtube.com/watch?v=dQw4w9WgXcQ"
+        self.assertEqual(extract_video_id(url), "dQw4w9WgXcQ")
+
+    def test_extract_video_id_with_hyphens_and_underscores(self):
+        url = "https://www.youtube.com/watch?v=-a_B1c2D3e4"
+        self.assertEqual(extract_video_id(url), "-a_B1c2D3e4")
+
     def test_extract_video_id_invalid_url(self):
         url = "https://example.com/abc"
+        self.assertIsNone(extract_video_id(url))
+
+    def test_extract_video_id_empty_string(self):
+        self.assertIsNone(extract_video_id(""))
+
+    def test_extract_video_id_too_short_id(self):
+        url = "https://www.youtube.com/watch?v=12345"
         self.assertIsNone(extract_video_id(url))
 
     @patch("yt_dlp.YoutubeDL")
@@ -39,12 +74,14 @@ class TestTranscript(unittest.TestCase):
 
         info = fetch_video_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
         self.assertEqual(info, {"title": "Test Title"})
+        mock_youtube_dl.assert_called_once_with({'quiet': True})
         mock_ydl_instance.extract_info.assert_called_once_with(
             "https://www.youtube.com/watch?v=dQw4w9WgXcQ", download=False
         )
 
+    @patch("sys.stderr", new_callable=StringIO)
     @patch("yt_dlp.YoutubeDL")
-    def test_fetch_video_info_error(self, mock_youtube_dl):
+    def test_fetch_video_info_error(self, mock_youtube_dl, mock_stderr):
         mock_ydl_instance = MagicMock()
         mock_youtube_dl.return_value.__enter__.return_value = mock_ydl_instance
         mock_ydl_instance.extract_info.side_effect = Exception("DL error")
@@ -52,6 +89,8 @@ class TestTranscript(unittest.TestCase):
         with self.assertRaises(SystemExit) as cm:
             fetch_video_info("https://www.youtube.com/watch?v=invalid")
         self.assertEqual(cm.exception.code, 1)
+        mock_youtube_dl.assert_called_once_with({'quiet': True})
+        self.assertIn("Error fetching video info: DL error", mock_stderr.getvalue())
 
     @patch("transcript.YouTubeTranscriptApi")
     def test_fetch_transcript_get_transcript_success(self, mock_api):
@@ -83,11 +122,25 @@ class TestTranscript(unittest.TestCase):
         self.assertEqual(result[0]["text"], "Fallback text")
 
     @patch("transcript.YouTubeTranscriptApi")
-    def test_fetch_transcript_exception_returns_empty(self, mock_api):
+    def test_fetch_transcript_timestamp_formatting(self, mock_api):
+        mock_api.get_transcript.return_value = [
+            {"start": 0.0, "text": "Start snippet"},
+            {"start": 3661.8, "text": "Long video snippet"},
+        ]
+
+        result = fetch_transcript("dQw4w9WgXcQ")
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["start_display"], "00:00")
+        self.assertEqual(result[1]["start_display"], "61:01")
+
+    @patch("sys.stderr", new_callable=StringIO)
+    @patch("transcript.YouTubeTranscriptApi")
+    def test_fetch_transcript_exception_returns_empty_and_logs_stderr(self, mock_api, mock_stderr):
         mock_api.get_transcript.side_effect = Exception("No transcript available")
 
         result = fetch_transcript("dQw4w9WgXcQ")
         self.assertEqual(result, [])
+        self.assertIn("Error fetching transcript: No transcript available", mock_stderr.getvalue())
 
     @patch("transcript.fetch_transcript")
     @patch("transcript.fetch_video_info")
@@ -130,9 +183,52 @@ class TestTranscript(unittest.TestCase):
         result = format_with_template(data)
         self.assertEqual(result, json.dumps(data, indent=2))
 
+    def test_format_with_template_real_template_rendering(self):
+        data = {
+            "title": "Awesome Video Title",
+            "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "uploader": "Test Channel",
+            "upload_date": "20231025",
+            "duration_string": "03:45",
+            "description": "This is a test description for the video.",
+            "transcript": [
+                {"start": 0.0, "start_display": "00:00", "text": "Hello world"},
+                {"start": 5.5, "start_display": "00:05", "text": "Welcome to the test"},
+            ],
+        }
+        expected_output = (
+            "# Awesome Video Title\n\n"
+            "**URL:** https://www.youtube.com/watch?v=dQw4w9WgXcQ\n"
+            "**Channel:** Test Channel\n"
+            "**Published:** 20231025\n"
+            "**Duration:** 03:45\n\n"
+            "## Description\n\n"
+            "This is a test description for the video.\n\n"
+            "## Transcript\n\n"
+            "[00:00] Hello world\n"
+            "[00:05] Welcome to the test"
+        )
+        result = format_with_template(data)
+        self.assertEqual(result, expected_output)
+
+    def test_format_with_template_empty_transcript(self):
+        data = {
+            "title": "No Transcript Video",
+            "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "uploader": "Test Channel",
+            "upload_date": "20231025",
+            "duration_string": "01:00",
+            "description": "No transcript available.",
+            "transcript": [],
+        }
+        result = format_with_template(data)
+        self.assertIn("# No Transcript Video", result)
+        self.assertIn("## Transcript", result)
+        self.assertTrue(result.endswith("## Transcript"))
+
     @patch("transcript.Environment")
     @patch("os.path.exists")
-    def test_format_with_template_success(self, mock_exists, mock_env_cls):
+    def test_format_with_template_mocked_env(self, mock_exists, mock_env_cls):
         mock_exists.return_value = True
         mock_env = MagicMock()
         mock_template = MagicMock()

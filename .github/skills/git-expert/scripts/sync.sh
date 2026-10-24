@@ -166,8 +166,12 @@ fi
 # Pop stash if created
 POP_ERR=""
 if [[ "$STASHED" -eq 1 ]]; then
-  if ! git stash pop --quiet; then
-    POP_ERR="Stash restore encountered merge conflicts. Working tree has conflict markers."
+  if [[ -z "$REBASE_ERR" ]]; then
+    if ! git stash pop --quiet; then
+      POP_ERR="Stash restore encountered merge conflicts. Working tree has conflict markers."
+    fi
+  else
+    POP_ERR="Tracked changes remain safely stashed in '$STASH_MSG'. After resolving conflicts and running 'git rebase --continue', run 'git stash pop' to restore them."
   fi
 fi
 

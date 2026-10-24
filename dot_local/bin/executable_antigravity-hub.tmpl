@@ -1,16 +1,58 @@
 #!/usr/bin/env bash
-# Launcher: repairs the SUID sandbox helper before exec, since app updates
-# re-extract it as a plain user-owned file.
+# Launcher: repairs the SUID sandbox helper before exec and checks for updates asynchronously.
 set -euo pipefail
+
+{{- $installed_version := "unknown" }}
+{{- if .is_default_linux }}
+{{-   $hub_json := output "curl" "-fsSL" "https://antigravity-hub-auto-updater-974169037036.us-central1.run.app/releases" }}
+{{-   $hub_payload := fromJson $hub_json }}
+{{-   $hub := index $hub_payload 0 }}
+{{-   $installed_version = $hub.version }}
+{{- end }}
 
 hub_dir="{{ .chezmoi.homeDir }}/.local/opt/antigravity-hub"
 sandbox="$hub_dir/chrome-sandbox"
+installed_version="{{ $installed_version }}"
 
+# Repair SUID sandbox helper if needed
 if [[ -f $sandbox ]] && { [[ $(stat -c %U "$sandbox") != root ]] || [[ $(stat -c %a "$sandbox") != 4755 ]]; }; then
   if ! pkexec /bin/sh -c 'chown root:root "$1" && chmod 4755 "$1"' _ "$sandbox"; then
     printf 'antigravity-hub: could not fix SUID sandbox helper; aborting\n' >&2
     exit 1
   fi
 fi
+
+# Asynchronous, non-blocking check for new releases
+check_updates() {
+  local cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/antigravity-hub"
+  local notify_file="$cache_dir/last_notified_version"
+  mkdir -p "$cache_dir"
+
+  local release_json
+  release_json=$(curl -fsSL --max-time 1 "https://antigravity-hub-auto-updater-974169037036.us-central1.run.app/releases" 2>/dev/null || true)
+  [[ -z "$release_json" ]] && return 0
+
+  local latest_version
+  latest_version=$(jq -r '.[0].version // empty' <<< "$release_json" 2>/dev/null || true)
+  [[ -z "$latest_version" ]] && return 0
+
+  if [[ "$latest_version" != "$installed_version" && "$installed_version" != "unknown" ]]; then
+    if [[ -f "$notify_file" ]] && [[ "$(< "$notify_file")" == "$latest_version" ]]; then
+      return 0
+    fi
+
+    local icon_path="{{ .chezmoi.homeDir }}/.local/share/icons/antigravity-hub.png"
+    local icon_args=()
+    [[ -f "$icon_path" ]] && icon_args=(-i "$icon_path")
+
+    notify-send "${icon_args[@]}" \
+      "Antigravity Hub Update Available" \
+      "Version v${latest_version} is available (installed: v${installed_version}).\nRun 'chezmoi update' to upgrade." 2>/dev/null || true
+
+    printf '%s\n' "$latest_version" > "$notify_file"
+  fi
+}
+
+check_updates &>/dev/null &
 
 exec "$hub_dir/antigravity" "$@"

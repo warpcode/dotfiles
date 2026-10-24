@@ -74,3 +74,11 @@ The script automatically verifies:
 2. CI status check rollup (fails with exit code 3 if CI checks are failing or pending).
 3. Applies `--admin` for ruleset bypass if requested.
 4. Supports `--dry-run` to preview the preflight without executing the merge.
+
+### Batch Merging Tool (`scripts/batch_merge.sh`)
+
+Use `scripts/batch_merge.sh` to preflight and squash-merge multiple approved pull requests sequentially:
+```bash
+bash <skill-dir>/scripts/batch_merge.sh --repo <owner/repo> --prs <1,2,3> [--admin] [--delete-branch] [--dry-run]
+```
+The script preflights every PR first, prints a clean Markdown status table, skips blocked/conflicting PRs, and sequentially merges conflict-free candidates with `--admin` ruleset bypass and branch deletion.

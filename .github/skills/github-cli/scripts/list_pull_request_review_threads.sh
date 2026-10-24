@@ -17,6 +17,7 @@ fi
 owner="$(gh repo view --json owner -q '.owner.login' 2>/dev/null || echo '')"
 repo="$(gh repo view --json name -q '.name' 2>/dev/null || echo '')"
 pull_number=""
+UNRESOLVED_IDS_ONLY=0
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -29,6 +30,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --owner <value>        Repository owner (auto-detected by default)"
       echo "  --repo <value>         Repository name (auto-detected by default)"
       echo "  --pull-number <value>  Pull request number (Required)"
+      echo "  --unresolved-ids       Emit only unresolved thread IDs (one per line)"
       echo "  -h, --help             Show this help message"
       exit 0
       ;;
@@ -43,6 +45,10 @@ while [[ $# -gt 0 ]]; do
     --pull-number)
       pull_number="$2"
       shift 2
+      ;;
+    --unresolved-ids)
+      UNRESOLVED_IDS_ONLY=1
+      shift
       ;;
     *)
       echo "Unknown argument: $1" >&2
@@ -78,6 +84,11 @@ if [[ $GH_STATUS -ne 0 ]]; then
   echo "Error: Failed to query GitHub API (exit code: $GH_STATUS)." >&2
   cat "$STDERR_FILE" >&2
   exit 1
+fi
+
+if [[ "$UNRESOLVED_IDS_ONLY" -eq 1 ]]; then
+  echo "$JSON_RESPONSE" | jq -r '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved | not) | .id'
+  exit 0
 fi
 
 # Hierarchical, token-efficient Markdown summary for review threads and all replies

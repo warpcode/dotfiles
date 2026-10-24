@@ -12,7 +12,7 @@ if str(scripts_dir) not in sys.path:
     sys.path.insert(0, str(scripts_dir))
 
 from jules.auth import resolve_jules_api_key
-from jules.client import JulesClient
+from jules.client import AuditSessionsOptions, CreateSessionConfig, JulesClient
 from jules.formatters import (
     format_activities,
     format_activity,
@@ -139,6 +139,45 @@ class TestJulesClient(unittest.TestCase):
         req = mock_urlopen.call_args[0][0]
         payload = json.loads(req.data.decode("utf-8"))
         self.assertEqual(payload.get("automationMode"), "AUTO_CREATE_PR")
+
+    @patch("jules.client.urlopen")
+    def test_create_session_with_config(self, mock_urlopen):
+        mock_response = MagicMock()
+        mock_response.getcode.return_value = 200
+        mock_response.read.return_value = json.dumps({
+            "id": "7777777777777777777",
+            "title": "Config Task",
+            "state": "QUEUED",
+        }).encode("utf-8")
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        config = CreateSessionConfig(
+            prompt="Run test suite",
+            source="github/warpcode/cloakpkg",
+            title="Config Task",
+        )
+        data = self.client.create_session(config=config)
+        self.assertEqual(data["id"], "7777777777777777777")
+
+        mock_urlopen.assert_called_once()
+        req = mock_urlopen.call_args[0][0]
+        payload = json.loads(req.data.decode("utf-8"))
+        self.assertEqual(payload.get("prompt"), "Run test suite")
+        self.assertEqual(payload.get("title"), "Config Task")
+        self.assertEqual(payload.get("sourceContext", {}).get("source"), "sources/github/warpcode/cloakpkg")
+
+    def test_create_session_invalid_kwargs(self):
+        with self.assertRaises(TypeError):
+            self.client.create_session(prompt="Test", invalid_param=123)
+
+    def test_create_session_missing_prompt(self):
+        with self.assertRaises(TypeError):
+            self.client.create_session()
+
+    def test_create_session_config_with_extra_kwargs(self):
+        config = CreateSessionConfig(prompt="Test")
+        with self.assertRaises(TypeError):
+            self.client.create_session(config=config, invalid_param=123)
 
     @patch("jules.client.urlopen")
     def test_create_session_custom_automation_mode(self, mock_urlopen):
@@ -655,6 +694,53 @@ class TestJulesFormatters(unittest.TestCase):
         self.assertNotIn("#### Stalled / Silent Sessions", md)
         self.assertNotIn("### Actionable Items", md)
 
+    def test_format_session_check_show_history_and_feedback(self):
+        audits = [
+            {
+                "id": "444",
+                "title": "Feedback Task",
+                "state": "IN_PROGRESS",
+                "assessment": "AWAITING_USER_FEEDBACK",
+                "inactive_mins": 15.0,
+                "latest_detail": "Please review",
+                "last_agent_message": "Need input",
+                "pull_request_url": "",
+                "user_message_count": 2,
+                "agent_message_count": 3,
+                "unanswered_user_messages": 0,
+                "agent_awaiting_reply": True,
+                "conversation_history": [
+                    {"role": "user", "time": "2026-03-01T10:00:00Z", "type": "message", "content": "Hello"},
+                    {"role": "agent", "time": "2026-03-01T10:01:00Z", "type": "message", "content": "Which approach do you prefer?"},
+                ],
+            }
+        ]
+        md = format_session_check(audits, show_history=True)
+        self.assertIn("FEEDBACK_GATE", md)
+        self.assertIn("Sessions Awaiting User Guidance", md)
+        self.assertIn("Detailed Conversation Histories", md)
+        self.assertIn("Which approach do you prefer?", md)
+
+    def test_format_session_check_flag_unmerged(self):
+        audits = [
+            {
+                "id": "555",
+                "title": "Completed Task No PR",
+                "state": "COMPLETED",
+                "assessment": "COMPLETED_NO_OUTPUT",
+                "inactive_mins": 120.0,
+                "latest_detail": "Done",
+                "pull_request_url": "",
+                "conversation_history": [
+                    {"role": "agent", "time": "2026-03-01T12:00:00Z", "type": "message", "content": "Completed pre-commit steps successfully."},
+                ],
+            }
+        ]
+        md = format_session_check(audits, flag_unmerged=True)
+        self.assertIn("CLOSED_NO_PR", md)
+        self.assertIn("CLOSED_NO_PR Sessions with Deliverables (Unmerged Work)", md)
+        self.assertIn("555", md)
+
 
 class TestJulesBatchOperations(unittest.TestCase):
     def test_audit_sessions_repo_filter(self):
@@ -742,15 +828,44 @@ class TestJulesBatchOperations(unittest.TestCase):
         ]
 
         candidates = _archive_candidates(client, args)
-        client.audit_sessions.assert_called_once_with(
+        expected_options = AuditSessionsOptions(
             page_size=50,
             max_age_days=None,
             older_than_days=None,
             repo=None,
             all_pages=True,
         )
+        client.audit_sessions.assert_called_once_with(expected_options)
         self.assertEqual(len(candidates), 1)
         self.assertEqual(candidates[0]["id"], "c1")
+
+    def test_audit_sessions_options_dataclass_usage(self):
+        client = JulesClient(api_key="dummy")
+        now = datetime.now(timezone.utc)
+        mock_sessions = {
+            "sessions": [
+                {
+                    "id": "s10",
+                    "sourceContext": {"source": "sources/github/warpcode/cloakenv"},
+                    "createTime": (now - timedelta(days=1)).isoformat(),
+                    "state": "IN_PROGRESS",
+                },
+            ]
+        }
+        opts = AuditSessionsOptions(page_size=5, max_age_days=10, repo="cloakenv")
+        with patch.object(client, "list_sessions", return_value=mock_sessions), \
+             patch.object(client, "audit_session", return_value={"id": "s10"}):
+            audits = client.audit_sessions(opts, page_size=20)
+            self.assertEqual(len(audits), 1)
+            self.assertEqual(audits[0]["id"], "s10")
+            # Verify original opts was not mutated
+            self.assertEqual(opts.page_size, 5)
+
+        # Verify invalid kwargs raise TypeError uniformly
+        with self.assertRaises(TypeError):
+            client.audit_sessions(opts, invalid_arg="bad")
+        with self.assertRaises(TypeError):
+            client.audit_sessions(invalid_arg="bad")
 
 
 if __name__ == "__main__":

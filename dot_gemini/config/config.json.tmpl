@@ -1,33 +1,19 @@
 {{- $configPath := joinPath .chezmoi.homeDir ".gemini/config/config.json" -}}
-{{- $remoteControlEnabled := true -}}
-{{- $hasRemoteControlHostname := false -}}
-{{- $remoteControlHostname := "" -}}
+{{- $userSettings := dict "remoteControlEnabled" true -}}
 {{- if stat $configPath -}}
   {{- $existingConfig := include $configPath | fromJson -}}
   {{- if hasKey $existingConfig "userSettings" -}}
-    {{- $existingUserSettings := index $existingConfig "userSettings" -}}
-    {{- if hasKey $existingUserSettings "remoteControlEnabled" -}}
-      {{- $remoteControlEnabled = index $existingUserSettings "remoteControlEnabled" -}}
-    {{- else if hasKey $existingConfig "remoteControlEnabled" -}}
-      {{- $remoteControlEnabled = index $existingConfig "remoteControlEnabled" -}}
-    {{- end -}}
-    {{- if hasKey $existingUserSettings "remoteControlHostname" -}}
-      {{- $hasRemoteControlHostname = true -}}
-      {{- $remoteControlHostname = index $existingUserSettings "remoteControlHostname" -}}
-    {{- else if hasKey $existingConfig "remoteControlHostname" -}}
-      {{- $hasRemoteControlHostname = true -}}
-      {{- $remoteControlHostname = index $existingConfig "remoteControlHostname" -}}
-    {{- end -}}
+    {{- $userSettings = index $existingConfig "userSettings" -}}
   {{- else -}}
     {{- if hasKey $existingConfig "remoteControlEnabled" -}}
-      {{- $remoteControlEnabled = index $existingConfig "remoteControlEnabled" -}}
+      {{- $_ := set $userSettings "remoteControlEnabled" (index $existingConfig "remoteControlEnabled") -}}
     {{- end -}}
     {{- if hasKey $existingConfig "remoteControlHostname" -}}
-      {{- $hasRemoteControlHostname = true -}}
-      {{- $remoteControlHostname = index $existingConfig "remoteControlHostname" -}}
+      {{- $_ := set $userSettings "remoteControlHostname" (index $existingConfig "remoteControlHostname") -}}
     {{- end -}}
   {{- end -}}
 {{- end -}}
+{{- $_ := unset $userSettings "globalPermissionGrants" -}}
 {
   "model": "Gemini 3.8 Flash (Medium)",
   "enableTelemetry": false,
@@ -42,10 +28,9 @@
     "{{ .chezmoi.sourceDir }}"
   ],
   "userSettings": {
-    {{- if $hasRemoteControlHostname }}
-    "remoteControlHostname": {{ $remoteControlHostname | toJson }},
+    {{- range $k, $v := $userSettings }}
+    {{ $k | toJson }}: {{ $v | toJson }},
     {{- end }}
-    "remoteControlEnabled": {{ $remoteControlEnabled }},
     {{ template "commands/antigravity.tmpl" . }}
   },
   "useG1Credits": false,

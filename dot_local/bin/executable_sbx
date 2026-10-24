@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Workaround for version mismatch between sbx 0.48.0 and docker agent 1.150.0
+# docker agent expects {"sandboxes": [...]}, but sbx outputs [...] directly
+REAL_SBX=$(which -a sbx | grep -v "$HOME/.local/bin/sbx" | head -n1)
+
+# Intercept 'sbx list/ls --json' and wrap array in {"sandboxes": ...}
+if [[ ("$*" == *"list"* || "$*" == *"ls"*) && ("$*" == *"--json"* || "$*" == *"json"*) ]]; then
+  output=$("$REAL_SBX" "$@")
+  status=$?
+  if [[ $status -ne 0 ]]; then
+    printf '%s\n' "$output"
+    exit $status
+  fi
+  if [[ "$output" =~ ^[[:space:]]*\[.*\][[:space:]]*$ ]]; then
+    printf '{"sandboxes": %s}\n' "$output"
+    exit 0
+  fi
+  printf '%s\n' "$output"
+  exit 0
+fi
+
+exec "$REAL_SBX" "$@"

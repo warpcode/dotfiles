@@ -137,98 +137,110 @@ def pinned_manifests() -> set[str]:
             for m in re.finditer(r"^\s*directory:\s*[\"']?([^\"'\n]+)", cfg, re.M)}
 
 
-def render(dep: list[dict], cs: list[dict], repo: str, base: str) -> str:
-    base_ref = f"origin/{base}"
-    out = [f"# Alert audit -- {repo} (against `{base_ref}`)", ""]
+def _render_summary(
+    real: list[dict],
+    phantom: list[dict],
+    unfixable: list[dict],
+    dismissed: list[dict],
+    fixed: list[dict],
+    open_cs: list[dict],
+) -> list[str]:
+    return [
+        "| Signal | Count |",
+        "|---|---|",
+        f"| Dependabot open (real manifest) | {len(real)} |",
+        f"| Dependabot open (phantom -- manifest absent) | {len(phantom)} |",
+        f"| ...of the real ones, no patched version exists | {len(unfixable)} |",
+        f"| Dependabot dismissed | {len(dismissed)} |",
+        f"| Dependabot fixed | {len(fixed)} |",
+        f"| Code scanning open | {len(open_cs)} |",
+        "",
+    ]
 
-    open_dep = [d for d in dep if d["state"] == "open"]
-    phantom = [d for d in open_dep if not d["manifest_exists"]]
-    real = [d for d in open_dep if d["manifest_exists"]]
-    unfixable = [d for d in real if not d["fix_available"]]
-    dismissed = [d for d in dep if d["state"] == "dismissed"]
-    fixed = [d for d in dep if d["state"] == "fixed"]
 
-    # Same advisory raised against several manifests -> one real issue, N noise rows.
-    dupes: dict[tuple, list[dict]] = defaultdict(list)
-    for d in open_dep:
-        dupes[(d["ghsa"], d["package"])].append(d)
-
-    out.append("| Signal | Count |")
-    out.append("|---|---|")
-    out.append(f"| Dependabot open (real manifest) | {len(real)} |")
-    out.append(f"| Dependabot open (phantom -- manifest absent) | {len(phantom)} |")
-    out.append(f"| ...of the real ones, no patched version exists | {len(unfixable)} |")
-    out.append(f"| Dependabot dismissed | {len(dismissed)} |")
-    out.append(f"| Dependabot fixed | {len(fixed)} |")
-    out.append(f"| Code scanning open | {len([c for c in cs if c.get('state') == 'open'])} |")
+def _render_phantom_section(
+    phantom: list[dict],
+    real: list[dict],
+    repo: str,
+    base: str,
+    pinned: set[str],
+) -> list[str]:
+    out = [
+        "## Phantom alerts",
+        "",
+        "These reference a manifest that does not exist on the default branch, "
+        "so there is no pinned version to assess or upgrade.",
+        "",
+        "| # | Sev | Advisory | Package | Manifest |",
+        "|---|---|---|---|---|",
+    ]
+    for d in phantom:
+        out.append(f"| {d['number']} | {d['severity']} | `{d['ghsa']}` "
+                   f"| `{d['package']}` | `{d['manifest']}` |")
     out.append("")
+    live_manifests = sorted({d["manifest"] for d in real})
+    out.append("Dismiss as inaccurate -- one command per alert:")
+    out.append("")
+    out.append("```bash")
+    for d in phantom:
+        out.append(
+            f"gh api --method PATCH repos/{repo}/dependabot/alerts/{d['number']} \\\n"
+            f"  -f state=dismissed -f dismissed_reason=inaccurate \\\n"
+            f"  -f dismissed_comment='Manifest absent from {base}; live path is "
+            f"{live_manifests[0] if live_manifests else 'n/a'}'"
+        )
+    out.append("```")
+    out.append("")
+    out.append("> The comment field is capped at 280 characters; the API returns "
+               "HTTP 422 if you exceed it.")
+    out.append("")
+    if not pinned:
+        out.append("**Dismissal does not fix the cause.** There is no "
+                   "`.github/dependabot.yml`, so auto-discovery can re-adopt these "
+                   "paths on the next scan. Pin `directory:` to the live manifest.")
+        out.append("")
+    return out
 
-    pinned = pinned_manifests()
-    if phantom:
-        out.append("## Phantom alerts")
-        out.append("")
-        out.append("These reference a manifest that does not exist on the default branch, "
-                   "so there is no pinned version to assess or upgrade.")
-        out.append("")
-        out.append("| # | Sev | Advisory | Package | Manifest |")
-        out.append("|---|---|---|---|---|")
-        for d in phantom:
-            out.append(f"| {d['number']} | {d['severity']} | `{d['ghsa']}` "
-                       f"| `{d['package']}` | `{d['manifest']}` |")
-        out.append("")
-        live_manifests = sorted({d["manifest"] for d in real})
-        out.append("Dismiss as inaccurate -- one command per alert:")
-        out.append("")
-        out.append("```bash")
-        for d in phantom:
-            out.append(
-                f"gh api --method PATCH repos/{repo}/dependabot/alerts/{d['number']} \\\n"
-                f"  -f state=dismissed -f dismissed_reason=inaccurate \\\n"
-                f"  -f dismissed_comment='Manifest absent from {base}; live path is "
-                f"{live_manifests[0] if live_manifests else 'n/a'}'"
-            )
-        out.append("```")
-        out.append("")
-        out.append("> The comment field is capped at 280 characters; the API returns "
-                   "HTTP 422 if you exceed it.")
-        out.append("")
-        if not pinned:
-            out.append("**Dismissal does not fix the cause.** There is no "
-                       "`.github/dependabot.yml`, so auto-discovery can re-adopt these "
-                       "paths on the next scan. Pin `directory:` to the live manifest.")
-            out.append("")
 
-    if real:
-        out.append("## Real alerts")
+def _render_real_section(real: list[dict], unfixable: list[dict]) -> list[str]:
+    out = [
+        "## Real alerts",
+        "",
+        "| # | Sev | Advisory | Package | Manifest | Fix |",
+        "|---|---|---|---|---|---|",
+    ]
+    for d in sorted(real, key=lambda x: (x["severity"] != "high", x["ghsa"] or "")):
+        fix = f"`{d['fixed_in']}`" if d["fix_available"] else "**none available**"
+        out.append(f"| {d['number']} | {d['severity']} | `{d['ghsa']}` "
+                   f"| `{d['package']}` | `{d['manifest']}` | {fix} |")
+    out.append("")
+    for d in real:
+        if d["summary"]:
+            out.append(f"- `{d['ghsa']}` — {d['summary']}")
+    out.append("")
+    if unfixable:
+        out.append(f"{len(unfixable)} of these have `first_patched_version: NONE` — "
+                   "no upgrade exists yet. Record and revisit; do not churn on them.")
         out.append("")
-        out.append("| # | Sev | Advisory | Package | Manifest | Fix |")
-        out.append("|---|---|---|---|---|---|")
-        for d in sorted(real, key=lambda x: (x["severity"] != "high", x["ghsa"] or "")):
-            fix = f"`{d['fixed_in']}`" if d["fix_available"] else "**none available**"
-            out.append(f"| {d['number']} | {d['severity']} | `{d['ghsa']}` "
-                       f"| `{d['package']}` | `{d['manifest']}` | {fix} |")
-        out.append("")
-        for d in real:
-            if d["summary"]:
-                out.append(f"- `{d['ghsa']}` — {d['summary']}")
-        out.append("")
-        if unfixable:
-            out.append(f"{len(unfixable)} of these have `first_patched_version: NONE` — "
-                       "no upgrade exists yet. Record and revisit; do not churn on them.")
-            out.append("")
+    return out
 
-    triplicated = {k: v for k, v in dupes.items() if len(v) > 1}
-    if triplicated:
-        out.append("## Duplicate advisories across manifests")
-        out.append("")
-        for (ghsa, pkg), group in sorted(triplicated.items()):
-            live = sum(1 for d in group if d["manifest_exists"])
-            out.append(f"- `{ghsa}` / `{pkg}` raised {len(group)}x "
-                       f"({live} real, {len(group) - live} phantom) -- one issue, "
-                       f"{len(group)} rows")
-        out.append("")
 
-    open_cs = [c for c in cs if c.get("state") == "open"]
+def _render_triplicated_section(triplicated: dict[tuple, list[dict]]) -> list[str]:
+    out = [
+        "## Duplicate advisories across manifests",
+        "",
+    ]
+    for (ghsa, pkg), group in sorted(triplicated.items()):
+        live = sum(1 for d in group if d["manifest_exists"])
+        out.append(f"- `{ghsa}` / `{pkg}` raised {len(group)}x "
+                   f"({live} real, {len(group) - live} phantom) -- one issue, "
+                   f"{len(group)} rows")
+    out.append("")
+    return out
+
+
+def _render_code_scanning_section(open_cs: list[dict], repo: str) -> list[str]:
+    out = []
     if open_cs:
         out.append("## Code scanning")
         out.append("")
@@ -257,6 +269,40 @@ def render(dep: list[dict], cs: list[dict], repo: str, base: str) -> str:
         out.append("")
     else:
         out.append("## Code scanning\n\nNo open alerts.\n")
+    return out
+
+
+def render(dep: list[dict], cs: list[dict], repo: str, base: str) -> str:
+    base_ref = f"origin/{base}"
+    out = [f"# Alert audit -- {repo} (against `{base_ref}`)", ""]
+
+    open_dep = [d for d in dep if d["state"] == "open"]
+    phantom = [d for d in open_dep if not d["manifest_exists"]]
+    real = [d for d in open_dep if d["manifest_exists"]]
+    unfixable = [d for d in real if not d["fix_available"]]
+    dismissed = [d for d in dep if d["state"] == "dismissed"]
+    fixed = [d for d in dep if d["state"] == "fixed"]
+    open_cs = [c for c in cs if c.get("state") == "open"]
+
+    # Same advisory raised against several manifests -> one real issue, N noise rows.
+    dupes: dict[tuple, list[dict]] = defaultdict(list)
+    for d in open_dep:
+        dupes[(d["ghsa"], d["package"])].append(d)
+
+    out.extend(_render_summary(real, phantom, unfixable, dismissed, fixed, open_cs))
+
+    pinned = pinned_manifests()
+    if phantom:
+        out.extend(_render_phantom_section(phantom, real, repo, base, pinned))
+
+    if real:
+        out.extend(_render_real_section(real, unfixable))
+
+    triplicated = {k: v for k, v in dupes.items() if len(v) > 1}
+    if triplicated:
+        out.extend(_render_triplicated_section(triplicated))
+
+    out.extend(_render_code_scanning_section(open_cs, repo))
 
     return "\n".join(out)
 
