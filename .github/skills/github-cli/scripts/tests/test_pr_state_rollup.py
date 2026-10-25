@@ -26,6 +26,25 @@ class TestPRStateRollup(unittest.TestCase):
         mock_run.return_value = (0, "https://github.com/owner/repo\n", "")
         self.assertEqual(prs.resolve_repo(None), "owner/repo")
 
+    @patch("pr_state_rollup.run")
+    def test_resolve_repo_git_remote_https_with_git_suffix(self, mock_run):
+        mock_run.return_value = (0, "https://github.com/owner/repo.git\n", "")
+        self.assertEqual(prs.resolve_repo(None), "owner/repo")
+
+    @patch("pr_state_rollup.run")
+    def test_resolve_repo_git_remote_ssh_url_format(self, mock_run):
+        mock_run.return_value = (0, "ssh://git@github.com/owner/repo.git\n", "")
+        self.assertEqual(prs.resolve_repo(None), "owner/repo")
+
+    @patch("sys.stderr.write")
+    @patch("pr_state_rollup.run")
+    def test_resolve_repo_git_remote_empty_output(self, mock_run, mock_stderr):
+        mock_run.return_value = (0, "   \n", "")
+        with self.assertRaises(SystemExit) as cm:
+            prs.resolve_repo(None)
+        self.assertEqual(cm.exception.code, 1)
+        mock_stderr.assert_called()
+
     @patch("sys.stderr.write")
     @patch("pr_state_rollup.run")
     def test_resolve_repo_git_remote_failure(self, mock_run, mock_stderr):
