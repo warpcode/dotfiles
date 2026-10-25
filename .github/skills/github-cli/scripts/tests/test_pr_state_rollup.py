@@ -64,6 +64,38 @@ class TestPRStateRollup(unittest.TestCase):
         self.assertEqual(failing, "")
         self.assertEqual(pending, "")
 
+    def test_rollup_status_empty_check_item(self):
+        # A check item with no conclusion, state, status, or name
+        pr = {"statusCheckRollup": [{}]}
+        overall, failing, pending = prs.rollup_status(pr)
+        self.assertEqual(overall, prs.OK)
+        self.assertEqual(failing, "")
+        self.assertEqual(pending, "")
+
+    def test_rollup_status_precedence_order(self):
+        # conclusion takes precedence over state, which takes precedence over status
+        pr1 = {
+            "statusCheckRollup": [
+                {"conclusion": "FAILURE", "state": "SUCCESS", "status": "PENDING", "name": "c1"}
+            ]
+        }
+        self.assertEqual(prs.rollup_status(pr1), (prs.FAIL, "c1", ""))
+
+        pr2 = {
+            "statusCheckRollup": [
+                {"conclusion": None, "state": "PENDING", "status": "SUCCESS", "name": "c2"}
+            ]
+        }
+        self.assertEqual(prs.rollup_status(pr2), (prs.PENDING, "", "c2"))
+
+    def test_rollup_status_all_success_states(self):
+        for state in prs.SUCCESS_STATES:
+            pr = {"statusCheckRollup": [{"conclusion": state.upper(), "name": "check"}]}
+            overall, failing, pending = prs.rollup_status(pr)
+            self.assertEqual(overall, prs.OK, f"Failed for success state: {state}")
+            self.assertEqual(failing, "")
+            self.assertEqual(pending, "")
+
     def test_rollup_status_failure(self):
         pr = {
             "statusCheckRollup": [
