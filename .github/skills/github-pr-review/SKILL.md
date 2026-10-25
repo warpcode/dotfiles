@@ -25,7 +25,7 @@ calls. `--help` documents each one. Paths are relative to this skill's directory
 | `scripts/audit_ci_test_coverage.sh` | Reports whether CI actually runs the repo's tests, and which `paths:` filters gate it. |
 | `scripts/apply_mutation.py` | The mutation rewriter `mutation_check.sh` calls. Run it standalone with `--check` to confirm a pattern applies before committing to a finding. |
 | `scripts/reply_to_review_thread.sh` | Replies to an unresolved PR review comment thread with the created URL on stdout. |
-| `scripts/prebundle_prs.sh` | Pre-generates audit bundles for multiple PRs in the parent session (with head-SHA caching) before launching parallel subagents, avoiding subagent permission blocks. |
+| `scripts/prebundle_prs.sh` (**for "review all open PRs" always run `--all-open` first; do not loop `gh pr view` per PR**) | Pre-generates audit bundles for multiple PRs in the parent session (with head-SHA caching) before launching parallel subagents, avoiding subagent permission blocks. |
 | `scripts/batch_disposition.sh` | Plans, validates (`--validate-only` gate), and applies batch review dispositions (`APPROVE`, `REQUEST_CHANGES`, `CLOSE`) sequentially. Defaults to dry run. |
 
 ## 📄 Templates

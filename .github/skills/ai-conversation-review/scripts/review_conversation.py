@@ -500,6 +500,26 @@ def _ingest_copilot_jsonl(path: Path, sess: IngestedSession) -> None:
     _finalize_command_smells(sess, terminal_cmds, file_reads)
 
 
+_PROBE_CMD_RE = re.compile(
+    r'^\s*"?\s*(?:git\s+(?:-C\s+\S+\s+)?grep|grep|egrep|fgrep|rg|diff|cmp|test|\[|which|command\s+-v)\b'
+)
+_CHAIN_RE = re.compile(r'&&|\|\||;')
+
+
+def _is_probe_exit1(args: Any) -> bool:
+    """True when exit code 1 is a normal 'no match / not found / differs' answer.
+
+    Only a single simple command counts; chained commands (&&, ||, ;) are
+    treated as real failures because the exit code may come from any link.
+    """
+    if not isinstance(args, dict):
+        return False
+    cmd = args.get("CommandLine") or args.get("command") or ""
+    if not isinstance(cmd, str) or _CHAIN_RE.search(cmd):
+        return False
+    return bool(_PROBE_CMD_RE.match(cmd))
+
+
 def _ingest_antigravity_jsonl(path: Path, sess: IngestedSession) -> None:
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     sess.raw_records_count = len(lines)
@@ -548,7 +568,10 @@ def _ingest_antigravity_jsonl(path: Path, sess: IngestedSession) -> None:
             summary = f"Result payload ({res_len:,} B)"
             if sess.tool_calls:
                 sess.tool_calls[-1]["result_bytes"] = res_len
-                if "exited with code 1" in content or "Tool execution failed" in content:
+                if "Tool execution failed" in content or (
+                    "exited with code 1" in content
+                    and not _is_probe_exit1(sess.tool_calls[-1].get("args"))
+                ):
                     sess.tool_calls[-1]["failed"] = True
                     if sess.tool_calls[-1] not in sess.failed_calls:
                         sess.failed_calls.append(sess.tool_calls[-1])

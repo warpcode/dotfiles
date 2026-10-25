@@ -53,6 +53,8 @@ When resolving base branch merge conflicts on a PR branch as the PR author (usin
 5. Push the resolved branch using a standard `git push` (NEVER force-push `--force` or `--force-with-lease`).
 6. Clean up the isolated worktree.
 
+Bundled helper: `bash <skill-dir>/scripts/pr_sync_validate.sh <pr> --repo <owner/repo> [--dry-run] [--push] [--cleanup]` performs steps 1-3, validation (`./validate.sh`) and the push in one call. It exits `2` and lists the conflicted files when conflicts occur; after resolving and `git add`-ing them, re-run with `--continue`. When finishing a conflicted merge by hand, use `GIT_EDITOR=true git merge --continue`, never `git commit -m` (it failed at event #90 of session 4ff115e0). Do not open the script source; `--help` documents every flag.
+
 > ⚠️ **Jules-Owned PR Exception**: Jules exclusively owns changes to its PR branch. NEVER push Git/code changes or perform merges on a Jules-owned PR branch. If base-branch drift or conflicts become unmanageable on a Jules PR, start a new Jules session from the current PR branch and let Jules handle the subsequent changes.
 
 ## 5. Pull Request Merging Rules
