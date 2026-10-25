@@ -344,13 +344,26 @@ main() {
       mkdir -p "${HOME}/.local/bin"
       local mise_install_script
       mise_install_script="$(mktemp -t mise-bootstrap-XXXXXX.sh)"
+
+      # Default allowlist hashes pin known versions of the mise install script.
+      # These may go stale when upstream updates the script.
+      # Use MISE_INSTALL_SHA256 env var to override them if needed.
+      local default_mise_hashes="82d35715f9d54b9ca4ff5b909ebeb4f4ded457d4fae15814db2fe6da5b943e1f"
+      local expected_mise_sha256="${MISE_INSTALL_SHA256:-${default_mise_hashes}}"
+
       if curl -fsSL https://mise.run > "${mise_install_script}" && [[ -s "${mise_install_script}" ]]; then
-        if ! sh "${mise_install_script}"; then
-          err "Failed to execute mise installer"
+        if verify_checksum "${mise_install_script}" ${expected_mise_sha256}; then
+          if ! sh "${mise_install_script}"; then
+            err "Failed to execute mise installer"
+            rm -f "${mise_install_script}"
+            exit 1
+          fi
+          rm -f "${mise_install_script}"
+        else
+          err "Failed integrity check for mise installer"
           rm -f "${mise_install_script}"
           exit 1
         fi
-        rm -f "${mise_install_script}"
       else
         err "Failed to download mise installer"
         rm -f "${mise_install_script}"

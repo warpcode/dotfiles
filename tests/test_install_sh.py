@@ -110,6 +110,10 @@ class TestInstallShSecurity(unittest.TestCase):
         self.assertIn("mktemp -t mise-bootstrap-XXXXXX.sh", self.content)
         self.assertIn("[[ -s \"${mise_install_script}\" ]]", self.content)
 
+        # Verify checksum verification is called before execution
+        self.assertIn('if verify_checksum "${mise_install_script}" ${expected_mise_sha256}; then', self.content)
+        self.assertIn('err "Failed integrity check for mise installer"', self.content)
+
         # Verify error handling on script execution failure
         self.assertIn("if ! sh \"${mise_install_script}\"; then", self.content)
 
