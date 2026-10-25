@@ -112,6 +112,34 @@ class TestAiGuardWrapperHelper(unittest.TestCase):
         self.assertEqual(ai_guard_wrapper.extract_command({}), "")
         self.assertEqual(ai_guard_wrapper.extract_command({"other_key": "val", "foo": "bar"}), "")
 
+    def test_extract_command_inner_quotes(self):
+        # Outer quotes stripped, inner quotes preserved when not at boundaries
+        mapping = {"command": '\'echo "hello" world\''}
+        self.assertEqual(ai_guard_wrapper.extract_command(mapping), 'echo "hello" world')
+
+    def test_extract_command_whitespace_quotes_only(self):
+        # String with only quotes and whitespace evaluates to empty string, falling through to next valid key or returning ""
+        mapping = {"CommandLine": "  '\"\"'  ", "cmd": "echo valid"}
+        self.assertEqual(ai_guard_wrapper.extract_command(mapping), "echo valid")
+
+        mapping_empty = {"CommandLine": "  '\"\"'  "}
+        self.assertEqual(ai_guard_wrapper.extract_command(mapping_empty), "")
+
+    def test_extract_command_tabs_newlines(self):
+        # Tabs and newlines stripped around command/quotes
+        mapping = {"commandLine": "\t\n 'ls -la'\t\n "}
+        self.assertEqual(ai_guard_wrapper.extract_command(mapping), "ls -la")
+
+    def test_extract_command_non_string_fallthrough(self):
+        # Keys with None, bool, int, float, list, dict fall through to lower precedence key with valid string
+        mapping = {
+            "CommandLine": None,
+            "commandLine": True,
+            "command": 42,
+            "cmd": "ls -l",
+        }
+        self.assertEqual(ai_guard_wrapper.extract_command(mapping), "ls -l")
+
 
 class TestAIGuardWrapper(unittest.TestCase):
 
@@ -144,6 +172,31 @@ class TestAIGuardWrapper(unittest.TestCase):
             ai_guard_wrapper.handle_file_route(payload, "read_file", tool_args)
 
         mock_run_guard.assert_not_called()
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {"decision": "allow"})
+        self.mock_exit.assert_called_with(0)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_file_route_none_tool_args_or_payload(self, mock_stdout, mock_run_guard):
+        # When tool_args and payload are None or non-dict, handle_file_route should safely handle them
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_file_route(None, "read_file", None)
+
+        mock_run_guard.assert_not_called()
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {"decision": "allow"})
+        self.mock_exit.assert_called_with(0)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_file_route_payload_target_only_with_none_tool_args(self, mock_stdout, mock_run_guard):
+        # Payload contains path, tool_args is None
+        mock_run_guard.return_value = (0, {"decision": "allow"})
+        payload = {"filePath": "/path/in/payload.txt"}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_file_route(payload, "read_file", None)
+
+        mock_run_guard.assert_called_once_with("file", args=["/path/in/payload.txt"], stdin_str=json.dumps(payload))
         self.assertEqual(json.loads(mock_stdout.getvalue()), {"decision": "allow"})
         self.mock_exit.assert_called_with(0)
 
@@ -716,6 +769,69 @@ class TestAIGuardWrapper(unittest.TestCase):
         written_content = "".join(call.args[0] for call in handle.write.call_args_list)
         self.assertIn("PROMPT SANITIZED", written_content)
         self.assertNotIn("sensitive_data_12345", written_content)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_prompt_route_messages_last_user_message(self, mock_stdout, mock_run_guard):
+        mock_run_guard.return_value = (0, {"decision": "allow"})
+        payload = {
+            "messages": [
+                {"role": "system", "content": "system instruction"},
+                {"role": "user", "content": "hello from user"}
+            ]
+        }
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_prompt_route(payload)
+
+        mock_run_guard.assert_called_once_with("prompt", stdin_str=json.dumps({"text": "hello from user"}))
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {})
+        self.mock_exit.assert_called_with(0)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_prompt_route_messages_last_non_user_message(self, mock_stdout, mock_run_guard):
+        payload = {
+            "messages": [
+                {"role": "user", "content": "user question"},
+                {"role": "assistant", "content": "assistant response"}
+            ]
+        }
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_prompt_route(payload)
+
+        mock_run_guard.assert_not_called()
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {})
+        self.mock_exit.assert_called_with(0)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_prompt_route_messages_empty_list(self, mock_stdout, mock_run_guard):
+        payload = {"messages": []}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_prompt_route(payload)
+
+        mock_run_guard.assert_not_called()
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {})
+        self.mock_exit.assert_called_with(0)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_handle_prompt_route_replace_sanitized_without_reasons(self, mock_stderr, mock_stdout, mock_run_guard):
+        mock_run_guard.return_value = (0, {"decision": "replace", "sanitized": "safe prompt"})
+        payload = {"prompt": "my secret"}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_prompt_route(payload)
+
+        resp = json.loads(mock_stdout.getvalue())
+        self.assertIn("injectSteps", resp)
+        self.assertEqual(resp["injectSteps"][0]["ephemeralMessage"], "Security Notice: Redacted sensitive items.")
+        self.assertIn("SECURITY GUARD: Prompt submission blocked: sensitive credentials or secrets detected. Remove secrets from prompt to prevent leakage.", mock_stderr.getvalue())
+        self.mock_exit.assert_called_with(0)
 
     @patch('ai_guard_wrapper.run_guard')
     @patch('sys.stdout', new_callable=StringIO)

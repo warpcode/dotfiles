@@ -51,6 +51,26 @@ class TestGitDiffTriage(unittest.TestCase):
         args = parse_args(["HEAD~1", "HEAD"])
         self.assertEqual(args.diff_args, ["HEAD~1", "HEAD"])
 
+    def test_parse_args_empty_separator(self):
+        args = parse_args(["--"])
+        self.assertEqual(args.diff_args, [])
+
+    def test_parse_args_zero_threshold(self):
+        args = parse_args(["--threshold", "0"])
+        self.assertEqual(args.threshold, 0)
+
+    def test_parse_args_flags_after_separator(self):
+        args = parse_args(["--", "--cached", "-M0", "main"])
+        self.assertEqual(args.diff_args, ["--cached", "-M0", "main"])
+
+    def test_parse_args_multiple_separators(self):
+        args = parse_args(["--", "--", "file.py"])
+        self.assertEqual(args.diff_args, ["--", "file.py"])
+
+    def test_parse_args_threshold_equals_syntax(self):
+        args = parse_args(["--threshold=25"])
+        self.assertEqual(args.threshold, 25)
+
     def test_parse_args_invalid_threshold(self):
         with self.assertRaises(SystemExit):
             with unittest.mock.patch("sys.stderr"):
@@ -158,6 +178,104 @@ class TestGitDiffTriage(unittest.TestCase):
         self.assertIn("-cmd = 'diff --git a b'\n", chunks[0])
         self.assertEqual(chunks[1], "diff --git a/other.py b/other.py\nindex 333..444 100644\n")
 
+    def test_split_diff_into_chunks_no_trailing_newline_and_no_newline_marker(self):
+        diff = (
+            "diff --git a/file1.txt b/file1.txt\n"
+            "index 111..222 100644\n"
+            "--- a/file1.txt\n"
+            "+++ b/file1.txt\n"
+            "@@ -1 +1 @@\n"
+            "-old\n"
+            "+new\n"
+            "\\ No newline at end of file\n"
+            "diff --git a/file2.txt b/file2.txt\n"
+            "index 333..444 100644\n"
+            "--- a/file2.txt\n"
+            "+++ b/file2.txt\n"
+            "@@ -1 +1 @@\n"
+            "-foo"
+        )
+        chunks = split_diff_into_chunks(diff)
+        self.assertEqual(len(chunks), 2)
+        self.assertIn("\\ No newline at end of file\n", chunks[0])
+        self.assertTrue(chunks[1].endswith("-foo"))
+        self.assertEqual("".join(chunks), diff)
+
+    def test_split_diff_into_chunks_consecutive_header_only(self):
+        diff = (
+            "diff --git a/executable.sh b/executable.sh\n"
+            "old mode 100644\n"
+            "new mode 100755\n"
+            "diff --git a/empty.txt b/empty.txt\n"
+            "new file mode 100644\n"
+            "index 0000000..e69de29\n"
+            "diff --git a/renamed_old.py b/renamed_new.py\n"
+            "similarity index 100%\n"
+            "rename from renamed_old.py\n"
+            "rename to renamed_new.py\n"
+        )
+        chunks = split_diff_into_chunks(diff)
+        self.assertEqual(len(chunks), 3)
+        self.assertEqual(chunks[0], "diff --git a/executable.sh b/executable.sh\nold mode 100644\nnew mode 100755\n")
+        self.assertEqual(chunks[1], "diff --git a/empty.txt b/empty.txt\nnew file mode 100644\nindex 0000000..e69de29\n")
+        self.assertEqual(chunks[2], "diff --git a/renamed_old.py b/renamed_new.py\nsimilarity index 100%\nrename from renamed_old.py\nrename to renamed_new.py\n")
+        self.assertEqual("".join(chunks), diff)
+
+    def test_split_diff_into_chunks_diff_git_as_added_or_removed_line(self):
+        diff = (
+            "diff --git a/file1.py b/file1.py\n"
+            "--- a/file1.py\n"
+            "+++ b/file1.py\n"
+            "@@ -1,2 +1,2 @@\n"
+            "-diff --git a/fake b/fake\n"
+            "+diff --git a/real b/real\n"
+            "diff --git a/file2.py b/file2.py\n"
+            "--- a/file2.py\n"
+            "+++ b/file2.py\n"
+        )
+        chunks = split_diff_into_chunks(diff)
+        self.assertEqual(len(chunks), 2)
+        self.assertIn("-diff --git a/fake b/fake\n", chunks[0])
+        self.assertIn("+diff --git a/real b/real\n", chunks[0])
+        self.assertTrue(chunks[1].startswith("diff --git a/file2.py"))
+        self.assertEqual("".join(chunks), diff)
+
+    def test_split_diff_into_chunks_trailing_whitespace_and_blank_lines(self):
+        diff = (
+            "diff --git a/a.txt b/a.txt\n"
+            "--- a/a.txt\n"
+            "+++ b/a.txt\n"
+            "@@ -1 +1 @@\n"
+            "-a\n"
+            "+b\n"
+            "\n"
+            "\n"
+        )
+        chunks = split_diff_into_chunks(diff)
+        self.assertEqual(len(chunks), 1)
+        self.assertEqual(chunks[0], diff)
+        self.assertEqual("".join(chunks), diff)
+
+    def test_split_diff_into_chunks_reconstitution_property(self):
+        diff_samples = [
+            "",
+            "single line no diff",
+            "diff --git a/x b/x\n",
+            (
+                "diff --git a/1 b/1\n"
+                "@@ -1 +1 @@\n"
+                "-1\n"
+                "+2\n"
+                "diff --git a/2 b/2\n"
+                "@@ -1 +1 @@\n"
+                "-a\n"
+                "+b\n"
+            ),
+        ]
+        for sample in diff_samples:
+            chunks = split_diff_into_chunks(sample)
+            self.assertEqual("".join(chunks), sample)
+
     def test_count_body_lines(self):
         chunk = (
             "diff --git a/f b/f\n"
@@ -256,6 +374,128 @@ class TestGitDiffTriage(unittest.TestCase):
         self.assertEqual(added, 2)
         self.assertEqual(removed, 2)
 
+    def test_count_body_lines_single_char_plus_minus(self):
+        chunk = (
+            "diff --git a/f b/f\n"
+            "--- a/f\n"
+            "+++ b/f\n"
+            "@@ -1,2 +1,2 @@\n"
+            "+\n"
+            "-\n"
+        )
+        added, removed = count_body_lines(chunk)
+        self.assertEqual(added, 1)
+        self.assertEqual(removed, 1)
+
+    def test_count_body_lines_crlf_line_endings(self):
+        chunk = (
+            "diff --git a/f b/f\r\n"
+            "--- a/f\r\n"
+            "+++ b/f\r\n"
+            "@@ -1,2 +1,2 @@\r\n"
+            "+added line\r\n"
+            "-removed line\r\n"
+        )
+        added, removed = count_body_lines(chunk)
+        self.assertEqual(added, 1)
+        self.assertEqual(removed, 1)
+
+    def test_count_body_lines_dev_null_headers(self):
+        chunk = (
+            "diff --git a/dev/null b/b.txt\n"
+            "--- /dev/null\n"
+            "+++ b/b.txt\n"
+            "@@ -0,0 +1,2 @@\n"
+            "+first\n"
+            "+second\n"
+        )
+        added, removed = count_body_lines(chunk)
+        self.assertEqual(added, 2)
+        self.assertEqual(removed, 0)
+
+    def test_count_body_lines_no_trailing_newline(self):
+        chunk = (
+            "--- a/f\n"
+            "+++ b/f\n"
+            "+added without newline"
+        )
+        added, removed = count_body_lines(chunk)
+        self.assertEqual(added, 1)
+        self.assertEqual(removed, 0)
+
+    def test_count_body_lines_prefix_variations(self):
+        chunk = (
+            "--- a/f\n"
+            "+++ b/f\n"
+            "@@ -1,3 +1,3 @@\n"
+            "++added with plus\n"
+            "--removed with minus\n"
+            "+ added with space\n"
+            "- removed with space\n"
+        )
+        added, removed = count_body_lines(chunk)
+        self.assertEqual(added, 2)
+        self.assertEqual(removed, 2)
+
+    def test_count_body_lines_hunk_header_lines(self):
+        chunk = (
+            "diff --git a/f b/f\n"
+            "--- a/f\n"
+            "+++ b/f\n"
+            "@@ -1,5 +1,5 @@ @@\n"
+            " context line\n"
+        )
+        added, removed = count_body_lines(chunk)
+        self.assertEqual(added, 0)
+        self.assertEqual(removed, 0)
+
+    @patch("sys.stdout", new_callable=StringIO)
+    @patch("sys.argv", ["git-diff-triage.py", "--threshold", "2"])
+    @patch("git_diff_triage.run_git_diff")
+    def test_main_function_threshold_truncation(self, mock_run_diff, mock_stdout):
+        mock_run_diff.return_value = (
+            "diff --git a/file b/file\n"
+            "index 123..456 100644\n"
+            "--- a/file\n"
+            "+++ b/file\n"
+            "@@ -1,5 +1,5 @@\n"
+            "+line 1\n"
+            "+line 2\n"
+            "+line 3\n"
+        )
+        git_diff_triage.main()
+        output = mock_stdout.getvalue()
+        self.assertIn("# [diff-triage] body omitted: +3/-0 lines (threshold 2)\n", output)
+        self.assertNotIn("+line 1", output)
+
+    @patch("sys.stdout", new_callable=StringIO)
+    @patch("sys.argv", ["git-diff-triage.py", "--raw"])
+    @patch("git_diff_triage.run_git_diff")
+    def test_main_function_raw_output(self, mock_run_diff, mock_stdout):
+        raw_diff = (
+            "diff --git a/file b/file\n"
+            "--- a/file\n"
+            "+++ b/file\n"
+            "@@ -1 +1 @@\n"
+            "+line 1\n"
+        )
+        mock_run_diff.return_value = raw_diff
+        git_diff_triage.main()
+        self.assertEqual(mock_stdout.getvalue(), raw_diff)
+
+    @patch("sys.stdout", new_callable=StringIO)
+    @patch("sys.argv", ["git-diff-triage.py"])
+    @patch("git_diff_triage.run_git_diff")
+    def test_main_function_binary_file(self, mock_run_diff, mock_stdout):
+        binary_diff = (
+            "diff --git a/image.png b/image.png\n"
+            "Binary files a/image.png and b/image.png differ\n"
+        )
+        mock_run_diff.return_value = binary_diff
+        git_diff_triage.main()
+        output = mock_stdout.getvalue()
+        self.assertIn("Binary files a/image.png and b/image.png differ", output)
+
     def test_header_only(self):
         chunk = (
             "diff --git a/file b/file\n"
@@ -349,6 +589,128 @@ class TestGitDiffTriage(unittest.TestCase):
             "+++ b/file\n"
         )
         self.assertEqual(header_only(only_headers), only_headers)
+
+    def test_header_only_multi_hunks(self):
+        chunk = (
+            "diff --git a/file.txt b/file.txt\n"
+            "index 1111111..2222222 100644\n"
+            "--- a/file.txt\n"
+            "+++ b/file.txt\n"
+            "@@ -1,3 +1,4 @@\n"
+            " line 1\n"
+            "-old line 2\n"
+            "+new line 2\n"
+            " line 3\n"
+            "@@ -10,3 +11,3 @@\n"
+            " line 10\n"
+            "-old line 11\n"
+            "+new line 11\n"
+            " line 12\n"
+        )
+        expected = (
+            "diff --git a/file.txt b/file.txt\n"
+            "index 1111111..2222222 100644\n"
+            "--- a/file.txt\n"
+            "+++ b/file.txt\n"
+            "@@ -1,3 +1,4 @@\n"
+            "@@ -10,3 +11,3 @@\n"
+        )
+        self.assertEqual(header_only(chunk), expected)
+
+    def test_header_only_without_trailing_newline(self):
+        chunk = (
+            "diff --git a/file b/file\n"
+            "index 123..456 100644\n"
+            "--- a/file\n"
+            "+++ b/file\n"
+            "@@ -1 +1 @@"
+        )
+        expected = (
+            "diff --git a/file b/file\n"
+            "index 123..456 100644\n"
+            "--- a/file\n"
+            "+++ b/file\n"
+            "@@ -1 +1 @@"
+        )
+        self.assertEqual(header_only(chunk), expected)
+
+    def test_header_only_rename_copy_headers(self):
+        chunk = (
+            "diff --git a/old.txt b/new.txt\n"
+            "similarity index 90%\n"
+            "rename from old.txt\n"
+            "rename to new.txt\n"
+            "--- a/old.txt\n"
+            "+++ b/new.txt\n"
+            "@@ -1,2 +1,2 @@\n"
+            "-old text\n"
+            "+new text\n"
+        )
+        expected = (
+            "diff --git a/old.txt b/new.txt\n"
+            "similarity index 90%\n"
+            "rename from old.txt\n"
+            "rename to new.txt\n"
+            "--- a/old.txt\n"
+            "+++ b/new.txt\n"
+            "@@ -1,2 +1,2 @@\n"
+        )
+        self.assertEqual(header_only(chunk), expected)
+
+    @patch("sys.argv", ["git-diff-triage.py", "--threshold", "2"])
+    @patch("git_diff_triage.run_git_diff")
+    @patch("sys.stdout", new_callable=StringIO)
+    def test_main_truncation_exceeds_threshold(self, mock_stdout, mock_run_diff):
+        mock_run_diff.return_value = (
+            "diff --git a/file.txt b/file.txt\n"
+            "index 1111111..2222222 100644\n"
+            "--- a/file.txt\n"
+            "+++ b/file.txt\n"
+            "@@ -1,3 +1,3 @@\n"
+            "+added 1\n"
+            "+added 2\n"
+            "-deleted 1\n"
+        )
+        git_diff_triage.main()
+        output = mock_stdout.getvalue()
+        self.assertIn("diff --git a/file.txt b/file.txt\n", output)
+        self.assertIn("@@ -1,3 +1,3 @@\n", output)
+        self.assertNotIn("+added 1\n", output)
+        self.assertIn("# [diff-triage] body omitted: +2/-1 lines (threshold 2)\n", output)
+
+    @patch("sys.argv", ["git-diff-triage.py", "--threshold", "5"])
+    @patch("git_diff_triage.run_git_diff")
+    @patch("sys.stdout", new_callable=StringIO)
+    def test_main_within_threshold(self, mock_stdout, mock_run_diff):
+        mock_run_diff.return_value = (
+            "diff --git a/file.txt b/file.txt\n"
+            "index 1111111..2222222 100644\n"
+            "--- a/file.txt\n"
+            "+++ b/file.txt\n"
+            "@@ -1,2 +1,2 @@\n"
+            "+added 1\n"
+            "-deleted 1\n"
+        )
+        git_diff_triage.main()
+        output = mock_stdout.getvalue()
+        self.assertIn("+added 1\n", output)
+        self.assertNotIn("[diff-triage] body omitted", output)
+
+    @patch("sys.argv", ["git-diff-triage.py", "--raw"])
+    @patch("git_diff_triage.run_git_diff")
+    @patch("sys.stdout", new_callable=StringIO)
+    def test_main_raw_flag(self, mock_stdout, mock_run_diff):
+        raw_diff = (
+            "diff --git a/file.txt b/file.txt\n"
+            "--- a/file.txt\n"
+            "+++ b/file.txt\n"
+            "@@ -1,10 +1,10 @@\n"
+            "+line 1\n"
+        )
+        mock_run_diff.return_value = raw_diff
+        git_diff_triage.main()
+        self.assertEqual(mock_stdout.getvalue(), raw_diff)
+
     @patch("subprocess.run")
     def test_run_git_diff_success(self, mock_run):
         mock_result = MagicMock()

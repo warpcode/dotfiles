@@ -183,16 +183,20 @@ def main() -> None:
     state = "all" if args.all_states else "open"
     deadline = time.time() + args.timeout
     prs: list[dict] = []
+    wanted = set(args.prs) if args.prs else None
+    reported_missing: set[int] = set()
+
     while True:
         prs = fetch(repo, state)
-        if args.prs:
-            wanted = set(args.prs)
+        if wanted:
             prs = [p for p in prs if p["number"] in wanted]
-            missing = wanted - {p["number"] for p in prs}
-            if missing and not args.all_states:
-                sys.stderr.write(
-                    f"not found in state '{state}': "
-                    f"{', '.join('#' + str(m) for m in sorted(missing))}\n")
+            if not args.all_states:
+                missing = wanted - {p["number"] for p in prs} - reported_missing
+                if missing:
+                    reported_missing.update(missing)
+                    sys.stderr.write(
+                        f"not found in state '{state}': "
+                        f"{', '.join('#' + str(m) for m in sorted(missing))}\n")
         if not args.wait:
             break
         pending = [p["number"] for p in prs if rollup_status(p)[0] == PENDING]

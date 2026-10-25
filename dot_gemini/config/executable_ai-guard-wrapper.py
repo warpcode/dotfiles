@@ -73,6 +73,11 @@ def extract_command(mapping):
 
 def handle_prompt_route(payload):
     prompt_text = payload.get("prompt") or payload.get("text") or ""
+    if not prompt_text and isinstance(payload.get("messages"), list) and payload["messages"]:
+        last_msg = payload["messages"][-1]
+        if isinstance(last_msg, dict) and last_msg.get("role") == "user":
+            prompt_text = last_msg.get("content") or last_msg.get("text") or ""
+
     tp = payload.get("transcriptPath")
     target_line_idx = None
     lines = []
@@ -212,6 +217,10 @@ def handle_file_route(payload, tool_name, tool_args):
     if tool_name in ("run_command", "bash", "execute_command", "runTerminalCommand", "terminal"):
         print(json.dumps({"decision": "allow"}))
         sys.exit(0)
+    if not isinstance(tool_args, dict):
+        tool_args = {}
+    if not isinstance(payload, dict):
+        payload = {}
     targets = []
     path_keys = (
         "AbsolutePath", "TargetFile", "filePath", "path", "file",
@@ -284,7 +293,7 @@ def main():
             or ("output" in payload and "toolCall" not in payload)
         ):
             route = "output"
-        elif "transcriptPath" in payload or "invocationNum" in payload or ("prompt" in payload and not tool_call):
+        elif "transcriptPath" in payload or "invocationNum" in payload or "messages" in payload or ("prompt" in payload and not tool_call):
             route = "prompt"
         elif tool_name in command_tools:
             route = "command"

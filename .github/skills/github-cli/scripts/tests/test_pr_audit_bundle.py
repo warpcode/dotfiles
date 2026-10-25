@@ -43,6 +43,9 @@ class TestPRAuditBundleScript(unittest.TestCase):
             ("This PR fixes #606.", ["606"]),
             ("This PR is a transfix #202 and prefix #303", []),
             ("Status remains unresolved #404", []),
+            ("(Fixes #123)", ["123"]),
+            ("[Closes #456]", ["456"]),
+            ("Fixes #10, closes #12", ["10", "12"]),
         ]
         for body, expected in test_cases:
             with self.subTest(body=body):

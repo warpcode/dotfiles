@@ -127,6 +127,12 @@ class TestInstallShSecurity(unittest.TestCase):
         self.assertIn('if ! /bin/bash "${brew_install_script}"; then', self.content)
         self.assertIn('err "Failed integrity check for Homebrew installer"', self.content)
 
+    def test_mise_wiring(self):
+        # Verify that mise execution only happens if verify_checksum succeeds
+        self.assertIn('if verify_checksum "${mise_install_script}" ${expected_mise_sha256}; then', self.content)
+        self.assertIn('if ! sh "${mise_install_script}"; then', self.content)
+        self.assertIn('err "Failed integrity check for mise installer"', self.content)
+
 
 if __name__ == "__main__":
     unittest.main()
