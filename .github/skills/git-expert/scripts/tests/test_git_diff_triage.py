@@ -256,6 +256,128 @@ class TestGitDiffTriage(unittest.TestCase):
         self.assertEqual(added, 2)
         self.assertEqual(removed, 2)
 
+    def test_count_body_lines_single_char_plus_minus(self):
+        chunk = (
+            "diff --git a/f b/f\n"
+            "--- a/f\n"
+            "+++ b/f\n"
+            "@@ -1,2 +1,2 @@\n"
+            "+\n"
+            "-\n"
+        )
+        added, removed = count_body_lines(chunk)
+        self.assertEqual(added, 1)
+        self.assertEqual(removed, 1)
+
+    def test_count_body_lines_crlf_line_endings(self):
+        chunk = (
+            "diff --git a/f b/f\r\n"
+            "--- a/f\r\n"
+            "+++ b/f\r\n"
+            "@@ -1,2 +1,2 @@\r\n"
+            "+added line\r\n"
+            "-removed line\r\n"
+        )
+        added, removed = count_body_lines(chunk)
+        self.assertEqual(added, 1)
+        self.assertEqual(removed, 1)
+
+    def test_count_body_lines_dev_null_headers(self):
+        chunk = (
+            "diff --git a/dev/null b/b.txt\n"
+            "--- /dev/null\n"
+            "+++ b/b.txt\n"
+            "@@ -0,0 +1,2 @@\n"
+            "+first\n"
+            "+second\n"
+        )
+        added, removed = count_body_lines(chunk)
+        self.assertEqual(added, 2)
+        self.assertEqual(removed, 0)
+
+    def test_count_body_lines_no_trailing_newline(self):
+        chunk = (
+            "--- a/f\n"
+            "+++ b/f\n"
+            "+added without newline"
+        )
+        added, removed = count_body_lines(chunk)
+        self.assertEqual(added, 1)
+        self.assertEqual(removed, 0)
+
+    def test_count_body_lines_prefix_variations(self):
+        chunk = (
+            "--- a/f\n"
+            "+++ b/f\n"
+            "@@ -1,3 +1,3 @@\n"
+            "++added with plus\n"
+            "--removed with minus\n"
+            "+ added with space\n"
+            "- removed with space\n"
+        )
+        added, removed = count_body_lines(chunk)
+        self.assertEqual(added, 2)
+        self.assertEqual(removed, 2)
+
+    def test_count_body_lines_hunk_header_lines(self):
+        chunk = (
+            "diff --git a/f b/f\n"
+            "--- a/f\n"
+            "+++ b/f\n"
+            "@@ -1,5 +1,5 @@ @@\n"
+            " context line\n"
+        )
+        added, removed = count_body_lines(chunk)
+        self.assertEqual(added, 0)
+        self.assertEqual(removed, 0)
+
+    @patch("sys.stdout", new_callable=StringIO)
+    @patch("sys.argv", ["git-diff-triage.py", "--threshold", "2"])
+    @patch("git_diff_triage.run_git_diff")
+    def test_main_function_threshold_truncation(self, mock_run_diff, mock_stdout):
+        mock_run_diff.return_value = (
+            "diff --git a/file b/file\n"
+            "index 123..456 100644\n"
+            "--- a/file\n"
+            "+++ b/file\n"
+            "@@ -1,5 +1,5 @@\n"
+            "+line 1\n"
+            "+line 2\n"
+            "+line 3\n"
+        )
+        git_diff_triage.main()
+        output = mock_stdout.getvalue()
+        self.assertIn("# [diff-triage] body omitted: +3/-0 lines (threshold 2)\n", output)
+        self.assertNotIn("+line 1", output)
+
+    @patch("sys.stdout", new_callable=StringIO)
+    @patch("sys.argv", ["git-diff-triage.py", "--raw"])
+    @patch("git_diff_triage.run_git_diff")
+    def test_main_function_raw_output(self, mock_run_diff, mock_stdout):
+        raw_diff = (
+            "diff --git a/file b/file\n"
+            "--- a/file\n"
+            "+++ b/file\n"
+            "@@ -1 +1 @@\n"
+            "+line 1\n"
+        )
+        mock_run_diff.return_value = raw_diff
+        git_diff_triage.main()
+        self.assertEqual(mock_stdout.getvalue(), raw_diff)
+
+    @patch("sys.stdout", new_callable=StringIO)
+    @patch("sys.argv", ["git-diff-triage.py"])
+    @patch("git_diff_triage.run_git_diff")
+    def test_main_function_binary_file(self, mock_run_diff, mock_stdout):
+        binary_diff = (
+            "diff --git a/image.png b/image.png\n"
+            "Binary files a/image.png and b/image.png differ\n"
+        )
+        mock_run_diff.return_value = binary_diff
+        git_diff_triage.main()
+        output = mock_stdout.getvalue()
+        self.assertIn("Binary files a/image.png and b/image.png differ", output)
+
     def test_header_only(self):
         chunk = (
             "diff --git a/file b/file\n"
