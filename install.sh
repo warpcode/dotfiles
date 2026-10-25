@@ -233,15 +233,13 @@ ensure_dotfiles() {
 }
 
 #######################################
-# Main execution function.
+# Parses command line arguments.
 # Arguments:
-#   $@ - All arguments passed to the script.
+#   $@ - Command line arguments.
+# Sets variables in caller scope:
+#   dotfiles_profile, git_name, git_email, keepass_db
 #######################################
-main() {
-  local dotfiles_profile=""
-  local git_name=""
-  local git_email=""
-  local keepass_db=""
+parse_args() {
   while [[ "$#" -gt 0 ]]; do
     case "$1" in
       --profile)
@@ -283,6 +281,158 @@ main() {
       *) err "Unknown parameter: $1"; exit 1 ;;
     esac
   done
+}
+
+#######################################
+# Ensures chezmoi is installed.
+#######################################
+ensure_chezmoi() {
+  if command -v chezmoi >/dev/null; then
+    return 0
+  fi
+
+  info "Installing chezmoi..."
+  if [[ "${OS_NAME}" == "macos" ]]; then
+    brew install -y chezmoi || true
+  else
+    mkdir -p "${HOME}/.local/bin"
+    local chezmoi_install_script
+    chezmoi_install_script="$(mktemp -t chezmoi-bootstrap-XXXXXX.sh)"
+
+    # Default allowlist hashes pin known versions of the chezmoi install script.
+    # These may go stale when upstream updates the script.
+    # Use CHEZMOI_INSTALL_SHA256 env var to override them if needed.
+    local default_chezmoi_hashes="d92ac6044ecfcd716c0c1d0512693e7d91c3002591cd6c871bb94ef227919982 d5558cd419c8d46bdc958064cb97f963d1ea793866414c025906ec15033512"
+    local expected_chezmoi_sha256="${CHEZMOI_INSTALL_SHA256:-${default_chezmoi_hashes}}"
+
+    if curl -fsSL https://chezmoi.io/get > "${chezmoi_install_script}" && [[ -s "${chezmoi_install_script}" ]]; then
+      if verify_checksum "${chezmoi_install_script}" ${expected_chezmoi_sha256}; then
+        if ! sh "${chezmoi_install_script}" -b "${HOME}/.local/bin"; then
+          err "Failed to execute chezmoi installer"
+          rm -f "${chezmoi_install_script}"
+          exit 1
+        fi
+        rm -f "${chezmoi_install_script}"
+      else
+        err "Failed integrity check for chezmoi installer"
+        rm -f "${chezmoi_install_script}"
+        exit 1
+      fi
+    else
+      err "Failed to download chezmoi installer"
+      rm -f "${chezmoi_install_script}"
+      exit 1
+    fi
+  fi
+}
+
+#######################################
+# Ensures mise is installed.
+#######################################
+ensure_mise() {
+  if [[ -f "${HOME}/.local/bin/mise" ]] || [[ "${OS_NAME}" == "macos" && -x "$(command -v mise)" ]]; then
+    success "Mise is already installed, skipping installation."
+    return 0
+  fi
+
+  info "Installing mise..."
+  if [[ "${OS_NAME}" == "macos" ]]; then
+    brew install -y mise || true
+  else
+    mkdir -p "${HOME}/.local/bin"
+    local mise_install_script
+    mise_install_script="$(mktemp -t mise-bootstrap-XXXXXX.sh)"
+
+    # Default allowlist hashes pin known versions of the mise install script.
+    # These may go stale when upstream updates the script.
+    # Use MISE_INSTALL_SHA256 env var to override them if needed.
+    local default_mise_hashes="82d35715f9d54b9ca4ff5b909ebeb4f4ded457d4fae15814db2fe6da5b943e1f"
+    local expected_mise_sha256="${MISE_INSTALL_SHA256:-${default_mise_hashes}}"
+
+    if curl -fsSL https://mise.run > "${mise_install_script}" && [[ -s "${mise_install_script}" ]]; then
+      if verify_checksum "${mise_install_script}" ${expected_mise_sha256}; then
+        if ! sh "${mise_install_script}"; then
+          err "Failed to execute mise installer"
+          rm -f "${mise_install_script}"
+          exit 1
+        fi
+        rm -f "${mise_install_script}"
+      else
+        err "Failed integrity check for mise installer"
+        rm -f "${mise_install_script}"
+        exit 1
+      fi
+    else
+      err "Failed to download mise installer"
+      rm -f "${mise_install_script}"
+      exit 1
+    fi
+  fi
+  hash -r 2>/dev/null || true
+}
+
+#######################################
+# Returns the path to the mise binary.
+# Outputs:
+#   Writes path to stdout.
+#######################################
+get_mise_bin() {
+  if [[ "${OS_NAME}" == "macos" ]] && command -v mise &>/dev/null; then
+    command -v mise
+  else
+    echo "${HOME}/.local/bin/mise"
+  fi
+}
+
+#######################################
+# Applies dotfiles via chezmoi.
+# Arguments:
+#   $1 - profile
+#   $2 - git_name
+#   $3 - git_email
+#   $4 - keepass_db
+#######################################
+apply_chezmoi_dotfiles() {
+  local profile="$1"
+  local git_name="$2"
+  local git_email="$3"
+  local keepass_db="$4"
+
+  info "Applying dotfiles via Chezmoi..."
+  # This will trigger:
+  # - run_once_after_05-system.sh (install system pkgs)
+  # - run_once_after_06-repositories.sh (setup 3rd party repos)
+  # - run_once_after_10-set-zsh.sh (set default shell)
+  local -a chezmoi_global_args=()
+  # Build --override-data JSON for template variables
+  # chezmoi --override-data accepts a JSON string as a global flag (before subcommand)
+  local override_data="{}"
+  if [[ -n "${profile}" || -n "${git_name}" || -n "${git_email}" || -n "${keepass_db}" ]]; then
+    override_data="$(jq -cn \
+      --arg profile "${profile}" \
+      --arg git_name "${git_name}" \
+      --arg git_email "${git_email}" \
+      --arg keepass_db "${keepass_db}" \
+      '{profile: $profile, git_name: $git_name, git_email: $git_email, keepass_db: $keepass_db} | with_entries(select(.value != ""))')"
+    chezmoi_global_args+=(--override-data "${override_data}")
+  fi
+
+  export PAGER=cat
+  chezmoi "${chezmoi_global_args[@]}" init --apply --source "${DOTFILES}"
+}
+
+#######################################
+# Main execution function.
+# Arguments:
+#   $@ - All arguments passed to the script.
+#######################################
+main() {
+  local dotfiles_profile=""
+  local git_name=""
+  local git_email=""
+  local keepass_db=""
+
+  parse_args "$@"
 
   if [[ -n "${dotfiles_profile}" ]]; then
     success "Profile set via argument to: ${dotfiles_profile}"
@@ -317,91 +467,18 @@ main() {
       git config --global --add safe.directory "${DOTFILES}"
     fi
   fi
-  
+
   # install chezmoi if not already installed
-  if ! command -v chezmoi >/dev/null; then
-    info "Installing chezmoi..."
-    if [[ "${OS_NAME}" == "macos" ]]; then
-      brew install -y chezmoi || true
-    else
-      mkdir -p "${HOME}/.local/bin"
-      local chezmoi_install_script
-      chezmoi_install_script="$(mktemp -t chezmoi-bootstrap-XXXXXX.sh)"
-
-      # Default allowlist hashes pin known versions of the chezmoi install script.
-      # These may go stale when upstream updates the script.
-      # Use CHEZMOI_INSTALL_SHA256 env var to override them if needed.
-      local default_chezmoi_hashes="d92ac6044ecfcd716c0c1d0512693e7d91c3002591cd6c871bb94ef227919982 d5558cd419c8d46bdc958064cb97f963d1ea793866414c025906ec15033512"
-      local expected_chezmoi_sha256="${CHEZMOI_INSTALL_SHA256:-${default_chezmoi_hashes}}"
-
-      if curl -fsSL https://chezmoi.io/get > "${chezmoi_install_script}" && [[ -s "${chezmoi_install_script}" ]]; then
-        if verify_checksum "${chezmoi_install_script}" ${expected_chezmoi_sha256}; then
-          if ! sh "${chezmoi_install_script}" -b "${HOME}/.local/bin"; then
-            err "Failed to execute chezmoi installer"
-            rm -f "${chezmoi_install_script}"
-            exit 1
-          fi
-          rm -f "${chezmoi_install_script}"
-        else
-          err "Failed integrity check for chezmoi installer"
-          rm -f "${chezmoi_install_script}"
-          exit 1
-        fi
-      else
-        err "Failed to download chezmoi installer"
-        rm -f "${chezmoi_install_script}"
-        exit 1
-      fi
-    fi
-  fi
+  ensure_chezmoi
 
   export PATH="${HOME}/.local/bin:${PATH}"
 
   # install mise if not already installed
-  if [[ -f "${HOME}/.local/bin/mise" ]] || [[ "${OS_NAME}" == "macos" && -x "$(command -v mise)" ]]; then
-    success "Mise is already installed, skipping installation."
-  else
-    info "Installing mise..."
-    if [[ "${OS_NAME}" == "macos" ]]; then
-      brew install -y mise || true
-    else
-      mkdir -p "${HOME}/.local/bin"
-      local mise_install_script
-      mise_install_script="$(mktemp -t mise-bootstrap-XXXXXX.sh)"
-
-      # Default allowlist hashes pin known versions of the mise install script.
-      # These may go stale when upstream updates the script.
-      # Use MISE_INSTALL_SHA256 env var to override them if needed.
-      local default_mise_hashes="82d35715f9d54b9ca4ff5b909ebeb4f4ded457d4fae15814db2fe6da5b943e1f"
-      local expected_mise_sha256="${MISE_INSTALL_SHA256:-${default_mise_hashes}}"
-
-      if curl -fsSL https://mise.run > "${mise_install_script}" && [[ -s "${mise_install_script}" ]]; then
-        if verify_checksum "${mise_install_script}" ${expected_mise_sha256}; then
-          if ! sh "${mise_install_script}"; then
-            err "Failed to execute mise installer"
-            rm -f "${mise_install_script}"
-            exit 1
-          fi
-          rm -f "${mise_install_script}"
-        else
-          err "Failed integrity check for mise installer"
-          rm -f "${mise_install_script}"
-          exit 1
-        fi
-      else
-        err "Failed to download mise installer"
-        rm -f "${mise_install_script}"
-        exit 1
-      fi
-    fi
-    hash -r 2>/dev/null || true
-  fi
+  ensure_mise
 
   # Bootstrap system packages via mise before chezmoi applies dotfiles
-  local mise_bin="${HOME}/.local/bin/mise"
-  if [[ "${OS_NAME}" == "macos" ]] && command -v mise &>/dev/null; then
-    mise_bin="$(command -v mise)"
-  fi
+  local mise_bin
+  mise_bin="$(get_mise_bin)"
   info "Bootstrapping system packages via mise..."
   # Report but do not abort: a partial package install should not block the
   # dotfile apply that follows, but it must not be silently swallowed either.
@@ -410,27 +487,7 @@ main() {
   fi
 
   # Apply dotfiles via chezmoi
-  info "Applying dotfiles via Chezmoi..."
-  # This will trigger:
-  # - run_once_after_05-system.sh (install system pkgs)
-  # - run_once_after_06-repositories.sh (setup 3rd party repos)
-  # - run_once_after_10-set-zsh.sh (set default shell)
-  local -a chezmoi_global_args=()
-  # Build --override-data JSON for template variables
-  # chezmoi --override-data accepts a JSON string as a global flag (before subcommand)
-  local override_data="{}"
-  if [[ -n "${dotfiles_profile}" || -n "${git_name}" || -n "${git_email}" || -n "${keepass_db}" ]]; then
-    override_data="$(jq -cn \
-      --arg profile "${dotfiles_profile}" \
-      --arg git_name "${git_name}" \
-      --arg git_email "${git_email}" \
-      --arg keepass_db "${keepass_db}" \
-      '{profile: $profile, git_name: $git_name, git_email: $git_email, keepass_db: $keepass_db} | with_entries(select(.value != ""))')"
-    chezmoi_global_args+=(--override-data "${override_data}")
-  fi
-
-  export PAGER=cat
-  chezmoi "${chezmoi_global_args[@]}" init --apply --source "${DOTFILES}"
+  apply_chezmoi_dotfiles "${dotfiles_profile}" "${git_name}" "${git_email}" "${keepass_db}"
 
   info "Installing mise tools (llama.cpp, ollama, etc)..."
   if ! "${mise_bin}" install; then
