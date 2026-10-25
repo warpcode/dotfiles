@@ -589,6 +589,128 @@ class TestGitDiffTriage(unittest.TestCase):
             "+++ b/file\n"
         )
         self.assertEqual(header_only(only_headers), only_headers)
+
+    def test_header_only_multi_hunks(self):
+        chunk = (
+            "diff --git a/file.txt b/file.txt\n"
+            "index 1111111..2222222 100644\n"
+            "--- a/file.txt\n"
+            "+++ b/file.txt\n"
+            "@@ -1,3 +1,4 @@\n"
+            " line 1\n"
+            "-old line 2\n"
+            "+new line 2\n"
+            " line 3\n"
+            "@@ -10,3 +11,3 @@\n"
+            " line 10\n"
+            "-old line 11\n"
+            "+new line 11\n"
+            " line 12\n"
+        )
+        expected = (
+            "diff --git a/file.txt b/file.txt\n"
+            "index 1111111..2222222 100644\n"
+            "--- a/file.txt\n"
+            "+++ b/file.txt\n"
+            "@@ -1,3 +1,4 @@\n"
+            "@@ -10,3 +11,3 @@\n"
+        )
+        self.assertEqual(header_only(chunk), expected)
+
+    def test_header_only_without_trailing_newline(self):
+        chunk = (
+            "diff --git a/file b/file\n"
+            "index 123..456 100644\n"
+            "--- a/file\n"
+            "+++ b/file\n"
+            "@@ -1 +1 @@"
+        )
+        expected = (
+            "diff --git a/file b/file\n"
+            "index 123..456 100644\n"
+            "--- a/file\n"
+            "+++ b/file\n"
+            "@@ -1 +1 @@"
+        )
+        self.assertEqual(header_only(chunk), expected)
+
+    def test_header_only_rename_copy_headers(self):
+        chunk = (
+            "diff --git a/old.txt b/new.txt\n"
+            "similarity index 90%\n"
+            "rename from old.txt\n"
+            "rename to new.txt\n"
+            "--- a/old.txt\n"
+            "+++ b/new.txt\n"
+            "@@ -1,2 +1,2 @@\n"
+            "-old text\n"
+            "+new text\n"
+        )
+        expected = (
+            "diff --git a/old.txt b/new.txt\n"
+            "similarity index 90%\n"
+            "rename from old.txt\n"
+            "rename to new.txt\n"
+            "--- a/old.txt\n"
+            "+++ b/new.txt\n"
+            "@@ -1,2 +1,2 @@\n"
+        )
+        self.assertEqual(header_only(chunk), expected)
+
+    @patch("sys.argv", ["git-diff-triage.py", "--threshold", "2"])
+    @patch("git_diff_triage.run_git_diff")
+    @patch("sys.stdout", new_callable=StringIO)
+    def test_main_truncation_exceeds_threshold(self, mock_stdout, mock_run_diff):
+        mock_run_diff.return_value = (
+            "diff --git a/file.txt b/file.txt\n"
+            "index 1111111..2222222 100644\n"
+            "--- a/file.txt\n"
+            "+++ b/file.txt\n"
+            "@@ -1,3 +1,3 @@\n"
+            "+added 1\n"
+            "+added 2\n"
+            "-deleted 1\n"
+        )
+        git_diff_triage.main()
+        output = mock_stdout.getvalue()
+        self.assertIn("diff --git a/file.txt b/file.txt\n", output)
+        self.assertIn("@@ -1,3 +1,3 @@\n", output)
+        self.assertNotIn("+added 1\n", output)
+        self.assertIn("# [diff-triage] body omitted: +2/-1 lines (threshold 2)\n", output)
+
+    @patch("sys.argv", ["git-diff-triage.py", "--threshold", "5"])
+    @patch("git_diff_triage.run_git_diff")
+    @patch("sys.stdout", new_callable=StringIO)
+    def test_main_within_threshold(self, mock_stdout, mock_run_diff):
+        mock_run_diff.return_value = (
+            "diff --git a/file.txt b/file.txt\n"
+            "index 1111111..2222222 100644\n"
+            "--- a/file.txt\n"
+            "+++ b/file.txt\n"
+            "@@ -1,2 +1,2 @@\n"
+            "+added 1\n"
+            "-deleted 1\n"
+        )
+        git_diff_triage.main()
+        output = mock_stdout.getvalue()
+        self.assertIn("+added 1\n", output)
+        self.assertNotIn("[diff-triage] body omitted", output)
+
+    @patch("sys.argv", ["git-diff-triage.py", "--raw"])
+    @patch("git_diff_triage.run_git_diff")
+    @patch("sys.stdout", new_callable=StringIO)
+    def test_main_raw_flag(self, mock_stdout, mock_run_diff):
+        raw_diff = (
+            "diff --git a/file.txt b/file.txt\n"
+            "--- a/file.txt\n"
+            "+++ b/file.txt\n"
+            "@@ -1,10 +1,10 @@\n"
+            "+line 1\n"
+        )
+        mock_run_diff.return_value = raw_diff
+        git_diff_triage.main()
+        self.assertEqual(mock_stdout.getvalue(), raw_diff)
+
     @patch("subprocess.run")
     def test_run_git_diff_success(self, mock_run):
         mock_result = MagicMock()
