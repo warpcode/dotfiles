@@ -212,6 +212,10 @@ def handle_file_route(payload, tool_name, tool_args):
     if tool_name in ("run_command", "bash", "execute_command", "runTerminalCommand", "terminal"):
         print(json.dumps({"decision": "allow"}))
         sys.exit(0)
+    if not isinstance(tool_args, dict):
+        tool_args = {}
+    if not isinstance(payload, dict):
+        payload = {}
     targets = []
     path_keys = (
         "AbsolutePath", "TargetFile", "filePath", "path", "file",
