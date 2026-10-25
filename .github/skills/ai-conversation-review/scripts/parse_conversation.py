@@ -90,10 +90,11 @@ def normalise_tool_calls(tool_calls: List[Dict[str, Any]]) -> List[Dict[str, Any
         if not isinstance(tc, dict):
             continue
         tc = dict(tc)
-        # Track whether the SOURCE carried an argument key at all. That -- not whether the
-        # value is non-empty -- is what separates an upstream key mismatch (the bug worth
-        # warning about) from a tool genuinely invoked with no arguments, which also
-        # normalises to {} and must not trigger a false alarm.
+        # Track whether the source payload contained any recognized tool argument key
+        # ('args', 'arguments', 'input', or 'Arguments'). Checking key presence rather
+        # than value truthiness distinguishes missing argument key schemas (an upstream
+        # payload structure issue worth warning about) from tool calls legitimately
+        # executed with empty argument dicts ({}), avoiding false warning alerts.
         had_key = "args" in tc or "arguments" in tc or "input" in tc or "Arguments" in tc
         if "args" not in tc:
             raw_args = tc.get("arguments")

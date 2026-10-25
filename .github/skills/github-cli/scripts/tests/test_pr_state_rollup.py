@@ -26,6 +26,25 @@ class TestPRStateRollup(unittest.TestCase):
         mock_run.return_value = (0, "https://github.com/owner/repo\n", "")
         self.assertEqual(prs.resolve_repo(None), "owner/repo")
 
+    @patch("pr_state_rollup.run")
+    def test_resolve_repo_git_remote_https_with_git_suffix(self, mock_run):
+        mock_run.return_value = (0, "https://github.com/owner/repo.git\n", "")
+        self.assertEqual(prs.resolve_repo(None), "owner/repo")
+
+    @patch("pr_state_rollup.run")
+    def test_resolve_repo_git_remote_ssh_url_format(self, mock_run):
+        mock_run.return_value = (0, "ssh://git@github.com/owner/repo.git\n", "")
+        self.assertEqual(prs.resolve_repo(None), "owner/repo")
+
+    @patch("sys.stderr.write")
+    @patch("pr_state_rollup.run")
+    def test_resolve_repo_git_remote_empty_output(self, mock_run, mock_stderr):
+        mock_run.return_value = (0, "   \n", "")
+        with self.assertRaises(SystemExit) as cm:
+            prs.resolve_repo(None)
+        self.assertEqual(cm.exception.code, 1)
+        mock_stderr.assert_called()
+
     @patch("sys.stderr.write")
     @patch("pr_state_rollup.run")
     def test_resolve_repo_git_remote_failure(self, mock_run, mock_stderr):
@@ -63,6 +82,38 @@ class TestPRStateRollup(unittest.TestCase):
         self.assertEqual(overall, prs.OK)
         self.assertEqual(failing, "")
         self.assertEqual(pending, "")
+
+    def test_rollup_status_empty_check_item(self):
+        # A check item with no conclusion, state, status, or name
+        pr = {"statusCheckRollup": [{}]}
+        overall, failing, pending = prs.rollup_status(pr)
+        self.assertEqual(overall, prs.OK)
+        self.assertEqual(failing, "")
+        self.assertEqual(pending, "")
+
+    def test_rollup_status_precedence_order(self):
+        # conclusion takes precedence over state, which takes precedence over status
+        pr1 = {
+            "statusCheckRollup": [
+                {"conclusion": "FAILURE", "state": "SUCCESS", "status": "PENDING", "name": "c1"}
+            ]
+        }
+        self.assertEqual(prs.rollup_status(pr1), (prs.FAIL, "c1", ""))
+
+        pr2 = {
+            "statusCheckRollup": [
+                {"conclusion": None, "state": "PENDING", "status": "SUCCESS", "name": "c2"}
+            ]
+        }
+        self.assertEqual(prs.rollup_status(pr2), (prs.PENDING, "", "c2"))
+
+    def test_rollup_status_all_success_states(self):
+        for state in prs.SUCCESS_STATES:
+            pr = {"statusCheckRollup": [{"conclusion": state.upper(), "name": "check"}]}
+            overall, failing, pending = prs.rollup_status(pr)
+            self.assertEqual(overall, prs.OK, f"Failed for success state: {state}")
+            self.assertEqual(failing, "")
+            self.assertEqual(pending, "")
 
     def test_rollup_status_failure(self):
         pr = {
