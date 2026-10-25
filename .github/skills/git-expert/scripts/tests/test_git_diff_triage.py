@@ -51,6 +51,26 @@ class TestGitDiffTriage(unittest.TestCase):
         args = parse_args(["HEAD~1", "HEAD"])
         self.assertEqual(args.diff_args, ["HEAD~1", "HEAD"])
 
+    def test_parse_args_empty_separator(self):
+        args = parse_args(["--"])
+        self.assertEqual(args.diff_args, [])
+
+    def test_parse_args_zero_threshold(self):
+        args = parse_args(["--threshold", "0"])
+        self.assertEqual(args.threshold, 0)
+
+    def test_parse_args_flags_after_separator(self):
+        args = parse_args(["--", "--cached", "-M0", "main"])
+        self.assertEqual(args.diff_args, ["--cached", "-M0", "main"])
+
+    def test_parse_args_multiple_separators(self):
+        args = parse_args(["--", "--", "file.py"])
+        self.assertEqual(args.diff_args, ["--", "file.py"])
+
+    def test_parse_args_threshold_equals_syntax(self):
+        args = parse_args(["--threshold=25"])
+        self.assertEqual(args.threshold, 25)
+
     def test_parse_args_invalid_threshold(self):
         with self.assertRaises(SystemExit):
             with unittest.mock.patch("sys.stderr"):
