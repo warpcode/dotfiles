@@ -112,6 +112,34 @@ class TestAiGuardWrapperHelper(unittest.TestCase):
         self.assertEqual(ai_guard_wrapper.extract_command({}), "")
         self.assertEqual(ai_guard_wrapper.extract_command({"other_key": "val", "foo": "bar"}), "")
 
+    def test_extract_command_inner_quotes(self):
+        # Outer quotes stripped, inner quotes preserved when not at boundaries
+        mapping = {"command": '\'echo "hello" world\''}
+        self.assertEqual(ai_guard_wrapper.extract_command(mapping), 'echo "hello" world')
+
+    def test_extract_command_whitespace_quotes_only(self):
+        # String with only quotes and whitespace evaluates to empty string, falling through to next valid key or returning ""
+        mapping = {"CommandLine": "  '\"\"'  ", "cmd": "echo valid"}
+        self.assertEqual(ai_guard_wrapper.extract_command(mapping), "echo valid")
+
+        mapping_empty = {"CommandLine": "  '\"\"'  "}
+        self.assertEqual(ai_guard_wrapper.extract_command(mapping_empty), "")
+
+    def test_extract_command_tabs_newlines(self):
+        # Tabs and newlines stripped around command/quotes
+        mapping = {"commandLine": "\t\n 'ls -la'\t\n "}
+        self.assertEqual(ai_guard_wrapper.extract_command(mapping), "ls -la")
+
+    def test_extract_command_non_string_fallthrough(self):
+        # Keys with None, bool, int, float, list, dict fall through to lower precedence key with valid string
+        mapping = {
+            "CommandLine": None,
+            "commandLine": True,
+            "command": 42,
+            "cmd": "ls -l",
+        }
+        self.assertEqual(ai_guard_wrapper.extract_command(mapping), "ls -l")
+
 
 class TestAIGuardWrapper(unittest.TestCase):
 
