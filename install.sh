@@ -142,8 +142,32 @@ setup_macos() {
   info "Setting up macOS..."
   if ! command -v brew >/dev/null; then
     info "Installing Homebrew..."
-    /bin/bash -c "$(curl -fsSL \
-      https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    local brew_install_script
+    brew_install_script="$(mktemp -t homebrew-bootstrap-XXXXXX.sh)"
+
+    # Default allowlist hashes pin known versions of the Homebrew install script.
+    # Use HOMEBREW_INSTALL_SHA256 env var to override them if needed.
+    local default_brew_hashes="5f333bbe53bc490e51e7ccb1df8779b3dd6ee73a1a7379efda216edb08ccb148"
+    local expected_brew_sha256="${HOMEBREW_INSTALL_SHA256:-${default_brew_hashes}}"
+
+    if curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh > "${brew_install_script}" && [[ -s "${brew_install_script}" ]]; then
+      if verify_checksum "${brew_install_script}" ${expected_brew_sha256}; then
+        if ! /bin/bash "${brew_install_script}"; then
+          err "Failed to execute Homebrew installer"
+          rm -f "${brew_install_script}"
+          return 1
+        fi
+        rm -f "${brew_install_script}"
+      else
+        err "Failed integrity check for Homebrew installer"
+        rm -f "${brew_install_script}"
+        return 1
+      fi
+    else
+      err "Failed to download Homebrew installer"
+      rm -f "${brew_install_script}"
+      return 1
+    fi
   fi
   brew update || true
 }
