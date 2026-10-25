@@ -149,6 +149,31 @@ class TestAIGuardWrapper(unittest.TestCase):
 
     @patch('ai_guard_wrapper.run_guard')
     @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_file_route_none_tool_args_or_payload(self, mock_stdout, mock_run_guard):
+        # When tool_args and payload are None or non-dict, handle_file_route should safely handle them
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_file_route(None, "read_file", None)
+
+        mock_run_guard.assert_not_called()
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {"decision": "allow"})
+        self.mock_exit.assert_called_with(0)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_file_route_payload_target_only_with_none_tool_args(self, mock_stdout, mock_run_guard):
+        # Payload contains path, tool_args is None
+        mock_run_guard.return_value = (0, {"decision": "allow"})
+        payload = {"filePath": "/path/in/payload.txt"}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_file_route(payload, "read_file", None)
+
+        mock_run_guard.assert_called_once_with("file", args=["/path/in/payload.txt"], stdin_str=json.dumps(payload))
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {"decision": "allow"})
+        self.mock_exit.assert_called_with(0)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
     def test_handle_file_route_command_tool(self, mock_stdout, mock_run_guard):
         payload = {"toolCall": {"name": "bash", "args": {"cmd": "ls"}}}
         tool_args = payload["toolCall"]["args"]
