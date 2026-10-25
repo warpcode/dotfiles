@@ -158,6 +158,104 @@ class TestGitDiffTriage(unittest.TestCase):
         self.assertIn("-cmd = 'diff --git a b'\n", chunks[0])
         self.assertEqual(chunks[1], "diff --git a/other.py b/other.py\nindex 333..444 100644\n")
 
+    def test_split_diff_into_chunks_no_trailing_newline_and_no_newline_marker(self):
+        diff = (
+            "diff --git a/file1.txt b/file1.txt\n"
+            "index 111..222 100644\n"
+            "--- a/file1.txt\n"
+            "+++ b/file1.txt\n"
+            "@@ -1 +1 @@\n"
+            "-old\n"
+            "+new\n"
+            "\\ No newline at end of file\n"
+            "diff --git a/file2.txt b/file2.txt\n"
+            "index 333..444 100644\n"
+            "--- a/file2.txt\n"
+            "+++ b/file2.txt\n"
+            "@@ -1 +1 @@\n"
+            "-foo"
+        )
+        chunks = split_diff_into_chunks(diff)
+        self.assertEqual(len(chunks), 2)
+        self.assertIn("\\ No newline at end of file\n", chunks[0])
+        self.assertTrue(chunks[1].endswith("-foo"))
+        self.assertEqual("".join(chunks), diff)
+
+    def test_split_diff_into_chunks_consecutive_header_only(self):
+        diff = (
+            "diff --git a/executable.sh b/executable.sh\n"
+            "old mode 100644\n"
+            "new mode 100755\n"
+            "diff --git a/empty.txt b/empty.txt\n"
+            "new file mode 100644\n"
+            "index 0000000..e69de29\n"
+            "diff --git a/renamed_old.py b/renamed_new.py\n"
+            "similarity index 100%\n"
+            "rename from renamed_old.py\n"
+            "rename to renamed_new.py\n"
+        )
+        chunks = split_diff_into_chunks(diff)
+        self.assertEqual(len(chunks), 3)
+        self.assertEqual(chunks[0], "diff --git a/executable.sh b/executable.sh\nold mode 100644\nnew mode 100755\n")
+        self.assertEqual(chunks[1], "diff --git a/empty.txt b/empty.txt\nnew file mode 100644\nindex 0000000..e69de29\n")
+        self.assertEqual(chunks[2], "diff --git a/renamed_old.py b/renamed_new.py\nsimilarity index 100%\nrename from renamed_old.py\nrename to renamed_new.py\n")
+        self.assertEqual("".join(chunks), diff)
+
+    def test_split_diff_into_chunks_diff_git_as_added_or_removed_line(self):
+        diff = (
+            "diff --git a/file1.py b/file1.py\n"
+            "--- a/file1.py\n"
+            "+++ b/file1.py\n"
+            "@@ -1,2 +1,2 @@\n"
+            "-diff --git a/fake b/fake\n"
+            "+diff --git a/real b/real\n"
+            "diff --git a/file2.py b/file2.py\n"
+            "--- a/file2.py\n"
+            "+++ b/file2.py\n"
+        )
+        chunks = split_diff_into_chunks(diff)
+        self.assertEqual(len(chunks), 2)
+        self.assertIn("-diff --git a/fake b/fake\n", chunks[0])
+        self.assertIn("+diff --git a/real b/real\n", chunks[0])
+        self.assertTrue(chunks[1].startswith("diff --git a/file2.py"))
+        self.assertEqual("".join(chunks), diff)
+
+    def test_split_diff_into_chunks_trailing_whitespace_and_blank_lines(self):
+        diff = (
+            "diff --git a/a.txt b/a.txt\n"
+            "--- a/a.txt\n"
+            "+++ b/a.txt\n"
+            "@@ -1 +1 @@\n"
+            "-a\n"
+            "+b\n"
+            "\n"
+            "\n"
+        )
+        chunks = split_diff_into_chunks(diff)
+        self.assertEqual(len(chunks), 1)
+        self.assertEqual(chunks[0], diff)
+        self.assertEqual("".join(chunks), diff)
+
+    def test_split_diff_into_chunks_reconstitution_property(self):
+        diff_samples = [
+            "",
+            "single line no diff",
+            "diff --git a/x b/x\n",
+            (
+                "diff --git a/1 b/1\n"
+                "@@ -1 +1 @@\n"
+                "-1\n"
+                "+2\n"
+                "diff --git a/2 b/2\n"
+                "@@ -1 +1 @@\n"
+                "-a\n"
+                "+b\n"
+            ),
+        ]
+        for sample in diff_samples:
+            chunks = split_diff_into_chunks(sample)
+            self.assertEqual("".join(chunks), sample)
+
     def test_count_body_lines(self):
         chunk = (
             "diff --git a/f b/f\n"
