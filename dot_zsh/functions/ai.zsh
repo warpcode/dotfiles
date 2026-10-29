@@ -51,32 +51,25 @@ ai.provider.define() {
     for arg in "${@:2}"; do
         [[ "$arg" == *=* ]] || continue
         k="${arg%%=*}"
-        if ! _ai.valid_key "$k"; then
+        _ai.valid_key "$k" || {
             print -u2 "Error: Invalid AI provider key '${k}'. Must contain only alphanumeric characters, underscores and dashes."
             return 1
-        fi
+        }
     done
 
     registry.define "ai_provider" "$@"
 
-    if (( ! $+functions[ai.providers.${pid}.enabled] )); then
-        functions[ai.providers.${pid}.enabled]="return 0"
-    fi
-    local is_openai=$(registry.get "ai_provider" "$pid" "openai_compatible")
-    
-    if [[ "$is_openai" == "true" || "$is_openai" == "1" ]]; then
-        if (( ! $+functions[ai.providers.${pid}.api] )); then
-            functions[ai.providers.${pid}.api]="_ai.provider.api_executor ${(q)pid} \"\$1\""
-        fi
-        
-        if (( ! $+functions[ai.providers.${pid}.models] )); then
-            functions[ai.providers.${pid}.models]="_ai.provider.models_executor ${(q)pid}"
-        fi
+    (( $+functions[ai.providers.${pid}.enabled] )) || functions[ai.providers.${pid}.enabled]="return 0"
 
-        if (( ! $+functions[ai.providers.${pid}.models.free] )); then
-            local target="ai.providers.${pid}.models"
-            functions[ai.providers.${pid}.models.free]="${(q)target}"
-        fi
+    local is_openai=$(registry.get "ai_provider" "$pid" "openai_compatible")
+    [[ "$is_openai" == "true" || "$is_openai" == "1" ]] || return 0
+
+    (( $+functions[ai.providers.${pid}.api] )) || functions[ai.providers.${pid}.api]="_ai.provider.api_executor ${(q)pid} \"\$1\""
+    (( $+functions[ai.providers.${pid}.models] )) || functions[ai.providers.${pid}.models]="_ai.provider.models_executor ${(q)pid}"
+
+    if (( ! $+functions[ai.providers.${pid}.models.free] )); then
+        local target="ai.providers.${pid}.models"
+        functions[ai.providers.${pid}.models.free]="${(q)target}"
     fi
 }
 ai.provider.list() { registry.list "ai_provider"; }
