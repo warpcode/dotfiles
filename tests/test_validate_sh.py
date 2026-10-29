@@ -116,6 +116,29 @@ class TestValidateShFailureModes(unittest.TestCase):
         self.assertGreater(data["failed"], 0)
         self.assertTrue(any("bash -n (syntax)" in f for f in data["failures"]))
 
+    def test_zsh_syntax_error_failure(self):
+        if shutil.which("zsh") is None:
+            self.skipTest("zsh not installed")
+
+        bad_zsh = os.path.join(self.temp_dir, "broken.zsh")
+        with open(bad_zsh, "w") as f:
+            f.write("if then invalid syntax")
+
+        res = subprocess.run(
+            [self.temp_validate, "--lint-only", "--json"],
+            cwd=self.temp_dir,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(res.returncode, 1)
+        lines = res.stdout.strip().splitlines()
+        last_line = lines[-1]
+        data = json.loads(last_line)
+
+        self.assertEqual(data["status"], 1)
+        self.assertGreater(data["failed"], 0)
+        self.assertTrue(any("zsh -n (syntax)" in f for f in data["failures"]))
+
     def test_stray_artifacts_failure(self):
         stray_file = os.path.join(self.temp_dir, "patch.rej")
         with open(stray_file, "w") as f:
