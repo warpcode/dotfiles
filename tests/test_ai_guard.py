@@ -1188,8 +1188,9 @@ class TestAIGuardSecretsExpansion(unittest.TestCase):
                 continue
             for r in section.get("rules", []):
                 self.assertNotIn("match", r, f"Rule in {section_name} contains 'match' field: {r}")
-                if r.get("perm") == "replace":
-                    self.assertNotIn("reason", r, f"Replace rule in {section_name} contains 'reason' field: {r}")
+                if r.get("perm") != "replace":
+                    continue
+                self.assertNotIn("reason", r, f"Replace rule in {section_name} contains 'reason' field: {r}")
 
     def test_non_regex_match_type_is_rejected(self):
         """Rules specifying non-regex match types like 'glob' are rejected and ignored."""
