@@ -17,15 +17,15 @@ alias python.http="mise exec python@latest -- python -m http.server"
 # Usage: vrun [venv_path]
 function python.vrun() {
     local venvpath="${1:-.venv}"
-    local name="$(basename "${1}")"
+    local name="$(basename "$venvpath")"
 
-    if [ -n "$VIRTUAL_ENV" ]; then
-        if [[ "$VIRTUAL_ENV" != "$venvpath" ]]; then
-            echo "Deactivating virtual environment: $VIRTUAL_ENV"
-            deactivate
-        else
-            return 0
-        fi
+    if [[ "$VIRTUAL_ENV" == "$venvpath" ]]; then
+        return 0
+    fi
+
+    if [[ -n "$VIRTUAL_ENV" ]]; then
+        echo "Deactivating virtual environment: $VIRTUAL_ENV"
+        deactivate
     fi
 
     if [[ ! -d "$venvpath" ]]; then
