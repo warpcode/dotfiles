@@ -309,6 +309,12 @@ class TestOpenAIBridgeServer(unittest.TestCase):
             500, "agentapi error: Unknown error"
         )
 
+    def test_log_message_redirects_to_logging_info(self):
+        self.handler.address_string = MagicMock(return_value="127.0.0.1")
+        with patch.object(openai_bridge_server.logging, "info") as mock_logging_info:
+            self.handler.log_message('"%s" %s %s', "GET /v1/models HTTP/1.1", "200", "-")
+            mock_logging_info.assert_called_once_with('127.0.0.1 - - "GET /v1/models HTTP/1.1" 200 -')
+
 
 if __name__ == "__main__":
     unittest.main()
