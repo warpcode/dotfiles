@@ -63,12 +63,13 @@ _m6_get_config_json() {
     local json_output=$(m6.cd && php -r 'chdir("etc"); $key = $argv[1];require "martini-config-docker.php";$value = Config::get($key);echo json_encode($value);' "$key" 2>/dev/null)
     local ret=$?
 
-    if [[ $ret -eq 0 ]]; then
-        if [[ -n "$jq_filter" ]]; then
-            echo "$json_output" | jq -r "$jq_filter" | tr -d '[:space:]'
-        else
-            echo "$json_output" | tr -d '[:space:]'
-        fi
+    if [[ $ret -ne 0 ]]; then
+        return $ret
     fi
-    return $ret
+
+    if [[ -n "$jq_filter" ]]; then
+        echo "$json_output" | jq -r "$jq_filter" | tr -d '[:space:]'
+    else
+        echo "$json_output" | tr -d '[:space:]'
+    fi
 }
