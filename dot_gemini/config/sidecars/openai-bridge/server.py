@@ -30,6 +30,16 @@ DEFAULT_HOST = "127.0.0.1"
 MAX_CONTENT_LENGTH = 8 * 1024 * 1024
 
 
+def _extract_block_text(block):
+    """Extract text from a single content block or string entry."""
+    if isinstance(block, str):
+        return block
+    if not isinstance(block, dict) or block.get("type") != "text":
+        return ""
+    text = block.get("text")
+    return text if isinstance(text, str) else ""
+
+
 def _extract_text(content):
     """Flatten OpenAI message content into a plain string.
 
@@ -40,15 +50,7 @@ def _extract_text(content):
     if isinstance(content, str):
         return content
     if isinstance(content, list):
-        parts = []
-        for block in content:
-            if isinstance(block, str):
-                parts.append(block)
-            elif isinstance(block, dict) and block.get("type") == "text":
-                text = block.get("text")
-                if isinstance(text, str):
-                    parts.append(text)
-        return "".join(parts)
+        return "".join(_extract_block_text(block) for block in content)
     return ""
 
 
