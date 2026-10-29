@@ -691,6 +691,22 @@ class TestAIGuardWrapper(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(data, {})
 
+    @patch('subprocess.run', side_effect=FileNotFoundError("No such file or directory: 'df.ai-guard'"))
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_run_guard_file_not_found_error_handling(self, mock_stderr, mock_subprocess):
+        code, data = ai_guard_wrapper.run_guard("prompt", args=["check"])
+        self.assertEqual(code, 2)
+        self.assertEqual(data, {"decision": "deny", "reason": "Security guard execution failed (prompt)"})
+        self.assertIn("Error invoking security guard (prompt)", mock_stderr.getvalue())
+
+    @patch('subprocess.run', side_effect=PermissionError("Permission denied"))
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_run_guard_permission_error_handling(self, mock_stderr, mock_subprocess):
+        code, data = ai_guard_wrapper.run_guard("command", args=["echo hi"])
+        self.assertEqual(code, 2)
+        self.assertEqual(data, {"decision": "deny", "reason": "Security guard execution failed (command)"})
+        self.assertIn("Error invoking security guard (command)", mock_stderr.getvalue())
+
     @patch('subprocess.run', side_effect=Exception("Execution mock failure with /path/to/secret.key sensitive_arg"))
     @patch('sys.stderr', new_callable=StringIO)
     def test_run_guard_exception_does_not_leak_cmd_args(self, mock_stderr, mock_subprocess):
