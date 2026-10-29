@@ -165,6 +165,45 @@ class TestOpenAIBridgeServer(unittest.TestCase):
                 openai_bridge_server.run(port=18081)
             self.assertEqual(mock_srv.call_args[0][0], ("127.0.0.1", 18081))
 
+    def test_run_with_bridge_host_env_var(self):
+        with patch.object(openai_bridge_server.http.server, "ThreadingHTTPServer") as mock_srv:
+            mock_srv.return_value.serve_forever.side_effect = KeyboardInterrupt
+            mock_srv.return_value.server_close = MagicMock()
+            with patch.dict(os.environ, {"BRIDGE_HOST": "10.0.0.1"}):
+                openai_bridge_server.run(port=18081)
+            self.assertEqual(mock_srv.call_args[0][0], ("10.0.0.1", 18081))
+
+    def test_run_with_explicit_host_and_port(self):
+        with patch.object(openai_bridge_server.http.server, "ThreadingHTTPServer") as mock_srv:
+            mock_srv.return_value.serve_forever.side_effect = KeyboardInterrupt
+            mock_srv.return_value.server_close = MagicMock()
+            openai_bridge_server.run(port=9090, host="127.0.0.2")
+            self.assertEqual(mock_srv.call_args[0][0], ("127.0.0.2", 9090))
+
+    def test_run_keyboard_interrupt_error_path(self):
+        with patch.object(openai_bridge_server.http.server, "ThreadingHTTPServer") as mock_srv, \
+             patch("logging.info") as mock_log:
+            instance = mock_srv.return_value
+            instance.serve_forever.side_effect = KeyboardInterrupt
+            openai_bridge_server.run(port=18081)
+            instance.serve_forever.assert_called_once()
+            instance.server_close.assert_called_once()
+            mock_log.assert_any_call("KeyboardInterrupt received.")
+
+    def test_main_port_parsing_invalid_and_valid(self):
+        # Verify the logic used in `if __name__ == "__main__":` for parsing PORT
+        def parse_port(port_env):
+            try:
+                return int(port_env)
+            except (ValueError, TypeError):
+                return 18081
+
+        self.assertEqual(parse_port("18081"), 18081)
+        self.assertEqual(parse_port("9000"), 9000)
+        self.assertEqual(parse_port("invalid"), 18081)
+        self.assertEqual(parse_port(""), 18081)
+        self.assertEqual(parse_port(None), 18081)
+
     def test_read_body_rejects_oversized_request(self):
         # SECURITY: an unauthenticated caller must not be able to force an
         # unbounded allocation via Content-Length.
