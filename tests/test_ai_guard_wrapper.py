@@ -162,6 +162,32 @@ class TestAIGuardWrapper(unittest.TestCase):
         self.assertEqual(json.loads(mock_stdout.getvalue()), {"decision": "allow"})
         self.mock_exit.assert_called_with(0)
 
+    @patch('builtins.open', new_callable=mock_open)
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_main_debug_logging_when_enabled(self, mock_stdout, m_open):
+        with patch.dict(os.environ, {"AI_GUARD_DEBUG": "1"}, clear=True):
+            with patch('sys.argv', ['ai-guard-wrapper.py', 'unknown-route']):
+                with patch('sys.stdin', StringIO('{"some": "data"}')):
+                    with self.assertRaises(SystemExitException):
+                        ai_guard_wrapper.main()
+
+        m_open.assert_called_once_with(os.path.expanduser("~/.local/state/ai-guard-wrapper.log"), "a")
+        handle = m_open()
+        written = "".join(call.args[0] for call in handle.write.call_args_list)
+        self.assertIn("HOOK CALLED: argv=['ai-guard-wrapper.py', 'unknown-route'] len=16", written)
+
+    @patch('builtins.open', side_effect=Exception("Failed to open debug log in main"))
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_main_debug_logging_exception_handling(self, mock_stdout, m_open):
+        with patch.dict(os.environ, {"AI_GUARD_DEBUG": "1"}, clear=True):
+            with patch('sys.argv', ['ai-guard-wrapper.py', 'unknown-route']):
+                with patch('sys.stdin', StringIO('{"some": "data"}')):
+                    with self.assertRaises(SystemExitException):
+                        ai_guard_wrapper.main()
+
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {"decision": "allow"})
+        self.mock_exit.assert_called_with(0)
+
     @patch('ai_guard_wrapper.run_guard')
     @patch('sys.stdout', new_callable=StringIO)
     def test_handle_file_route_no_targets(self, mock_stdout, mock_run_guard):
