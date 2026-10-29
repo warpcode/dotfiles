@@ -198,38 +198,39 @@ _registry.dispatch() {
         fi
 
         fn="$prefix.$id.$method"
-        if (( $+functions[$fn] )); then
-            case "$mode" in
-                call*)
-                    "$fn" "$@"; rc=$?
-                    (( rc != 0 )) && return "$rc"
-                    ;;
-                collect*)
-                    out="$("$fn" "$@")"; rc=$?
-                    (( rc != 0 )) && return "$rc"
-                    print -r -- "$out"
-                    ;;
-                all_true)
-                    "$fn" "$@" >/dev/null 2>&1 || return 1
-                    ;;
-                all_false)
-                    "$fn" "$@" >/dev/null 2>&1 && return 1
-                    ;;
-                any_true)
-                    "$fn" "$@" >/dev/null 2>&1 && return 0
-                    ;;
-                any_false)
-                    "$fn" "$@" >/dev/null 2>&1 || return 0
-                    ;;
-                list_enabled)
-                    print -r -- "$id"
-                    ;;
-            esac
-        else
+        if (( ! $+functions[$fn] )); then
             case "$mode" in
                 all_true|all_false|call*|collect*) return 1 ;;
             esac
+            continue
         fi
+
+        case "$mode" in
+            call*)
+                "$fn" "$@"; rc=$?
+                (( rc != 0 )) && return "$rc"
+                ;;
+            collect*)
+                out="$("$fn" "$@")"; rc=$?
+                (( rc != 0 )) && return "$rc"
+                print -r -- "$out"
+                ;;
+            all_true)
+                "$fn" "$@" >/dev/null 2>&1 || return 1
+                ;;
+            all_false)
+                "$fn" "$@" >/dev/null 2>&1 && return 1
+                ;;
+            any_true)
+                "$fn" "$@" >/dev/null 2>&1 && return 0
+                ;;
+            any_false)
+                "$fn" "$@" >/dev/null 2>&1 || return 0
+                ;;
+            list_enabled)
+                print -r -- "$id"
+                ;;
+        esac
     done
 
     case "$mode" in
