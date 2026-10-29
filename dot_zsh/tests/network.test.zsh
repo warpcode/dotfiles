@@ -4,37 +4,52 @@
 SCRIPT_DIR="${0:A:h}"
 REPO_ROOT="${SCRIPT_DIR:h}"
 
-# Ensure openssl is available or fallback to a function stub for minimal CI containers
+TMPDIR=$(mktemp -d)
+trap 'rm -rf "$TMPDIR"' EXIT
+
+# Ensure openssl and file commands are available in PATH for minimal test environments
+mkdir -p "$TMPDIR/bin"
+
 if ! command -v openssl >/dev/null 2>&1; then
-    openssl() {
-        if [[ "$1" == "base64" ]]; then
+    cat >"$TMPDIR/bin/openssl" << 'EOF'
+#!/bin/sh
+if [ "$1" = "base64" ]; then
+    shift
+    while [ $# -gt 0 ]; do
+        if [ "$1" = "-in" ]; then
             shift
-            local in_file=""
-            while [[ $# -gt 0 ]]; do
-                if [[ "$1" == "-in" ]]; then
-                    in_file="$2"
-                    shift 2
-                else
-                    shift
-                fi
-            done
-            if [[ -n "$in_file" ]]; then
-                base64 < "$in_file"
-            else
-                base64
-            fi
+            base64 < "$1" | tr -d "\n"
         fi
-    }
+        shift
+    done
 fi
+EOF
+    chmod +x "$TMPDIR/bin/openssl"
+fi
+
+if ! command -v file >/dev/null 2>&1; then
+    cat >"$TMPDIR/bin/file" << 'EOF'
+#!/bin/sh
+filepath=""
+while [ $# -gt 0 ]; do
+    filepath="$1"
+    shift
+done
+case "$filepath" in
+    *.txt) echo "text/plain" ;;
+    *) echo "application/octet-stream" ;;
+esac
+EOF
+    chmod +x "$TMPDIR/bin/file"
+fi
+
+export PATH="$TMPDIR/bin:$PATH"
 
 source "$REPO_ROOT/config/70-network.zsh" || { print -r "Failed to source 70-network.zsh" >&2; exit 1; }
 
 set -e
 
 print -r "Running 70-network.zsh dataurl unit tests..."
-
-TMPDIR=$(mktemp -d)
-trap 'rm -rf "$TMPDIR"' EXIT
 
 # Test 1: Missing argument (usage)
 out=""
