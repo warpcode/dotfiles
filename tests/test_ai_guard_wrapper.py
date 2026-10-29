@@ -951,6 +951,67 @@ class TestAIGuardWrapper(unittest.TestCase):
             resp = json.loads(mock_stdout.getvalue())
             self.assertIn("injectSteps", resp)
 
+    @patch('builtins.open', side_effect=PermissionError("Permission denied reading transcript"))
+    @patch('os.path.isfile', return_value=True)
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_prompt_route_transcript_read_exception_handled(
+        self, mock_stdout, mock_run_guard, mock_isfile, mock_open_file
+    ):
+        payload = {"transcriptPath": "/restricted/transcript.jsonl"}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_prompt_route(payload)
+
+        mock_run_guard.assert_not_called()
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {})
+        self.mock_exit.assert_called_with(0)
+
+    @patch('builtins.open')
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_prompt_route_debug_logging_exception_handled(
+        self, mock_stdout, mock_run_guard, mock_open_file
+    ):
+        mock_run_guard.return_value = (0, {"decision": "replace", "sanitized": "safe content"})
+        # Open succeeds for transcript if called, but fails when trying to open log_path
+        def side_effect(path, mode='r', *args, **kwargs):
+            if "ai-guard-wrapper.log" in str(path):
+                raise OSError("Disk error opening log")
+            return mock_open()()
+
+        mock_open_file.side_effect = side_effect
+        payload = {"prompt": "secret data"}
+
+        with patch.dict(os.environ, {"AI_GUARD_DEBUG": "1"}, clear=True):
+            with self.assertRaises(SystemExitException):
+                ai_guard_wrapper.handle_prompt_route(payload)
+
+        self.mock_exit.assert_called_with(0)
+        resp = json.loads(mock_stdout.getvalue())
+        self.assertIn("injectSteps", resp)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_prompt_route_messages_non_dict_and_empty_content(self, mock_stdout, mock_run_guard):
+        # Test case 1: Non-dict last element in messages
+        payload1 = {"messages": ["not a dict"]}
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_prompt_route(payload1)
+        mock_run_guard.assert_not_called()
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {})
+
+        # Reset stdout
+        mock_stdout.seek(0)
+        mock_stdout.truncate(0)
+
+        # Test case 2: User role with empty content and text
+        payload2 = {"messages": [{"role": "user", "content": "", "text": ""}]}
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_prompt_route(payload2)
+        mock_run_guard.assert_not_called()
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {})
+
 
 if __name__ == '__main__':
     unittest.main()
