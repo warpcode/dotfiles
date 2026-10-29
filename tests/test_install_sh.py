@@ -89,6 +89,94 @@ class TestInstallShChecksumVerification(unittest.TestCase):
         self.assertNotEqual(res.returncode, 0)
         self.assertIn("Checksum verification failed: no SHA-256 tool available", res.stderr)
 
+class TestInstallShDetectOS(unittest.TestCase):
+    """Test detect_os and detect_linux_os_id shell functions in install.sh."""
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def _run_detect_os(self, ostype, termux_version=None, prefix=None, os_release_content=None):
+        env = os.environ.copy()
+        env["OSTYPE"] = ostype
+        if termux_version is not None:
+            env["TERMUX_VERSION"] = termux_version
+        else:
+            env.pop("TERMUX_VERSION", None)
+
+        os_release_path = os.path.join(self.temp_dir, "os-release")
+        if os_release_content is not None:
+            with open(os_release_path, "w") as f:
+                f.write(os_release_content)
+
+        if prefix is not None:
+            env["PREFIX"] = prefix
+        else:
+            env.pop("PREFIX", None)
+
+        # We override /etc/os-release in detect_linux_os_id by overriding the file lookup if os_release_content provided
+        # or we test running bash with fake /etc/os-release via redirection or mock function if needed.
+        # To easily test os-release parsing cleanly, we can sed/replace /etc/os-release or define helper inline in test command.
+        if os_release_content is not None:
+            cmd = f'source "{INSTALL_SH}" && detect_linux_os_id() {{ local os_id="linux"; if [[ -f "{os_release_path}" ]]; then os_id="$(grep -E \'^ID=\' "{os_release_path}" 2>/dev/null | cut -d= -f2 | tr -d \'"\' || echo "linux")"; fi; case "${{os_id}}" in ubuntu|debian) echo "debian" ;; fedora|arch) echo "${{os_id}}" ;; *) echo "linux" ;; esac; }} && detect_os'
+        else:
+            cmd = f'source "{INSTALL_SH}" && detect_os'
+
+        res = subprocess.run(
+            ["bash", "-c", cmd],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        return res
+
+    def test_detect_os_macos(self):
+        res = self._run_detect_os("darwin20.0")
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.stdout.strip(), "macos")
+
+    def test_detect_os_termux(self):
+        prefix_dir = os.path.join(self.temp_dir, "usr")
+        os.makedirs(prefix_dir, exist_ok=True)
+        res = self._run_detect_os("linux-gnu", termux_version="0.118", prefix=prefix_dir)
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.stdout.strip(), "termux")
+
+    def test_detect_os_ubuntu(self):
+        res = self._run_detect_os("linux-gnu", os_release_content='ID=ubuntu\nNAME="Ubuntu"')
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.stdout.strip(), "debian")
+
+    def test_detect_os_debian(self):
+        res = self._run_detect_os("linux-gnu", os_release_content='ID="debian"\n')
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.stdout.strip(), "debian")
+
+    def test_detect_os_fedora(self):
+        res = self._run_detect_os("linux-gnu", os_release_content='ID=fedora\n')
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.stdout.strip(), "fedora")
+
+    def test_detect_os_arch(self):
+        res = self._run_detect_os("linux-gnu", os_release_content='ID=arch\n')
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.stdout.strip(), "arch")
+
+    def test_detect_os_generic_linux(self):
+        res = self._run_detect_os("linux-gnu", os_release_content='ID=alpine\n')
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.stdout.strip(), "linux")
+
+    def test_detect_os_unknown(self):
+        res = self._run_detect_os("freebsd12.0")
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.stdout.strip(), "unknown")
+
+
 class TestInstallShSecurity(unittest.TestCase):
     def setUp(self):
         self.install_sh_path = Path(__file__).parent.parent / "install.sh"

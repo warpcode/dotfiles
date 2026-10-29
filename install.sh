@@ -54,6 +54,26 @@ verify_checksum() {
 }
 
 #######################################
+# Detects the Linux distribution identifier from /etc/os-release.
+# Outputs:
+#   Writes Linux distribution identifier to stdout (debian, fedora, arch, linux).
+#######################################
+detect_linux_os_id() {
+  local os_id="linux"
+  if [[ -f /etc/os-release ]]; then
+    os_id="$(grep -E '^ID=' /etc/os-release 2>/dev/null \
+      | cut -d= -f2 \
+      | tr -d '"' || echo "linux")"
+  fi
+
+  case "${os_id}" in
+    ubuntu|debian) echo "debian" ;;
+    fedora|arch) echo "${os_id}" ;;
+    *) echo "linux" ;;
+  esac
+}
+
+#######################################
 # Detects the operating system and returns a normalised identifier.
 # Outputs:
 #   Writes OS identifier to stdout (macos, debian, fedora, arch, termux, linux).
@@ -66,17 +86,7 @@ detect_os() {
         echo "termux"
         return 0
       fi
-      local os_id="linux"
-      if [[ -f /etc/os-release ]]; then
-        os_id="$(grep -E '^ID=' /etc/os-release 2>/dev/null \
-          | cut -d= -f2 \
-          | tr -d '"' || echo "linux")"
-      fi
-      case "${os_id}" in
-        ubuntu|debian) echo "debian" ;;
-        fedora|arch) echo "${os_id}" ;;
-        *) echo "linux" ;;
-      esac
+      detect_linux_os_id
       ;;
     *) echo "unknown" ;;
   esac
