@@ -309,6 +309,52 @@ class TestOpenAIBridgeServer(unittest.TestCase):
             500, "agentapi error: Unknown error"
         )
 
+    def test_send_json(self):
+        handler = openai_bridge_server.OpenAIBridgeHandler.__new__(openai_bridge_server.OpenAIBridgeHandler)
+        handler.send_response = MagicMock()
+        handler.send_header = MagicMock()
+        handler.end_headers = MagicMock()
+        mock_wfile = MagicMock()
+        handler.wfile = mock_wfile
+
+        test_data = {"status": "ok", "message": "hello world 🌍"}
+        handler.send_json(200, test_data)
+
+        handler.send_response.assert_called_once_with(200)
+        handler.send_header.assert_called_once_with("Content-Type", "application/json")
+        handler.end_headers.assert_called_once()
+        expected_bytes = json.dumps(test_data).encode("utf-8")
+        mock_wfile.write.assert_called_once_with(expected_bytes)
+
+    @patch("logging.info")
+    def test_log_message(self, mock_logging_info):
+        handler = openai_bridge_server.OpenAIBridgeHandler.__new__(openai_bridge_server.OpenAIBridgeHandler)
+        handler.address_string = MagicMock(return_value="127.0.0.1")
+        handler.log_message("GET / %s", "200")
+        mock_logging_info.assert_called_once_with("127.0.0.1 - - GET / 200")
+
+    def test_send_error_response_direct(self):
+        handler = openai_bridge_server.OpenAIBridgeHandler.__new__(openai_bridge_server.OpenAIBridgeHandler)
+        handler.send_json = MagicMock()
+        handler.send_error_response(400, "Invalid payload")
+        handler.send_json.assert_called_once_with(400, {
+            "error": {
+                "message": "Invalid payload",
+                "type": "invalid_request_error",
+                "code": None
+            }
+        })
+
+    def test_handle_models_direct(self):
+        handler = openai_bridge_server.OpenAIBridgeHandler.__new__(openai_bridge_server.OpenAIBridgeHandler)
+        handler.send_json = MagicMock()
+        handler.handle_models()
+        handler.send_json.assert_called_once()
+        status_code, data = handler.send_json.call_args[0]
+        self.assertEqual(status_code, 200)
+        self.assertEqual(data["object"], "list")
+        self.assertEqual(len(data["data"]), 3)
+
 
 if __name__ == "__main__":
     unittest.main()
