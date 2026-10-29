@@ -15,21 +15,18 @@ def calculate_metrics(issue, status_map=None, now=None):
     # Pre-parse history timestamps and flatten status items into (created_dt, item) tuples
     parsed_items = []
     for h in val.get("histories", []):
-        created_dt = None
-        created_parsed = False
-        for item in h.get("items", []):
-            if item.get("field") == "status":
-                if not created_parsed:
-                    created_dt = parse_jira_time(h.get("created"))
-                    created_parsed = True
-                parsed_items.append((created_dt, item))
+        status_items = [
+            item for item in h.get("items", []) if item.get("field") == "status"
+        ]
+        if status_items:
+            created_dt = parse_jira_time(h.get("created"))
+            parsed_items.extend((created_dt, item) for item in status_items)
 
     # Handle None dates safely during sorting without causing TypeError when comparing Nones
     parsed_items.sort(key=lambda x: (x[0] is None, x[0] or datetime.min.replace(tzinfo=timezone.utc)))
 
     # Build timeline of status changes in a single pass over flattened status items
     timeline = [{"status": "New", "time": parse_jira_time(fields.get("created"))}]
-    transition_count = 0
     found_initial = False
 
     for created_dt, item in parsed_items:
@@ -39,7 +36,8 @@ def calculate_metrics(issue, status_map=None, now=None):
                 timeline[0]["status"] = from_str
                 found_initial = True
         timeline.append({"status": item.get("toString"), "time": created_dt})
-        transition_count += 1
+
+    transition_count = len(parsed_items)
 
     # Calculate time in each status
     time_in_status = {}
