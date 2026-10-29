@@ -1,5 +1,6 @@
 import os
 import sys
+import subprocess
 import unittest
 from unittest.mock import patch, MagicMock
 
@@ -99,6 +100,38 @@ class TestCloakEnvSecretSource(unittest.TestCase):
         result = plugin.fetch()
         self.assertEqual(result.status, FetchStatus.ERROR)
         self.assertEqual(result.error, "Expected JSON object from cloakenv")
+
+    def test_missing_path_or_token(self):
+        plugin_no_path = CloakEnvSecretSource({**self.config_base, "path": ""})
+        result = plugin_no_path.fetch()
+        self.assertEqual(result.status, FetchStatus.ERROR)
+        self.assertEqual(result.error, "Missing path or token")
+
+        plugin_no_token = CloakEnvSecretSource({**self.config_base, "token": ""})
+        result = plugin_no_token.fetch()
+        self.assertEqual(result.status, FetchStatus.ERROR)
+        self.assertEqual(result.error, "Missing path or token")
+
+    @patch("plugin.subprocess.run")
+    def test_invalid_json_handling(self, mock_run):
+        mock_run.return_value = MagicMock(returncode=0, stdout="not valid json")
+        plugin = CloakEnvSecretSource(self.config_base)
+        result = plugin.fetch()
+        self.assertEqual(result.status, FetchStatus.ERROR)
+        self.assertTrue(result.error.startswith("Invalid JSON:"))
+
+    @patch("plugin.subprocess.run")
+    def test_timeout_and_os_error_handling(self, mock_run):
+        mock_run.side_effect = subprocess.TimeoutExpired(cmd="cloakenv", timeout=30)
+        plugin = CloakEnvSecretSource(self.config_base)
+        result = plugin.fetch()
+        self.assertEqual(result.status, FetchStatus.ERROR)
+        self.assertIn("Failed to execute cloakenv:", result.error)
+
+        mock_run.side_effect = OSError("Permission denied")
+        result = plugin.fetch()
+        self.assertEqual(result.status, FetchStatus.ERROR)
+        self.assertIn("Failed to execute cloakenv: Permission denied", result.error)
 
 if __name__ == '__main__':
     unittest.main()
