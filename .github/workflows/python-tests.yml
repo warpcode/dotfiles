@@ -71,7 +71,17 @@ jobs:
             # sitting directly in scripts/. Discovery must run from inside
             # scripts/ -- most suites have no tests/__init__.py, so passing -t
             # makes unittest fail with "Start directory is not importable".
+            has_tests_dir=0
             if [ -d "$scripts_dir/tests" ]; then
+              for p in "$scripts_dir/tests"/*.py; do
+                if [ -e "$p" ]; then
+                  has_tests_dir=1
+                  break
+                fi
+              done
+            fi
+
+            if [ "$has_tests_dir" -eq 1 ]; then
               echo "::group::$skill tests/"
               ran=$((ran + 1))
               # A skill with a pyproject.toml pins its dependencies in uv.lock,
