@@ -6,6 +6,49 @@ pkg.recipe.define ollama \
 
 pkg.recipe.ollama.enabled() { [[ $(df.os family) != "macos" ]] }
 
+_pkg.recipe.ollama.pull_models() {
+    local -a models=( "$@" )
+    local -a installed=( ${${(f)"$(ollama list 2>/dev/null)"}[2,-1]%%[[:space:]]*} )
+    local -a missing=( ${models:|installed} )
+
+    if (( ! $#missing )); then
+        tui.success "All models already installed: ${(j:, :)models}"
+        return 0
+    fi
+
+    tui.info "Missing models: ${(j:, :)missing}"
+    for m in $missing; do
+        tui.step "Pulling $m..."
+        ollama pull $m || tui.error "Failed to pull $m"
+    done
+}
+
+_pkg.recipe.ollama.sync_models() {
+    local -a models=( "$@" )
+    local pid=0 url="http://localhost:11434"
+
+    {
+        # Ensure server is running before checking models
+        if ! curl -sf "$url" >/dev/null 2>&1; then
+            tui.info "Starting temporary ollama server..."
+            ollama serve >/dev/null 2>&1 & pid=$!
+
+            local count=0
+            while ! curl -sf "$url" >/dev/null 2>&1 && kill -0 $pid 2>/dev/null; do
+                sleep 1
+                (( ++count > 60 )) && { tui.error "Timed out waiting for ollama server"; return 1; }
+            done
+        fi
+
+        _pkg.recipe.ollama.pull_models "${models[@]}"
+    } always {
+        if (( pid )); then
+            tui.info "Stopping temporary ollama server..."
+            kill $pid 2>/dev/null; wait $pid 2>/dev/null
+        fi
+    }
+}
+
 pkg.recipe.ollama.configure() {
     # Disabled for now
     return 0
@@ -26,41 +69,7 @@ pkg.recipe.ollama.configure() {
         fi
 
         local -a models=( ${=$(pkg.recipe.get ollama models)} )
-        local pid url="http://localhost:11434"
-        local started_temp=0
-
-        # Ensure server is running before checking models
-        if ! curl -sf "$url" >/dev/null 2>&1; then
-            tui.info "Starting temporary ollama server..."
-            ollama serve >/dev/null 2>&1 & pid=$!
-            started_temp=1
-
-            local count=0
-            while ! curl -sf "$url" >/dev/null 2>&1 && kill -0 $pid 2>/dev/null; do
-                sleep 1
-                (( ++count > 60 )) && { tui.error "Timed out waiting for ollama server"; return 1; }
-            done
-        fi
-
-        {
-            local -a installed=( ${${(f)"$(ollama list 2>/dev/null)"}[2,-1]%%[[:space:]]*} )
-            local -a missing=( ${models:|installed} )
-
-            if (( ! $#missing )); then
-                tui.success "All models already installed: ${(j:, :)models}"
-            else
-                tui.info "Missing models: ${(j:, :)missing}"
-                for m in $missing; do
-                    tui.step "Pulling $m..."
-                    ollama pull $m || tui.error "Failed to pull $m"
-                done
-            fi
-        } always {
-            if (( started_temp && pid )); then
-                tui.info "Stopping temporary ollama server..."
-                kill $pid 2>/dev/null; wait $pid 2>/dev/null
-            fi
-        }
+        _pkg.recipe.ollama.sync_models "${models[@]}"
     } always {
         tui.indent.pop
     }
