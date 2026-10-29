@@ -309,6 +309,60 @@ class TestOpenAIBridgeServer(unittest.TestCase):
             500, "agentapi error: Unknown error"
         )
 
+    def test_send_error_response_calls_send_json(self):
+        # Test direct invocation of send_error_response with various status codes and messages
+        test_cases = [
+            (400, "Invalid Request"),
+            (404, "Not Found: /v1/foo"),
+            (413, "Request body too large"),
+            (500, "Internal Server Error"),
+        ]
+        for status_code, message in test_cases:
+            with self.subTest(status_code=status_code, message=message):
+                self.handler.send_json.reset_mock()
+                # Call send_error_response using the real implementation on the handler
+                openai_bridge_server.OpenAIBridgeHandler.send_error_response(
+                    self.handler, status_code, message
+                )
+                self.handler.send_json.assert_called_once_with(
+                    status_code,
+                    {
+                        "error": {
+                            "message": message,
+                            "type": "invalid_request_error",
+                            "code": None,
+                        }
+                    },
+                )
+
+    def test_send_error_response_integration_writes_response(self):
+        # Test full execution through send_json without mocking send_json
+        handler = openai_bridge_server.OpenAIBridgeHandler.__new__(
+            openai_bridge_server.OpenAIBridgeHandler
+        )
+        handler.send_response = MagicMock()
+        handler.send_header = MagicMock()
+        handler.end_headers = MagicMock()
+        mock_wfile = MagicMock()
+        handler.wfile = mock_wfile
+
+        handler.send_error_response(400, "Bad Request")
+
+        handler.send_response.assert_called_once_with(400)
+        handler.send_header.assert_called_once_with("Content-Type", "application/json")
+        handler.end_headers.assert_called_once()
+
+        written_bytes = mock_wfile.write.call_args[0][0]
+        decoded_payload = json.loads(written_bytes.decode("utf-8"))
+        expected_payload = {
+            "error": {
+                "message": "Bad Request",
+                "type": "invalid_request_error",
+                "code": None,
+            }
+        }
+        self.assertEqual(decoded_payload, expected_payload)
+
 
 if __name__ == "__main__":
     unittest.main()
