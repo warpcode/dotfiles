@@ -1,13 +1,10 @@
-
 function command_not_found_handler() {
     local cmd="$1"
-    # Only run in interactive sessions
+
+    # In interactive sessions, attempt to reload paths/rehash first
     if [[ -o interactive ]]; then
-        # 1. Attempt to blindly reload paths/rehash first
         rehash
-        if ! command -v "$cmd" >/dev/null 2>&1; then
-             path.reload
-        fi
+        command -v "$cmd" >/dev/null 2>&1 || path.reload
 
         # If found after reload, run it immediately!
         if command -v "$cmd" >/dev/null 2>&1; then
