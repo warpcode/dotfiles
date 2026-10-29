@@ -45,8 +45,15 @@ import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
+
+
+@lru_cache(maxsize=1024)
+def _get_script_pattern(script_name: str) -> re.Pattern:
+    """Cache compiled regex pattern for script matching."""
+    return re.compile(rf"(?:^|[\s/\"']){re.escape(script_name)}(?:[\s\"']|$)")
 
 # Search roots across platforms
 ANTIGRAVITY_BRAIN_PATHS = [
@@ -268,8 +275,8 @@ def match_tool_call(
     elif script_targets is not None:
         matched_script = None
         for s in script_targets:
-            # Fast string containment check before compiling dynamic regex
-            if s in cmd_str and re.search(rf"(?:^|[\s/\"']){re.escape(s)}(?:[\s\"']|$)", cmd_str):
+            # Fast string containment check before regex search
+            if s in cmd_str and _get_script_pattern(s).search(cmd_str):
                 matched_script = s
                 break
         if not matched_script:
