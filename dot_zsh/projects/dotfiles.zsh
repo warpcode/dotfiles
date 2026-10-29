@@ -26,8 +26,7 @@ function dotfiles.setup.zshrc() {
 function dotfiles.setup.submodules() {
     (
         df.cd || return 1
-        if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-            git submodule update --init --remote --recursive || return 1
-        fi
+        git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+        git submodule update --init --remote --recursive
     )
 }
