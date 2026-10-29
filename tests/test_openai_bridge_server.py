@@ -24,6 +24,82 @@ class TestOpenAIBridgeServer(unittest.TestCase):
         with openai_bridge_server.cache_lock:
             openai_bridge_server.history_to_conv_id.clear()
 
+    def test_is_valid_conv_id(self):
+        is_valid = openai_bridge_server._is_valid_conv_id
+        self.assertTrue(is_valid("conv-123"))
+        self.assertTrue(is_valid("abc_456"))
+        self.assertTrue(is_valid("550e8400-e29b-41d4-a716-446655440000"))
+
+        self.assertFalse(is_valid("-flag"))
+        self.assertFalse(is_valid("--exec"))
+        self.assertFalse(is_valid("conv id"))
+        self.assertFalse(is_valid("conv;id"))
+        self.assertFalse(is_valid("conv&id"))
+        self.assertFalse(is_valid("conv\x00id"))
+        self.assertFalse(is_valid(""))
+        self.assertFalse(is_valid(None))
+        self.assertFalse(is_valid(123))
+
+    def test_sanitize_prompt(self):
+        sanitize = openai_bridge_server._sanitize_prompt
+        self.assertEqual(sanitize("hello\x00world"), "helloworld")
+        self.assertEqual(sanitize("clean prompt"), "clean prompt")
+        self.assertEqual(sanitize(None), "")
+
+    @patch("subprocess.run")
+    def test_invalid_conv_id_in_cache_bypassed(self, mock_subprocess_run):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = json.dumps({"response": {"content": "Response", "conversation_id": "conv-999"}})
+        mock_proc.stderr = ""
+        mock_subprocess_run.return_value = mock_proc
+
+        # Manually poison cache with a malicious flag conv_id
+        hash_key = "flash_lite:" + json.dumps([{"role": "user", "content": "Prev message"}])
+        with openai_bridge_server.cache_lock:
+            openai_bridge_server.history_to_conv_id[hash_key] = "--flag-injection"
+
+        messages = [
+            {"role": "user", "content": "Prev message"},
+            {"role": "assistant", "content": "Prev response"},
+            {"role": "user", "content": "Next question"}
+        ]
+
+        self.handler.process_completions(messages, model="flash_lite", is_chat=True)
+        cmd_args = mock_subprocess_run.call_args[0][0]
+        self.assertEqual(cmd_args[0:2], ["agentapi", "new-conversation"])
+        self.assertNotIn("--flag-injection", cmd_args)
+
+    @patch("subprocess.run")
+    def test_invalid_conv_id_in_output_ignored(self, mock_subprocess_run):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = json.dumps({"response": {"content": "Response", "conversation_id": "-invalid-id"}})
+        mock_proc.stderr = ""
+        mock_subprocess_run.return_value = mock_proc
+
+        messages = [{"role": "user", "content": "Hello"}]
+        self.handler.process_completions(messages, model="flash_lite", is_chat=True)
+
+        with openai_bridge_server.cache_lock:
+            self.assertEqual(len(openai_bridge_server.history_to_conv_id), 0)
+
+    @patch("subprocess.run")
+    def test_null_bytes_stripped_from_prompts_in_subprocess_cmd(self, mock_subprocess_run):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = json.dumps({"response": {"content": "Response", "conversation_id": "conv-123"}})
+        mock_proc.stderr = ""
+        mock_subprocess_run.return_value = mock_proc
+
+        messages = [{"role": "user", "content": "Hello\x00 World"}]
+        self.handler.process_completions(messages, model="flash_lite", is_chat=True)
+
+        cmd_args = mock_subprocess_run.call_args[0][0]
+        prompt_arg = cmd_args[-1]
+        self.assertEqual(prompt_arg, "Hello World")
+        self.assertNotIn("\x00", prompt_arg)
+
     def test_allowed_models_frozenset_exactness(self):
         self.assertEqual(openai_bridge_server.ALLOWED_MODELS, frozenset({"flash_lite", "flash", "pro"}))
         with self.assertRaises(AttributeError):
