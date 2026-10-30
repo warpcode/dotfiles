@@ -7,7 +7,6 @@ import threading
 import uuid
 import time
 import logging
-import ipaddress
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
@@ -23,25 +22,8 @@ ALLOWED_ROLES = frozenset({"user", "assistant", "system", "developer", "tool", "
 # SECURITY: This bridge has no authentication. Any client that can reach it can
 # drive the local `agentapi` agent with arbitrary prompts, executing with this
 # user's privileges and environment. It must therefore only ever listen on
-# loopback.
+# loopback. Override with BRIDGE_HOST only when the exposure is understood.
 DEFAULT_HOST = "127.0.0.1"
-
-
-def _is_loopback(host):
-    """Check whether a host string resolves to a loopback address.
-
-    SECURITY: Unauthenticated bridges must only listen on loopback interfaces.
-    """
-    if not host or not isinstance(host, str):
-        return False
-    host_clean = host.strip().lower()
-    if host_clean in {"localhost", "localhost.localdomain"}:
-        return True
-    try:
-        ip = ipaddress.ip_address(host_clean)
-        return ip.is_loopback
-    except ValueError:
-        return False
 
 # SECURITY: Unauthenticated callers must not be able to make the server buffer
 # an unbounded body in memory (single-request memory exhaustion).
@@ -366,19 +348,10 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
         return None, stdout_str
 
 def run(port=18081, host=None):
-    # SECURITY: loopback-only. This bridge is unauthenticated, so binding
-    # 0.0.0.0 or any non-loopback address would expose remote prompt execution
-    # into `agentapi`.
+    # SECURITY: loopback-only by default. This bridge is unauthenticated, so
+    # binding 0.0.0.0 would expose remote prompt execution into `agentapi`.
     if host is None:
         host = os.environ.get("BRIDGE_HOST", DEFAULT_HOST)
-    if not _is_loopback(host):
-        logging.warning(
-            "Non-loopback host %r requested, but bridge is unauthenticated. "
-            "Enforcing loopback (%s).",
-            host,
-            DEFAULT_HOST,
-        )
-        host = DEFAULT_HOST
     server_address = (host, port)
     httpd = http.server.ThreadingHTTPServer(server_address, OpenAIBridgeHandler)
     logging.info(f"Starting OpenAI Bridge server on {host}:{port}...")
