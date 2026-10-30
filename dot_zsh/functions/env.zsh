@@ -19,6 +19,7 @@ env.lazy.register() {
   [[ $var != [a-zA-Z_][a-zA-Z0-9_]* ]] && { print -u2 "env.lazy.register: invalid name: $var"; return 1; }
   _ENV_LAZY_VARS[$var]=$cmd
   [[ $# -gt 0 ]] && _ENV_LAZY_DEPS[$var]="$*"
+  return 0
 }
 
 env.lazy.load() {
@@ -30,16 +31,16 @@ env.lazy.load() {
     
     deps=( ${=_ENV_LAZY_DEPS[$var]} )
     for dep in $deps; do
-      if [[ -z ${seen[$dep]} ]]; then
-        env.lazy.load "$dep"
-        seen[$dep]=1
-      fi
+      [[ -n ${seen[$dep]} ]] && continue
+      env.lazy.load "$dep"
+      seen[$dep]=1
     done
 
     local -a cmd_parts expanded_parts
     local p
     setopt LOCAL_OPTIONS EXTENDED_GLOB
     cmd_parts=( ${(z)_ENV_LAZY_VARS[$var]} )
+    expanded_parts=()
     for p in "${cmd_parts[@]}"; do
       expanded_parts+=( "${(Q)p//(#b)\$(([a-zA-Z_][a-zA-Z0-9_]#)|\{([a-zA-Z_][a-zA-Z0-9_]#)\})/${(P)match[2]:-${(P)match[3]}}}" )
     done
