@@ -241,6 +241,54 @@ class TestOpenAIBridgeServer(unittest.TestCase):
                 openai_bridge_server.run(port=18081)
             self.assertEqual(mock_srv.call_args[0][0], ("127.0.0.1", 18081))
 
+    def test_is_loopback_validation(self):
+        is_loopback = openai_bridge_server._is_loopback
+        # Valid loopback targets
+        self.assertTrue(is_loopback("127.0.0.1"))
+        self.assertTrue(is_loopback("127.0.0.2"))
+        self.assertTrue(is_loopback("::1"))
+        self.assertTrue(is_loopback("localhost"))
+        self.assertTrue(is_loopback("localhost.localdomain"))
+        self.assertTrue(is_loopback(" LOCALHOST "))
+
+        # Non-loopback targets (must be rejected)
+        self.assertFalse(is_loopback("0.0.0.0"))
+        self.assertFalse(is_loopback("::"))
+        self.assertFalse(is_loopback("192.168.1.100"))
+        self.assertFalse(is_loopback("10.0.0.1"))
+        self.assertFalse(is_loopback("attacker.com"))
+        self.assertFalse(is_loopback(""))
+        self.assertFalse(is_loopback(None))
+        self.assertFalse(is_loopback(123))
+
+    def test_run_rejects_non_loopback_bridge_host(self):
+        non_loopback_hosts = ["0.0.0.0", "::", "192.168.1.1", "10.0.0.1", "attacker.com"]
+        for bad_host in non_loopback_hosts:
+            with self.subTest(bad_host=bad_host):
+                with patch.object(openai_bridge_server.http.server, "ThreadingHTTPServer") as mock_srv:
+                    mock_srv.return_value.serve_forever.side_effect = KeyboardInterrupt
+                    mock_srv.return_value.server_close = MagicMock()
+                    with patch.dict(os.environ, {"BRIDGE_HOST": bad_host}):
+                        openai_bridge_server.run(port=18081)
+                    self.assertEqual(mock_srv.call_args[0][0], ("127.0.0.1", 18081))
+
+                with patch.object(openai_bridge_server.http.server, "ThreadingHTTPServer") as mock_srv:
+                    mock_srv.return_value.serve_forever.side_effect = KeyboardInterrupt
+                    mock_srv.return_value.server_close = MagicMock()
+                    openai_bridge_server.run(port=18081, host=bad_host)
+                    self.assertEqual(mock_srv.call_args[0][0], ("127.0.0.1", 18081))
+
+    def test_run_accepts_valid_loopback_host(self):
+        valid_hosts = ["localhost", "127.0.0.1", "::1"]
+        for valid_host in valid_hosts:
+            with self.subTest(valid_host=valid_host):
+                with patch.object(openai_bridge_server.http.server, "ThreadingHTTPServer") as mock_srv:
+                    mock_srv.return_value.serve_forever.side_effect = KeyboardInterrupt
+                    mock_srv.return_value.server_close = MagicMock()
+                    with patch.dict(os.environ, {"BRIDGE_HOST": valid_host}):
+                        openai_bridge_server.run(port=18081)
+                    self.assertEqual(mock_srv.call_args[0][0], (valid_host, 18081))
+
     def test_read_body_rejects_oversized_request(self):
         # SECURITY: an unauthenticated caller must not be able to force an
         # unbounded allocation via Content-Length.
