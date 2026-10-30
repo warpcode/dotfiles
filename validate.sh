@@ -83,30 +83,27 @@ have() {
 # Shell / Zsh syntax (mirrors lint.yml)
 # ---------------------------------------------------------------------------
 
-if have zsh; then
-    lint_zsh() {
-        local failed=0
-        while IFS= read -r f; do
-            if ! zsh -n "$f"; then
-                failed=1
-            fi
-        done < <(find . -name '*.zsh' -not -path './.git/*')
-        return $failed
-    }
-    run "zsh -n (syntax)" lint_zsh
-else
-    printf '\nSKIP zsh -n (syntax) (zsh not installed)\n'
-fi
+lint_zsh() {
+    local failed=0
+    while IFS= read -r f; do
+        zsh -n "$f" || failed=1
+    done < <(find . -name '*.zsh' -not -path './.git/*')
+    return $failed
+}
 
 lint_bash() {
     local failed=0
     while IFS= read -r f; do
-        if ! bash -n "$f"; then
-            failed=1
-        fi
+        bash -n "$f" || failed=1
     done < <(find . -name '*.sh' -not -path './.git/*')
     return $failed
 }
+
+if have zsh; then
+    run "zsh -n (syntax)" lint_zsh
+else
+    printf '\nSKIP zsh -n (syntax) (zsh not installed)\n'
+fi
 
 run "bash -n (syntax)" lint_bash
 
@@ -126,28 +123,29 @@ run "stray-artifacts" check_stray_artifacts
 # Zsh unit tests (mirrors the lint.yml runner step)
 # ---------------------------------------------------------------------------
 
+run_zsh_tests() {
+    [ -d dot_zsh/tests ] || {
+        printf 'dot_zsh/tests/ not found\n' >&2
+        return 1
+    }
+    local failed=0 ran=0
+    for suite in dot_zsh/tests/*.zsh; do
+        [ -f "$suite" ] || continue
+        ran=$((ran + 1))
+        printf -- '--- %s\n' "$suite"
+        if ! zsh "$suite"; then
+            failed=1
+        fi
+    done
+    if [ "$ran" -eq 0 ]; then
+        printf 'no zsh test suites found\n' >&2
+        return 1
+    fi
+    return $failed
+}
+
 if [ "$LINT_ONLY" -eq 0 ]; then
     if have zsh; then
-        run_zsh_tests() {
-            [ -d dot_zsh/tests ] || {
-                printf 'dot_zsh/tests/ not found\n' >&2
-                return 1
-            }
-            local failed=0 ran=0
-            for suite in dot_zsh/tests/*.zsh; do
-                [ -f "$suite" ] || continue
-                ran=$((ran + 1))
-                printf -- '--- %s\n' "$suite"
-                if ! zsh "$suite"; then
-                    failed=1
-                fi
-            done
-            if [ "$ran" -eq 0 ]; then
-                printf 'no zsh test suites found\n' >&2
-                return 1
-            fi
-            return $failed
-        }
         run "zsh tests (dot_zsh/tests)" run_zsh_tests
     else
         printf '\nSKIP zsh tests (zsh not installed)\n'
@@ -158,16 +156,17 @@ fi
 # Static analysis, declared in AGENTS.md but with no workflow running it yet.
 # ---------------------------------------------------------------------------
 
+# ShellCheck supports sh/bash/dash/ksh only -- feeding it *.zsh yields
+# SC1071, not real findings. Zsh is covered by the `zsh -n` check above.
+shellcheck_all() {
+    local failed=0
+    # shellcheck disable=SC2046
+    shellcheck --severity=warning --external-sources $(git ls-files '*.sh') ||
+        failed=1
+    return $failed
+}
+
 if have shellcheck; then
-    # ShellCheck supports sh/bash/dash/ksh only -- feeding it *.zsh yields
-    # SC1071, not real findings. Zsh is covered by the `zsh -n` check above.
-    shellcheck_all() {
-        local failed=0
-        # shellcheck disable=SC2046
-        shellcheck --severity=warning --external-sources $(git ls-files '*.sh') ||
-            failed=1
-        return $failed
-    }
     run "shellcheck" shellcheck_all
 else
     printf '\nSKIP shellcheck (not installed)\n'
@@ -212,7 +211,7 @@ run_single_skill_tests() {
     # Suites use both layouts. Discovery must run from inside scripts/ --
     # most have no tests/__init__.py, so passing -t makes unittest fail
     # with "Start directory is not importable".
-    if [ -d "$scripts_dir/tests" ]; then
+    if [ -d "$scripts_dir/tests" ] && ls "$scripts_dir/tests"/*.py >/dev/null 2>&1; then
         printf -- '--- %s tests/\n' "$skill"
         exec_skill_unittest "$scripts_dir" discover -s tests || failed=1
     fi
