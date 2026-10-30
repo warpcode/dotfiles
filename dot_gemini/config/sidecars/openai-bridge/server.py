@@ -8,8 +8,28 @@ import uuid
 import time
 import logging
 import ipaddress
+import re
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+
+CONV_ID_REGEX = re.compile(r"^[a-zA-Z0-9_][a-zA-Z0-9_-]*$")
+
+
+def _is_valid_conv_id(conv_id):
+    """Check if conv_id matches expected alphanumeric/hyphen/underscore format.
+
+    Ensures conv_id cannot start with a dash (flag injection) or contain control characters / null bytes.
+    """
+    if not isinstance(conv_id, str):
+        return False
+    return bool(CONV_ID_REGEX.match(conv_id))
+
+
+def _sanitize_prompt(prompt):
+    """Sanitize prompt text by stripping null bytes that would cause subprocess failures."""
+    if not isinstance(prompt, str):
+        return ""
+    return prompt.replace("\x00", "")
 
 # Thread-safe in-memory cache mapping history hashes to conversation IDs
 cache_lock = threading.Lock()
@@ -54,20 +74,22 @@ def _extract_text(content):
     Accepts a plain string, or the structured content-block list form
     ([{"type": "text", "text": ...}]). Anything else yields "" rather than a
     Python repr, which would splice dict/list syntax into the prompt.
+    Sanitizes null bytes to prevent subprocess execution failures.
     """
+    text = ""
     if isinstance(content, str):
-        return content
-    if isinstance(content, list):
+        text = content
+    elif isinstance(content, list):
         parts = []
         for block in content:
             if isinstance(block, str):
                 parts.append(block)
             elif isinstance(block, dict) and block.get("type") == "text":
-                text = block.get("text")
-                if isinstance(text, str):
-                    parts.append(text)
-        return "".join(parts)
-    return ""
+                t = block.get("text")
+                if isinstance(t, str):
+                    parts.append(t)
+        text = "".join(parts)
+    return text.replace("\x00", "")
 
 
 def _normalize_message(raw_role, raw_content):
@@ -231,7 +253,11 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
         conv_id = None
         if history_hash:
             with cache_lock:
-                conv_id = history_to_conv_id.get(history_hash)
+                cached_id = history_to_conv_id.get(history_hash)
+                if cached_id and _is_valid_conv_id(cached_id):
+                    conv_id = cached_id
+
+        current_prompt = _sanitize_prompt(current_prompt)
 
         # Build command to execute agentapi
         if conv_id:
@@ -243,14 +269,14 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
                 context_str = "Context of previous conversation:\n"
                 for msg in history:
                     role = msg.get("role", "user").capitalize()
-                    content = msg.get("content", "")
+                    content = _sanitize_prompt(msg.get("content", ""))
                     context_str += f"{role}: {content}\n"
                 context_str += "\nNow respond to the following prompt:\n"
                 initial_prompt = context_str + current_prompt
             else:
                 initial_prompt = current_prompt
 
-            cmd = ["agentapi", "new-conversation", f"--model={model}", initial_prompt]
+            cmd = ["agentapi", "new-conversation", f"--model={model}", _sanitize_prompt(initial_prompt)]
 
         logging.info(f"Running command: {' '.join(cmd)}")
         try:
@@ -270,6 +296,9 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
 
         # Parse output
         parsed_conv_id, parsed_content = self.parse_agentapi_output(stdout)
+        if parsed_conv_id and not _is_valid_conv_id(parsed_conv_id):
+            logging.warning("Parsed conversation ID %r from agentapi output is invalid.", parsed_conv_id)
+            parsed_conv_id = None
 
         if not parsed_content:
             try:
