@@ -205,24 +205,16 @@ exec_skill_unittest() {
 run_single_skill_tests() {
     local scripts_dir="$1"
     local failed=0
-    local skill test_file has_py_test=0
+    local skill test_file
 
     skill="$(basename "$(dirname "$scripts_dir")")"
 
     # Suites use both layouts. Discovery must run from inside scripts/ --
     # most have no tests/__init__.py, so passing -t makes unittest fail
     # with "Start directory is not importable".
-    if [ -d "$scripts_dir/tests" ]; then
-        for test_file in "$scripts_dir/tests"/*.py "$scripts_dir/tests"/*/*.py; do
-            if [ -e "$test_file" ]; then
-                has_py_test=1
-                break
-            fi
-        done
-        if [ "$has_py_test" -eq 1 ]; then
-            printf -- '--- %s tests/\n' "$skill"
-            exec_skill_unittest "$scripts_dir" discover -s tests || failed=1
-        fi
+    if [ -d "$scripts_dir/tests" ] && ls "$scripts_dir/tests"/*.py >/dev/null 2>&1; then
+        printf -- '--- %s tests/\n' "$skill"
+        exec_skill_unittest "$scripts_dir" discover -s tests || failed=1
     fi
 
     for test_file in "$scripts_dir"/test_*.py; do
