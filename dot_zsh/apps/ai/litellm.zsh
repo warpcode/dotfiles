@@ -46,17 +46,23 @@ ai.litellm.proxy.wrapper() {
     {
         # Wait for server to be up (any response = server is ready)
         local count=0
-        while ! curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${port}/health" 2>/dev/null | grep -qE '^[23]'; do
+        while true; do
+            if curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${port}/health" 2>/dev/null | grep -qE '^[23]'; then
+                break
+            fi
+
             if ! kill -0 "$litellm_pid" 2>/dev/null; then
                 rm -f "$config_file"
                 echo "[ai.litellm] Error: LiteLLM failed to start" >&2
                 return 1
             fi
+
             if [[ $count -ge $timeout ]]; then
                 rm -f "$config_file"
                 echo "[ai.litellm] Error: LiteLLM failed to start within ${timeout}s" >&2
                 return 1
             fi
+
             sleep 1
             count=$((count + 1))
             if [[ $((count % 10)) -eq 0 ]]; then
