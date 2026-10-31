@@ -117,6 +117,33 @@ class TestCloakEnvSecretSource(unittest.TestCase):
         self.assertEqual(result.status, FetchStatus.SUCCESS)
         self.assertEqual(result.secrets, {"X": "B"})
 
+    def test_fetch_missing_path_or_token(self):
+        # Missing both path and token
+        plugin_no_config = CloakEnvSecretSource({})
+        res = plugin_no_config.fetch()
+        self.assertEqual(res.status, FetchStatus.ERROR)
+        self.assertEqual(res.error, "Missing path or token")
+
+        # Missing path only
+        plugin_no_path = CloakEnvSecretSource({"token": "secret"})
+        res = plugin_no_path.fetch()
+        self.assertEqual(res.status, FetchStatus.ERROR)
+        self.assertEqual(res.error, "Missing path or token")
+
+        # Missing token only
+        plugin_no_token = CloakEnvSecretSource({"path": "secret/path"})
+        res = plugin_no_token.fetch()
+        self.assertEqual(res.status, FetchStatus.ERROR)
+        self.assertEqual(res.error, "Missing path or token")
+
+    @patch("plugin.subprocess.run")
+    def test_invalid_json_handling(self, mock_run):
+        mock_run.return_value = MagicMock(returncode=0, stdout="{invalid_json")
+        plugin = CloakEnvSecretSource(self.config_base)
+        result = plugin.fetch()
+        self.assertEqual(result.status, FetchStatus.ERROR)
+        self.assertTrue(result.error.startswith("Invalid JSON: "))
+
     @patch("plugin.subprocess.run")
     def test_execution_error_handling(self, mock_run):
         mock_run.side_effect = FileNotFoundError("Executable not found")
@@ -124,6 +151,23 @@ class TestCloakEnvSecretSource(unittest.TestCase):
         result = plugin.fetch()
         self.assertEqual(result.status, FetchStatus.ERROR)
         self.assertIn("Failed to execute cloakenv: Executable not found", result.error)
+
+    @patch("plugin.subprocess.run")
+    def test_execution_timeout_error_handling(self, mock_run):
+        import subprocess
+        mock_run.side_effect = subprocess.TimeoutExpired(cmd=["cloakenv"], timeout=30)
+        plugin = CloakEnvSecretSource(self.config_base)
+        result = plugin.fetch()
+        self.assertEqual(result.status, FetchStatus.ERROR)
+        self.assertIn("Failed to execute cloakenv: Command '['cloakenv']' timed out after 30 seconds", result.error)
+
+    @patch("plugin.subprocess.run")
+    def test_execution_os_error_handling(self, mock_run):
+        mock_run.side_effect = OSError("Permission denied")
+        plugin = CloakEnvSecretSource(self.config_base)
+        result = plugin.fetch()
+        self.assertEqual(result.status, FetchStatus.ERROR)
+        self.assertIn("Failed to execute cloakenv: Permission denied", result.error)
 
     @patch("plugin.subprocess.run")
     def test_non_dict_json_handling(self, mock_run):
