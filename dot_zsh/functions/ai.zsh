@@ -37,6 +37,18 @@ _ai.valid_key() {
     [[ "$1" =~ ^[A-Za-z0-9_-]+$ ]]
 }
 
+_ai.validate_provider_keys() {
+    local arg k
+    for arg in "$@"; do
+        [[ "$arg" == *=* ]] || continue
+        k="${arg%%=*}"
+        if ! _ai.valid_key "$k"; then
+            print -u2 "Error: Invalid AI provider key '${k}'. Must contain only alphanumeric characters, underscores and dashes."
+            return 1
+        fi
+    done
+}
+
 ai.provider.define() {
     local raw_pid="$1"
     if ! _ai.valid_id "$raw_pid"; then
@@ -47,15 +59,7 @@ ai.provider.define() {
     # Normalise exactly as the registry does: '-' becomes '_' and nothing else.
     local pid="${raw_pid//-/_}"
 
-    local arg k
-    for arg in "${@:2}"; do
-        [[ "$arg" == *=* ]] || continue
-        k="${arg%%=*}"
-        if ! _ai.valid_key "$k"; then
-            print -u2 "Error: Invalid AI provider key '${k}'. Must contain only alphanumeric characters, underscores and dashes."
-            return 1
-        fi
-    done
+    _ai.validate_provider_keys "${@:2}" || return 1
 
     registry.define "ai_provider" "$@"
 
