@@ -162,6 +162,51 @@ class TestAIGuardWrapper(unittest.TestCase):
         self.assertEqual(json.loads(mock_stdout.getvalue()), {"decision": "allow"})
         self.mock_exit.assert_called_with(0)
 
+    @patch('os.makedirs')
+    @patch('builtins.open', new_callable=mock_open)
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_main_debug_logging_when_enabled(self, mock_stdout, m_open, mock_makedirs):
+        with patch.dict(os.environ, {"AI_GUARD_DEBUG": "1"}, clear=True):
+            with patch('sys.argv', ['ai-guard-wrapper.py', 'unknown-route']):
+                with patch('sys.stdin', StringIO('{"foo": "bar"}')):
+                    with self.assertRaises(SystemExitException):
+                        ai_guard_wrapper.main()
+
+        expected_log_path = os.path.expanduser("~/.local/state/ai-guard-wrapper.log")
+        mock_makedirs.assert_called_once_with(os.path.dirname(expected_log_path), exist_ok=True)
+        m_open.assert_called_once_with(expected_log_path, "a")
+        handle = m_open()
+        written = "".join(call.args[0] for call in handle.write.call_args_list)
+        self.assertIn("HOOK CALLED: argv=['ai-guard-wrapper.py', 'unknown-route'] len=14\n", written)
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {"decision": "allow"})
+        self.mock_exit.assert_called_with(0)
+
+    @patch('os.makedirs', side_effect=OSError("Disk full or permission denied"))
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_main_debug_logging_exception_handled(self, mock_stdout, mock_makedirs):
+        with patch.dict(os.environ, {"AI_GUARD_DEBUG": "1"}, clear=True):
+            with patch('sys.argv', ['ai-guard-wrapper.py', 'unknown-route']):
+                with patch('sys.stdin', StringIO('{"foo": "bar"}')):
+                    # Even if logging fails, main() should not crash and should complete execution
+                    with self.assertRaises(SystemExitException):
+                        ai_guard_wrapper.main()
+
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {"decision": "allow"})
+        self.mock_exit.assert_called_with(0)
+
+    @patch('builtins.open', new_callable=mock_open)
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_main_debug_logging_prevented_when_unset(self, mock_stdout, m_open):
+        with patch.dict(os.environ, {}, clear=True):
+            with patch('sys.argv', ['ai-guard-wrapper.py', 'unknown-route']):
+                with patch('sys.stdin', StringIO('{"foo": "bar"}')):
+                    with self.assertRaises(SystemExitException):
+                        ai_guard_wrapper.main()
+
+        m_open.assert_not_called()
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {"decision": "allow"})
+        self.mock_exit.assert_called_with(0)
+
     @patch('ai_guard_wrapper.run_guard')
     @patch('sys.stdout', new_callable=StringIO)
     def test_handle_file_route_all_command_tools(self, mock_stdout, mock_run_guard):
