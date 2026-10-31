@@ -33,11 +33,8 @@ scheduler.remove() {
     case "$os_family" in
         macos)
             local plist="$HOME/Library/LaunchAgents/com.dotfiles.scheduler.$name.plist"
-            if [[ -f "$plist" ]]; then
-                launchctl bootout "gui/$(id -u)" "$plist" 2>/dev/null || true
-                rm -f "$plist"
-            fi
-            rm -f "$HOME/.local/state/dotfiles/scheduler/$name.log"
+            [[ -f "$plist" ]] && launchctl bootout "gui/$(id -u)" "$plist" 2>/dev/null || true
+            rm -f "$plist" "$HOME/.local/state/dotfiles/scheduler/$name.log"
             ;;
         debian|fedora|arch|linux)
             local service_file="$HOME/.config/systemd/user/dotfiles-scheduler-$name.service"
@@ -64,10 +61,8 @@ scheduler.logs() {
     case "$os_family" in
         macos)
             local log_file="$HOME/.local/state/dotfiles/scheduler/$name.log"
-            if [[ ! -f "$log_file" ]]; then
-                tui.error "No logs found for task: $name"
-                return 1
-            fi
+            [[ ! -f "$log_file" ]] && { tui.error "No logs found for task: $name"; return 1; }
+
             if (( $+commands[bat] )); then
                 tail -n 100 "$log_file" | bat --style=plain
             else
