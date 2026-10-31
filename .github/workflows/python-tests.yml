@@ -72,22 +72,20 @@ jobs:
             # scripts/ -- most suites have no tests/__init__.py, so passing -t
             # makes unittest fail with "Start directory is not importable".
             if [ -d "$scripts_dir/tests" ]; then
-              if ls "$scripts_dir/tests"/test_*.py "$scripts_dir/tests"/*_test.py >/dev/null 2>&1; then
-                echo "::group::$skill tests/"
-                ran=$((ran + 1))
-                # A skill with a pyproject.toml pins its dependencies in uv.lock,
-                # so run through uv to install them. --locked makes a stale or
-                # hand-edited lockfile a hard failure rather than a silent
-                # re-resolve, which is the point of committing the lock.
-                if [ -f "$scripts_dir/pyproject.toml" ]; then
-                  if ! (cd "$scripts_dir" && PYTHONPATH=. uv run --locked python -m unittest discover -s tests); then
-                    failed=1
-                  fi
-                elif ! (cd "$scripts_dir" && PYTHONPATH=. python -m unittest discover -s tests); then
+              echo "::group::$skill tests/"
+              ran=$((ran + 1))
+              # A skill with a pyproject.toml pins its dependencies in uv.lock,
+              # so run through uv to install them. --locked makes a stale or
+              # hand-edited lockfile a hard failure rather than a silent
+              # re-resolve, which is the point of committing the lock.
+              if [ -f "$scripts_dir/pyproject.toml" ]; then
+                if ! (cd "$scripts_dir" && PYTHONPATH=. uv run --locked python -m unittest discover -s tests); then
                   failed=1
                 fi
-                echo "::endgroup::"
+              elif ! (cd "$scripts_dir" && PYTHONPATH=. python -m unittest discover -s tests); then
+                failed=1
               fi
+              echo "::endgroup::"
             fi
 
             for test_file in "$scripts_dir"/test_*.py; do
