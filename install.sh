@@ -60,6 +60,7 @@ verify_checksum() {
 # Outputs:
 #   Writes normalized Linux distribution identifier to stdout (debian, fedora, arch, linux).
 #######################################
+# shellcheck disable=SC2120
 detect_linux_distro() {
   local os_release_file="${1:-${OS_RELEASE_PATH:-/etc/os-release}}"
   local os_id="linux"
