@@ -7,29 +7,8 @@ import threading
 import uuid
 import time
 import logging
-import ipaddress
-import re
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-
-CONV_ID_REGEX = re.compile(r"^[a-zA-Z0-9_][a-zA-Z0-9_-]*$")
-
-
-def _is_valid_conv_id(conv_id):
-    """Check if conv_id matches expected alphanumeric/hyphen/underscore format.
-
-    Ensures conv_id cannot start with a dash (flag injection) or contain control characters / null bytes.
-    """
-    if not isinstance(conv_id, str):
-        return False
-    return bool(CONV_ID_REGEX.match(conv_id))
-
-
-def _sanitize_prompt(prompt):
-    """Sanitize prompt text by stripping null bytes that would cause subprocess failures."""
-    if not isinstance(prompt, str):
-        return ""
-    return prompt.replace("\x00", "")
 
 # Thread-safe in-memory cache mapping history hashes to conversation IDs
 cache_lock = threading.Lock()
@@ -43,25 +22,8 @@ ALLOWED_ROLES = frozenset({"user", "assistant", "system", "developer", "tool", "
 # SECURITY: This bridge has no authentication. Any client that can reach it can
 # drive the local `agentapi` agent with arbitrary prompts, executing with this
 # user's privileges and environment. It must therefore only ever listen on
-# loopback.
+# loopback. Override with BRIDGE_HOST only when the exposure is understood.
 DEFAULT_HOST = "127.0.0.1"
-
-
-def _is_loopback(host):
-    """Check whether a host string resolves to a loopback address.
-
-    SECURITY: Unauthenticated bridges must only listen on loopback interfaces.
-    """
-    if not host or not isinstance(host, str):
-        return False
-    host_clean = host.strip().lower()
-    if host_clean in {"localhost", "localhost.localdomain"}:
-        return True
-    try:
-        ip = ipaddress.ip_address(host_clean)
-        return ip.is_loopback
-    except ValueError:
-        return False
 
 # SECURITY: Unauthenticated callers must not be able to make the server buffer
 # an unbounded body in memory (single-request memory exhaustion).
@@ -74,22 +36,20 @@ def _extract_text(content):
     Accepts a plain string, or the structured content-block list form
     ([{"type": "text", "text": ...}]). Anything else yields "" rather than a
     Python repr, which would splice dict/list syntax into the prompt.
-    Sanitizes null bytes to prevent subprocess execution failures.
     """
-    text = ""
     if isinstance(content, str):
-        text = content
-    elif isinstance(content, list):
+        return content
+    if isinstance(content, list):
         parts = []
         for block in content:
             if isinstance(block, str):
                 parts.append(block)
             elif isinstance(block, dict) and block.get("type") == "text":
-                t = block.get("text")
-                if isinstance(t, str):
-                    parts.append(t)
-        text = "".join(parts)
-    return text.replace("\x00", "")
+                text = block.get("text")
+                if isinstance(text, str):
+                    parts.append(text)
+        return "".join(parts)
+    return ""
 
 
 def _normalize_message(raw_role, raw_content):
@@ -253,11 +213,7 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
         conv_id = None
         if history_hash:
             with cache_lock:
-                cached_id = history_to_conv_id.get(history_hash)
-                if cached_id and _is_valid_conv_id(cached_id):
-                    conv_id = cached_id
-
-        current_prompt = _sanitize_prompt(current_prompt)
+                conv_id = history_to_conv_id.get(history_hash)
 
         # Build command to execute agentapi
         if conv_id:
@@ -269,14 +225,14 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
                 context_str = "Context of previous conversation:\n"
                 for msg in history:
                     role = msg.get("role", "user").capitalize()
-                    content = _sanitize_prompt(msg.get("content", ""))
+                    content = msg.get("content", "")
                     context_str += f"{role}: {content}\n"
                 context_str += "\nNow respond to the following prompt:\n"
                 initial_prompt = context_str + current_prompt
             else:
                 initial_prompt = current_prompt
 
-            cmd = ["agentapi", "new-conversation", f"--model={model}", _sanitize_prompt(initial_prompt)]
+            cmd = ["agentapi", "new-conversation", f"--model={model}", initial_prompt]
 
         logging.info(f"Running command: {' '.join(cmd)}")
         try:
@@ -296,9 +252,6 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
 
         # Parse output
         parsed_conv_id, parsed_content = self.parse_agentapi_output(stdout)
-        if parsed_conv_id and not _is_valid_conv_id(parsed_conv_id):
-            logging.warning("Parsed conversation ID %r from agentapi output is invalid.", parsed_conv_id)
-            parsed_conv_id = None
 
         if not parsed_content:
             try:
@@ -395,19 +348,10 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
         return None, stdout_str
 
 def run(port=18081, host=None):
-    # SECURITY: loopback-only. This bridge is unauthenticated, so binding
-    # 0.0.0.0 or any non-loopback address would expose remote prompt execution
-    # into `agentapi`.
+    # SECURITY: loopback-only by default. This bridge is unauthenticated, so
+    # binding 0.0.0.0 would expose remote prompt execution into `agentapi`.
     if host is None:
         host = os.environ.get("BRIDGE_HOST", DEFAULT_HOST)
-    if not _is_loopback(host):
-        logging.warning(
-            "Non-loopback host %r requested, but bridge is unauthenticated. "
-            "Enforcing loopback (%s).",
-            host,
-            DEFAULT_HOST,
-        )
-        host = DEFAULT_HOST
     server_address = (host, port)
     httpd = http.server.ThreadingHTTPServer(server_address, OpenAIBridgeHandler)
     logging.info(f"Starting OpenAI Bridge server on {host}:{port}...")

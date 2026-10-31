@@ -4,6 +4,42 @@ export LITELLM_API_BASE="${LITELLM_API_BASE:-$LITELLM_API_ENDPOINT}"
 export LITELLM_API_KEY="${LITELLM_API_KEY:-}"
 
 ##
+# Wait for LiteLLM server to become ready
+# @param port The port to probe
+# @param pid The process ID of the server
+# @param timeout The maximum seconds to wait
+# @return 0 if server becomes ready, 1 on error or timeout
+##
+ai.litellm.wait_for_ready() {
+    local port="$1"
+    local pid="$2"
+    local timeout="$3"
+    local count=0
+
+    while true; do
+        if curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${port}/health" 2>/dev/null | grep -qE '^[23]'; then
+            return 0
+        fi
+
+        if ! kill -0 "$pid" 2>/dev/null; then
+            echo "[ai.litellm] Error: LiteLLM failed to start" >&2
+            return 1
+        fi
+
+        if [[ $count -ge $timeout ]]; then
+            echo "[ai.litellm] Error: LiteLLM failed to start within ${timeout}s" >&2
+            return 1
+        fi
+
+        sleep 1
+        count=$((count + 1))
+        if [[ $((count % 10)) -eq 0 ]]; then
+            echo "[ai.litellm] Still waiting... (${count}s)"
+        fi
+    done
+}
+
+##
 # Start a temporary LiteLLM server and run a command against it
 # Automatically starts litellm on a local port, waits for readiness,
 # executes the command, then cleans up the server
@@ -44,31 +80,10 @@ ai.litellm.proxy.wrapper() {
     local litellm_pid=$!
 
     {
-        # Wait for server to be up (any response = server is ready)
-        local count=0
-        while true; do
-            if curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${port}/health" 2>/dev/null | grep -qE '^[23]'; then
-                break
-            fi
-
-            if ! kill -0 "$litellm_pid" 2>/dev/null; then
-                rm -f "$config_file"
-                echo "[ai.litellm] Error: LiteLLM failed to start" >&2
-                return 1
-            fi
-
-            if [[ $count -ge $timeout ]]; then
-                rm -f "$config_file"
-                echo "[ai.litellm] Error: LiteLLM failed to start within ${timeout}s" >&2
-                return 1
-            fi
-
-            sleep 1
-            count=$((count + 1))
-            if [[ $((count % 10)) -eq 0 ]]; then
-                echo "[ai.litellm] Still waiting... (${count}s)"
-            fi
-        done
+        if ! ai.litellm.wait_for_ready "$port" "$litellm_pid" "$timeout"; then
+            rm -f "$config_file"
+            return 1
+        fi
 
         echo "[ai.litellm] LiteLLM ready. Running: $@"
         "$@"
