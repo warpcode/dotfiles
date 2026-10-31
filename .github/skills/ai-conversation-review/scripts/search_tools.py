@@ -45,8 +45,15 @@ import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
+
+
+@lru_cache(maxsize=1024)
+def _get_script_pattern(script_name: str) -> re.Pattern:
+    """Cache compiled regex pattern for script matching."""
+    return re.compile(rf"(?:^|[\s/\"']){re.escape(script_name)}(?:[\s\"']|$)")
 
 # Search roots across platforms
 ANTIGRAVITY_BRAIN_PATHS = [
@@ -187,37 +194,54 @@ def extract_tool_calls_from_jsonl(file_path: Path) -> List[Dict[str, Any]]:
 
 def extract_tool_calls_from_opencode(db_path: str, session_id: str) -> List[Dict[str, Any]]:
     """Extract tool calls from an OpenCode session SQLite entry."""
-    tool_calls = []
+    res = extract_tool_calls_from_opencode_batch(db_path, [session_id])
+    return res.get(session_id, [])
+
+
+def extract_tool_calls_from_opencode_batch(db_path: str, session_ids: List[str]) -> Dict[str, List[Dict[str, Any]]]:
+    """Extract tool calls from multiple OpenCode sessions in a single SQLite query batch."""
+    results: Dict[str, List[Dict[str, Any]]] = {sid: [] for sid in session_ids}
+    if not session_ids:
+        return results
+
     try:
         conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
         cur = conn.cursor()
-        rows = cur.execute(
-            "SELECT time_created, role, content FROM message WHERE session_id = ? ORDER BY time_created ASC",
-            (session_id,)
-        ).fetchall()
-        for tcreated, role, content in rows:
-            if not content:
-                continue
-            ts = ""
-            if tcreated:
-                sec = (tcreated / 1000.0) if tcreated > 1e11 else float(tcreated)
-                ts = datetime.utcfromtimestamp(sec).isoformat() + "Z"
-            try:
-                data = json.loads(content)
-                parts = data if isinstance(data, list) else data.get("parts", [])
-                for p in parts:
-                    if isinstance(p, dict) and p.get("type") in ("tool_use", "tool_call"):
-                        tool_calls.append({
-                            "name": p.get("name", ""),
-                            "args": p.get("input") or p.get("arguments") or {},
-                            "timestamp": ts,
-                            "status": "DONE",
-                        })
-            except Exception:
-                pass
+
+        chunk_size = 500
+        for i in range(0, len(session_ids), chunk_size):
+            chunk = session_ids[i : i + chunk_size]
+            placeholders = ",".join("?" for _ in chunk)
+            rows = cur.execute(
+                f"SELECT session_id, time_created, role, content FROM message WHERE session_id IN ({placeholders}) ORDER BY time_created ASC",
+                chunk,
+            ).fetchall()
+
+            for sid, tcreated, role, content in rows:
+                if not content or sid not in results:
+                    continue
+                ts = ""
+                if tcreated:
+                    sec = (tcreated / 1000.0) if tcreated > 1e11 else float(tcreated)
+                    ts = datetime.utcfromtimestamp(sec).isoformat() + "Z"
+                try:
+                    data = json.loads(content)
+                    parts = data if isinstance(data, list) else data.get("parts", [])
+                    for p in parts:
+                        if isinstance(p, dict) and p.get("type") in ("tool_use", "tool_call"):
+                            results[sid].append({
+                                "name": p.get("name", ""),
+                                "args": p.get("input") or p.get("arguments") or {},
+                                "timestamp": ts,
+                                "status": "DONE",
+                            })
+                except Exception:
+                    pass
+        conn.close()
     except Exception:
         pass
-    return tool_calls
+
+    return results
 
 
 def match_tool_call(
@@ -268,8 +292,8 @@ def match_tool_call(
     elif script_targets is not None:
         matched_script = None
         for s in script_targets:
-            # Fast string containment check before compiling dynamic regex
-            if s in cmd_str and re.search(rf"(?:^|[\s/\"']){re.escape(s)}(?:[\s\"']|$)", cmd_str):
+            # Fast string containment check before regex search
+            if s in cmd_str and _get_script_pattern(s).search(cmd_str):
                 matched_script = s
                 break
         if not matched_script:
@@ -345,11 +369,23 @@ def process_sessions(
     matched_sessions: Set[str] = set()
     total_invocations = 0
 
+    # Pre-extract OpenCode tool calls in batch per DB location to eliminate N+1 queries
+    opencode_tool_calls: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+    opencode_sessions_by_db: Dict[str, List[str]] = defaultdict(list)
+    for sref in sessions:
+        if sref.platform == "opencode":
+            opencode_sessions_by_db[str(sref.location)].append(sref.session_id)
+
+    for db_path, sids in opencode_sessions_by_db.items():
+        batch_results = extract_tool_calls_from_opencode_batch(db_path, sids)
+        for sid, tcs in batch_results.items():
+            opencode_tool_calls[(db_path, sid)] = tcs
+
     for sref in sessions:
         if sref.platform in ("antigravity", "copilot"):
             tcs = extract_tool_calls_from_jsonl(Path(sref.location))
         elif sref.platform == "opencode":
-            tcs = extract_tool_calls_from_opencode(str(sref.location), sref.session_id)
+            tcs = opencode_tool_calls.get((str(sref.location), sref.session_id), [])
         else:
             tcs = []
 

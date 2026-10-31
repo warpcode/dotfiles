@@ -24,6 +24,82 @@ class TestOpenAIBridgeServer(unittest.TestCase):
         with openai_bridge_server.cache_lock:
             openai_bridge_server.history_to_conv_id.clear()
 
+    def test_is_valid_conv_id(self):
+        is_valid = openai_bridge_server._is_valid_conv_id
+        self.assertTrue(is_valid("conv-123"))
+        self.assertTrue(is_valid("abc_456"))
+        self.assertTrue(is_valid("550e8400-e29b-41d4-a716-446655440000"))
+
+        self.assertFalse(is_valid("-flag"))
+        self.assertFalse(is_valid("--exec"))
+        self.assertFalse(is_valid("conv id"))
+        self.assertFalse(is_valid("conv;id"))
+        self.assertFalse(is_valid("conv&id"))
+        self.assertFalse(is_valid("conv\x00id"))
+        self.assertFalse(is_valid(""))
+        self.assertFalse(is_valid(None))
+        self.assertFalse(is_valid(123))
+
+    def test_sanitize_prompt(self):
+        sanitize = openai_bridge_server._sanitize_prompt
+        self.assertEqual(sanitize("hello\x00world"), "helloworld")
+        self.assertEqual(sanitize("clean prompt"), "clean prompt")
+        self.assertEqual(sanitize(None), "")
+
+    @patch("subprocess.run")
+    def test_invalid_conv_id_in_cache_bypassed(self, mock_subprocess_run):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = json.dumps({"response": {"content": "Response", "conversation_id": "conv-999"}})
+        mock_proc.stderr = ""
+        mock_subprocess_run.return_value = mock_proc
+
+        # Manually poison cache with a malicious flag conv_id
+        hash_key = "flash_lite:" + json.dumps([{"role": "user", "content": "Prev message"}])
+        with openai_bridge_server.cache_lock:
+            openai_bridge_server.history_to_conv_id[hash_key] = "--flag-injection"
+
+        messages = [
+            {"role": "user", "content": "Prev message"},
+            {"role": "assistant", "content": "Prev response"},
+            {"role": "user", "content": "Next question"}
+        ]
+
+        self.handler.process_completions(messages, model="flash_lite", is_chat=True)
+        cmd_args = mock_subprocess_run.call_args[0][0]
+        self.assertEqual(cmd_args[0:2], ["agentapi", "new-conversation"])
+        self.assertNotIn("--flag-injection", cmd_args)
+
+    @patch("subprocess.run")
+    def test_invalid_conv_id_in_output_ignored(self, mock_subprocess_run):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = json.dumps({"response": {"content": "Response", "conversation_id": "-invalid-id"}})
+        mock_proc.stderr = ""
+        mock_subprocess_run.return_value = mock_proc
+
+        messages = [{"role": "user", "content": "Hello"}]
+        self.handler.process_completions(messages, model="flash_lite", is_chat=True)
+
+        with openai_bridge_server.cache_lock:
+            self.assertEqual(len(openai_bridge_server.history_to_conv_id), 0)
+
+    @patch("subprocess.run")
+    def test_null_bytes_stripped_from_prompts_in_subprocess_cmd(self, mock_subprocess_run):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = json.dumps({"response": {"content": "Response", "conversation_id": "conv-123"}})
+        mock_proc.stderr = ""
+        mock_subprocess_run.return_value = mock_proc
+
+        messages = [{"role": "user", "content": "Hello\x00 World"}]
+        self.handler.process_completions(messages, model="flash_lite", is_chat=True)
+
+        cmd_args = mock_subprocess_run.call_args[0][0]
+        prompt_arg = cmd_args[-1]
+        self.assertEqual(prompt_arg, "Hello World")
+        self.assertNotIn("\x00", prompt_arg)
+
     def test_allowed_models_frozenset_exactness(self):
         self.assertEqual(openai_bridge_server.ALLOWED_MODELS, frozenset({"flash_lite", "flash", "pro"}))
         with self.assertRaises(AttributeError):
@@ -164,6 +240,54 @@ class TestOpenAIBridgeServer(unittest.TestCase):
                 os.environ.pop("BRIDGE_HOST", None)
                 openai_bridge_server.run(port=18081)
             self.assertEqual(mock_srv.call_args[0][0], ("127.0.0.1", 18081))
+
+    def test_is_loopback_validation(self):
+        is_loopback = openai_bridge_server._is_loopback
+        # Valid loopback targets
+        self.assertTrue(is_loopback("127.0.0.1"))
+        self.assertTrue(is_loopback("127.0.0.2"))
+        self.assertTrue(is_loopback("::1"))
+        self.assertTrue(is_loopback("localhost"))
+        self.assertTrue(is_loopback("localhost.localdomain"))
+        self.assertTrue(is_loopback(" LOCALHOST "))
+
+        # Non-loopback targets (must be rejected)
+        self.assertFalse(is_loopback("0.0.0.0"))
+        self.assertFalse(is_loopback("::"))
+        self.assertFalse(is_loopback("192.168.1.100"))
+        self.assertFalse(is_loopback("10.0.0.1"))
+        self.assertFalse(is_loopback("attacker.com"))
+        self.assertFalse(is_loopback(""))
+        self.assertFalse(is_loopback(None))
+        self.assertFalse(is_loopback(123))
+
+    def test_run_rejects_non_loopback_bridge_host(self):
+        non_loopback_hosts = ["0.0.0.0", "::", "192.168.1.1", "10.0.0.1", "attacker.com"]
+        for bad_host in non_loopback_hosts:
+            with self.subTest(bad_host=bad_host):
+                with patch.object(openai_bridge_server.http.server, "ThreadingHTTPServer") as mock_srv:
+                    mock_srv.return_value.serve_forever.side_effect = KeyboardInterrupt
+                    mock_srv.return_value.server_close = MagicMock()
+                    with patch.dict(os.environ, {"BRIDGE_HOST": bad_host}):
+                        openai_bridge_server.run(port=18081)
+                    self.assertEqual(mock_srv.call_args[0][0], ("127.0.0.1", 18081))
+
+                with patch.object(openai_bridge_server.http.server, "ThreadingHTTPServer") as mock_srv:
+                    mock_srv.return_value.serve_forever.side_effect = KeyboardInterrupt
+                    mock_srv.return_value.server_close = MagicMock()
+                    openai_bridge_server.run(port=18081, host=bad_host)
+                    self.assertEqual(mock_srv.call_args[0][0], ("127.0.0.1", 18081))
+
+    def test_run_accepts_valid_loopback_host(self):
+        valid_hosts = ["localhost", "127.0.0.1", "::1"]
+        for valid_host in valid_hosts:
+            with self.subTest(valid_host=valid_host):
+                with patch.object(openai_bridge_server.http.server, "ThreadingHTTPServer") as mock_srv:
+                    mock_srv.return_value.serve_forever.side_effect = KeyboardInterrupt
+                    mock_srv.return_value.server_close = MagicMock()
+                    with patch.dict(os.environ, {"BRIDGE_HOST": valid_host}):
+                        openai_bridge_server.run(port=18081)
+                    self.assertEqual(mock_srv.call_args[0][0], (valid_host, 18081))
 
     def test_read_body_rejects_oversized_request(self):
         # SECURITY: an unauthenticated caller must not be able to force an
@@ -308,6 +432,52 @@ class TestOpenAIBridgeServer(unittest.TestCase):
         self.handler.send_error_response.assert_called_once_with(
             500, "agentapi error: Unknown error"
         )
+
+    def test_send_json(self):
+        handler = openai_bridge_server.OpenAIBridgeHandler.__new__(openai_bridge_server.OpenAIBridgeHandler)
+        handler.send_response = MagicMock()
+        handler.send_header = MagicMock()
+        handler.end_headers = MagicMock()
+        mock_wfile = MagicMock()
+        handler.wfile = mock_wfile
+
+        test_data = {"status": "ok", "message": "hello world 🌍"}
+        handler.send_json(200, test_data)
+
+        handler.send_response.assert_called_once_with(200)
+        handler.send_header.assert_called_once_with("Content-Type", "application/json")
+        handler.end_headers.assert_called_once()
+        expected_bytes = json.dumps(test_data).encode("utf-8")
+        mock_wfile.write.assert_called_once_with(expected_bytes)
+
+    @patch("logging.info")
+    def test_log_message(self, mock_logging_info):
+        handler = openai_bridge_server.OpenAIBridgeHandler.__new__(openai_bridge_server.OpenAIBridgeHandler)
+        handler.address_string = MagicMock(return_value="127.0.0.1")
+        handler.log_message("GET / %s", "200")
+        mock_logging_info.assert_called_once_with("127.0.0.1 - - GET / 200")
+
+    def test_send_error_response_direct(self):
+        handler = openai_bridge_server.OpenAIBridgeHandler.__new__(openai_bridge_server.OpenAIBridgeHandler)
+        handler.send_json = MagicMock()
+        handler.send_error_response(400, "Invalid payload")
+        handler.send_json.assert_called_once_with(400, {
+            "error": {
+                "message": "Invalid payload",
+                "type": "invalid_request_error",
+                "code": None
+            }
+        })
+
+    def test_handle_models_direct(self):
+        handler = openai_bridge_server.OpenAIBridgeHandler.__new__(openai_bridge_server.OpenAIBridgeHandler)
+        handler.send_json = MagicMock()
+        handler.handle_models()
+        handler.send_json.assert_called_once()
+        status_code, data = handler.send_json.call_args[0]
+        self.assertEqual(status_code, 200)
+        self.assertEqual(data["object"], "list")
+        self.assertEqual(len(data["data"]), 3)
 
 
 if __name__ == "__main__":
