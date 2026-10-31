@@ -89,6 +89,132 @@ class TestInstallShChecksumVerification(unittest.TestCase):
         self.assertNotEqual(res.returncode, 0)
         self.assertIn("Checksum verification failed: no SHA-256 tool available", res.stderr)
 
+class TestInstallShDetectOS(unittest.TestCase):
+    """Test detect_os and detect_linux_distro shell functions in install.sh."""
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def _run_detect_os(self, ostype, termux_version=None, prefix=None, os_release_content=None):
+        env = os.environ.copy()
+        env["OSTYPE"] = ostype
+        if termux_version is not None:
+            env["TERMUX_VERSION"] = termux_version
+        else:
+            env.pop("TERMUX_VERSION", None)
+
+        if prefix is not None:
+            env["PREFIX"] = prefix
+        else:
+            env.pop("PREFIX", None)
+
+        os_release_path = os.path.join(self.temp_dir, "os-release")
+        if os_release_content is not None:
+            with open(os_release_path, "w") as f:
+                f.write(os_release_content)
+            env["OS_RELEASE_PATH"] = os_release_path
+
+        cmd = f'source "{INSTALL_SH}" && detect_os'
+        res = subprocess.run(
+            ["bash", "-c", cmd],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        return res
+
+    def _run_detect_linux_distro(self, os_release_content=None, file_path=None):
+        if file_path is None:
+            os_release_path = os.path.join(self.temp_dir, "os-release")
+            if os_release_content is not None:
+                with open(os_release_path, "w") as f:
+                    f.write(os_release_content)
+            file_arg = f'"{os_release_path}"'
+        else:
+            file_arg = f'"{file_path}"'
+
+        cmd = f'source "{INSTALL_SH}" && detect_linux_distro {file_arg}'
+        res = subprocess.run(
+            ["bash", "-c", cmd],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+        )
+        return res
+
+    def test_detect_os_macos(self):
+        res = self._run_detect_os("darwin20.0")
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.stdout.strip(), "macos")
+
+    def test_detect_os_termux(self):
+        prefix_dir = os.path.join(self.temp_dir, "usr")
+        os.makedirs(prefix_dir, exist_ok=True)
+        res = self._run_detect_os("linux-gnu", termux_version="0.118", prefix=prefix_dir)
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.stdout.strip(), "termux")
+
+    def test_detect_os_unknown(self):
+        res = self._run_detect_os("freebsd12.0")
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.stdout.strip(), "unknown")
+
+    def test_detect_linux_distro_ubuntu(self):
+        res = self._run_detect_linux_distro('ID=ubuntu\nNAME="Ubuntu"')
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.stdout.strip(), "debian")
+
+    def test_detect_linux_distro_debian(self):
+        res = self._run_detect_linux_distro('ID="debian"\n')
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.stdout.strip(), "debian")
+
+    def test_detect_linux_distro_fedora(self):
+        res = self._run_detect_linux_distro('ID=fedora\n')
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.stdout.strip(), "fedora")
+
+    def test_detect_linux_distro_arch(self):
+        res = self._run_detect_linux_distro('ID=arch\n')
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.stdout.strip(), "arch")
+
+    def test_detect_linux_distro_generic(self):
+        res = self._run_detect_linux_distro('ID=alpine\n')
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.stdout.strip(), "linux")
+
+    def test_detect_linux_distro_missing_file(self):
+        res = self._run_detect_linux_distro(file_path=os.path.join(self.temp_dir, "nonexistent"))
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.stdout.strip(), "linux")
+
+    def test_detect_os_linux_delegates_to_distro(self):
+        res = self._run_detect_os("linux-gnu", os_release_content='ID=fedora\n')
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.stdout.strip(), "fedora")
+
+    def test_detect_os_linux_debian(self):
+        res = self._run_detect_os("linux-gnu", os_release_content='ID=ubuntu\n')
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.stdout.strip(), "debian")
+
+    def test_detect_os_linux_arch(self):
+        res = self._run_detect_os("linux-gnu", os_release_content='ID=arch\n')
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.stdout.strip(), "arch")
+
+    def test_detect_os_linux_generic(self):
+        res = self._run_detect_os("linux-gnu", os_release_content='ID=gentoo\n')
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.stdout.strip(), "linux")
+
+
 class TestInstallShSecurity(unittest.TestCase):
     def setUp(self):
         self.install_sh_path = Path(__file__).parent.parent / "install.sh"
