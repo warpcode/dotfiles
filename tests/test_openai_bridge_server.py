@@ -118,6 +118,28 @@ class TestOpenAIBridgeServer(unittest.TestCase):
         self.assertIsNone(conv_id)
         self.assertEqual(content, "Plain text output without JSON")
 
+    @patch("logging.info")
+    @patch("subprocess.run")
+    def test_subprocess_run_no_prompt_logging_leakage(self, mock_subprocess_run, mock_logging_info):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = json.dumps({"response": {"content": "Response", "conversation_id": "conv-sec-1"}})
+        mock_proc.stderr = ""
+        mock_subprocess_run.return_value = mock_proc
+
+        secret_prompt = "SUPER_SECRET_TOKEN_DO_NOT_LEAK_IN_LOGS_98765"
+        messages = [{"role": "user", "content": secret_prompt}]
+        self.handler.process_completions(messages, model="flash_lite", is_chat=True)
+
+        # Verify subprocess.run arguments
+        mock_subprocess_run.assert_called_once()
+
+        # Verify no logged message contains the sensitive prompt string
+        logged_messages = [str(call.args[0]) for call in mock_logging_info.call_args_list if call.args]
+        for msg in logged_messages:
+            self.assertNotIn(secret_prompt, msg, "Sensitive prompt text leaked in log output")
+        self.assertIn("Running command: agentapi new-conversation", logged_messages)
+
     @patch("subprocess.run")
     def test_process_completions_model_inputs(self, mock_subprocess_run):
         mock_proc = MagicMock()
