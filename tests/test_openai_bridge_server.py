@@ -289,6 +289,24 @@ class TestOpenAIBridgeServer(unittest.TestCase):
                         openai_bridge_server.run(port=18081)
                     self.assertEqual(mock_srv.call_args[0][0], (valid_host, 18081))
 
+    @patch("logging.info")
+    def test_run_handles_keyboard_interrupt(self, mock_logging_info):
+        with patch.object(openai_bridge_server.http.server, "ThreadingHTTPServer") as mock_srv:
+            mock_instance = mock_srv.return_value
+            mock_instance.serve_forever.side_effect = KeyboardInterrupt
+            mock_instance.server_close = MagicMock()
+
+            # Should not raise KeyboardInterrupt
+            openai_bridge_server.run(port=18081, host="127.0.0.1")
+
+            mock_instance.serve_forever.assert_called_once()
+            mock_instance.server_close.assert_called_once()
+
+            logged_messages = [call.args[0] for call in mock_logging_info.call_args_list]
+            self.assertIn("Starting OpenAI Bridge server on 127.0.0.1:18081...", logged_messages)
+            self.assertIn("KeyboardInterrupt received.", logged_messages)
+            self.assertIn("Stopping OpenAI Bridge server...", logged_messages)
+
     def test_read_body_rejects_oversized_request(self):
         # SECURITY: an unauthenticated caller must not be able to force an
         # unbounded allocation via Content-Length.
