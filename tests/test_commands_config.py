@@ -31,6 +31,7 @@ def parse_jsonc_reference(text):
 
     while i < n:
         char = text[i]
+
         if in_string:
             result.append(char)
             if escape:
@@ -40,23 +41,24 @@ def parse_jsonc_reference(text):
             elif char == '"':
                 in_string = False
             i += 1
+            continue
+
+        if char == '"':
+            in_string = True
+            result.append(char)
+            i += 1
+        elif text.startswith("//", i):
+            i += 2
+            while i < n and text[i] != "\n":
+                i += 1
+        elif text.startswith("/*", i):
+            i += 2
+            while i + 1 < n and not (text[i] == "*" and text[i + 1] == "/"):
+                i += 1
+            i += 2
         else:
-            if char == '"':
-                in_string = True
-                result.append(char)
-                i += 1
-            elif char == "/" and i + 1 < n and text[i + 1] == "/":
-                i += 2
-                while i < n and text[i] != "\n":
-                    i += 1
-            elif char == "/" and i + 1 < n and text[i + 1] == "*":
-                i += 2
-                while i + 1 < n and not (text[i] == "*" and text[i + 1] == "/"):
-                    i += 1
-                i += 2
-            else:
-                result.append(char)
-                i += 1
+            result.append(char)
+            i += 1
 
     cleaned = "".join(result)
     cleaned = re.sub(r",\s*([\]}])", r"\1", cleaned)
