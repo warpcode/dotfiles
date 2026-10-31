@@ -787,15 +787,16 @@ class TestJulesBatchOperations(unittest.TestCase):
 
     def test_audit_sessions_pagination_all_pages(self):
         client = JulesClient(api_key="dummy")
+        now_ts = datetime.now(timezone.utc).isoformat()
         page1 = {
             "sessions": [
-                {"id": "s1", "createTime": "2026-10-01T12:00:00Z", "state": "IN_PROGRESS"},
+                {"id": "s1", "createTime": now_ts, "state": "IN_PROGRESS"},
             ],
             "nextPageToken": "token-page-2",
         }
         page2 = {
             "sessions": [
-                {"id": "s2", "createTime": "2026-10-01T12:00:00Z", "state": "IN_PROGRESS"},
+                {"id": "s2", "createTime": now_ts, "state": "IN_PROGRESS"},
             ],
         }
 
