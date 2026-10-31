@@ -745,19 +745,18 @@ class TestJulesFormatters(unittest.TestCase):
 class TestJulesBatchOperations(unittest.TestCase):
     def test_audit_sessions_repo_filter(self):
         client = JulesClient(api_key="dummy")
-        now = datetime.now(timezone.utc)
         mock_sessions = {
             "sessions": [
                 {
                     "id": "s1",
                     "sourceContext": {"source": "sources/github/warpcode/cloakenv"},
-                    "createTime": (now - timedelta(days=1)).isoformat(),
+                    "createTime": "2026-10-01T12:00:00Z",
                     "state": "IN_PROGRESS",
                 },
                 {
                     "id": "s2",
                     "sourceContext": {"source": "sources/github/warpcode/dotfiles"},
-                    "createTime": (now - timedelta(days=1)).isoformat(),
+                    "createTime": "2026-10-01T12:00:00Z",
                     "state": "IN_PROGRESS",
                 },
             ]
@@ -788,16 +787,15 @@ class TestJulesBatchOperations(unittest.TestCase):
 
     def test_audit_sessions_pagination_all_pages(self):
         client = JulesClient(api_key="dummy")
-        now = datetime.now(timezone.utc)
         page1 = {
             "sessions": [
-                {"id": "s1", "createTime": (now - timedelta(days=1)).isoformat(), "state": "IN_PROGRESS"},
+                {"id": "s1", "createTime": "2026-10-01T12:00:00Z", "state": "IN_PROGRESS"},
             ],
             "nextPageToken": "token-page-2",
         }
         page2 = {
             "sessions": [
-                {"id": "s2", "createTime": (now - timedelta(days=1)).isoformat(), "state": "IN_PROGRESS"},
+                {"id": "s2", "createTime": "2026-10-01T12:00:00Z", "state": "IN_PROGRESS"},
             ],
         }
 
