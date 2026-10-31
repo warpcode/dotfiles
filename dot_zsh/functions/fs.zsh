@@ -18,6 +18,47 @@ fs.find.root() {
     return 1
 }
 
+# Internal helper for fs.search in a git repository
+_fs.search.git() {
+    local simple="$1" query="$2" dir="$3"; shift 3
+    local -a flags=("$@")
+    local -a cmd=(git --no-pager grep --recurse-submodules "${flags[@]}")
+
+    if (( simple )); then
+        $cmd "$query" -- "$dir" | while IFS=: read -r file line_num content; do
+            print "${file}:${line_num}:${content}"
+        done
+    else
+        $cmd --heading --break "$query" -- "$dir"
+    fi
+}
+
+# Internal helper for fs.search outside a git repository
+_fs.search.grep() {
+    local simple="$1" query="$2" dir="$3"; shift 3
+    local -a flags=("$@")
+    local -a excludes=(.git .svn node_modules vendor dist build .gemini .opencode)
+    local -a cmd=(grep -r "${flags[@]}")
+    local d; for d in $excludes; cmd+=(--exclude-dir=$d)
+
+    if (( simple )); then
+        $cmd "$query" "$dir" | while IFS=: read -r file line_num content; do
+            print "${file}:${line_num}:${content}"
+        done
+        return
+    fi
+
+    local last="" file line_num content
+    $cmd "$query" "$dir" | while IFS=: read -r file line_num content; do
+        if [[ "$file" != "$last" ]]; then
+            [[ -n "$last" ]] && print ""
+            tui.heading "$file"
+            last="$file"
+        fi
+        print -r -- "$line_num:$content"
+    done
+}
+
 # Search for a string in file contents
 fs.search() {
     local -A opts; zparseopts -E -D -K -A opts r s
@@ -27,35 +68,12 @@ fs.search() {
     local -a flags=(-n -I)
     (( ${+opts[-r]} )) || flags+=(-F)
 
+    local simple=${+opts[-s]}
+
     if git rev-parse --is-inside-work-tree &>/dev/null; then
-        local -a cmd=(git --no-pager grep --recurse-submodules "${flags[@]}")
-        if (( ${+opts[-s]} )); then
-            $cmd "$query" -- "$dir" | while IFS=: read -r file line_num content; do
-                print "${file}:${line_num}:${content}"
-            done
-        else
-            $cmd --heading --break "$query" -- "$dir"
-        fi
+        _fs.search.git "$simple" "$query" "$dir" "${flags[@]}"
     else
-        local -a excludes=(.git .svn node_modules vendor dist build .gemini .opencode)
-        local -a cmd=(grep -r "${flags[@]}")
-        local d; for d in $excludes; cmd+=(--exclude-dir=$d)
-        
-        if (( ${+opts[-s]} )); then
-            $cmd "$query" "$dir" | while IFS=: read -r file line_num content; do
-                print "${file}:${line_num}:${content}"
-            done
-        else
-            local last="" file line_num content
-            $cmd "$query" "$dir" | while IFS=: read -r file line_num content; do
-                if [[ "$file" != "$last" ]]; then
-                    [[ -n "$last" ]] && print ""
-                    tui.heading "$file"
-                    last="$file"
-                fi
-                print -r -- "$line_num:$content"
-            done
-        fi
+        _fs.search.grep "$simple" "$query" "$dir" "${flags[@]}"
     fi
 }
 

@@ -1,3 +1,4 @@
+import hashlib
 import os
 import sys
 import unittest
@@ -34,6 +35,38 @@ class TestCloakEnvSecretSource(unittest.TestCase):
         plugin1 = CloakEnvSecretSource({**self.config_base, "mappings": {"A": "B"}})
         plugin2 = CloakEnvSecretSource({**self.config_base, "mappings": {"A": "B"}})
         self.assertEqual(plugin1.get_cache_key(), plugin2.get_cache_key())
+
+    def test_get_cache_key_format_and_hashing(self):
+        token = "secret_token_value"
+        token_hash = hashlib.sha256(token.encode()).hexdigest()[:8]
+        plugin = CloakEnvSecretSource({
+            "path": "path/to/secret",
+            "namespace": "my-ns",
+            "token": token,
+            "mappings": {"K1": "V1", "K2": "V2"},
+        })
+        expected_key = f"path/to/secret:my-ns:[('K1', 'V1'), ('K2', 'V2')]:{token_hash}"
+        self.assertEqual(plugin.get_cache_key(), expected_key)
+
+    def test_get_cache_key_mapping_order_independence(self):
+        plugin1 = CloakEnvSecretSource({**self.config_base, "mappings": {"A": "1", "B": "2"}})
+        plugin2 = CloakEnvSecretSource({**self.config_base, "mappings": {"B": "2", "A": "1"}})
+        self.assertEqual(plugin1.get_cache_key(), plugin2.get_cache_key())
+
+    def test_cache_key_uniqueness_different_paths_and_namespaces(self):
+        plugin1 = CloakEnvSecretSource({**self.config_base, "path": "path/a"})
+        plugin2 = CloakEnvSecretSource({**self.config_base, "path": "path/b"})
+        self.assertNotEqual(plugin1.get_cache_key(), plugin2.get_cache_key())
+
+        plugin3 = CloakEnvSecretSource({**self.config_base, "namespace": "ns-1"})
+        plugin4 = CloakEnvSecretSource({**self.config_base, "namespace": "ns-2"})
+        self.assertNotEqual(plugin3.get_cache_key(), plugin4.get_cache_key())
+
+    def test_get_cache_key_default_config(self):
+        plugin = CloakEnvSecretSource({})
+        token_hash = hashlib.sha256(b"").hexdigest()[:8]
+        expected_key = f":default:[]:{token_hash}"
+        self.assertEqual(plugin.get_cache_key(), expected_key)
 
     @patch("plugin.subprocess.run")
     def test_empty_vault_handling_empty_stdout(self, mock_run):
