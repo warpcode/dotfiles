@@ -14,6 +14,32 @@ _github_validate_repo() {
     [[ "$1" =~ ^[a-zA-Z0-9._/-]+$ ]] || _github_err "Invalid repo name: $1"
 }
 
+_github_unpack_archive() {
+    local url="$1" tmp="$2"
+    case "$url" in
+        *.zip) unzip -qo "$tmp" ;;
+        *)     tar -xzf "$tmp" --strip-components=1 2>/dev/null || tar -xzf "$tmp" ;;
+    esac
+}
+
+_github_flatten_subdir() {
+    local -a sub=(*(/N))
+    if (( ${#sub} == 1 )) && [[ -d "$sub[1]/bin" || -d "$sub[1]/lib" ]]; then
+        mv "$sub[1]"/*(N) . && rmdir "$sub[1]"
+    fi
+}
+
+_github_ensure_bin() {
+    [[ -d "bin" ]] && [[ -n "$(ls -A bin 2>/dev/null)" ]] && return 0
+
+    mkdir -p bin
+    local exe
+    for exe in *(x.N); do
+        [[ "$exe" == "bin" ]] && continue
+        ln -sf "../$exe" "bin/${exe:t}"
+    done
+}
+
 # --- Public API ---
 
 # Get the latest release version
@@ -98,23 +124,9 @@ _github_extract_asset() {
     mkdir -p "$dir"
     (
         cd "$dir" || exit 1
-        case "$url" in
-            *.zip) unzip -qo "$tmp" ;;
-            *)     tar -xzf "$tmp" --strip-components=1 2>/dev/null || tar -xzf "$tmp" ;;
-        esac
-
-        local -a sub=(*(/N))
-        if (( ${#sub} == 1 )) && [[ -d "$sub[1]/bin" || -d "$sub[1]/lib" ]]; then
-            mv "$sub[1]"/*(N) . && rmdir "$sub[1]"
-        fi
-        
-        if [[ ! -d "bin" || -z "$(ls -A bin 2>/dev/null)" ]]; then
-            mkdir -p bin
-            local exe; for exe in *(x.N); do
-                [[ "$exe" == "bin" ]] && continue
-                ln -sf "../$exe" "bin/${exe:t}"
-            done
-        fi
+        _github_unpack_archive "$url" "$tmp"
+        _github_flatten_subdir
+        _github_ensure_bin
         echo "$version" > .version
     )
     echo "    ✅ Installed $app $version"
