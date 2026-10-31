@@ -289,7 +289,7 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
         # SECURITY: Log command identifiers without leaking full prompt or argument payloads to logs (.jules/sentinel.md)
         logging.info(f"Running command: {cmd[0]} {cmd[1]}")
         try:
-            res = subprocess.run(cmd, capture_output=True, text=True, check=False, shell=False)
+            res = subprocess.run(cmd, capture_output=True, text=True, check=False)
             stdout = res.stdout
             stderr = res.stderr
             returncode = res.returncode

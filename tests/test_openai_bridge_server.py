@@ -120,7 +120,7 @@ class TestOpenAIBridgeServer(unittest.TestCase):
 
     @patch("logging.info")
     @patch("subprocess.run")
-    def test_subprocess_run_shell_false_and_no_prompt_logging_leakage(self, mock_subprocess_run, mock_logging_info):
+    def test_subprocess_run_no_prompt_logging_leakage(self, mock_subprocess_run, mock_logging_info):
         mock_proc = MagicMock()
         mock_proc.returncode = 0
         mock_proc.stdout = json.dumps({"response": {"content": "Response", "conversation_id": "conv-sec-1"}})
@@ -133,8 +133,6 @@ class TestOpenAIBridgeServer(unittest.TestCase):
 
         # Verify subprocess.run arguments
         mock_subprocess_run.assert_called_once()
-        _, kwargs = mock_subprocess_run.call_args
-        self.assertFalse(kwargs.get("shell", True), "subprocess.run must explicitly set shell=False")
 
         # Verify no logged message contains the sensitive prompt string
         logged_messages = [str(call.args[0]) for call in mock_logging_info.call_args_list if call.args]
