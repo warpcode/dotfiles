@@ -260,9 +260,10 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
         current_prompt = _sanitize_prompt(current_prompt)
 
         # Build command to execute agentapi
+        # Use '--' delimiter to prevent positional arguments/prompts from being parsed as CLI options/flags.
         if conv_id:
             logging.info(f"Continuing conversation {conv_id} using send-message...")
-            cmd = ["agentapi", "send-message", conv_id, current_prompt]
+            cmd = ["agentapi", "send-message", "--", conv_id, current_prompt]
         else:
             logging.info("Starting new conversation...")
             if history:
@@ -276,7 +277,7 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
             else:
                 initial_prompt = current_prompt
 
-            cmd = ["agentapi", "new-conversation", f"--model={model}", _sanitize_prompt(initial_prompt)]
+            cmd = ["agentapi", "new-conversation", f"--model={model}", "--", _sanitize_prompt(initial_prompt)]
 
         logging.info(f"Running command: {' '.join(cmd)}")
         try:

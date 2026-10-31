@@ -68,6 +68,7 @@ class TestOpenAIBridgeServer(unittest.TestCase):
         self.handler.process_completions(messages, model="flash_lite", is_chat=True)
         cmd_args = mock_subprocess_run.call_args[0][0]
         self.assertEqual(cmd_args[0:2], ["agentapi", "new-conversation"])
+        self.assertIn("--", cmd_args)
         self.assertNotIn("--flag-injection", cmd_args)
 
     @patch("subprocess.run")
@@ -204,8 +205,40 @@ class TestOpenAIBridgeServer(unittest.TestCase):
         self.handler.process_completions(turn2_messages, model="flash_lite", is_chat=True)
 
         cmd2 = mock_subprocess_run.call_args[0][0]
-        self.assertEqual(cmd2[0:3], ["agentapi", "send-message", "conv-100"])
-        self.assertEqual(cmd2[3], "What can you do?")
+        self.assertEqual(cmd2[0:4], ["agentapi", "send-message", "--", "conv-100"])
+        self.assertEqual(cmd2[4], "What can you do?")
+
+    @patch("subprocess.run")
+    def test_prompt_starting_with_dash_flag_delimited_safely(self, mock_subprocess_run):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = json.dumps({"response": {"content": "Safe output", "conversation_id": "conv-555"}})
+        mock_proc.stderr = ""
+        mock_subprocess_run.return_value = mock_proc
+
+        # New conversation with prompt starting with flags/dashes
+        flag_prompt = "--help --exec=whoami -rf /"
+        messages = [{"role": "user", "content": flag_prompt}]
+        self.handler.process_completions(messages, model="flash_lite", is_chat=True)
+
+        cmd_new = mock_subprocess_run.call_args[0][0]
+        self.assertEqual(cmd_new[0:3], ["agentapi", "new-conversation", "--model=flash_lite"])
+        self.assertEqual(cmd_new[3], "--")
+        self.assertEqual(cmd_new[4], flag_prompt)
+
+        # Continuation with prompt starting with flags/dashes
+        mock_subprocess_run.reset_mock()
+        mock_proc.stdout = json.dumps({"response": {"content": "Safe output 2", "conversation_id": "conv-555"}})
+        turn2_messages = [
+            {"role": "user", "content": flag_prompt},
+            {"role": "assistant", "content": "Safe output"},
+            {"role": "user", "content": "-flag-injection-prompt"}
+        ]
+        self.handler.process_completions(turn2_messages, model="flash_lite", is_chat=True)
+
+        cmd_send = mock_subprocess_run.call_args[0][0]
+        self.assertEqual(cmd_send[0:4], ["agentapi", "send-message", "--", "conv-555"])
+        self.assertEqual(cmd_send[4], "-flag-injection-prompt")
 
     @patch("subprocess.run")
     def test_process_completions_sanitizes_history_context(self, mock_subprocess_run):
