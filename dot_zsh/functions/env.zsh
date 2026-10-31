@@ -30,10 +30,9 @@ env.lazy.load() {
     
     deps=( ${=_ENV_LAZY_DEPS[$var]} )
     for dep in $deps; do
-      if [[ -z ${seen[$dep]} ]]; then
-        env.lazy.load "$dep"
-        seen[$dep]=1
-      fi
+      [[ -n ${seen[$dep]} ]] && continue
+      env.lazy.load "$dep"
+      seen[$dep]=1
     done
 
     local -a cmd_parts expanded_parts
