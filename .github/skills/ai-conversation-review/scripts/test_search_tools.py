@@ -16,8 +16,6 @@ from unittest.mock import patch
 from search_tools import (
     discover_sessions,
     extract_tool_calls_from_jsonl,
-    extract_tool_calls_from_opencode,
-    extract_tool_calls_from_opencode_batch,
     match_tool_call,
     parse_args,
     print_json_output,
@@ -101,34 +99,6 @@ class TestSearchTools(unittest.TestCase):
         matched, target = match_tool_call(suffix_collision_tc, script_patterns=patterns)
         self.assertFalse(matched)
         self.assertIsNone(target)
-
-    def test_extract_tool_calls_from_opencode_batch(self):
-        import sqlite3
-        with tempfile.NamedTemporaryFile("w+", suffix=".db", delete=False) as tf:
-            db_path = tf.name
-
-        try:
-            conn = sqlite3.connect(db_path)
-            conn.execute("CREATE TABLE message (session_id TEXT, time_created INTEGER, role TEXT, content TEXT)")
-            m1 = json.dumps({"parts": [{"type": "tool_call", "name": "run_command", "input": {"command": "git status"}}]})
-            m2 = json.dumps({"parts": [{"type": "tool_use", "name": "view_file", "input": {"path": "README.md"}}]})
-            conn.execute("INSERT INTO message VALUES (?, ?, ?, ?)", ("s1", 1000, "assistant", m1))
-            conn.execute("INSERT INTO message VALUES (?, ?, ?, ?)", ("s2", 2000, "assistant", m2))
-            conn.commit()
-            conn.close()
-
-            tcs_s1 = extract_tool_calls_from_opencode(db_path, "s1")
-            self.assertEqual(len(tcs_s1), 1)
-            self.assertEqual(tcs_s1[0]["name"], "run_command")
-
-            batch = extract_tool_calls_from_opencode_batch(db_path, ["s1", "s2", "s3"])
-            self.assertEqual(len(batch["s1"]), 1)
-            self.assertEqual(batch["s1"][0]["name"], "run_command")
-            self.assertEqual(len(batch["s2"]), 1)
-            self.assertEqual(batch["s2"][0]["name"], "view_file")
-            self.assertEqual(batch["s3"], [])
-        finally:
-            os.unlink(db_path)
 
     def test_extract_tool_calls_from_jsonl(self):
         with tempfile.NamedTemporaryFile("w+", suffix=".jsonl", delete=False) as tf:
