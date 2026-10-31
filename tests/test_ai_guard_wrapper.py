@@ -1054,6 +1054,124 @@ class TestAIGuardWrapper(unittest.TestCase):
             resp = json.loads(mock_stdout.getvalue())
             self.assertIn("injectSteps", resp)
 
+    @patch('builtins.open', side_effect=PermissionError("Permission denied reading transcript"))
+    @patch('os.path.isfile', return_value=True)
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_prompt_route_transcript_read_ioerror(self, mock_stdout, mock_run_guard, mock_isfile, mock_open_file):
+        payload = {"transcriptPath": "/restricted/transcript.jsonl"}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_prompt_route(payload)
+
+        mock_run_guard.assert_not_called()
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {})
+        self.mock_exit.assert_called_with(0)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_handle_prompt_route_transcript_stype_exception_handled(self, mock_stderr, mock_stdout, mock_run_guard):
+        mock_run_guard.return_value = (
+            0,
+            {
+                "decision": "replace",
+                "sanitized": "sanitized_prompt_content",
+                "reasons": ["Token Leak"]
+            }
+        )
+        fake_lines = [
+            json.dumps({"type": "USER_INPUT", "content": "raw_secret"}) + "\n"
+        ]
+
+        original_json_loads = json.loads
+        call_count = {"count": 0}
+
+        def custom_json_loads(s, *args, **kwargs):
+            call_count["count"] += 1
+            if call_count["count"] == 3:
+                raise ValueError("Corrupt JSON structure")
+            return original_json_loads(s, *args, **kwargs)
+
+        with patch('os.path.isfile', return_value=True):
+            with patch('builtins.open', mock_open(read_data=fake_lines[0])):
+                with patch('json.loads', side_effect=custom_json_loads):
+                    with self.assertRaises(SystemExitException):
+                        ai_guard_wrapper.handle_prompt_route({"transcriptPath": "/fake/transcript.jsonl"})
+
+        self.mock_exit.assert_called_with(0)
+        resp = json.loads(mock_stdout.getvalue())
+        self.assertIn("injectSteps", resp)
+        self.assertEqual(len(resp["injectSteps"]), 1)
+        self.assertIn("Security Notice", resp["injectSteps"][0]["ephemeralMessage"])
+
+    @patch('builtins.open')
+    @patch('os.makedirs')
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_handle_prompt_route_debug_log_write_error(
+        self, mock_stderr, mock_stdout, mock_run_guard, mock_makedirs, mock_open_file
+    ):
+        mock_run_guard.return_value = (
+            0,
+            {
+                "decision": "replace",
+                "sanitized": "safe content",
+                "reasons": []
+            }
+        )
+        mock_open_file.side_effect = PermissionError("Cannot write log")
+
+        with patch.dict(os.environ, {"AI_GUARD_DEBUG": "1"}, clear=True):
+            with self.assertRaises(SystemExitException):
+                ai_guard_wrapper.handle_prompt_route({"prompt": "sensitive secret"})
+
+        self.mock_exit.assert_called_with(0)
+        resp = json.loads(mock_stdout.getvalue())
+        self.assertIn("injectSteps", resp)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_prompt_route_messages_malformed_items(self, mock_stdout, mock_run_guard):
+        for malformed_messages in (
+            [None],
+            ["string_message"],
+            [123],
+            [[]],
+            [{"no_role": "user"}],
+            [{"role": "user", "other": "no_content"}],
+            [{"role": "assistant", "content": "hi"}, None],
+        ):
+            mock_stdout.seek(0)
+            mock_stdout.truncate(0)
+            self.mock_exit.reset_mock()
+            mock_run_guard.reset_mock()
+
+            with self.assertRaises(SystemExitException):
+                ai_guard_wrapper.handle_prompt_route({"messages": malformed_messages})
+
+            mock_run_guard.assert_not_called()
+            self.assertEqual(json.loads(mock_stdout.getvalue()), {})
+            self.mock_exit.assert_called_with(0)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_handle_prompt_route_guard_failure_exit_2(self, mock_stderr, mock_stdout, mock_run_guard):
+        mock_run_guard.return_value = (2, {"decision": "deny", "reason": "Security guard execution failed (prompt)"})
+        payload = {"prompt": "Check this prompt"}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_prompt_route(payload)
+
+        self.mock_exit.assert_called_with(2)
+        self.assertEqual(
+            json.loads(mock_stdout.getvalue()),
+            {"decision": "deny", "reason": "Security guard execution failed (prompt)"}
+        )
+        self.assertIn("SECURITY GUARD: Security guard execution failed (prompt)\n", mock_stderr.getvalue())
+
 
 class TestHandleFileRoute(unittest.TestCase):
     def setUp(self):
