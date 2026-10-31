@@ -76,20 +76,22 @@ def _extract_text(content):
     Python repr, which would splice dict/list syntax into the prompt.
     Sanitizes null bytes to prevent subprocess execution failures.
     """
-    text = ""
     if isinstance(content, str):
-        text = content
-    elif isinstance(content, list):
-        parts = []
-        for block in content:
-            if isinstance(block, str):
-                parts.append(block)
-            elif isinstance(block, dict) and block.get("type") == "text":
-                t = block.get("text")
-                if isinstance(t, str):
-                    parts.append(t)
-        text = "".join(parts)
-    return text.replace("\x00", "")
+        return content.replace("\x00", "")
+    if not isinstance(content, list):
+        return ""
+
+    parts = []
+    for block in content:
+        if isinstance(block, str):
+            parts.append(block)
+            continue
+        if isinstance(block, dict) and block.get("type") == "text":
+            block_text = block.get("text")
+            if isinstance(block_text, str):
+                parts.append(block_text)
+
+    return "".join(parts).replace("\x00", "")
 
 
 def _normalize_message(raw_role, raw_content):

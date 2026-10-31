@@ -162,6 +162,12 @@ class TestOpenAIBridgeServer(unittest.TestCase):
         self.assertEqual(
             extract([{"type": "image_url", "image_url": {"url": "x"}},
                      {"type": "text", "text": "t"}]), "t")
+        # Edge cases: empty list, plain strings in list, null byte stripping, malformed blocks
+        self.assertEqual(extract([]), "")
+        self.assertEqual(extract(["hello", " ", "world"]), "hello world")
+        self.assertEqual(extract(["hello\x00", {"type": "text", "text": "world\x00"}]), "helloworld")
+        self.assertEqual(extract([{"type": "text", "text": 123}, {"type": "text"}]), "")
+        self.assertEqual(extract([None, 456, ["nested"], {"text": "missing type"}]), "")
 
     def test_allowed_roles_frozenset_exactness(self):
         self.assertEqual(openai_bridge_server.ALLOWED_ROLES, frozenset({"user", "assistant", "system", "developer", "tool", "function"}))
