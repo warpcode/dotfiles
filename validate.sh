@@ -212,7 +212,7 @@ run_single_skill_tests() {
     # Suites use both layouts. Discovery must run from inside scripts/ --
     # most have no tests/__init__.py, so passing -t makes unittest fail
     # with "Start directory is not importable".
-    if [ -d "$scripts_dir/tests" ] && ls "$scripts_dir/tests"/*.py >/dev/null 2>&1; then
+    if [ -d "$scripts_dir/tests" ]; then
         printf -- '--- %s tests/\n' "$skill"
         exec_skill_unittest "$scripts_dir" discover -s tests || failed=1
     fi
