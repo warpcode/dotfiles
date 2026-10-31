@@ -5,26 +5,22 @@ alias wanip="dig +short myip.opendns.com @resolver1.opendns.com"
 
 # Generate a data url
 dataurl() {
-    hash openssl 2>/dev/null || { echo 'Please install openssl'; return 1; }
+    hash openssl 2>/dev/null || { echo 'Please install openssl'; return 1;}
 
     if [ -z "$1" ]; then
         # display usage if no parameters given
         echo "Usage: dataurl <path/to/file>"
         return 1
-    fi
-
-    if [ ! -f "$1" ]; then
+    elif [ ! -f "$1" ]; then
         echo "Error: file '$1' not found" >&2
         return 1
+    else
+        MIMETYPE=$(file -b --mime-type "$1");
+        if [[ $MIMETYPE == text/* ]]; then
+            MIMETYPE="${MIMETYPE};charset=utf-8";
+        fi
+        echo "data:${MIMETYPE};base64,$(openssl base64 -in "$1" | tr -d '\n')";
     fi
-
-    local MIMETYPE
-    MIMETYPE=$(file -b --mime-type "$1")
-    if [[ $MIMETYPE == text/* ]]; then
-        MIMETYPE="${MIMETYPE};charset=utf-8"
-    fi
-
-    echo "data:${MIMETYPE};base64,$(openssl base64 -in "$1" | tr -d '\n')"
 }
 
 
