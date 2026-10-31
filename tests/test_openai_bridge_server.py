@@ -457,6 +457,28 @@ class TestOpenAIBridgeServer(unittest.TestCase):
         handler.log_message("GET / %s", "200")
         mock_logging_info.assert_called_once_with("127.0.0.1 - - GET / 200")
 
+    @patch("logging.info")
+    def test_log_message_multiple_args(self, mock_logging_info):
+        handler = openai_bridge_server.OpenAIBridgeHandler.__new__(openai_bridge_server.OpenAIBridgeHandler)
+        handler.address_string = MagicMock(return_value="10.0.0.1")
+        handler.log_message('"%s" %s %s', "POST /v1/chat/completions HTTP/1.1", "200", "1234")
+        mock_logging_info.assert_called_once_with('10.0.0.1 - - "POST /v1/chat/completions HTTP/1.1" 200 1234')
+
+    @patch("logging.info")
+    def test_log_message_no_args(self, mock_logging_info):
+        handler = openai_bridge_server.OpenAIBridgeHandler.__new__(openai_bridge_server.OpenAIBridgeHandler)
+        handler.address_string = MagicMock(return_value="::1")
+        handler.log_message("Connection closed unexpectedly")
+        mock_logging_info.assert_called_once_with("::1 - - Connection closed unexpectedly")
+
+    @patch("logging.info")
+    def test_log_request_delegates_to_log_message(self, mock_logging_info):
+        handler = openai_bridge_server.OpenAIBridgeHandler.__new__(openai_bridge_server.OpenAIBridgeHandler)
+        handler.address_string = MagicMock(return_value="127.0.0.1")
+        handler.requestline = "GET /v1/models HTTP/1.1"
+        handler.log_request(200, 512)
+        mock_logging_info.assert_called_once_with('127.0.0.1 - - "GET /v1/models HTTP/1.1" 200 512')
+
     def test_send_error_response_direct(self):
         handler = openai_bridge_server.OpenAIBridgeHandler.__new__(openai_bridge_server.OpenAIBridgeHandler)
         handler.send_json = MagicMock()
