@@ -1,5 +1,96 @@
 # scheduler.zsh - User-space scheduled task framework
 
+# --- macOS Platform Implementations ---
+
+_scheduler.remove.macos() {
+    local name="$1"
+    local plist="$HOME/Library/LaunchAgents/com.dotfiles.scheduler.$name.plist"
+
+    if [[ -f "$plist" ]]; then
+        launchctl bootout "gui/$(id -u)" "$plist" 2>/dev/null || true
+    fi
+    rm -f "$plist" "$HOME/.local/state/dotfiles/scheduler/$name.log"
+}
+
+_scheduler.logs.macos() {
+    local name="$1"
+    local log_file="$HOME/.local/state/dotfiles/scheduler/$name.log"
+    [[ ! -f "$log_file" ]] && { tui.error "No logs found for task: $name"; return 1; }
+
+    if (( $+commands[bat] )); then
+        tail -n 100 "$log_file" | bat --style=plain
+    else
+        tail -n 100 "$log_file"
+    fi
+}
+
+_scheduler.apply.macos() {
+    local name="$1" config_file="$2"
+    local plist="$HOME/Library/LaunchAgents/com.dotfiles.scheduler.$name.plist"
+
+    config.hydrate "$DOTFILES/.chezmoitemplates/scheduler/launchd.plist.tmpl" \
+        --config-file "$config_file" \
+        --output "$plist" || return 1
+    launchctl bootout "gui/$(id -u)" "$plist" 2>/dev/null || true
+    launchctl bootstrap "gui/$(id -u)" "$plist" || {
+        tui.error "Failed to bootstrap launchd agent: $name"
+        return 1
+    }
+    # Verify status
+    launchctl list "com.dotfiles.scheduler.$name" >/dev/null 2>&1 || {
+        tui.error "launchd agent failed to register: $name"
+        return 1
+    }
+}
+
+# --- Systemd Platform Implementations ---
+
+_scheduler.remove.systemd() {
+    local name="$1"
+    local service_file="$HOME/.config/systemd/user/dotfiles-scheduler-$name.service"
+    local timer_file="$HOME/.config/systemd/user/dotfiles-scheduler-$name.timer"
+
+    systemctl --user stop "dotfiles-scheduler-$name.timer" 2>/dev/null || true
+    systemctl --user disable "dotfiles-scheduler-$name.timer" 2>/dev/null || true
+    rm -f "$service_file" "$timer_file"
+    systemctl --user daemon-reload
+}
+
+_scheduler.logs.systemd() {
+    local name="$1"
+    journalctl --user -u "dotfiles-scheduler-$name.service" -n 100
+}
+
+_scheduler.apply.systemd() {
+    local name="$1" config_file="$2"
+    local service_file="$HOME/.config/systemd/user/dotfiles-scheduler-$name.service"
+    local timer_file="$HOME/.config/systemd/user/dotfiles-scheduler-$name.timer"
+
+    config.hydrate "$DOTFILES/.chezmoitemplates/scheduler/systemd.service.tmpl" \
+        --config-file "$config_file" \
+        --output "$service_file" || return 1
+    config.hydrate "$DOTFILES/.chezmoitemplates/scheduler/systemd.timer.tmpl" \
+        --config-file "$config_file" \
+        --output "$timer_file" || return 1
+
+    systemctl --user daemon-reload
+    systemctl --user enable "dotfiles-scheduler-$name.timer" || {
+        tui.error "Failed to enable systemd timer: $name"
+        return 1
+    }
+    systemctl --user restart "dotfiles-scheduler-$name.timer" || {
+        tui.error "Failed to start systemd timer: $name"
+        return 1
+    }
+    # Verify status
+    systemctl --user is-active --quiet "dotfiles-scheduler-$name.timer" || {
+        tui.error "systemd timer failed to start: $name"
+        return 1
+    }
+}
+
+# --- Public API ---
+
 # List all scheduled tasks
 scheduler.list() {
     local config_dir="$DOTFILES/assets/configs/scheduler"
@@ -32,17 +123,10 @@ scheduler.remove() {
 
     case "$os_family" in
         macos)
-            local plist="$HOME/Library/LaunchAgents/com.dotfiles.scheduler.$name.plist"
-            [[ -f "$plist" ]] && launchctl bootout "gui/$(id -u)" "$plist" 2>/dev/null || true
-            rm -f "$plist" "$HOME/.local/state/dotfiles/scheduler/$name.log"
+            _scheduler.remove.macos "$name"
             ;;
         debian|fedora|arch|linux)
-            local service_file="$HOME/.config/systemd/user/dotfiles-scheduler-$name.service"
-            local timer_file="$HOME/.config/systemd/user/dotfiles-scheduler-$name.timer"
-            systemctl --user stop "dotfiles-scheduler-$name.timer" 2>/dev/null || true
-            systemctl --user disable "dotfiles-scheduler-$name.timer" 2>/dev/null || true
-            rm -f "$service_file" "$timer_file"
-            systemctl --user daemon-reload
+            _scheduler.remove.systemd "$name"
             ;;
     esac
 
@@ -60,17 +144,10 @@ scheduler.logs() {
     tui.banner "Logs: $name" "-" 40
     case "$os_family" in
         macos)
-            local log_file="$HOME/.local/state/dotfiles/scheduler/$name.log"
-            [[ ! -f "$log_file" ]] && { tui.error "No logs found for task: $name"; return 1; }
-
-            if (( $+commands[bat] )); then
-                tail -n 100 "$log_file" | bat --style=plain
-            else
-                tail -n 100 "$log_file"
-            fi
+            _scheduler.logs.macos "$name"
             ;;
         debian|fedora|arch|linux)
-            journalctl --user -u "dotfiles-scheduler-$name.service" -n 100
+            _scheduler.logs.systemd "$name"
             ;;
         *)
             tui.error "Unsupported OS family for logs: $os_family"
@@ -89,46 +166,10 @@ scheduler.apply() {
 
     case "$os_family" in
         macos)
-            local plist="$HOME/Library/LaunchAgents/com.dotfiles.scheduler.$name.plist"
-            config.hydrate "$DOTFILES/.chezmoitemplates/scheduler/launchd.plist.tmpl" \
-                --config-file "$config_file" \
-                --output "$plist" || return 1
-            launchctl bootout "gui/$(id -u)" "$plist" 2>/dev/null || true
-            launchctl bootstrap "gui/$(id -u)" "$plist" || {
-                tui.error "Failed to bootstrap launchd agent: $name"
-                return 1
-            }
-            # Verify status
-            launchctl list "com.dotfiles.scheduler.$name" >/dev/null 2>&1 || {
-                tui.error "launchd agent failed to register: $name"
-                return 1
-            }
+            _scheduler.apply.macos "$name" "$config_file"
             ;;
         debian|fedora|arch|linux)
-            local service_file="$HOME/.config/systemd/user/dotfiles-scheduler-$name.service"
-            local timer_file="$HOME/.config/systemd/user/dotfiles-scheduler-$name.timer"
-
-            config.hydrate "$DOTFILES/.chezmoitemplates/scheduler/systemd.service.tmpl" \
-                --config-file "$config_file" \
-                --output "$service_file" || return 1
-            config.hydrate "$DOTFILES/.chezmoitemplates/scheduler/systemd.timer.tmpl" \
-                --config-file "$config_file" \
-                --output "$timer_file" || return 1
-
-            systemctl --user daemon-reload
-            systemctl --user enable "dotfiles-scheduler-$name.timer" || {
-                tui.error "Failed to enable systemd timer: $name"
-                return 1
-            }
-            systemctl --user restart "dotfiles-scheduler-$name.timer" || {
-                tui.error "Failed to start systemd timer: $name"
-                return 1
-            }
-            # Verify status
-            systemctl --user is-active --quiet "dotfiles-scheduler-$name.timer" || {
-                tui.error "systemd timer failed to start: $name"
-                return 1
-            }
+            _scheduler.apply.systemd "$name" "$config_file"
             ;;
         *)
             tui.error "Unsupported OS family for scheduler: $os_family"
