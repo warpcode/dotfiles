@@ -2,20 +2,14 @@
 _zsh.init() {
     setopt null_glob globstarshort
 
-    if [[ -z "${DOTFILES_PROFILE:-}" ]]; then
-        if [[ -f "${HOME}/.dotfiles_profile" ]]; then
-            local p
-            p="$(<"${HOME}/.dotfiles_profile")"
-            if [[ -n "${p}" ]]; then
-                export DOTFILES_PROFILE="${p}"
-            fi
+    if [[ -z "${DOTFILES_PROFILE:-}" && -f "${HOME}/.dotfiles_profile" ]]; then
+        local p
+        p="$(<"${HOME}/.dotfiles_profile")"
+        if [[ -n "${p}" ]]; then
+            DOTFILES_PROFILE="${p}"
         fi
-        if [[ -z "${DOTFILES_PROFILE:-}" ]]; then
-            export DOTFILES_PROFILE="default"
-        fi
-    else
-        export DOTFILES_PROFILE
     fi
+    export DOTFILES_PROFILE="${DOTFILES_PROFILE:-default}"
 
     local root f
     local roots=(
