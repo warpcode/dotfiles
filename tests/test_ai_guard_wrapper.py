@@ -1210,5 +1210,100 @@ class TestHandleFileRoute(unittest.TestCase):
         self.mock_exit.assert_called_with(0)
 
 
+class TestHandleOutputRoute(unittest.TestCase):
+    def setUp(self):
+        self.exit_patcher = patch('sys.exit', side_effect=SystemExitException)
+        self.mock_exit = self.exit_patcher.start()
+
+    def tearDown(self):
+        self.exit_patcher.stop()
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_output_route_allow_with_decision_allow(self, mock_stdout, mock_run_guard):
+        mock_run_guard.return_value = (0, {"decision": "allow"})
+        payload = {"toolResult": "everything is normal", "toolCall": {"name": "read_file"}}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_output_route(payload)
+
+        mock_run_guard.assert_called_once_with("output", stdin_str=json.dumps(payload))
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {})
+        self.mock_exit.assert_called_with(0)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_handle_output_route_allow_with_empty_data(self, mock_stdout, mock_run_guard):
+        mock_run_guard.return_value = (0, {})
+        payload = {}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_output_route(payload)
+
+        mock_run_guard.assert_called_once_with("output", stdin_str=json.dumps(payload))
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {})
+        self.mock_exit.assert_called_with(0)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_handle_output_route_deny_by_returncode_2_with_reason(self, mock_stderr, mock_stdout, mock_run_guard):
+        mock_run_guard.return_value = (2, {"decision": "deny", "reason": "Secret API token detected in output"})
+        payload = {"toolResult": "ghp_1234567890abcdef"}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_output_route(payload)
+
+        mock_run_guard.assert_called_once_with("output", stdin_str=json.dumps(payload))
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {})
+        self.assertIn("SECURITY GUARD: Secret API token detected in output\n", mock_stderr.getvalue())
+        self.mock_exit.assert_called_with(2)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_handle_output_route_deny_by_decision_with_code_0(self, mock_stderr, mock_stdout, mock_run_guard):
+        mock_run_guard.return_value = (0, {"decision": "deny", "reason": "Private key detected in output"})
+        payload = {"toolResult": "-----BEGIN RSA PRIVATE KEY-----"}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_output_route(payload)
+
+        mock_run_guard.assert_called_once_with("output", stdin_str=json.dumps(payload))
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {})
+        self.assertIn("SECURITY GUARD: Private key detected in output\n", mock_stderr.getvalue())
+        self.mock_exit.assert_called_with(2)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_handle_output_route_deny_default_reason_when_missing(self, mock_stderr, mock_stdout, mock_run_guard):
+        mock_run_guard.return_value = (2, {})
+        payload = {"toolResult": "forbidden data"}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_output_route(payload)
+
+        mock_run_guard.assert_called_once_with("output", stdin_str=json.dumps(payload))
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {})
+        self.assertIn("SECURITY GUARD: Tool output blocked by security guard\n", mock_stderr.getvalue())
+        self.mock_exit.assert_called_with(2)
+
+    @patch('ai_guard_wrapper.run_guard')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_handle_output_route_deny_default_reason_when_decision_deny_only(self, mock_stderr, mock_stdout, mock_run_guard):
+        mock_run_guard.return_value = (0, {"decision": "deny"})
+        payload = {"output": "sensitive details"}
+
+        with self.assertRaises(SystemExitException):
+            ai_guard_wrapper.handle_output_route(payload)
+
+        mock_run_guard.assert_called_once_with("output", stdin_str=json.dumps(payload))
+        self.assertEqual(json.loads(mock_stdout.getvalue()), {})
+        self.assertIn("SECURITY GUARD: Tool output blocked by security guard\n", mock_stderr.getvalue())
+        self.mock_exit.assert_called_with(2)
+
+
 if __name__ == '__main__':
     unittest.main()
