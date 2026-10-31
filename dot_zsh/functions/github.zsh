@@ -24,9 +24,10 @@ _github_unpack_archive() {
 
 _github_flatten_subdir() {
     local -a sub=(*(/N))
-    if (( ${#sub} == 1 )) && [[ -d "$sub[1]/bin" || -d "$sub[1]/lib" ]]; then
-        mv "$sub[1]"/*(N) . && rmdir "$sub[1]"
-    fi
+    (( ${#sub} != 1 )) && return 0
+    [[ ! -d "$sub[1]/bin" && ! -d "$sub[1]/lib" ]] && return 0
+
+    mv "$sub[1]"/*(N) . && rmdir "$sub[1]"
 }
 
 _github_ensure_bin() {
