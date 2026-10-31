@@ -13,6 +13,17 @@ PATHS_JSON_PATH = os.path.join(REPO_ROOT, ".chezmoidata", "paths.json")
 CHEZMOI_AVAILABLE = shutil.which("chezmoi") is not None
 
 
+def _scan_string_char(char, escape):
+    """Update string scanning and escape state for a character within a string literal."""
+    if escape:
+        return True, False
+    if char == "\\":
+        return True, True
+    if char == '"':
+        return False, False
+    return True, False
+
+
 def parse_jsonc_reference(text):
     """Reference implementation of scanner-based JSONC parser."""
     text = text.strip()
@@ -34,12 +45,7 @@ def parse_jsonc_reference(text):
 
         if in_string:
             result.append(char)
-            if escape:
-                escape = False
-            elif char == "\\":
-                escape = True
-            elif char == '"':
-                in_string = False
+            in_string, escape = _scan_string_char(char, escape)
             i += 1
             continue
 
