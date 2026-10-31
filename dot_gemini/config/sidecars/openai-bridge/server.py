@@ -286,9 +286,10 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
 
             cmd = ["agentapi", "new-conversation", f"--model={model}", "--", _sanitize_prompt(initial_prompt)]
 
-        logging.info(f"Running command: {' '.join(cmd)}")
+        # SECURITY: Log command identifiers without leaking full prompt or argument payloads to logs (.jules/sentinel.md)
+        logging.info(f"Running command: {cmd[0]} {cmd[1]}")
         try:
-            res = subprocess.run(cmd, capture_output=True, text=True, check=False)
+            res = subprocess.run(cmd, capture_output=True, text=True, check=False, shell=False)
             stdout = res.stdout
             stderr = res.stderr
             returncode = res.returncode
