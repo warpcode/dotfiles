@@ -807,12 +807,12 @@ class TestJulesBatchOperations(unittest.TestCase):
         with patch.object(client, "list_sessions", side_effect=mock_list_sessions), \
              patch.object(client, "audit_session", side_effect=lambda s, **kw: {"id": s["id"]}):
             # Without all_pages: only 1 page
-            audits_single = client.audit_sessions(page_size=10, all_pages=False)
+            audits_single = client.audit_sessions(page_size=10, all_pages=False, max_age_days=0)
             self.assertEqual(len(audits_single), 1)
             self.assertEqual(audits_single[0]["id"], "s1")
 
             # With all_pages: traverses to page 2
-            audits_all = client.audit_sessions(page_size=10, all_pages=True)
+            audits_all = client.audit_sessions(page_size=10, all_pages=True, max_age_days=0)
             self.assertEqual(len(audits_all), 2)
             self.assertEqual([a["id"] for a in audits_all], ["s1", "s2"])
 
