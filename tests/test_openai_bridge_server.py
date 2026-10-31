@@ -487,6 +487,40 @@ class TestOpenAIBridgeServer(unittest.TestCase):
             }
         })
 
+    def test_send_error_response_wire_format(self):
+        cases = [
+            (400, "Bad Request"),
+            (404, "Not Found: /v1/test"),
+            (413, "Request body too large"),
+            (500, "Internal Server Error: 💥"),
+            (422, ""),
+        ]
+        for status_code, message in cases:
+            with self.subTest(status_code=status_code, message=message):
+                handler = openai_bridge_server.OpenAIBridgeHandler.__new__(openai_bridge_server.OpenAIBridgeHandler)
+                handler.send_response = MagicMock()
+                handler.send_header = MagicMock()
+                handler.end_headers = MagicMock()
+                mock_wfile = MagicMock()
+                handler.wfile = mock_wfile
+
+                handler.send_error_response(status_code, message)
+
+                handler.send_response.assert_called_once_with(status_code)
+                handler.send_header.assert_called_once_with("Content-Type", "application/json")
+                handler.end_headers.assert_called_once()
+                mock_wfile.write.assert_called_once()
+
+                written_bytes = mock_wfile.write.call_args[0][0]
+                payload = json.loads(written_bytes.decode("utf-8"))
+                self.assertEqual(payload, {
+                    "error": {
+                        "message": message,
+                        "type": "invalid_request_error",
+                        "code": None
+                    }
+                })
+
     def test_handle_models_direct(self):
         handler = openai_bridge_server.OpenAIBridgeHandler.__new__(openai_bridge_server.OpenAIBridgeHandler)
         handler.send_json = MagicMock()
