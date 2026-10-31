@@ -68,6 +68,21 @@ def _is_loopback(host):
 MAX_CONTENT_LENGTH = 8 * 1024 * 1024
 
 
+def _extract_block_text(block):
+    """Extract text from a single OpenAI content block.
+
+    Supports string blocks directly, or text dict blocks ({"type": "text", "text": ...}).
+    Returns an empty string for unsupported block structures.
+    """
+    if isinstance(block, str):
+        return block
+    if isinstance(block, dict) and block.get("type") == "text":
+        text = block.get("text")
+        if isinstance(text, str):
+            return text
+    return ""
+
+
 def _extract_text(content):
     """Flatten OpenAI message content into a plain string.
 
@@ -76,19 +91,11 @@ def _extract_text(content):
     Python repr, which would splice dict/list syntax into the prompt.
     Sanitizes null bytes to prevent subprocess execution failures.
     """
-    text = ""
     if isinstance(content, str):
-        text = content
-    elif isinstance(content, list):
-        parts = []
-        for block in content:
-            if isinstance(block, str):
-                parts.append(block)
-            elif isinstance(block, dict) and block.get("type") == "text":
-                t = block.get("text")
-                if isinstance(t, str):
-                    parts.append(t)
-        text = "".join(parts)
+        return content.replace("\x00", "")
+    if not isinstance(content, list):
+        return ""
+    text = "".join(_extract_block_text(b) for b in content)
     return text.replace("\x00", "")
 
 

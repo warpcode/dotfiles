@@ -149,10 +149,37 @@ class TestOpenAIBridgeServer(unittest.TestCase):
                 cmd_args = mock_subprocess_run.call_args[0][0]
                 self.assertIn("--model=flash_lite", cmd_args)
 
+    def test_extract_block_text(self):
+        extract_block = openai_bridge_server._extract_block_text
+        # String blocks
+        self.assertEqual(extract_block("plain text block"), "plain text block")
+        self.assertEqual(extract_block(""), "")
+
+        # Dict blocks with type="text"
+        self.assertEqual(extract_block({"type": "text", "text": "valid text"}), "valid text")
+        self.assertEqual(extract_block({"type": "text", "text": ""}), "")
+
+        # Dict blocks with non-text type
+        self.assertEqual(extract_block({"type": "image_url", "image_url": {"url": "http://example.com"}}), "")
+        self.assertEqual(extract_block({"type": "audio"}), "")
+
+        # Dict blocks with missing or non-string "text"
+        self.assertEqual(extract_block({"type": "text"}), "")
+        self.assertEqual(extract_block({"type": "text", "text": None}), "")
+        self.assertEqual(extract_block({"type": "text", "text": 123}), "")
+        self.assertEqual(extract_block({"type": "text", "text": ["nested"]}), "")
+
+        # Unsupported block types
+        self.assertEqual(extract_block(None), "")
+        self.assertEqual(extract_block(123), "")
+        self.assertEqual(extract_block(["inner"]), "")
+
     def test_extract_text_flattens_content_blocks(self):
         extract = openai_bridge_server._extract_text
         self.assertEqual(extract("plain"), "plain")
         self.assertEqual(extract(""), "")
+        # Null byte sanitization in string content
+        self.assertEqual(extract("null\x00byte"), "nullbyte")
         # Non-string, non-block content must not leak a Python repr into the prompt
         self.assertEqual(extract(None), "")
         self.assertEqual(extract(123), "")
@@ -163,6 +190,16 @@ class TestOpenAIBridgeServer(unittest.TestCase):
         self.assertEqual(
             extract([{"type": "image_url", "image_url": {"url": "x"}},
                      {"type": "text", "text": "t"}]), "t")
+        # Mixed string and dict blocks
+        self.assertEqual(
+            extract(["string block ", {"type": "text", "text": "dict block"}]),
+            "string block dict block"
+        )
+        # Null byte sanitization across blocks
+        self.assertEqual(
+            extract(["str\x00ing ", {"type": "text", "text": "bl\x00ock"}]),
+            "string block"
+        )
 
     def test_allowed_roles_frozenset_exactness(self):
         self.assertEqual(openai_bridge_server.ALLOWED_ROLES, frozenset({"user", "assistant", "system", "developer", "tool", "function"}))
