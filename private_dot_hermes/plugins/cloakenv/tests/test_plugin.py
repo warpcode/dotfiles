@@ -68,6 +68,55 @@ class TestCloakEnvSecretSource(unittest.TestCase):
         expected_key = f":default:[]:{token_hash}"
         self.assertEqual(plugin.get_cache_key(), expected_key)
 
+    def test_get_cache_key_idempotence(self):
+        plugin = CloakEnvSecretSource({**self.config_base, "mappings": {"A": "1", "B": "2"}})
+        first_call = plugin.get_cache_key()
+        second_call = plugin.get_cache_key()
+        self.assertEqual(first_call, second_call)
+
+    def test_get_cache_key_unicode_token(self):
+        token = "🔐_s3cr3t_üñîçødé_token_🚀"
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()[:8]
+        plugin = CloakEnvSecretSource({**self.config_base, "token": token})
+        expected_key = f"path/to/secret:my-ns:[]:{token_hash}"
+        self.assertEqual(plugin.get_cache_key(), expected_key)
+        self.assertEqual(len(token_hash), 8)
+
+    def test_get_cache_key_empty_vs_whitespace_token(self):
+        plugin_empty = CloakEnvSecretSource({**self.config_base, "token": ""})
+        plugin_whitespace = CloakEnvSecretSource({**self.config_base, "token": "   "})
+        self.assertNotEqual(plugin_empty.get_cache_key(), plugin_whitespace.get_cache_key())
+
+    def test_get_cache_key_special_characters_in_path_and_namespace(self):
+        plugin = CloakEnvSecretSource({
+            "path": "path:with:colons/and/slashes space",
+            "namespace": "ns:with:colons",
+            "token": "tok",
+            "mappings": {"k:1": "v:1"},
+        })
+        token_hash = hashlib.sha256(b"tok").hexdigest()[:8]
+        expected_key = f"path:with:colons/and/slashes space:ns:with:colons:[('k:1', 'v:1')]:{token_hash}"
+        self.assertEqual(plugin.get_cache_key(), expected_key)
+
+    def test_get_cache_key_reflects_mutated_attributes(self):
+        plugin = CloakEnvSecretSource(self.config_base)
+        initial_key = plugin.get_cache_key()
+
+        plugin.path = "new/path"
+        self.assertNotEqual(plugin.get_cache_key(), initial_key)
+
+        plugin.path = self.config_base["path"]
+        plugin.namespace = "other-ns"
+        self.assertNotEqual(plugin.get_cache_key(), initial_key)
+
+        plugin.namespace = self.config_base["namespace"]
+        plugin.token = "new_token"
+        self.assertNotEqual(plugin.get_cache_key(), initial_key)
+
+        plugin.token = self.config_base["token"]
+        plugin.mappings = {"new": "mapping"}
+        self.assertNotEqual(plugin.get_cache_key(), initial_key)
+
     @patch("plugin.subprocess.run")
     def test_empty_vault_handling_empty_stdout(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0, stdout="")
