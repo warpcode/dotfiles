@@ -346,7 +346,7 @@ ensure_mise() {
     # Default allowlist hashes pin known versions of the mise install script.
     # These may go stale when upstream updates the script.
     # Use MISE_INSTALL_SHA256 env var to override them if needed.
-    local default_mise_hashes="82d35715f9d54b9ca4ff5b909ebeb4f4ded457d4fae15814db2fe6da5b943e1f 0f8c5212184c41bae5597fc4abbbd032cb7716021e9be1c6c5b720e022af449d"
+    local default_mise_hashes="82d35715f9d54b9ca4ff5b909ebeb4f4ded457d4fae15814db2fe6da5b943e1f"
     local expected_mise_sha256="${MISE_INSTALL_SHA256:-${default_mise_hashes}}"
 
     if curl -fsSL https://mise.run > "${mise_install_script}" && [[ -s "${mise_install_script}" ]]; then
