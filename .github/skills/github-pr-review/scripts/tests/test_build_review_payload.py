@@ -78,7 +78,8 @@ class BuildReviewPayloadTests(unittest.TestCase):
         self.assertEqual(payload["body"], "")
 
     def test_omitted_spec_with_approve_succeeds(self):
-        out = tempfile.mktemp(suffix=".out")
+        fd, out = tempfile.mkstemp(suffix=".out")
+        os.close(fd)
         try:
             res = subprocess.run(
                 [sys.executable, SCRIPT, "--out", out, "--event", "APPROVE"],
