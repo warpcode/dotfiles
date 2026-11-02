@@ -299,9 +299,10 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
             return
 
         logging.info(f"agentapi exit code: {returncode}")
-        logging.info(f"agentapi stdout: {stdout}")
+        # SECURITY: Do not log full stdout or stderr payloads to prevent leaking sensitive response data or tokens into logs (.jules/sentinel.md)
+        logging.info(f"agentapi stdout received ({len(stdout)} chars)")
         if stderr:
-            logging.warning(f"agentapi stderr: {stderr}")
+            logging.warning(f"agentapi stderr received ({len(stderr)} chars)")
 
         # Parse output
         parsed_conv_id, parsed_content = self.parse_agentapi_output(stdout)
