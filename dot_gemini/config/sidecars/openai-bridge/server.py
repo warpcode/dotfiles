@@ -298,10 +298,10 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
             self.send_error_response(500, f"Failed to execute agentapi command: {str(e)}")
             return
 
-        logging.info(f"agentapi exit code: {returncode}")
-        logging.info(f"agentapi stdout: {stdout}")
+        # SECURITY: Do not log raw stdout/stderr containing LLM responses or error details (.jules/sentinel.md)
+        logging.info(f"agentapi exit code: {returncode} (stdout bytes: {len(stdout)})")
         if stderr:
-            logging.warning(f"agentapi stderr: {stderr}")
+            logging.warning(f"agentapi stderr present (bytes: {len(stderr)})")
 
         # Parse output
         parsed_conv_id, parsed_content = self.parse_agentapi_output(stdout)

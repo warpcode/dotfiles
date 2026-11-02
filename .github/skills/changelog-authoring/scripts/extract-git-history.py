@@ -75,27 +75,39 @@ def get_commit_sha(ref: str, cwd: Optional[Path] = None) -> str:
     return run_git_cmd(["rev-parse", ref], cwd=cwd)
 
 
+# Pre-compiled regular expressions for commit and PR parsing in loops
+PR_SQUASH_RE = re.compile(r"\(#(\d+)\)\s*$")
+PR_MERGE_RE = re.compile(r"Merge pull request #(\d+)")
+PR_MERGE_SHORT_RE = re.compile(r"Merge PR #(\d+)", re.IGNORECASE)
+PR_BODY_RE = re.compile(r"(?:PR|Pull Request|Closes|Fixes)\s*#(\d+)", re.IGNORECASE)
+CONVENTIONAL_COMMIT_RE = re.compile(r"^([a-zA-Z0-9_-]+)(?:\(([^\)]+)\))?(!)?:\s*(.*)$")
+PR_SUFFIX_RE = re.compile(r"\s*\(#\d+\)\s*$")
+
+
 def extract_pr_number(subject: str, body: str) -> Optional[int]:
     """Detect PR number from subject or merge message."""
-    # Pattern 1: Squash merge trailing (#123)
-    m = re.search(r"\(#(\d+)\)\s*$", subject)
-    if m:
-        return int(m.group(1))
+    # Fast short-circuit: all PR detection patterns require '#'
+    if "#" in subject:
+        # Pattern 1: Squash merge trailing (#123)
+        m = PR_SQUASH_RE.search(subject)
+        if m:
+            return int(m.group(1))
 
-    # Pattern 2: Merge pull request #123 from ...
-    m = re.search(r"Merge pull request #(\d+)", subject)
-    if m:
-        return int(m.group(1))
+        # Pattern 2: Merge pull request #123 from ...
+        m = PR_MERGE_RE.search(subject)
+        if m:
+            return int(m.group(1))
 
-    # Pattern 3: Merge PR #123
-    m = re.search(r"Merge PR #(\d+)", subject, re.IGNORECASE)
-    if m:
-        return int(m.group(1))
+        # Pattern 3: Merge PR #123
+        m = PR_MERGE_SHORT_RE.search(subject)
+        if m:
+            return int(m.group(1))
 
     # Pattern 4: Embedded in body: PR: #123 or Closes #123
-    m = re.search(r"(?:PR|Pull Request|Closes|Fixes)\s*#(\d+)", body, re.IGNORECASE)
-    if m:
-        return int(m.group(1))
+    if "#" in body:
+        m = PR_BODY_RE.search(body)
+        if m:
+            return int(m.group(1))
 
     return None
 
@@ -128,16 +140,17 @@ def parse_conventional_commit(subject: str) -> Tuple[Optional[str], Optional[str
     Parse conventional commit message into (type, scope, is_breaking, clean_message).
     Example: 'feat(parser)!: add json streaming' -> ('feat', 'parser', True, 'add json streaming')
     """
-    pattern = r"^([a-zA-Z0-9_-]+)(?:\(([^\)]+)\))?(!)?:\s*(.*)$"
-    m = re.match(pattern, subject.strip())
-    if m:
-        c_type = m.group(1).lower()
-        scope = m.group(2)
-        breaking = bool(m.group(3))
-        message = m.group(4).strip()
-        return c_type, scope, breaking, message
+    s_clean = subject.strip()
+    if ":" in s_clean:
+        m = CONVENTIONAL_COMMIT_RE.match(s_clean)
+        if m:
+            c_type = m.group(1).lower()
+            scope = m.group(2)
+            breaking = bool(m.group(3))
+            message = m.group(4).strip()
+            return c_type, scope, breaking, message
 
-    return None, None, False, subject.strip()
+    return None, None, False, s_clean
 
 
 def classify_commit(
@@ -163,7 +176,8 @@ def classify_commit(
         is_breaking = True
 
     # Strip PR suffix from description if present: 'Add feature (#123)' -> 'Add feature'
-    clean_msg = re.sub(r"\s*\(#\d+\)\s*$", "", clean_msg).strip()
+    if "(#" in clean_msg:
+        clean_msg = PR_SUFFIX_RE.sub("", clean_msg).strip()
 
     # Determine category
     if is_breaking:

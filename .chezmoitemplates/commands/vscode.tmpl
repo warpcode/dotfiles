@@ -36,5 +36,4 @@
 {{- end -}}
 
 "chat.tools.terminal.autoApprove": {{ $termApprove | toPrettyJson "  " }},
-"chat.tools.edits.autoApprove": {{ $editsApprove | toPrettyJson "  " }}
-
+"chat.tools.edits.autoApprove": {{ $editsApprove | toPrettyJson "  " | trim -}}

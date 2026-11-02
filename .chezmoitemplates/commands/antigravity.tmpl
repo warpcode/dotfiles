@@ -16,6 +16,20 @@
   {{- $allow = append $allow (printf "write_file(%s)" $p) -}}
 {{- end -}}
 
+{{- if and (hasKey . "chezmoi") (hasKey .chezmoi "homeDir") -}}
+  {{- $cfgPath := joinPath .chezmoi.homeDir ".gemini/config/config.json" -}}
+  {{- if stat $cfgPath -}}
+    {{- $cfg := include $cfgPath | fromJson -}}
+    {{- if and (hasKey $cfg "userSettings") (hasKey (index $cfg "userSettings") "globalPermissionGrants") -}}
+      {{- $gpg := index (index $cfg "userSettings") "globalPermissionGrants" -}}
+      {{- range $item := (get $gpg "allow" | default list) -}}
+        {{- $norm := regexReplaceAll "^(read_file|write_file)\\((~)" $item (printf "${1}(%s" $.chezmoi.homeDir) -}}
+        {{- $allow = append $allow $norm -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
 {{- $ask := list -}}
 {{- range $c := $commands.ask -}}
   {{- $cmd := $c | trimSuffix "*" | trim -}}
@@ -36,4 +50,8 @@
   {{- $deny = append $deny (printf "write_file(%s)" $p) -}}
 {{- end -}}
 
-"globalPermissionGrants": {{ dict "allow" ($allow | uniq) "deny" ($deny | uniq) "ask" ($ask | uniq) | toPrettyJson "  " }}
+{{- $allow = $allow | uniq | sortAlpha -}}
+{{- $ask = $ask | uniq | sortAlpha -}}
+{{- $deny = $deny | uniq | sortAlpha -}}
+
+"globalPermissionGrants": {{ dict "allow" $allow "ask" $ask "deny" $deny | toPrettyJson "  " | trim -}}

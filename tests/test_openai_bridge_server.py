@@ -118,13 +118,15 @@ class TestOpenAIBridgeServer(unittest.TestCase):
         self.assertIsNone(conv_id)
         self.assertEqual(content, "Plain text output without JSON")
 
+    @patch("logging.warning")
     @patch("logging.info")
     @patch("subprocess.run")
-    def test_subprocess_run_no_prompt_logging_leakage(self, mock_subprocess_run, mock_logging_info):
+    def test_subprocess_run_no_prompt_logging_leakage(self, mock_subprocess_run, mock_logging_info, mock_logging_warning):
         mock_proc = MagicMock()
         mock_proc.returncode = 0
-        mock_proc.stdout = json.dumps({"response": {"content": "Response", "conversation_id": "conv-sec-1"}})
-        mock_proc.stderr = ""
+        sensitive_output = "GENERATED_SECRET_KEY_abc123xyz789"
+        mock_proc.stdout = json.dumps({"response": {"content": sensitive_output, "conversation_id": "conv-sec-1"}})
+        mock_proc.stderr = "stderr_sensitive_token_999"
         mock_subprocess_run.return_value = mock_proc
 
         secret_prompt = "SUPER_SECRET_TOKEN_DO_NOT_LEAK_IN_LOGS_98765"
@@ -134,11 +136,17 @@ class TestOpenAIBridgeServer(unittest.TestCase):
         # Verify subprocess.run arguments
         mock_subprocess_run.assert_called_once()
 
-        # Verify no logged message contains the sensitive prompt string
+        # Verify no logged info message contains the sensitive prompt string or output
         logged_messages = [str(call.args[0]) for call in mock_logging_info.call_args_list if call.args]
         for msg in logged_messages:
             self.assertNotIn(secret_prompt, msg, "Sensitive prompt text leaked in log output")
+            self.assertNotIn(sensitive_output, msg, "Sensitive output text leaked in log output")
         self.assertIn("Running command: agentapi new-conversation", logged_messages)
+
+        # Verify no warning message contains sensitive stderr string
+        warn_messages = [str(call.args[0]) for call in mock_logging_warning.call_args_list if call.args]
+        for msg in warn_messages:
+            self.assertNotIn("stderr_sensitive_token_999", msg, "Sensitive stderr text leaked in warning log")
 
     @patch("subprocess.run")
     def test_process_completions_model_inputs(self, mock_subprocess_run):

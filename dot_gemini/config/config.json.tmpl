@@ -1,7 +1,11 @@
 {{- $configPath := joinPath .chezmoi.homeDir ".gemini/config/config.json" -}}
 {{- $userSettings := dict "remoteControlEnabled" true -}}
+{{- $sidecars := dict "check-documentation" (dict "enabled" false "projectId" "fba647d8-6d8b-4274-83f8-84a398053890" "schemaVersion" 1) -}}
 {{- if stat $configPath -}}
   {{- $existingConfig := include $configPath | fromJson -}}
+  {{- if hasKey $existingConfig "sidecars" -}}
+    {{- $sidecars = index $existingConfig "sidecars" -}}
+  {{- end -}}
   {{- if hasKey $existingConfig "userSettings" -}}
     {{- $userSettings = index $existingConfig "userSettings" -}}
   {{- else -}}
@@ -14,29 +18,43 @@
   {{- end -}}
 {{- end -}}
 {{- $_ := unset $userSettings "globalPermissionGrants" -}}
+{{- $before := dict -}}
+{{- $after := dict -}}
+{{- range $k, $v := $userSettings -}}
+  {{- if lt $k "globalPermissionGrants" -}}
+    {{- $_ := set $before $k $v -}}
+  {{- else -}}
+    {{- $_ := set $after $k $v -}}
+  {{- end -}}
+{{- end -}}
 {
-  "model": "Gemini 3.8 Flash (Medium)",
+  "copyOnSelect": true,
   "enableTelemetry": false,
+  "model": "Gemini 3.8 Flash (Medium)",
+  "pickerGrouping": "workspace",
+  "queuedMessages": "queue",
+  "sidecars": {{ $sidecars | toPrettyJson "  " | trim | indent 2 | trimPrefix "  " }},
   "statusLine": {
-    "type": "",
     "command": "",
     "enabled": true,
-    "stack_with_default": true
+    "stack_with_default": true,
+    "type": ""
   },
   "toolPermission": "proceed-in-sandbox",
   "trustedWorkspaces": [
     "{{ .chezmoi.sourceDir }}"
   ],
-  "userSettings": {
-    {{- range $k, $v := $userSettings }}
-    {{ $k | toJson }}: {{ $v | toJson }},
-    {{- end }}
-    {{ template "commands/antigravity.tmpl" . }}
-  },
-  "useG1Credits": false,
   "useAiCredits": false,
-  "queuedMessages": "queue",
-  "verbosity": "medium",
-  "pickerGrouping": "workspace",
-  "copyOnSelect": true
+  "useG1Credits": false,
+  "userSettings": {
+{{- range $k := keys $before | sortAlpha }}
+    {{ $k | toJson }}: {{ index $before $k | toJson }},
+{{- end }}
+{{ includeTemplate "commands/antigravity.tmpl" . | indent 4 -}}
+{{- if $after }},
+{{ range $i, $k := keys $after | sortAlpha }}{{ if $i }},
+{{ end }}    {{ $k | toJson }}: {{ index $after $k | toJson }}{{ end }}
+{{- end }}
+  },
+  "verbosity": "medium"
 }
