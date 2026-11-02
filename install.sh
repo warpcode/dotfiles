@@ -415,9 +415,8 @@ apply_chezmoi_dotfiles() {
 
   info "Applying dotfiles via Chezmoi..."
   # This will trigger:
-  # - run_once_after_05-system.sh (install system pkgs)
-  # - run_once_after_06-repositories.sh (setup 3rd party repos)
-  # - run_once_after_10-set-zsh.sh (set default shell)
+  # - run_once_after_09-fonts.sh.tmpl (install fonts)
+  # - run_once_after_10-set-zsh.sh.tmpl (set default shell)
   local -a chezmoi_global_args=()
   # Build --override-data JSON for template variables
   # chezmoi --override-data accepts a JSON string as a global flag (before subcommand)

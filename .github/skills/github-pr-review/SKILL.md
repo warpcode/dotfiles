@@ -215,7 +215,7 @@ When reviewing a bot-authored PR (e.g. Jules) where amendment commits were pushe
      ```
    - **Uncompleted or Broken**: Bump the thread with a contextual reply using the initial comment's REST integer `databaseId`:
      ```bash
-     bash <skills-dir>/scripts/reply_to_review_thread.sh --owner <owner> --repo <repo> --pr <pr> --comment-id <databaseId> --body "..."
+     bash <skills-dir>/github-pr-review/scripts/reply_to_review_thread.sh --owner <owner> --repo <repo> --pr <pr> --comment-id <databaseId> --body "..."
      ```
    > ⚠️ **Key Invariant**: `--comment-id` in `reply_to_review_thread.sh` requires an **integer REST `databaseId`** (surfaced in `list_pull_request_review_threads.sh` output), NOT the GraphQL node `id` string (such as `PRRC_...`).
    > ⚠️ **Resolve script emits plain text, not JSON** (verified 2026-09-27): `update_pull_request_review_thread_resolution.sh` prints `Thread ID: <id> | Resolved: <bool>` and exits `0` on success — the underlying GraphQL mutation is `resolveReviewThread`, not `updatePullRequestReviewThread`. Wrapping it in a `jq -r '.data.…'` pipeline therefore fails on both counts and yields a **false negative**: a loop over N threads reports every one as `FAILED` while all N resolves actually succeeded (observed on PR #186, 7/7). Do not pipe it to `jq`, and do not re-run a loop that already succeeded — resolution is idempotent but the wasted calls obscure real failures. To check status, re-query the thread list instead.
