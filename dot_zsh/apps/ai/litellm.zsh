@@ -10,6 +10,35 @@ export LITELLM_API_KEY="${LITELLM_API_KEY:-}"
 # @param command The command to run (with arguments)
 # @return Exit code of the command
 ##
+_ai.litellm.is_ready() {
+    local port="$1"
+    curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${port}/health" 2>/dev/null | grep -qE '^[23]'
+}
+
+_ai.litellm.wait_ready() {
+    local port="$1"
+    local litellm_pid="$2"
+    local timeout="$3"
+    local count=0
+
+    while ! _ai.litellm.is_ready "$port"; do
+        if ! kill -0 "$litellm_pid" 2>/dev/null; then
+            echo "[ai.litellm] Error: LiteLLM failed to start" >&2
+            return 1
+        fi
+        if [[ $count -ge $timeout ]]; then
+            echo "[ai.litellm] Error: LiteLLM failed to start within ${timeout}s" >&2
+            return 1
+        fi
+        sleep 1
+        count=$((count + 1))
+        if [[ $((count % 10)) -eq 0 ]]; then
+            echo "[ai.litellm] Still waiting... (${count}s)"
+        fi
+    done
+    return 0
+}
+
 ai.litellm.proxy.wrapper() {
     local port=4000
     local timeout=90
@@ -45,24 +74,7 @@ ai.litellm.proxy.wrapper() {
 
     {
         # Wait for server to be up (any response = server is ready)
-        local count=0
-        while ! curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${port}/health" 2>/dev/null | grep -qE '^[23]'; do
-            if ! kill -0 "$litellm_pid" 2>/dev/null; then
-                rm -f "$config_file"
-                echo "[ai.litellm] Error: LiteLLM failed to start" >&2
-                return 1
-            fi
-            if [[ $count -ge $timeout ]]; then
-                rm -f "$config_file"
-                echo "[ai.litellm] Error: LiteLLM failed to start within ${timeout}s" >&2
-                return 1
-            fi
-            sleep 1
-            count=$((count + 1))
-            if [[ $((count % 10)) -eq 0 ]]; then
-                echo "[ai.litellm] Still waiting... (${count}s)"
-            fi
-        done
+        _ai.litellm.wait_ready "$port" "$litellm_pid" "$timeout" || return 1
 
         echo "[ai.litellm] LiteLLM ready. Running: $@"
         "$@"
@@ -71,7 +83,7 @@ ai.litellm.proxy.wrapper() {
         if kill -0 "$litellm_pid" 2>/dev/null; then
             echo "[ai.litellm] Stopping LiteLLM..."
             kill "$litellm_pid" 2>/dev/null
-            wait "$litellm_pid" 2>/dev/null
+            wait "$litellm_pid" 2>/dev/null || true
         fi
         # Cleanup config file
         rm -f "$config_file"
