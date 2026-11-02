@@ -46,9 +46,12 @@ Execution commands and scripts for review discovery, inspection, and thread reso
   ```
 
 - **Submit Structured Review Payload (Line & File Comments)**:
+  ⚠️ `--owner` and `--repo` must be **separate flags**: `--owner warpcode --repo dotfiles`.
+  A combined `--repo warpcode/dotfiles` expands to `repos/warpcode/warpcode/dotfiles` and dies
+  with a silent exit 1 (verified 2026-11-02, PR #356). Flags are `--pull-number` and `--input`.
   ```bash
   # Submit structured payload with staged line/file comments via REST:
-  bash @scripts/submit_pull_request_review_payload.sh --pr 42 --payload-file review_payload.json
+  bash @scripts/submit_pull_request_review_payload.sh --owner <owner> --repo <name> --pull-number 42 --input review_payload.json
   ```
 
 ---

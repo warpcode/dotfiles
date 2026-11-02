@@ -17,7 +17,7 @@ while [[ $# -gt 0 ]]; do
       echo ""
       echo "Options:"
       echo "  --owner <value>        Repository owner (auto-detected if omitted)"
-      echo "  --repo <value>         Repository name (auto-detected if omitted)"
+      echo "  --repo <value>         Repository NAME only, no owner (use --owner separately)"
       echo "  --pull-number <value>  Pull request number (Required)"
       echo "  --input <value>        Path to JSON review payload file (Required)"
       echo "  -h, --help             Show this help message"
@@ -48,6 +48,10 @@ done
 
 if [[ -z "$owner" ]]; then
   echo "Error: --owner is required. Use --help for usage." >&2
+  exit 1
+fi
+if [[ "$repo" == */* ]]; then
+  echo "Error: --repo expects the repository NAME only (e.g. dotfiles), not owner/name. Pass --owner and --repo separately." >&2
   exit 1
 fi
 if [[ -z "$repo" ]]; then
