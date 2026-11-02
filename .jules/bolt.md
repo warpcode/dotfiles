@@ -24,3 +24,7 @@
 ## 2026-11-01 - Pre-Compile Regexes and Fast Substring Guards in Git Log Processing
 **Learning:** In batch git history parsing (e.g. changelog extraction across hundreds or thousands of commits), evaluating uncompiled regex patterns repeatedly inside loops across each commit subject and body incurs unnecessary regex re-compilation and search overhead.
 **Action:** Pre-compile static regexes at module level and guard regex invocations with fast substring checks (`"#" in subject`, `":" in s_clean`, `"(#" in clean_msg`) to skip regex engines entirely for non-matching commit messages.
+
+## 2026-11-02 - Fast Substring Guards for PR Regex Evaluation in Changelog Audit
+**Learning:** In changelog auditing loops (`audit_version_against_git`), running un-guarded regex searches across every commit subject incurs substantial overhead when most commits do not contain PR references or have already been accounted for.
+**Action:** Guard regex pattern calls with `if not is_accounted and "#" in subject:` and fast substring pre-checks (`"(#"` and `"Merge pull request #"`) to bypass regex search calls on non-PR commits.
