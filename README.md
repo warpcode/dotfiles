@@ -102,7 +102,7 @@ chezmoi apply
 
 ### Profiles
 - Different configurations and packages are conditionally loaded based on profiles (`default`, `work`, `phone`).
-- The active profile is stored in `~/.dotfiles_profile` and read automatically by Chezmoi to apply profile-specific constraints on packages and configurations.
+- The active profile is stored in `~/.dotfiles_profile` and read by the shell configuration and `df.fs` to apply profile-specific settings.
 
 ### Customizing the setup
 - Add personal aliases/functions to `~/.zshrc.local` (sourced after the main config).

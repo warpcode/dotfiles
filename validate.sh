@@ -5,6 +5,7 @@
 # CI splits across three workflows:
 #   lint.yml         -> zsh -n over *.zsh, plus dot_zsh/tests/*.zsh suites
 #   python-tests.yml -> unittest discovery under .github/skills/*/scripts and tests/
+#   test.yml         -> container matrix and macOS integration tests
 #   (shellcheck)     -> declared in AGENTS.md, not yet a workflow
 #
 # This script runs the checks locally so a "tests pass" claim is verifiable

@@ -14,7 +14,7 @@ fi
 alias python.http="mise exec python@latest -- python -m http.server"
 
 # Function to activate a Python virtual environment
-# Usage: vrun [venv_path]
+# Usage: python.vrun [venv_path]
 function python.vrun() {
     local venvpath="${1:-.venv}"
     local name="$(basename "$venvpath")"
