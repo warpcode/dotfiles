@@ -88,7 +88,7 @@
   "github.copilot.completions.chat.enabled": true,
   {{ template "commands/vscode.tmpl" . }},
 {{ if eq .profile "default" -}}
-"github.copilot.llm-gateway.serverUrl": "http://localhost:8081",
+"github.copilot.llm-gateway.serverUrl": "http://localhost:8080",
 {{ end -}}
 "github.copilot.chat.commitMessageGeneration.instructions": [
   {
