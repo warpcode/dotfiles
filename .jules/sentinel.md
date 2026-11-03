@@ -12,3 +12,8 @@
 **Vulnerability:** `dot_gemini/config/sidecars/openai-bridge/server.py` logged raw `stdout` and `stderr` from the `agentapi` subprocess directly to system logs via `logging.info(f"agentapi stdout: {stdout}")` and `logging.warning(f"agentapi stderr: {stderr}")`. LLM responses or error diagnostics containing credentials, tokens, or confidential content were exposed in persistent server logs.
 **Learning:** Just as input prompts and CLI arguments must not be logged, model completion outputs and raw stderr streams frequently contain generated secrets or sensitive diagnostics and must never be serialized into unauthenticated logs.
 **Prevention:** In sidecars and daemon wrappers, log only metadata (e.g. exit status, byte length, completion status) rather than the raw output or error content of subprocesses.
+
+## 2026-11-03 - Secure CLI Invocation and URL Decoding in Shell Download Utilities
+**Vulnerability:** In `dot_local/bin/executable_dl`, URLs were passed directly to `wget` without `--` delimiter, permitting option injection (e.g., `--post-file` or `--output-document`), and default filenames were derived using bash `echo -e` string substitution which evaluated escape sequences and null bytes.
+**Learning:** Naive shell-based percent-decoding using `echo -e "${_//%/\\x}"` introduces interpretation vulnerabilities for non-hex sequences and escape codes. Moreover, passing external inputs directly to commands without a `--` options delimiter allows flag injection.
+**Prevention:** Always delimit positional CLI arguments with `--` when executing tools like `wget`, `curl`, or `basename`, and use standard parsing libraries like Python's `urllib.parse.unquote` to sanitize and decode URL strings.

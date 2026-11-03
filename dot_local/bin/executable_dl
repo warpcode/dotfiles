@@ -1,12 +1,29 @@
-#!/bin/env bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-URL="$1"
-SAVETO="$2"
-
-function urldecode() { : "${*//+/ }"; echo -e "${_//%/\\x}"; }
-
-if [ -z "$2"  ]; then
-    SAVETO=$(basename "$(urldecode "$1")")
+if [[ $# -lt 1 || -z "${1:-}" ]]; then
+    printf 'Usage: %s <URL> [SAVETO]\n' "$(basename -- "$0")" >&2
+    exit 1
 fi
 
-exec wget -O "$SAVETO" -q --show-progress --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 "$1"
+URL="$1"
+SAVETO="${2:-}"
+
+# Safely percent-decode URL path for default filename, stripping null bytes and avoiding echo -e escape expansion
+urldecode() {
+    python3 -c 'import sys, urllib.parse; print(urllib.parse.unquote(sys.argv[1]).replace("\x00", ""))' "$1"
+}
+
+if [[ -z "$SAVETO" ]]; then
+    # Strip URL query parameters or fragments before determining basename
+    clean_url="${URL%%\?*}"
+    clean_url="${clean_url%%\#*}"
+    decoded_url="$(urldecode "$clean_url")"
+    SAVETO="$(basename -- "$decoded_url")"
+    if [[ -z "$SAVETO" || "$SAVETO" == "/" || "$SAVETO" == "." ]]; then
+        SAVETO="download"
+    fi
+fi
+
+# SECURITY: Use '--' before "$URL" to prevent option injection into wget
+exec wget -O "$SAVETO" -q --show-progress --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -- "$URL"
