@@ -414,8 +414,8 @@ apply_chezmoi_dotfiles() {
   local keepass_db="$4"
 
   info "Applying dotfiles via Chezmoi..."
-  # This will trigger scripts under .chezmoiscripts, including:
-  # - run_once_after_09-fonts.sh.tmpl (rebuild font cache)
+  # This will trigger:
+  # - run_once_after_09-fonts.sh.tmpl (install fonts)
   # - run_once_after_10-set-zsh.sh.tmpl (set default shell)
   local -a chezmoi_global_args=()
   # Build --override-data JSON for template variables
