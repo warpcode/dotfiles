@@ -17,3 +17,8 @@
 **Vulnerability:** In `dot_local/bin/executable_dl`, URLs were passed directly to `wget` without `--` delimiter, permitting option injection (e.g., `--post-file` or `--output-document`), and default filenames were derived using bash `echo -e` string substitution which evaluated escape sequences and null bytes.
 **Learning:** Naive shell-based percent-decoding using `echo -e "${_//%/\\x}"` introduces interpretation vulnerabilities for non-hex sequences and escape codes. Moreover, passing external inputs directly to commands without a `--` options delimiter allows flag injection.
 **Prevention:** Always delimit positional CLI arguments with `--` when executing tools like `wget`, `curl`, or `basename`, and use standard parsing libraries like Python's `urllib.parse.unquote` to sanitize and decode URL strings.
+
+## 2026-11-04 - Delimit Positional Arguments in CLI Web Scrapers
+**Vulnerability:** In `dot_local/bin/executable_link-scraper`, URLs were passed directly to `lynx` without argument validation or `--` delimiter, allowing CLI option injection (e.g., `-auth=`, `-post_data`, `-restrictions`).
+**Learning:** CLI utilities wrapping external commands like `lynx` must validate user inputs and separate option flags from positional targets using the `--` option terminator to prevent unexpected parameter injection.
+**Prevention:** Always enforce argument presence validation and insert `--` before positional target arguments passed to external binaries like `lynx` or `curl`.
