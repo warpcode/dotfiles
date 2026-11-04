@@ -27,7 +27,7 @@ Repository-specific guidance for Zsh work:
 - Keep Zsh configuration modular. Put logic in the appropriate file under `dot_zsh/config/`, `dot_zsh/functions/`, `dot_zsh/apps/`, or `dot_zsh/projects/` instead of adding large blocks directly to `dot_zsh/init.zsh`.
 - Never edit stowed files in `$HOME`. Edit the source files under the `dot_*` directories.
 - Use `$DOTFILES` for repository-root paths instead of hardcoded absolute paths.
-- For package installation logic, use the repo's `pkg.install` and recipe system instead of direct `apt`, `brew`, or similar package-manager commands in scripts.
+- For package configuration logic, use the repo's `pkg.recipe.*` recipe system instead of direct `apt`, `brew`, or similar package-manager commands in scripts.
 - **Function Exit Hygiene**: NEVER use `exit` inside Zsh functions intended for interactive use or sourcing. Always use `return <status>` (e.g., `return 1` for errors) to ensure the user's shell session is not terminated upon failure.
 - **yq Compatibility in Zsh Scripts**: When calling `yq` from Zsh scripts, always target `mikefarah/yq` (v4) compatibility. Avoid `jq`-specific features such as `any()` or `from_json`. For dynamic value matching, build Zsh loop-based filter strings (e.g. `match_expr`) or export parameters individually into environment variables to be read by `yq` via `strenv()`.
 - **Dynamic Backreference Evaluation**: When using `${var//(#b)pattern/repl}`, Zsh re-evaluates the `repl` string for each match. This enables patterns like `${(P)match[2]}` to dynamically look up variable names captured in the `match` array during the substitution process.
