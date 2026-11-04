@@ -597,6 +597,35 @@ class TestOpenAIBridgeServer(unittest.TestCase):
         handler.log_request(200, 512)
         mock_logging_info.assert_called_once_with('127.0.0.1 - - "GET /v1/models HTTP/1.1" 200 512')
 
+    def test_log_message_records_log_record(self):
+        handler = openai_bridge_server.OpenAIBridgeHandler.__new__(openai_bridge_server.OpenAIBridgeHandler)
+        handler.address_string = MagicMock(return_value="192.168.1.50")
+        with self.assertLogs(level="INFO") as cm:
+            handler.log_message("Transaction %s completed with status %d", "tx-99", 200)
+        self.assertEqual(len(cm.records), 1)
+        self.assertEqual(cm.records[0].levelname, "INFO")
+        self.assertIn("192.168.1.50 - - Transaction tx-99 completed with status 200", cm.output[0])
+
+    def test_log_error_redirects_through_log_message(self):
+        handler = openai_bridge_server.OpenAIBridgeHandler.__new__(openai_bridge_server.OpenAIBridgeHandler)
+        handler.address_string = MagicMock(return_value="127.0.0.1")
+        with self.assertLogs(level="INFO") as cm:
+            handler.log_error("Failed to read header: %s", "Unexpected EOF")
+        self.assertEqual(len(cm.records), 1)
+        self.assertEqual(cm.records[0].levelname, "INFO")
+        self.assertIn("127.0.0.1 - - Failed to read header: Unexpected EOF", cm.output[0])
+
+    def test_send_response_triggers_log_message(self):
+        handler = openai_bridge_server.OpenAIBridgeHandler.__new__(openai_bridge_server.OpenAIBridgeHandler)
+        handler.address_string = MagicMock(return_value="127.0.0.1")
+        handler.requestline = "GET /v1/models HTTP/1.1"
+        handler.request_version = "HTTP/1.1"
+        handler.responses = openai_bridge_server.http.server.BaseHTTPRequestHandler.responses
+        handler.wfile = MagicMock()
+        with self.assertLogs(level="INFO") as cm:
+            handler.send_response(200)
+        self.assertTrue(any('127.0.0.1 - - "GET /v1/models HTTP/1.1" 200 -' in log for log in cm.output))
+
     def test_send_error_response_direct(self):
         handler = openai_bridge_server.OpenAIBridgeHandler.__new__(openai_bridge_server.OpenAIBridgeHandler)
         handler.send_json = MagicMock()
