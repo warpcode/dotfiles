@@ -8,16 +8,14 @@ NOSTATS='0'
 usage()
 {
   cat <<EO
-Usage: $PROGNAME [options] infile outfile
+Usage: ${0##*/} [options] infile [outfile]
 
-Script to optimize PNG images.
+Script to optimize PNG, JPEG, and GIF images.
 
 Options:
 EO
 cat <<EO | column -s\& -t
 	-h, --help & shows this help
-	-i, --input [dir]  & specify input directory (current directory by default)
-	-o, --output [dir] & specify output directory ("output" by default)
 EO
 }
 
