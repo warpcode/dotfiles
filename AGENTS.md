@@ -32,7 +32,7 @@ and `tests/` (locally, `./validate.sh` also executes `bash -n` and `shellcheck`)
 emits a machine-readable summary.
 
 ## Destructive gates (explicit approval required)
-- `chezmoi apply` / `chezmoi bootstrap --only packages`
+- `chezmoi apply` / `mise bootstrap --only packages`
 - `rm -rf` near a symlink (`readlink`/`ls -l` first)
 - `git push --force`, PR merge, network-impacting changes
 - See `dot_agents/AGENTS.md` §3 for the full gate.
