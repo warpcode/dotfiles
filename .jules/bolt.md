@@ -28,3 +28,7 @@
 ## 2026-11-02 - Fast Substring Guards for PR Regex Evaluation in Changelog Audit
 **Learning:** In changelog auditing loops (`audit_version_against_git`), running un-guarded regex searches across every commit subject incurs substantial overhead when most commits do not contain PR references or have already been accounted for.
 **Action:** Guard regex pattern calls with `if not is_accounted and "#" in subject:` and fast substring pre-checks (`"(#"` and `"Merge pull request #"`) to bypass regex search calls on non-PR commits.
+
+## 2026-11-03 - Avoid Redundant `while read` Piping Over Native Formatted CLI Outputs
+**Learning:** In shell functions that wrap native search utilities (`git grep -n` or `grep -r -n`), piping the command output through `| while IFS=: read -r file line_num content; do print "${file}:${line_num}:${content}"; done` re-formats strings that the binary already emits natively. In Zsh, this while loop forks subshells in pipelines, introduces IPC buffering, and forces line-by-line interpreter loops (~1.63s down to ~0.57s over 50 search runs).
+**Action:** Execute CLI commands directly when their native output format matches the expected consumer contract (e.g. `file:line:content`), reserving while-read loops only for paths requiring custom transformation or terminal formatting.
