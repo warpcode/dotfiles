@@ -192,5 +192,19 @@ for bad_id in "my.provider" "my:provider" "my provider"; do
     fi
 done
 
+# Test 9: Invalid provider key handling and error message
+echo "--- Test 9: Invalid key validation error ---"
+err_out=$(ai.provider.define "valid-provider" "bad.key=value" 2>&1)
+rc=$?
+if [[ $rc -ne 1 ]]; then
+    echo "Invalid key was not rejected with return code 1! Got: $rc"
+    exit 1
+fi
+if [[ "$err_out" != *"Error: Invalid AI provider key 'bad.key'"* ]]; then
+    echo "Expected error message not found in output: $err_out"
+    exit 1
+fi
+echo "Invalid provider key correctly rejected with error message."
+
 rm -rf "$TEST_DIR"
 echo "All tests passed successfully."

@@ -51,10 +51,10 @@ ai.provider.define() {
     for arg in "${@:2}"; do
         [[ "$arg" == *=* ]] || continue
         k="${arg%%=*}"
-        if ! _ai.valid_key "$k"; then
+        _ai.valid_key "$k" || {
             print -u2 "Error: Invalid AI provider key '${k}'. Must contain only alphanumeric characters, underscores and dashes."
             return 1
-        fi
+        }
     done
 
     registry.define "ai_provider" "$@"
