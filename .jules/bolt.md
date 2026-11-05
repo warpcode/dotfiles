@@ -32,3 +32,7 @@
 ## 2026-11-03 - Avoid Redundant `while read` Piping Over Native Formatted CLI Outputs
 **Learning:** In shell functions that wrap native search utilities (`git grep -n` or `grep -r -n`), piping the command output through `| while IFS=: read -r file line_num content; do print "${file}:${line_num}:${content}"; done` re-formats strings that the binary already emits natively. In Zsh, this while loop forks subshells in pipelines, introduces IPC buffering, and forces line-by-line interpreter loops (~1.63s down to ~0.57s over 50 search runs).
 **Action:** Execute CLI commands directly when their native output format matches the expected consumer contract (e.g. `file:line:content`), reserving while-read loops only for paths requiring custom transformation or terminal formatting.
+
+## 2026-11-05 - Batch Multiple Config Files into Single CLI Tool Invocations
+**Learning:** Querying metadata fields across multiple JSON files by calling `jq` multiple times inside a loop (e.g. 3 separate `jq` invocations per file in `scheduler.list`) incurs severe process-spawning and subshell overhead (~311 ms vs ~7 ms for 20 tasks).
+**Action:** Pass all matching configuration files to a single `jq` command utilizing `[.field1, .field2] | @tsv` and stream into a tab-delimited reader loop, reducing process spawns from 3N to 1.
