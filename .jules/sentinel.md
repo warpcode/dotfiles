@@ -23,6 +23,11 @@
 **Learning:** CLI utilities wrapping external commands like `lynx` must validate user inputs and separate option flags from positional targets using the `--` option terminator to prevent unexpected parameter injection.
 **Prevention:** Always enforce argument presence validation and insert `--` before positional target arguments passed to external binaries like `lynx` or `curl`.
 
+## 2026-11-05 - Insecure Temporary Files in Media Utilities
+**Vulnerability:** In `dot_local/bin/executable_optimise-img`, temporary files were created in world-writable `/tmp` using predictable paths constructed from `$$` (e.g. `/tmp/$(basename $0).$$.1.png`), exposing the utility to symlink attacks, race conditions, and unauthorized file overwrite/hijack (CWE-377 / CWE-379).
+**Learning:** Using predictable `/tmp` filenames with `$$` is an anti-pattern because PIDs are easily enumerated on Linux/Unix systems, allowing local unprivileged actors to pre-create malicious symlinks before image processing runs.
+**Prevention:** Always use `mktemp` with random suffix templates (e.g. `mktemp "${TMPDIR:-/tmp}/utility-XXXXXX.ext"`) and verify non-empty exit status or file creation before invoking downstream processing commands.
+
 ## 2026-11-05 - Sanitize and Limit Prompt Inputs Passed to Subprocess CLI
 **Vulnerability:** In `dot_gemini/config/sidecars/openai-bridge/server.py`, user prompts were passed to `agentapi` without size boundaries or stripping of non-printable control characters and BiDi override codepoints, risking CLI argument buffer exhaustion, terminal injection, and denial of service.
 **Learning:** Even when CLI flag delimiters (`--`) are used with `subprocess.run(shell=False)`, unbounded argument strings or malicious control characters can exploit argument limits (`ARG_MAX`) or cause unexpected behavior in downstream CLI argument parsers.
