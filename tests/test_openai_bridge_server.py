@@ -44,7 +44,37 @@ class TestOpenAIBridgeServer(unittest.TestCase):
         sanitize = openai_bridge_server._sanitize_prompt
         self.assertEqual(sanitize("hello\x00world"), "helloworld")
         self.assertEqual(sanitize("clean prompt"), "clean prompt")
+        self.assertEqual(sanitize("hello\x07\x08\x1b\x7fworld"), "helloworld")
+        self.assertEqual(sanitize("hello\u202eworld"), "helloworld")
+        self.assertEqual(sanitize("hello\t\n\rworld"), "hello\t\n\rworld")
         self.assertEqual(sanitize(None), "")
+
+    def test_process_completions_rejects_empty_prompt_after_sanitization(self):
+        messages = [{"role": "user", "content": "\x00\x07\x1b   \u202e"}]
+        self.handler.process_completions(messages, model="flash_lite", is_chat=True)
+        self.handler.send_error_response.assert_called_once_with(
+            400, "Prompt must not be empty after sanitization"
+        )
+
+    def test_process_completions_rejects_oversized_current_prompt(self):
+        huge_prompt = "a" * (openai_bridge_server.MAX_PROMPT_LENGTH + 1)
+        messages = [{"role": "user", "content": huge_prompt}]
+        self.handler.process_completions(messages, model="flash_lite", is_chat=True)
+        self.handler.send_error_response.assert_called_once_with(
+            400, f"Prompt length exceeds maximum allowed limit of {openai_bridge_server.MAX_PROMPT_LENGTH} characters"
+        )
+
+    def test_process_completions_rejects_oversized_combined_history_prompt(self):
+        history_chunk = "b" * (openai_bridge_server.MAX_PROMPT_LENGTH // 2)
+        messages = [
+            {"role": "user", "content": history_chunk},
+            {"role": "assistant", "content": history_chunk},
+            {"role": "user", "content": "c" * 100}
+        ]
+        self.handler.process_completions(messages, model="flash_lite", is_chat=True)
+        self.handler.send_error_response.assert_called_once_with(
+            400, f"Combined prompt length exceeds maximum allowed limit of {openai_bridge_server.MAX_PROMPT_LENGTH} characters"
+        )
 
     @patch("subprocess.run")
     def test_invalid_conv_id_in_cache_bypassed(self, mock_subprocess_run):
