@@ -41,83 +41,88 @@ echo -n $1 | awk 'function human(x) {
 }
 
 optimise_png(){
-    local TMPFILE1="/tmp/$(basename $0).$$.1.png"
+    # Security: Use mktemp instead of predictable /tmp paths to prevent symlink attacks and race conditions (CWE-377/CWE-379)
+    local TMPFILE1 TMPFILE2
+    TMPFILE1=$(mktemp "${TMPDIR:-/tmp}/optimise-img-png1-XXXXXX.png") || return 1
+    TMPFILE2=$(mktemp "${TMPDIR:-/tmp}/optimise-img-png2-XXXXXX.png") || { rm -f "$TMPFILE1"; return 1; }
+
     pngcrush -q "$1" "$TMPFILE1"  >/dev/null
     local pngcrush_exit=$?
     local pngcrush_size=""
 
-    if [ $pngcrush_exit -eq 0 ]; then
+    if [ $pngcrush_exit -eq 0 ] && [ -s "$TMPFILE1" ]; then
         pngcrush_size=$(get_filesize "$TMPFILE1")
     fi
 
-
-    local TMPFILE2="/tmp/$(basename $0).$$.2.png"
     optipng -o7 -clobber -quiet "$1" -out "$TMPFILE2"
     local optipng_exit=$?
     local optipng_size=""
 
-    if [ $optipng_exit -eq 0 ]; then
+    if [ $optipng_exit -eq 0 ] && [ -s "$TMPFILE2" ]; then
         optipng_size=$(get_filesize "$TMPFILE2")
     fi
 
-
     if [ "$pngcrush_size" = "" ] && [ "$optipng_size" = "" ];then
         echo ""
-        rm "$TMPFILE1"
-        rm "$TMPFILE2"
+        rm -f "$TMPFILE1" "$TMPFILE2"
     elif [ "$pngcrush_size" != "" ] && [ "$optipng_size" != "" ];then
         if [ "$pngcrush_size" -lt  "$optipng_size" ];then
             echo "$TMPFILE1"
-            rm "$TMPFILE2"
+            rm -f "$TMPFILE2"
         else
             echo "$TMPFILE2"
-            rm "$TMPFILE2"
+            rm -f "$TMPFILE1"
         fi
     elif [ "$pngcrush_size" != "" ];then
         echo "$TMPFILE1"
-        rm "$TMPFILE2"
+        rm -f "$TMPFILE2"
     else
         echo "$TMPFILE2"
-        rm "$TMPFILE1"
+        rm -f "$TMPFILE1"
     fi
 }
 
 optimise_jpeg(){
-    local TMPFILE1="/tmp/$(basename $0).$$.1.jpg"
+    # Security: Use mktemp instead of predictable /tmp paths to prevent symlink attacks and race conditions (CWE-377/CWE-379)
+    local TMPFILE1
+    TMPFILE1=$(mktemp "${TMPDIR:-/tmp}/optimise-img-jpg-XXXXXX.jpg") || return 1
+
     cp -f "$1" "$TMPFILE1"
     jpegoptim -q "$TMPFILE1"
     local jpegoptim_exit=$?
     local jpegoptim_size=""
 
-    if [ $jpegoptim_exit -eq 0 ]; then
+    if [ $jpegoptim_exit -eq 0 ] && [ -s "$TMPFILE1" ]; then
         jpegoptim_size=$(get_filesize "$TMPFILE1")
     fi
     
     if [ "$jpegoptim_size" = "" ];then
         echo ""
-        rm "$TMPFILE1"
+        rm -f "$TMPFILE1"
     else
         echo "$TMPFILE1"
     fi
 }
 
 optimise_gif(){
-    local TMPFILE1="/tmp/$(basename $0).$$.1.gif"
+    # Security: Use mktemp instead of predictable /tmp paths to prevent symlink attacks and race conditions (CWE-377/CWE-379)
+    local TMPFILE1
+    TMPFILE1=$(mktemp "${TMPDIR:-/tmp}/optimise-img-gif-XXXXXX.gif") || return 1
+
     gifsicle -O3 "$1" -o "$TMPFILE1"
     local gifsicle_exit=$?
     local gifsicle_size=""
 
-    if [ $gifsicle_exit -eq 0 ]; then
+    if [ $gifsicle_exit -eq 0 ] && [ -s "$TMPFILE1" ]; then
         gifsicle_size=$(get_filesize "$TMPFILE1")
     fi
     
     if [ "$gifsicle_size" = "" ];then
         echo ""
-        rm "$TMPFILE1"
+        rm -f "$TMPFILE1"
     else
         echo "$TMPFILE1"
     fi
-    
 }
 
 INFILE=""
