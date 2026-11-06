@@ -620,6 +620,44 @@ def _ingest_antigravity_jsonl(path: Path, sess: IngestedSession) -> None:
     _finalize_command_smells(sess, terminal_cmds, file_reads)
 
 
+def _opencode_v2_rows(conn, session_id: str) -> list:
+    """Flatten newer OpenCode `session_message` rows into legacy (id, part_json, msg_json) rows.
+
+    Newer OpenCode versions store sessions in `session_v2`/`session_message` instead of
+    `session`/`message`/`part`. User rows carry `text`; assistant rows carry a `content` list
+    of reasoning/text/tool items (tool items use `name` and `state.{status,input,error,content}`).
+    """
+    out = []
+    q = ("SELECT id, type, time_created, data FROM session_message "
+         "WHERE session_id = ? AND type IN ('user','assistant') ORDER BY seq")
+    try:
+        msgs = conn.execute(q, (session_id,)).fetchall()
+    except sqlite3.Error:
+        return out
+    for mid, mtype, created, raw in msgs:
+        try:
+            d = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        meta = json.dumps({"role": mtype, "time_created": created})
+        if mtype == "user":
+            out.append((mid, json.dumps({"type": "text", "text": d.get("text", "")}), meta))
+            continue
+        for n, item in enumerate(d.get("content") or []):
+            it = item.get("type")
+            if it == "text":
+                part = {"type": "text", "text": item.get("text", "")}
+            elif it == "tool":
+                state = dict(item.get("state") or {})
+                state.setdefault("output", json.dumps(state.get("content", ""))[:2000])
+                part = {"type": "tool", "tool": item.get("name", "unknown_tool"),
+                        "callID": item.get("id"), "state": state}
+            else:
+                continue
+            out.append((f"{mid}:{n}", json.dumps(part), meta))
+    return out
+
+
 def _ingest_opencode_db(sess: IngestedSession) -> None:
     db_path = Path(sess.target.location)
     conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
@@ -628,6 +666,9 @@ def _ingest_opencode_db(sess: IngestedSession) -> None:
         "WHERE p.session_id = ? ORDER BY p.id",
         (sess.session_id,),
     ).fetchall()
+
+    if not rows:
+        rows = _opencode_v2_rows(conn, sess.session_id)
 
     sess.raw_records_count = len(rows)
     segment = 0
