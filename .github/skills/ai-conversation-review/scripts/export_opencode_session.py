@@ -47,11 +47,18 @@ def connect(db: Path) -> sqlite3.Connection:
 
 
 def list_sessions(conn: sqlite3.Connection, limit: int) -> list[tuple[str, str, int]]:
-    rows = conn.execute(
-        "SELECT id, COALESCE(title, ''), time_created FROM session "
-        "ORDER BY time_created DESC LIMIT ?",
-        (limit,),
-    ).fetchall()
+    try:
+        rows = conn.execute(
+            "SELECT id, COALESCE(title, ''), time_created FROM session_v2 "
+            "ORDER BY time_created DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+    except sqlite3.OperationalError:
+        rows = conn.execute(
+            "SELECT id, COALESCE(title, ''), time_created FROM session "
+            "ORDER BY time_created DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
     return [(r[0], r[1], r[2]) for r in rows]
 
 
@@ -110,6 +117,50 @@ def export(conn: sqlite3.Connection, session_id: str) -> int:
         "WHERE p.session_id = ? ORDER BY p.id",
         (session_id,),
     ).fetchall()
+
+    if not rows:
+        try:
+            v2_msgs = conn.execute(
+                "SELECT type, data FROM session_message WHERE session_id = ? ORDER BY seq",
+                (session_id,),
+            ).fetchall()
+        except sqlite3.OperationalError:
+            v2_msgs = []
+        count = 0
+        for mtype, raw_data in v2_msgs:
+            try:
+                d = json.loads(raw_data)
+            except json.JSONDecodeError:
+                continue
+            if mtype == "user":
+                print(json.dumps({"role": "user", "content": d.get("text", ""), "tool_calls": [], "error": None}))
+                count += 1
+            elif mtype == "assistant":
+                for item in d.get("content") or []:
+                    if item.get("type") == "text":
+                        txt = item.get("text", "")
+                        if txt.strip():
+                            print(json.dumps({"role": "assistant", "content": txt, "tool_calls": [], "error": None}))
+                            count += 1
+                    elif item.get("type") == "tool":
+                        st = item.get("state") or {}
+                        status = st.get("status")
+                        args = st.get("input") or {}
+                        print(json.dumps({
+                            "role": "assistant",
+                            "content": "",
+                            "tool_calls": [{
+                                "name": item.get("name", "unknown"),
+                                "status": status,
+                                "error": (st.get("error") or None) if status == "error" else None,
+                                "arguments": args if isinstance(args, dict) else {},
+                            }],
+                            "error": None,
+                        }))
+                        count += 1
+        if count > 0:
+            print(f"# Exported {count} events from session {session_id}", file=sys.stderr)
+            return count
 
     count = 0
     for raw_part, raw_message in rows:

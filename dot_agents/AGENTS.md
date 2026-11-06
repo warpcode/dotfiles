@@ -36,9 +36,13 @@ Persistent behavioral guardrails and universal preferences across repositories.
 6. **Tool Parameter & Command Hygiene**:
    - Never pass unnecessary escaped literal quotes in tool arguments (e.g., use `"/path"`, not `"\"/path\""`).
    - **No Inline Python Scripts**: NEVER execute `python3 -c "..."` or heredoc Python scripts in `run_command`. Rely on skill subcommands or dedicated scripts.
-   - **No Shell Sleep**: Never run background or chained `sleep` commands in shell strings (`sleep <n> && ...`). Rely on reactive event notifications or the timer tool.
-   - **No Duplicate File Reads**: Do not re-read files already in context unless altered on disk.
-   - **Reactive Wakeups**: Never poll `manage_subagents` or `manage_task status`, and do not schedule redundant timers on background `run_command` tasks — await reactive completion notifications.
+   - **No Shell Sleep**: Never run background or chained `sleep` commands in shell strings (`sleep <n> && ...`). Rely on reactive event notifications, background task completion, or the timer tool.
+   - **No Duplicate File Reads**: Do not re-read files that are already present in context unless a write, edit, or build command has altered them on disk.
+   - **No N+1 PR Inspection Loops**: Never loop `gh pr view <n>` across multiple PRs in shell loops (`for pr in ...; do gh pr view ...`). Use `pr_state_rollup.py` or bulk repository fetches (`gh pr list`).
+   - **Non-Interactive Git Execution**: Never run `git rebase` or interactive commands without `-c core.editor=true` or `GIT_EDITOR=true` to prevent interactive terminal hangs.
+   - **Subagent Reactive Wakeups**: Never poll `manage_subagents` in loops; allow background task notifications and reactive wakeups to resume execution.
+   - **Background Task Completion**: When a command is sent to the background via `run_command`, do NOT schedule redundant one-shot timers on its task ID or poll `manage_task status`. The system automatically notifies you with a high-priority message upon task completion; simply stop calling tools to await completion.
+   - **PR Branch Synchronization Invariant**: NEVER force-push or rebase PR branches to resolve merge conflicts. Update PR branches by merging `origin/master` (`git merge origin/master`), running regression tests in an isolated worktree, and pushing via standard push. Squash-merging on GitHub produces a single clean commit.
 
 7. **Conflict Resolution Order**: Safety > User Intent > Simplicity > Local Convention.
 
