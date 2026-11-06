@@ -27,3 +27,8 @@
 **Vulnerability:** In `dot_local/bin/executable_optimise-img`, temporary files were created in world-writable `/tmp` using predictable paths constructed from `$$` (e.g. `/tmp/$(basename $0).$$.1.png`), exposing the utility to symlink attacks, race conditions, and unauthorized file overwrite/hijack (CWE-377 / CWE-379).
 **Learning:** Using predictable `/tmp` filenames with `$$` is an anti-pattern because PIDs are easily enumerated on Linux/Unix systems, allowing local unprivileged actors to pre-create malicious symlinks before image processing runs.
 **Prevention:** Always use `mktemp` with random suffix templates (e.g. `mktemp "${TMPDIR:-/tmp}/utility-XXXXXX.ext"`) and verify non-empty exit status or file creation before invoking downstream processing commands.
+
+## 2026-11-06 - Prevent Option Injection in Archive Utility Invocations
+**Vulnerability:** In `dot_local/bin/executable_targz`, input arguments were passed directly to `tar`, compression utilities (`zopfli`, `pigz`, `gzip`), and filesystem tools (`stat`, `rm`) without an options delimiter (`--`), enabling option injection if the target path began with a dash (e.g. `-h`). Additionally, missing file presence validation allowed tar to fail unexpectedly.
+**Learning:** Utilities that accept user-provided file or folder names must strictly guard against flags injected through leading dashes. Commands like `tar`, `gzip`, and `rm` interpret leading hyphens as CLI options unless explicitly instructed otherwise via the `--` end-of-options delimiter.
+**Prevention:** Always validate source target existence early and prepend `--` before any user-supplied or derived file paths passed to shell tools such as `tar`, compression utilities, `stat`, or `rm`.
