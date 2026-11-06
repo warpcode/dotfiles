@@ -64,10 +64,12 @@ def extract_command(mapping):
     if not isinstance(mapping, dict):
         return ""
     for k in ("CommandLine", "commandLine", "command", "cmd"):
-        if k in mapping and isinstance(mapping[k], str):
-            val = mapping[k].strip().strip("'\"")
-            if val:
-                return val
+        val = mapping.get(k)
+        if not isinstance(val, str):
+            continue
+        cleaned = val.strip().strip("'\"")
+        if cleaned:
+            return cleaned
     return ""
 
 

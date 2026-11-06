@@ -32,3 +32,8 @@
 **Vulnerability:** In `dot_gemini/config/sidecars/openai-bridge/server.py`, user prompts were passed to `agentapi` without size boundaries or stripping of non-printable control characters and BiDi override codepoints, risking CLI argument buffer exhaustion, terminal injection, and denial of service.
 **Learning:** Even when CLI flag delimiters (`--`) are used with `subprocess.run(shell=False)`, unbounded argument strings or malicious control characters can exploit argument limits (`ARG_MAX`) or cause unexpected behavior in downstream CLI argument parsers.
 **Prevention:** Enforce strict size limits on prompt strings before command construction, strip control characters and directional override codepoints, and reject empty inputs after sanitization.
+
+## 2026-11-06 - Prevent Option Injection in Archive Utility Invocations
+**Vulnerability:** In `dot_local/bin/executable_targz`, input arguments were passed directly to `tar`, compression utilities (`zopfli`, `pigz`, `gzip`), and filesystem tools (`stat`, `rm`) without an options delimiter (`--`), enabling option injection if the target path began with a dash (e.g. `-h`). Additionally, missing file presence validation allowed tar to fail unexpectedly.
+**Learning:** Utilities that accept user-provided file or folder names must strictly guard against flags injected through leading dashes. Commands like `tar`, `gzip`, and `rm` interpret leading hyphens as CLI options unless explicitly instructed otherwise via the `--` end-of-options delimiter.
+**Prevention:** Always validate source target existence early and prepend `--` before any user-supplied or derived file paths passed to shell tools such as `tar`, compression utilities, `stat`, or `rm`.
