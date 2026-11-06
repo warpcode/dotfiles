@@ -10,11 +10,11 @@
 # return through the standard zsh `REPLY` convention instead, which forks
 # nothing. Per-call: registry.define 6.9 -> 1.0 ms, registry.get 2.9 -> 0.45 ms.
 #
-# SCOPE: only those two string helpers were converted. `_registry.arr_get` and
-# `_registry.aa_get` still return via stdout, so `_registry.dispatch` and
-# `registry.collect_parallel` still fork once each via `$( )` around arr_get.
+# SCOPE: `_registry.ns_var` and `_registry.norm` return via `REPLY`, and
+# `_registry.dispatch` and `registry.collect_parallel` retrieve namespace IDs
+# directly via native parameter expansion `("${(@P)REPLY}")` instead of forking
+# subshells `$( )` around `_registry.arr_get`.
 # (`registry.list` passes the name to arr_get as an argument and does not fork.)
-# Registry is not fork-free.
 #
 # STARTUP: the win is real, because six provider files under
 # `dot_zsh/apps/ai/providers/` call `ai.provider.define` at top level, and
@@ -186,16 +186,16 @@ _registry.dispatch() {
 
     local -a ids
     _registry.ns_var "$ns" "list"
-    ids=($(_registry.arr_get "$REPLY"))
+    # PERF: In Zsh, "${(@P)REPLY}" dereferences the list array directly in-process,
+    # eliminating subshell forks and word-splitting from $(_registry.arr_get "$REPLY").
+    ids=("${(@P)REPLY}")
 
     local id fn out rc
     local filter_enabled=0
     [[ "$mode" == *_enabled ]] && filter_enabled=1
 
     for id in "${ids[@]}"; do
-        if (( filter_enabled )); then
-            registry.is_enabled "$ns" "$id" "$prefix" || continue
-        fi
+        (( filter_enabled )) && { registry.is_enabled "$ns" "$id" "$prefix" || continue; }
 
         fn="$prefix.$id.$method"
         if (( ! $+functions[$fn] )); then
@@ -270,7 +270,9 @@ registry.collect_parallel() {
     _registry.validate_exists "$ns" || return 1
     local -a ids
     _registry.ns_var "$ns" "list"
-    ids=($(_registry.arr_get "$REPLY"))
+    # PERF: In Zsh, "${(@P)REPLY}" dereferences the list array directly in-process,
+    # eliminating subshell forks from $(_registry.arr_get "$REPLY").
+    ids=("${(@P)REPLY}")
 
     [[ -o monitor ]] && local restore_monitor=1 && unsetopt monitor
 
