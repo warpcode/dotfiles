@@ -195,9 +195,7 @@ _registry.dispatch() {
     [[ "$mode" == *_enabled ]] && filter_enabled=1
 
     for id in "${ids[@]}"; do
-        if (( filter_enabled )); then
-            registry.is_enabled "$ns" "$id" "$prefix" || continue
-        fi
+        (( filter_enabled )) && { registry.is_enabled "$ns" "$id" "$prefix" || continue; }
 
         fn="$prefix.$id.$method"
         if (( ! $+functions[$fn] )); then
