@@ -36,3 +36,7 @@
 ## 2026-11-05 - Batch Multiple Config Files into Single CLI Tool Invocations
 **Learning:** Querying metadata fields across multiple JSON files by calling `jq` multiple times inside a loop (e.g. 3 separate `jq` invocations per file in `scheduler.list`) incurs severe process-spawning and subshell overhead (~311 ms vs ~7 ms for 20 tasks).
 **Action:** Pass all matching configuration files to a single `jq` command utilizing `[.field1, .field2] | @tsv` and stream into a tab-delimited reader loop, reducing process spawns from 3N to 1.
+
+## 2026-11-06 - In-Process Array Dereferencing Eliminates Subshell Forks in Zsh Dispatch
+**Learning:** Extracting array elements across dynamic variable names via command substitution subshells (`ids=($(_registry.arr_get "$var"))`) incurs a ~0.49 ms subshell fork per dispatch call and risks word-splitting on values with spaces. In Zsh, dynamic indirect array dereferencing can be evaluated entirely in-process using native parameter expansion `("${(@P)var}")` with zero forks (~1.41s down to ~0.44s over 1000 dispatches).
+**Action:** Use native indirect parameter expansion `("${(@P)var}")` rather than subshell-piped helper functions whenever reading array contents by variable name in Zsh.
