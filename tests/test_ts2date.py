@@ -67,9 +67,12 @@ class TestTs2DateScript(unittest.TestCase):
         self.assertTrue(res.stdout.strip().startswith("2023-11-14"))
 
     def test_negative_timestamp(self):
+        # Explicitly set TZ=UTC to isolate timezone offset across test environments
+        env = {**os.environ, "TZ": "UTC"}
         res = subprocess.run(
             ["bash", self.ts2date_script, "-1000"],
             cwd=self.test_dir,
+            env=env,
             capture_output=True,
             text=True,
         )
