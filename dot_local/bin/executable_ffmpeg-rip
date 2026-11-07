@@ -57,7 +57,7 @@ def setup_arguments():
     parser.add_argument('-denoise', type=str, help="denoise options.\n Allows weakest,weak,medium,strong and allows a custom denoise in the format x:x:x:x", default="")
     parser.add_argument("-modulus", type=int, help="Sets the modulus to keep to for video frame size", default=8)
     parser.add_argument("-threads", type=int, help="Sets the number of threads allowed to be used", default=0)
-    parser.add_argument('-opencl', action='store_true', default=False, help="Enables cropping")
+    parser.add_argument('-opencl', action='store_true', default=False, help="Enables OpenCL hardware acceleration (x264)")
     parser.add_argument("-crf", type=int, help="-crf quality to use", default=19)
     parser.add_argument("-video-bitrate", type=int, help="Video bitrate in K to use. Overrides crf value", default=0)
     parser.add_argument("-preset", type=str, help="x264 preset to use", default='slow')
