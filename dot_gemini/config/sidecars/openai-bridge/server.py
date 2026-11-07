@@ -13,6 +13,11 @@ import re
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 CONV_ID_REGEX = re.compile(r"^[a-zA-Z0-9_][a-zA-Z0-9_-]*$")
+# Strip ASCII control characters except \t (\x09), \n (\x0a), \r (\x0d), and strip Unicode BiDi overrides
+CONTROL_CHARS_REGEX = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\u202a-\u202e\u2066-\u2069]")
+
+# Maximum prompt length passed to agentapi (1MB) to protect CLI limits and memory
+MAX_PROMPT_LENGTH = 1024 * 1024
 
 
 def _is_valid_conv_id(conv_id):
@@ -26,10 +31,10 @@ def _is_valid_conv_id(conv_id):
 
 
 def _sanitize_prompt(prompt):
-    """Sanitize prompt text by stripping null bytes that would cause subprocess failures."""
+    """Sanitize prompt text by stripping control characters and BiDi overrides."""
     if not isinstance(prompt, str):
         return ""
-    return prompt.replace("\x00", "")
+    return CONTROL_CHARS_REGEX.sub("", prompt)
 
 # Thread-safe in-memory cache mapping history hashes to conversation IDs
 cache_lock = threading.Lock()
@@ -265,6 +270,13 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
                     conv_id = cached_id
 
         current_prompt = _sanitize_prompt(current_prompt)
+        if not current_prompt.strip():
+            self.send_error_response(400, "Prompt must not be empty after sanitization")
+            return
+
+        if len(current_prompt) > MAX_PROMPT_LENGTH:
+            self.send_error_response(400, f"Prompt length exceeds maximum allowed limit of {MAX_PROMPT_LENGTH} characters")
+            return
 
         # Build command to execute agentapi
         # Use '--' delimiter to prevent positional arguments/prompts from being parsed as CLI options/flags.
@@ -284,7 +296,12 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
             else:
                 initial_prompt = current_prompt
 
-            cmd = ["agentapi", "new-conversation", f"--model={model}", "--", _sanitize_prompt(initial_prompt)]
+            initial_prompt = _sanitize_prompt(initial_prompt)
+            if len(initial_prompt) > MAX_PROMPT_LENGTH:
+                self.send_error_response(400, f"Combined prompt length exceeds maximum allowed limit of {MAX_PROMPT_LENGTH} characters")
+                return
+
+            cmd = ["agentapi", "new-conversation", f"--model={model}", "--", initial_prompt]
 
         # SECURITY: Log command identifiers without leaking full prompt or argument payloads to logs (.jules/sentinel.md)
         logging.info(f"Running command: {cmd[0]} {cmd[1]}")
