@@ -1,20 +1,38 @@
 #!/usr/bin/env bash
 
-if [[ -z "$1" ]]
-then
-    if [[ -p /dev/stdin ]]    # input from a pipe
-    then
-        read -r p
-    else
-        echo "No timestamp given." >&2
-        exit
+set -euo pipefail
+
+p=""
+
+# Read timestamp from first argument or standard input pipe
+if [[ -n "${1:-}" ]]; then
+    p="$1"
+elif [[ -p /dev/stdin ]] || [[ ! -t 0 ]]; then
+    if ! read -r p; then
+        p=""
     fi
-else
-    p=$1
+fi
+
+# Trim leading and trailing whitespace
+p="${p#"${p%%[![:space:]]*}"}"
+p="${p%"${p##*[![:space:]]}"}"
+
+if [[ -z "$p" ]]; then
+    echo "Usage: ts2date <timestamp>" >&2
+    exit 1
+fi
+
+# Security: Validate that timestamp is numeric (optional leading '-', digits, optional decimal)
+# Prevents option injection flags (e.g. -f, -r, -d) or unexpected inputs from reaching date
+if [[ ! "$p" =~ ^-?[0-9]+(\.[0-9]+)?$ ]]; then
+    echo "ts2date: invalid timestamp '$p'" >&2
+    exit 1
 fi
 
 if [[ "$OSTYPE" =~ ^darwin ]]; then
-    date -r $p "+%Y-%m-%d %H:%M:%S"
+    # BSD date takes -r <seconds>
+    date -r "$p" "+%Y-%m-%d %H:%M:%S"
 else
-    date -d @$p "+%Y-%m-%d %H:%M:%S"
+    # GNU date takes -d @<seconds>
+    date -d "@$p" "+%Y-%m-%d %H:%M:%S"
 fi
