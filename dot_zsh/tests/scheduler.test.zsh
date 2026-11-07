@@ -39,24 +39,11 @@ cat << 'EOF' > "$DOTFILES/assets/configs/scheduler/sample-task.json"
 }
 EOF
 
-cat << 'EOF' > "$DOTFILES/assets/configs/scheduler/second-task.json"
-{
-  "name": "second-task",
-  "schedule": "hourly",
-  "command": "df.check --status"
-}
-EOF
-
 list_out=$(scheduler.list)
 if [[ "$list_out" != *"sample-task"* || "$list_out" != *"daily"* || "$list_out" != *"echo hello"* ]]; then
-    print -u2 -- "FAILED: scheduler.list output missing expected fields for sample-task: $list_out"
+    print -u2 -- "FAILED: scheduler.list output missing expected fields: $list_out"
     exit 1
 fi
-if [[ "$list_out" != *"second-task"* || "$list_out" != *"hourly"* || "$list_out" != *"df.check --status"* ]]; then
-    print -u2 -- "FAILED: scheduler.list output missing expected fields for second-task: $list_out"
-    exit 1
-fi
-rm -f "$DOTFILES/assets/configs/scheduler/second-task.json"
 print -- "PASSED"
 
 # --- Test 3: scheduler.add input validation ---

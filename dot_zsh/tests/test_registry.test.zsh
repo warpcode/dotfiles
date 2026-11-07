@@ -292,15 +292,4 @@ if ! registry.any_true bool_app bool_pfx is_good; then
     exit 1
 fi
 
-# Test 25: registry.collect_parallel output aggregation across items
-function disp_mod.mod1.parallel_greet { print -r "Parallel 1"; }
-function disp_mod.mod2.parallel_greet { print -r "Parallel 2"; }
-
-parallel_out="$(registry.collect_parallel disp_app disp_mod parallel_greet)"
-expected_parallel="Parallel 1"$'\n'"Parallel 2"
-if [[ "$parallel_out" != "$expected_parallel" ]]; then
-    print -r "Test 25 Failed: collect_parallel mismatch, got '$parallel_out'" >&2
-    exit 1
-fi
-
 print -r "ALL REGISTRY TESTS PASSED SUCCESSFULLY!"

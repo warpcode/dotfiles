@@ -1183,18 +1183,13 @@ class TestAIGuardSecretsExpansion(unittest.TestCase):
         cfg_path = REPO_ROOT / "dot_config" / "dotfiles" / "ai-guard.json"
         with open(cfg_path, "r", encoding="utf-8") as f:
             cfg = json.load(f)
-
-        section_rules = [
-            (section_name, rule)
-            for section_name, section in cfg.items()
-            if isinstance(section, dict)
-            for rule in section.get("rules", [])
-        ]
-
-        for section_name, r in section_rules:
-            self.assertNotIn("match", r, f"Rule in {section_name} contains 'match' field: {r}")
-            if r.get("perm") == "replace":
-                self.assertNotIn("reason", r, f"Replace rule in {section_name} contains 'reason' field: {r}")
+        for section_name, section in cfg.items():
+            if not isinstance(section, dict):
+                continue
+            for r in section.get("rules", []):
+                self.assertNotIn("match", r, f"Rule in {section_name} contains 'match' field: {r}")
+                if r.get("perm") == "replace":
+                    self.assertNotIn("reason", r, f"Replace rule in {section_name} contains 'reason' field: {r}")
 
     def test_non_regex_match_type_is_rejected(self):
         """Rules specifying non-regex match types like 'glob' are rejected and ignored."""
