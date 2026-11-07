@@ -40,3 +40,7 @@
 ## 2026-11-06 - In-Process Array Dereferencing Eliminates Subshell Forks in Zsh Dispatch
 **Learning:** Extracting array elements across dynamic variable names via command substitution subshells (`ids=($(_registry.arr_get "$var"))`) incurs a ~0.49 ms subshell fork per dispatch call and risks word-splitting on values with spaces. In Zsh, dynamic indirect array dereferencing can be evaluated entirely in-process using native parameter expansion `("${(@P)var}")` with zero forks (~1.41s down to ~0.44s over 1000 dispatches).
 **Action:** Use native indirect parameter expansion `("${(@P)var}")` rather than subshell-piped helper functions whenever reading array contents by variable name in Zsh.
+
+## 2026-11-07 - Batch Array Printing with `print -r -l --` Bypasses Element Iteration Overhead
+**Learning:** In Zsh, iterating element-by-element over an array in a `for e in "${elems[@]}"; do print -r -- "$e"; done` loop incurs substantial interpreter loop evaluation overhead (~1.12s down to ~0.10s over 2,000 array dumps of 100 elements, an ~11x speedup). In functions like `registry.list` that output line-delimited items from an array name, batch-printing elements with `print -r -l -- "${elems[@]}"` (guarded with `(( ${#elems} ))` to prevent emitting a blank newline on empty arrays) provides a ~3.2x end-to-end speedup.
+**Action:** Replace element-by-element print loops in Zsh with direct batch printing `print -r -l -- "${elems[@]}"`, guarded by `(( ${#elems} ))`.
