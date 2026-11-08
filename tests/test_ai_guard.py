@@ -120,6 +120,35 @@ def run_wrapper(
 class TestAIGuardCommand(unittest.TestCase):
     """Test cases for 'df.ai-guard command'."""
 
+    def test_bypassed_shell_flags(self):
+        """Shell invocations with combined short flags (e.g. bash -lc, zsh -ic) should extract and evaluate the nested command."""
+        with tempfile.NamedTemporaryFile("w", suffix=".json") as f:
+            cfg = {
+                "commands": {
+                    "rules": [{"pattern": r"^rm -rf /", "perm": "deny", "reason": "Destructive rm command forbidden"}]
+                },
+                "files": {
+                    "rules": [{"pattern": r"^/etc/passwd$", "perm": "deny", "reason": "Access to /etc/passwd blocked"}]
+                }
+            }
+            json.dump(cfg, f)
+            f.flush()
+
+            # Nested command is forbidden
+            res = run_guard("command", args=["bash", "-lc", "rm -rf /"], custom_config=f.name, stdin_payload="bash -lc \"rm -rf /\"")
+            self.assertEqual(res.returncode, 2)
+            self.assertIn("Destructive rm command forbidden", res.stderr)
+
+            # Nested command targets a forbidden file
+            res = run_guard("command", args=["zsh", "-ic", "cat /etc/passwd"], custom_config=f.name, stdin_payload="zsh -ic \"cat /etc/passwd\"")
+            self.assertEqual(res.returncode, 2)
+            self.assertIn("Access to /etc/passwd blocked", res.stderr)
+
+            # Extra flag characters are properly handled
+            res = run_guard("command", args=["sh", "-cl", "rm -rf /"], custom_config=f.name, stdin_payload="sh -cl \"rm -rf /\"")
+            self.assertEqual(res.returncode, 2)
+            self.assertIn("Destructive rm command forbidden", res.stderr)
+
     def test_safe_exact_commands(self):
         """Safe exact commands should pass through to IDE with exit code 0 and empty JSON."""
         exact_cmds = [

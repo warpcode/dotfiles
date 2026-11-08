@@ -383,7 +383,7 @@ class CommandParser:
                 cmd_base = os.path.basename(var[0])
                 if cmd_base in ("bash", "sh", "zsh", "dash"):
                     for idx, tok in enumerate(var):
-                        if tok in ("-c", "-ec", "-ce", "-cx", "-xc") and idx + 1 < len(var):
+                        if tok.startswith("-") and not tok.startswith("--") and "c" in tok[1:] and idx + 1 < len(var):
                             cmd_arg = var[idx + 1]
                             nested_p = cls.parse(cmd_arg)
                             if nested_p.error:
