@@ -49,7 +49,8 @@ class TestPhrasegenScript(unittest.TestCase):
         self.assertEqual(len(generated), 2)
 
     def test_invalid_word_count_rejected(self):
-        for bad_count in ["0", "-1", "abc", "4.5", "1001", ""]:
+        overflow_val = "9" * 30
+        for bad_count in ["0", "-1", "abc", "4.5", "1001", "", overflow_val]:
             res = self._run_phrasegen([bad_count])
             self.assertEqual(res.returncode, 1, f"Failed to reject invalid count: {bad_count}")
             self.assertIn("Usage: phrasegen [words (1-1000)]", res.stderr)
@@ -59,6 +60,14 @@ class TestPhrasegenScript(unittest.TestCase):
             res = self._run_phrasegen([flag])
             self.assertEqual(res.returncode, 1, f"Failed to reject flag: {flag}")
             self.assertIn("Usage: phrasegen [words (1-1000)]", res.stderr)
+
+    def test_delimiter_option_injection_handled_safely(self):
+        for option_delim in ["--help", "-v", "-"]:
+            res = self._run_phrasegen(["2", option_delim])
+            self.assertEqual(res.returncode, 0, msg=f"stderr: {res.stderr}")
+            # paste -s --delimiters="<delim>" uses characters from delim sequentially
+            # ensure execution succeeds and generates 2 words
+            self.assertTrue(len(res.stdout.strip()) > 0)
 
     def test_invalid_delimiter_with_newline_rejected(self):
         res = self._run_phrasegen(["3", "\n"])
