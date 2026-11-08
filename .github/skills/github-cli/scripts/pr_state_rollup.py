@@ -55,6 +55,72 @@ def run(cmd: list[str], check: bool = False) -> tuple[int, str, str]:
     return p.returncode, p.stdout, p.stderr
 
 
+def augment_with_graphql(repo: str, prs: list[dict]) -> None:
+    if not prs:
+        return
+    parts = repo.split("/", 1)
+    if len(parts) != 2:
+        return
+    owner, name = parts
+
+    query_parts = []
+    for pr in prs:
+        num = pr.get("number")
+        if not num:
+            continue
+        query_parts.append(
+            f"pr_{num}: pullRequest(number: {num}) {{"
+            f"commits(last: 1) {{nodes {{commit {{statusCheckRollup {{"
+            f"contexts(first: 100) {{nodes {{"
+            f"... on CheckRun {{name conclusion status}} "
+            f"... on StatusContext {{context state}} "
+            f"}}}}}}}}}}}}}}"
+        )
+    if not query_parts:
+        return
+
+    query = (
+        "query($owner: String!, $name: String!) { "
+        "repository(owner: $owner, name: $name) { " +
+        " ".join(query_parts) +
+        " } }"
+    )
+
+    code, out, _ = run(["gh", "api", "graphql", "-f", f"owner={owner}", "-f", f"name={name}", "-f", f"query={query}"])
+    if code != 0 or not out.strip():
+        return
+
+    try:
+        gql_data = json.loads(out)
+    except json.JSONDecodeError:
+        return
+
+    repo_data = gql_data.get("data", {}).get("repository") or {}
+    for pr in prs:
+        num = pr.get("number")
+        if not num:
+            continue
+        pr_node = repo_data.get(f"pr_{num}")
+        if not pr_node:
+            continue
+        commits = pr_node.get("commits", {}).get("nodes") or []
+        if not commits:
+            continue
+        rollup = commits[0].get("commit", {}).get("statusCheckRollup")
+        if not rollup:
+            continue
+        contexts = rollup.get("contexts", {}).get("nodes") or []
+
+        if "statusCheckRollup" not in pr or pr["statusCheckRollup"] is None:
+            pr["statusCheckRollup"] = []
+
+        existing_names = {c.get("name") or c.get("context") for c in pr["statusCheckRollup"]}
+        for c in contexts:
+            c_name = c.get("name") or c.get("context")
+            if c_name and c_name not in existing_names:
+                pr["statusCheckRollup"].append(c)
+
+
 def resolve_repo(explicit: str | None) -> str:
     if explicit:
         return explicit
@@ -77,7 +143,9 @@ def fetch(repo: str, state: str) -> list[dict]:
     if code != 0:
         sys.stderr.write(f"gh pr list failed:\n{err}\n")
         raise SystemExit(1)
-    return json.loads(out or "[]")
+    prs = json.loads(out or "[]")
+    augment_with_graphql(repo, prs)
+    return prs
 
 
 def rollup_status(pr: dict) -> tuple[str, str, str]:
