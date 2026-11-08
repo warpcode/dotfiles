@@ -9,7 +9,7 @@ fi
 URL="$1"
 
 # SECURITY: Use '--' before "$URL" to prevent option injection into lynx
-# PERF: Extract link URL directly ($2) when line has fields (NF >= 2).
-# Consolidating the pipeline eliminates a redundant awk process fork, subshell/IPC overhead,
-# and field re-concatenation (~1.3x speedup on batch streams).
-exec lynx -dump -hiddenlinks=listonly -- "$URL" | awk 'NF >= 2 {print $2}'
+# PERF: Strip leading counter/whitespace while preserving URLs that contain spaces or fragments.
+# Consolidating the dual-awk pipeline into a single awk process eliminates a redundant fork
+# and pipeline IPC buffering.
+exec lynx -dump -hiddenlinks=listonly -- "$URL" | awk 'NF >= 2 { sub(/^[[:space:]]*[^[:space:]]+[[:space:]]+/, ""); print }'

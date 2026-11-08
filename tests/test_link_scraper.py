@@ -110,6 +110,8 @@ class TestLinkScraperScript(unittest.TestCase):
             "echo ''\n"
             "echo '  10. https://example.org/two'\n"
             "echo ' 100.  http://example.net/three?a=1&b=2'\n"
+            "echo ' 101.  http://example.org/file name with spaces.pdf'\n"
+            "echo ' 102.  http://example.org/doc#section with fragment'\n"
         )
         mock_lynx.chmod(0o755)
 
@@ -128,6 +130,8 @@ class TestLinkScraperScript(unittest.TestCase):
             "http://example.com/one",
             "https://example.org/two",
             "http://example.net/three?a=1&b=2",
+            "http://example.org/file name with spaces.pdf",
+            "http://example.org/doc#section with fragment",
         ]
         self.assertEqual(res.stdout.splitlines(), expected)
 
