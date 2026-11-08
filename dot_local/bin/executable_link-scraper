@@ -9,4 +9,7 @@ fi
 URL="$1"
 
 # SECURITY: Use '--' before "$URL" to prevent option injection into lynx
-exec lynx -dump -hiddenlinks=listonly -- "$URL" | awk '{$1=""}1' | awk '{$1=$1}1'
+# PERF: Strip leading counter/whitespace while preserving URLs that contain spaces or fragments.
+# Consolidating the dual-awk pipeline into a single awk process eliminates a redundant fork
+# and pipeline IPC buffering.
+exec lynx -dump -hiddenlinks=listonly -- "$URL" | awk 'NF >= 2 { sub(/^[[:space:]]*[^[:space:]]+[[:space:]]+/, ""); print }'
