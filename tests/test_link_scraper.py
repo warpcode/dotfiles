@@ -100,6 +100,37 @@ class TestLinkScraperScript(unittest.TestCase):
         idx_dashdash = args.index("--")
         self.assertIn(malicious_arg, args[idx_dashdash + 1:])
 
+    def test_extracts_multiple_links_with_varying_whitespace(self):
+        mock_bin_dir = Path(self.test_dir) / "bin"
+        mock_bin_dir.mkdir()
+        mock_lynx = mock_bin_dir / "lynx"
+        mock_lynx.write_text(
+            "#!/usr/bin/env bash\n"
+            "echo '   1. http://example.com/one'\n"
+            "echo ''\n"
+            "echo '  10. https://example.org/two'\n"
+            "echo ' 100.  http://example.net/three?a=1&b=2'\n"
+        )
+        mock_lynx.chmod(0o755)
+
+        env = os.environ.copy()
+        env["PATH"] = f"{mock_bin_dir}:{env.get('PATH', '')}"
+
+        res = subprocess.run(
+            ["bash", self.scraper_script, "https://example.com"],
+            cwd=self.test_dir,
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(res.returncode, 0)
+        expected = [
+            "http://example.com/one",
+            "https://example.org/two",
+            "http://example.net/three?a=1&b=2",
+        ]
+        self.assertEqual(res.stdout.splitlines(), expected)
+
 
 if __name__ == "__main__":
     unittest.main()
