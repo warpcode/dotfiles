@@ -13,7 +13,11 @@ typeset -r SCRIPT_DIR="${0:A:h}"
 # ---------------------------------------------------------------------------
 
 # Extract DOTFILES from relative script dir if missing
-typeset -r DOTFILES_DIR="${DOTFILES:-${SCRIPT_DIR:h}}"
+if [[ "${SCRIPT_DIR:t}" == "bin" && "${SCRIPT_DIR:h:t}" == "dot_local" ]]; then
+    typeset -r DOTFILES_DIR="${DOTFILES:-${SCRIPT_DIR:h:h}}"
+else
+    typeset -r DOTFILES_DIR="${DOTFILES:-${SCRIPT_DIR:h}}"
+fi
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -106,11 +110,8 @@ _cmd_profile_list() {
     if [[ "${active_profile}" != "global" && -d "${dir}/global" ]]; then
         search_dirs+=( "${dir}/global" )
     fi
-
-    # If neither the profile nor global/default folders exist but the base dir does
-    if [[ ${#search_dirs[@]} -eq 0 ]]; then
-         search_dirs=( "${dir}" )
-    fi
+    # Always include the base directory as the fallback
+    search_dirs+=( "${dir}" )
 
     local query="${filename:-*}"
     local found=0
