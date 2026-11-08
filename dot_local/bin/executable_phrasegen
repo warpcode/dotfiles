@@ -1,7 +1,35 @@
 #!/usr/bin/env bash
 
+# Security: validate words parameter to prevent option injection, integer overflow, and resource exhaustion (CWE-20 / CWE-190 / CWE-400)
+if [[ $# -ge 1 && -z "$1" ]]; then
+    echo "Usage: phrasegen [words (1-1000)] [delimiter]" >&2
+    exit 1
+fi
+
 words="${1:-4}"
+# Enforce integer range (1-1000) using strict regex to avoid bash arithmetic evaluation overflow
+if [[ ! "$words" =~ ^([1-9][0-9]{0,2}|1000)$ ]]; then
+    echo "Usage: phrasegen [words (1-1000)] [delimiter]" >&2
+    exit 1
+fi
+
+# Sanitize delimiter: default to single space, disallow newline characters to prevent command breakage
 delimiter="${2:- }"
+if [[ "$delimiter" =~ [$'\n'] ]]; then
+    echo "phrasegen: delimiter cannot contain newline characters" >&2
+    exit 1
+fi
+
+# Ensure wordlist directory and files exist
+wordlist_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/dotfiles/wordlists"
+shopt -s nullglob
+wordlists=("${wordlist_dir}"/google-10000-english-usa-no-swears-*.txt)
+shopt -u nullglob
+
+if (( ${#wordlists[@]} == 0 )); then
+    echo "phrasegen: no wordlist files found in ${wordlist_dir}" >&2
+    exit 1
+fi
 
 # Determine the best available random shuffling tool
 if command -v shuf >/dev/null 2>&1; then
@@ -16,7 +44,7 @@ else
     shuffle_cmd=(sort -R)
 fi
 
-exec cat "${XDG_CONFIG_HOME:-${HOME}/.config}"/dotfiles/wordlists/google-10000-english-usa-no-swears-*.txt \
+exec cat -- "${wordlists[@]}" \
     | "${shuffle_cmd[@]}" \
     | head -n "${words}" \
-    | paste -s -d "$delimiter" -
+    | paste -s --delimiters="${delimiter}" -- -
