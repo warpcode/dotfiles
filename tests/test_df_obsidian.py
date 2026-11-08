@@ -1,9 +1,14 @@
 import unittest
 import subprocess
 import os
+import shutil
 
 class TestDfObsidian(unittest.TestCase):
     def test_profile_load(self):
+        zsh_bin = shutil.which("zsh")
+        if not zsh_bin:
+            self.skipTest("zsh is not installed")
+
         script = """
         source dot_local/bin/executable_df.obsidian
         _profile_load "/tmp/test_df_obsidian/rules" "default.json"
@@ -15,7 +20,7 @@ class TestDfObsidian(unittest.TestCase):
 
         # Test basic success
         res = subprocess.run(
-            ["zsh", "-c", script],
+            [zsh_bin, "-c", script],
             capture_output=True,
             text=True
         )
@@ -23,6 +28,10 @@ class TestDfObsidian(unittest.TestCase):
         self.assertIn('"a":1', res.stdout.replace(' ', ''))
 
     def test_profile_load_merge(self):
+        zsh_bin = shutil.which("zsh")
+        if not zsh_bin:
+            self.skipTest("zsh is not installed")
+
         script = """
         export DOTFILES_PROFILE=my-profile
         source dot_local/bin/executable_df.obsidian
@@ -35,7 +44,7 @@ class TestDfObsidian(unittest.TestCase):
             f.write('{"fields": {"b": 3, "c": 4}}')
 
         res = subprocess.run(
-            ["zsh", "-c", script],
+            [zsh_bin, "-c", script],
             capture_output=True,
             text=True
         )

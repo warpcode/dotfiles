@@ -1,0 +1,55 @@
+<<<<<<< SEARCH
+import os
+
+class TestDfObsidian(unittest.TestCase):
+    def test_profile_load(self):
+        script = """
+=======
+import os
+import shutil
+
+class TestDfObsidian(unittest.TestCase):
+    def test_profile_load(self):
+        zsh_bin = shutil.which("zsh")
+        if not zsh_bin:
+            self.skipTest("zsh is not installed")
+        script = """
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+        # Test basic success
+        res = subprocess.run(
+            ["zsh", "-c", script],
+            capture_output=True,
+            text=True
+        )
+=======
+        # Test basic success
+        res = subprocess.run(
+            [zsh_bin, "-c", script],
+            capture_output=True,
+            text=True
+        )
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+    def test_profile_load_merge(self):
+        script = """
+=======
+    def test_profile_load_merge(self):
+        zsh_bin = shutil.which("zsh")
+        if not zsh_bin:
+            self.skipTest("zsh is not installed")
+        script = """
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+        res = subprocess.run(
+            ["zsh", "-c", script],
+            capture_output=True,
+            text=True
+        )
+=======
+        res = subprocess.run(
+            [zsh_bin, "-c", script],
+            capture_output=True,
+            text=True
+        )
+>>>>>>> REPLACE
