@@ -22,10 +22,12 @@ tui.progress.clear() { TUI_INDENT_LEVEL=$TUI_INDENT_LEVEL "$_tui_bin" progress-c
 
 tui.indent.push() {
     local delta="${1:-1}"
+    [[ "$delta" =~ ^-?[0-9]+$ ]] || return 1
     (( TUI_INDENT_LEVEL += delta ))
 }
 tui.indent.pop() {
     local delta="${1:-1}"
+    [[ "$delta" =~ ^-?[0-9]+$ ]] || return 1
     (( TUI_INDENT_LEVEL -= delta ))
     (( TUI_INDENT_LEVEL < 0 )) && TUI_INDENT_LEVEL=0
 }
@@ -34,6 +36,7 @@ tui.indent.reset() {
 }
 tui.with_indent() {
     local delta="${1:-1}"
+    [[ "$delta" =~ ^-?[0-9]+$ ]] || return 1
     shift
     local -i TUI_INDENT_LEVEL=$(( TUI_INDENT_LEVEL + delta ))
     "$@"
