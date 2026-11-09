@@ -32,19 +32,26 @@ if (( ${#wordlists[@]} == 0 )); then
 fi
 
 # Determine the best available random shuffling tool
+# PERF: shuf/gshuf -n "${words}" already bounds output to the requested word count,
+# making a subsequent 'head -n "${words}"' process fork and pipeline redundant.
+# We only pipe through 'head' when falling back to 'sort -R' (which outputs all lines).
 if command -v shuf >/dev/null 2>&1; then
     shuffle_cmd=(shuf -n "${words}")
     [[ -e /dev/urandom ]] && shuffle_cmd+=(--random-source=/dev/urandom)
+    exec cat -- "${wordlists[@]}" \
+        | "${shuffle_cmd[@]}" \
+        | paste -s --delimiters="${delimiter}" -- -
 elif command -v gshuf >/dev/null 2>&1; then
     shuffle_cmd=(gshuf -n "${words}")
     [[ -e /dev/urandom ]] && shuffle_cmd+=(--random-source=/dev/urandom)
+    exec cat -- "${wordlists[@]}" \
+        | "${shuffle_cmd[@]}" \
+        | paste -s --delimiters="${delimiter}" -- -
 else
     # Fallback to sort -R if shuf is not available.
-    # Note: sort -R is less efficient as it sorts the entire input.
-    shuffle_cmd=(sort -R)
+    # Note: sort -R is less efficient as it sorts the entire input and requires head.
+    exec cat -- "${wordlists[@]}" \
+        | sort -R \
+        | head -n "${words}" \
+        | paste -s --delimiters="${delimiter}" -- -
 fi
-
-exec cat -- "${wordlists[@]}" \
-    | "${shuffle_cmd[@]}" \
-    | head -n "${words}" \
-    | paste -s --delimiters="${delimiter}" -- -
