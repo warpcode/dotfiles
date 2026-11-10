@@ -18,7 +18,13 @@ if [[ -z "$SAVETO" ]]; then
     # Strip URL query parameters or fragments before determining basename
     clean_url="${URL%%\?*}"
     clean_url="${clean_url%%\#*}"
-    decoded_url="$(urldecode "$clean_url")"
+    # PERF: Fast substring check to bypass python3 subshell startup (~200ms)
+    # when the URL path contains no percent-encoded characters.
+    if [[ "$clean_url" == *%* ]]; then
+        decoded_url="$(urldecode "$clean_url")"
+    else
+        decoded_url="$clean_url"
+    fi
     SAVETO="$(basename -- "$decoded_url")"
     if [[ -z "$SAVETO" || "$SAVETO" == "/" || "$SAVETO" == "." ]]; then
         SAVETO="download"
