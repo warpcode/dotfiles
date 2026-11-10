@@ -276,6 +276,14 @@ if __name__ == "__main__":
 
     args = setup_arguments()
 
+    # Security: validate input file presence and existence before processing
+    if not os.path.isfile(args.input):
+        print(f"ffmpeg-rip: source '{args.input}' does not exist or is not a file", file=sys.stderr)
+        sys.exit(1)
+
+    # Normalize relative paths starting with '-' to prevent ffmpeg option injection
+    if args.input.startswith('-'):
+        args.input = f"./{args.input}"
 
     setup_initial()
 
