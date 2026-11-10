@@ -135,19 +135,42 @@ class TestAIGuardCommand(unittest.TestCase):
             f.flush()
 
             # Nested command is forbidden
-            res = run_guard("command", args=["bash", "-lc", "rm -rf /"], custom_config=f.name, stdin_payload="bash -lc \"rm -rf /\"")
+            res = run_guard("command", custom_config=f.name, stdin_payload={"CommandLine": "bash -lc \"rm -rf /\""})
             self.assertEqual(res.returncode, 2)
             self.assertIn("Destructive rm command forbidden", res.stderr)
 
             # Nested command targets a forbidden file
-            res = run_guard("command", args=["zsh", "-ic", "cat /etc/passwd"], custom_config=f.name, stdin_payload="zsh -ic \"cat /etc/passwd\"")
+            res = run_guard("command", custom_config=f.name, stdin_payload={"CommandLine": "zsh -ic \"cat /etc/passwd\""})
             self.assertEqual(res.returncode, 2)
             self.assertIn("Access to /etc/passwd blocked", res.stderr)
 
             # Extra flag characters are properly handled
-            res = run_guard("command", args=["sh", "-cl", "rm -rf /"], custom_config=f.name, stdin_payload="sh -cl \"rm -rf /\"")
+            res = run_guard("command", custom_config=f.name, stdin_payload={"CommandLine": "sh -cl \"rm -rf /\""})
             self.assertEqual(res.returncode, 2)
             self.assertIn("Destructive rm command forbidden", res.stderr)
+
+            # Additional flag order variants requested by review
+            res = run_guard("command", custom_config=f.name, stdin_payload={"CommandLine": "bash -c -- \"rm -rf /\""})
+            self.assertEqual(res.returncode, 2)
+            self.assertIn("Destructive rm command forbidden", res.stderr)
+
+            res = run_guard("command", custom_config=f.name, stdin_payload={"CommandLine": "bash -c -l \"rm -rf /\""})
+            self.assertEqual(res.returncode, 2)
+            self.assertIn("Destructive rm command forbidden", res.stderr)
+
+            res = run_guard("command", custom_config=f.name, stdin_payload={"CommandLine": "bash -oc errexit \"rm -rf /\""})
+            self.assertEqual(res.returncode, 2)
+            self.assertIn("Destructive rm command forbidden", res.stderr)
+
+            # Benign commands pass through
+            res = run_guard("command", custom_config=f.name, stdin_payload={"CommandLine": "bash -lc \"git status\""})
+            self.assertEqual(res.returncode, 0)
+            self.assertEqual(json.loads(res.stdout), {})
+
+            # Misinterpreted script flags pass through
+            res = run_guard("command", custom_config=f.name, stdin_payload={"CommandLine": "bash script.sh -config foo"})
+            self.assertEqual(res.returncode, 0)
+            self.assertEqual(json.loads(res.stdout), {})
 
     def test_safe_exact_commands(self):
         """Safe exact commands should pass through to IDE with exit code 0 and empty JSON."""
