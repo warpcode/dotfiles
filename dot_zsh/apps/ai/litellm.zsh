@@ -3,13 +3,6 @@ export LITELLM_API_ENDPOINT="${LITELLM_API_ENDPOINT:-$LITELLM_BASE_URL/v1}"
 export LITELLM_API_BASE="${LITELLM_API_BASE:-$LITELLM_API_ENDPOINT}"
 export LITELLM_API_KEY="${LITELLM_API_KEY:-}"
 
-##
-# Start a temporary LiteLLM server and run a command against it
-# Automatically starts litellm on a local port, waits for readiness,
-# executes the command, then cleans up the server
-# @param command The command to run (with arguments)
-# @return Exit code of the command
-##
 _ai.litellm.is_ready() {
     local port="$1"
     curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${port}/health" 2>/dev/null | grep -qE '^[23]'
@@ -39,6 +32,13 @@ _ai.litellm.wait_ready() {
     return 0
 }
 
+##
+# Start a temporary LiteLLM server and run a command against it
+# Automatically starts litellm on a local port, waits for readiness,
+# executes the command, then cleans up the server
+# @param command The command to run (with arguments)
+# @return Exit code of the command
+##
 ai.litellm.proxy.wrapper() {
     local port=4000
     local timeout=90
