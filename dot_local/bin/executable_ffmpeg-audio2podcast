@@ -6,16 +6,36 @@ then
     exit 1
 fi
 
-if ffmpeg -i "$1" 2>&1 | grep 'Invalid data found'		#check if it's video file
+# Security: validate input file presence and existence before processing
+if [[ ! -f "$1" ]]
+then
+    echo "Source '$1' does not exist or is not a file" >&2
+    exit 1
+fi
+
+# Normalize relative paths starting with '-' to prevent ffmpeg option injection
+SOURCE="$1"
+if [[ "$SOURCE" == -* ]]
+then
+    SOURCE="./$SOURCE"
+fi
+
+if ffmpeg -i "$SOURCE" 2>&1 | grep 'Invalid data found'		#check if it's video file
 then
    echo "$1 is NOT A VALID FILE!"
-   exit
+   exit 1
 fi
 
 if [[ "$2" == '' ]]
 then
     echo "No Output specified"
     exit 1
+fi
+
+OUTPUT="$2"
+if [[ "$OUTPUT" == -* ]]
+then
+    OUTPUT="./$OUTPUT"
 fi
 
 if [[ ! "${2##*.}" == 'mp4' ]] && [[ ! "${2##*.}" == 'm4a' ]]
@@ -45,5 +65,5 @@ fi
 
 echo "Using aac encoder: $AAC_LIB"
 
-ffmpeg -y -v error -stats -i "$1" -vn -sn -c:a $AAC_LIB -b:a 32k -ac 2 "$2" < /dev/null
+ffmpeg -y -v error -stats -i "$SOURCE" -vn -sn -c:a $AAC_LIB -b:a 32k -ac 2 "$OUTPUT" < /dev/null
 echo ""
