@@ -382,15 +382,31 @@ class CommandParser:
                     continue
                 cmd_base = os.path.basename(var[0])
                 if cmd_base in ("bash", "sh", "zsh", "dash"):
-                    for idx, tok in enumerate(var):
-                        if tok in ("-c", "-ec", "-ce", "-cx", "-xc") and idx + 1 < len(var):
-                            cmd_arg = var[idx + 1]
-                            nested_p = cls.parse(cmd_arg)
-                            if nested_p.error:
-                                return ParsedCommand(raw=raw, error=nested_p.error)
-                            extra_segments.extend(nested_p.segments)
-                            p.file_targets.extend(nested_p.file_targets)
+                    has_c = False
+                    idx = 1
+                    while idx < len(var):
+                        tok = var[idx]
+                        if tok == "--":
+                            idx += 1
                             break
+                        if tok.startswith("-") and not tok.startswith("--"):
+                            if "c" in tok[1:]:
+                                has_c = True
+                            if "o" in tok[1:] or "O" in tok[1:]:
+                                idx += 1
+                        elif tok in ("--rcfile", "--init-file", "+o", "+O"):
+                            idx += 1
+                        else:
+                            break
+                        idx += 1
+
+                    if has_c and idx < len(var):
+                        cmd_arg = var[idx]
+                        nested_p = cls.parse(cmd_arg)
+                        if nested_p.error:
+                            return ParsedCommand(raw=raw, error=nested_p.error)
+                        extra_segments.extend(nested_p.segments)
+                        p.file_targets.extend(nested_p.file_targets)
                 elif cmd_base == "find":
                     for idx, tok in enumerate(var):
                         if tok in ("-exec", "-execdir", "-ok", "-okdir") and idx + 1 < len(var):
