@@ -62,63 +62,116 @@ def augment_with_graphql(repo: str, prs: list[dict]) -> None:
     if len(parts) != 2:
         return
     owner, name = parts
+    if not owner or not name:
+        return
 
-    query_parts = []
+    needs_augmentation = []
     for pr in prs:
         num = pr.get("number")
-        if not num:
+        if not isinstance(num, int) or isinstance(num, bool) or num <= 0:
             continue
-        query_parts.append(
-            f"pr_{num}: pullRequest(number: {num}) {{"
-            f"commits(last: 1) {{nodes {{commit {{statusCheckRollup {{"
-            f"contexts(first: 100) {{nodes {{"
-            f"... on CheckRun {{name conclusion status}} "
-            f"... on StatusContext {{context state}} "
-            f"}}}}}}}}}}}}}}"
-        )
-    if not query_parts:
+        rollup = pr.get("statusCheckRollup")
+        if isinstance(rollup, list) and len(rollup) >= 100:
+            needs_augmentation.append(pr)
+
+    if not needs_augmentation:
         return
 
-    query = (
-        "query($owner: String!, $name: String!) { "
-        "repository(owner: $owner, name: $name) { " +
-        " ".join(query_parts) +
-        " } }"
-    )
+    batch_size = 50
+    for i in range(0, len(needs_augmentation), batch_size):
+        batch = needs_augmentation[i:i + batch_size]
 
-    code, out, _ = run(["gh", "api", "graphql", "-f", f"owner={owner}", "-f", f"name={name}", "-f", f"query={query}"])
-    if code != 0 or not out.strip():
-        return
+        pr_cursors = {pr["number"]: None for pr in batch}
+        pr_has_next = {pr["number"]: True for pr in batch}
 
-    try:
-        gql_data = json.loads(out)
-    except json.JSONDecodeError:
-        return
+        while any(pr_has_next.values()):
+            query_parts = []
+            active_prs = []
+            for pr in batch:
+                num = pr["number"]
+                if not pr_has_next[num]:
+                    continue
+                active_prs.append(pr)
+                cursor = pr_cursors[num]
+                after_clause = f', after: "{cursor}"' if cursor else ""
+                query_parts.append(
+                    f"pr_{num}: pullRequest(number: {num}) {{"
+                    f"commits(last: 1) {{nodes {{commit {{statusCheckRollup {{"
+                    f"contexts(first: 100{after_clause}) {{"
+                    f"pageInfo {{hasNextPage endCursor}} "
+                    f"nodes {{"
+                    f"__typename "
+                    f"... on CheckRun {{name conclusion status}} "
+                    f"... on StatusContext {{context state}} "
+                    f"}}}}}}}}}}}}}}"
+                )
 
-    repo_data = gql_data.get("data", {}).get("repository") or {}
-    for pr in prs:
-        num = pr.get("number")
-        if not num:
-            continue
-        pr_node = repo_data.get(f"pr_{num}")
-        if not pr_node:
-            continue
-        commits = pr_node.get("commits", {}).get("nodes") or []
-        if not commits:
-            continue
-        rollup = commits[0].get("commit", {}).get("statusCheckRollup")
-        if not rollup:
-            continue
-        contexts = rollup.get("contexts", {}).get("nodes") or []
+            if not query_parts:
+                break
 
-        if "statusCheckRollup" not in pr or pr["statusCheckRollup"] is None:
-            pr["statusCheckRollup"] = []
+            query = (
+                "query($owner: String!, $name: String!) { "
+                "repository(owner: $owner, name: $name) { " +
+                " ".join(query_parts) +
+                " } }"
+            )
 
-        existing_names = {c.get("name") or c.get("context") for c in pr["statusCheckRollup"]}
-        for c in contexts:
-            c_name = c.get("name") or c.get("context")
-            if c_name and c_name not in existing_names:
-                pr["statusCheckRollup"].append(c)
+            code, out, _ = run(["gh", "api", "graphql", "-f", f"owner={owner}", "-f", f"name={name}", "-f", f"query={query}"])
+            if code != 0 or not out.strip():
+                break
+
+            try:
+                gql_data = json.loads(out)
+            except json.JSONDecodeError:
+                break
+
+            if not isinstance(gql_data, dict):
+                break
+
+            repo_data = (gql_data.get("data") or {}).get("repository") or {}
+            if not repo_data and "errors" in gql_data:
+                break
+
+            for pr in active_prs:
+                num = pr["number"]
+                pr_node = repo_data.get(f"pr_{num}") or {}
+
+                commits = (pr_node.get("commits") or {}).get("nodes") or []
+                if not commits or not isinstance(commits[0], dict):
+                    pr_has_next[num] = False
+                    continue
+
+                rollup = (commits[0].get("commit") or {}).get("statusCheckRollup") or {}
+                contexts_obj = rollup.get("contexts") or {}
+
+                page_info = contexts_obj.get("pageInfo") or {}
+                pr_has_next[num] = bool(page_info.get("hasNextPage"))
+                pr_cursors[num] = page_info.get("endCursor")
+
+                contexts = contexts_obj.get("nodes") or []
+
+                if "statusCheckRollup" not in pr or pr["statusCheckRollup"] is None:
+                    pr["statusCheckRollup"] = []
+
+                existing_keys = set()
+                for c in pr["statusCheckRollup"]:
+                    if not isinstance(c, dict):
+                        continue
+                    t = c.get("__typename")
+                    if not t:
+                        t = "CheckRun" if "name" in c else "StatusContext"
+                    n = c.get("name") or c.get("context")
+                    if n:
+                        existing_keys.add((t, n))
+
+                for c in contexts:
+                    if not c or not isinstance(c, dict):
+                        continue
+                    t = c.get("__typename")
+                    c_name = c.get("name") or c.get("context")
+                    if c_name and (t, c_name) not in existing_keys:
+                        existing_keys.add((t, c_name))
+                        pr["statusCheckRollup"].append(c)
 
 
 def resolve_repo(explicit: str | None) -> str:

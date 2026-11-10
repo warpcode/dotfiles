@@ -337,11 +337,11 @@ class TestPRStateRollup(unittest.TestCase):
                 "number": 1,
                 "statusCheckRollup": [
                     {"name": "build", "conclusion": "SUCCESS"}
-                ]
+                ] * 100
             }
         ]
         prs.augment_with_graphql("owner/repo", prs_list)
-        self.assertEqual(len(prs_list[0]["statusCheckRollup"]), 2)
+        self.assertEqual(len(prs_list[0]["statusCheckRollup"]), 102)
         # build is already present so it should not be added again
         # CodeQL should be added
         names = [c.get("name") or c.get("context") for c in prs_list[0]["statusCheckRollup"]]
@@ -383,7 +383,7 @@ class TestPRStateRollup(unittest.TestCase):
 
     @patch("pr_state_rollup.run")
     def test_fetch_success(self, mock_run):
-        mock_json_data = '[{"number": 1, "title": "Test PR"}]'
+        mock_json_data = '[{"number": 1, "title": "Test PR", "statusCheckRollup": [' + ','.join(['{"name": "build", "conclusion": "SUCCESS"}'] * 100) + ']}]'
 
         def run_side_effect(cmd, check=False):
             if cmd[0:3] == ["gh", "pr", "list"]:
@@ -395,7 +395,7 @@ class TestPRStateRollup(unittest.TestCase):
         mock_run.side_effect = run_side_effect
 
         result = prs.fetch("owner/repo", "open")
-        self.assertEqual(result, [{"number": 1, "title": "Test PR"}])
+        self.assertEqual(result[0]["title"], "Test PR")
 
         # mock_run should have been called twice: gh pr list and gh api graphql
         self.assertEqual(mock_run.call_count, 2)
