@@ -44,7 +44,7 @@ class TestValidateShFlags(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.returncode, 0, msg=f"Stderr: {res.stderr}\nStdout: {res.stdout}")
         self.assertIn("SKIP unittest (--lint-only)", res.stdout)
         self.assertIn("all checks passed", res.stdout)
 
@@ -55,7 +55,7 @@ class TestValidateShFlags(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.returncode, 0, msg=f"Stderr: {res.stderr}\nStdout: {res.stdout}")
         self.assertIn("SKIP unittest (--fast)", res.stdout)
         self.assertIn("all checks passed", res.stdout)
 
@@ -66,7 +66,7 @@ class TestValidateShFlags(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.returncode, 0, msg=f"Stderr: {res.stderr}\nStdout: {res.stdout}")
         lines = res.stdout.strip().splitlines()
         last_line = lines[-1]
         data = json.loads(last_line)
@@ -107,7 +107,7 @@ class TestValidateShFailureModes(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        self.assertEqual(res.returncode, 1)
+        self.assertEqual(res.returncode, 1, msg=f"Stderr: {res.stderr}\nStdout: {res.stdout}")
         lines = res.stdout.strip().splitlines()
         last_line = lines[-1]
         data = json.loads(last_line)
@@ -130,7 +130,7 @@ class TestValidateShFailureModes(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        self.assertEqual(res.returncode, 1)
+        self.assertEqual(res.returncode, 1, msg=f"Stderr: {res.stderr}\nStdout: {res.stdout}")
         lines = res.stdout.strip().splitlines()
         last_line = lines[-1]
         data = json.loads(last_line)
@@ -153,7 +153,7 @@ class TestValidateShFailureModes(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        self.assertEqual(res.returncode, 1)
+        self.assertEqual(res.returncode, 1, msg=f"Stderr: {res.stderr}\nStdout: {res.stdout}")
         lines = res.stdout.strip().splitlines()
         last_line = lines[-1]
         data = json.loads(last_line)
