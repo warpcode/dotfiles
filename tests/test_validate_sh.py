@@ -81,6 +81,18 @@ class TestValidateShFlags(unittest.TestCase):
         self.assertEqual(data["failed"], 0)
         self.assertEqual(data["failures"], [])
 
+    def test_changed_flag(self):
+        # With no modified files, --changed should still pass cleanly
+        res = subprocess.run(
+            [VALIDATE_SH, "--changed"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(res.returncode, 0)
+        self.assertIn("all checks passed", res.stdout)
+        self.assertIn("PASS bash -n (syntax)", res.stdout)
+
 
 class TestValidateShFailureModes(unittest.TestCase):
     """Test validate.sh execution and error detection under failure conditions in an isolated repo."""
@@ -160,6 +172,28 @@ class TestValidateShFailureModes(unittest.TestCase):
 
         self.assertEqual(data["status"], 1)
         self.assertTrue(any("stray-artifacts" in f for f in data["failures"]))
+
+    def test_changed_flag_behavior(self):
+        # Create a clean branch history context so git diff HEAD...HEAD works as expected
+        subprocess.run(["git", "commit", "--allow-empty", "-m", "init"], cwd=self.temp_dir, capture_output=True, check=True)
+
+        # Untracked bad file should be picked up by validate.sh --changed
+        bad_sh = os.path.join(self.temp_dir, "broken.sh")
+        with open(bad_sh, "w") as f:
+            f.write("if then invalid syntax")
+
+        res = subprocess.run(
+            [self.temp_validate, "--changed", "--lint-only", "--json"],
+            cwd=self.temp_dir,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(res.returncode, 1)
+        lines = res.stdout.strip().splitlines()
+        last_line = lines[-1]
+        data = json.loads(last_line)
+        self.assertEqual(data["status"], 1)
+        self.assertTrue(any("bash -n (syntax)" in f for f in data["failures"]))
 
 
 if __name__ == "__main__":

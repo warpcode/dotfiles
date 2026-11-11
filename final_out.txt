@@ -1,0 +1,445 @@
+
+SKIP zsh -n (syntax) (zsh not installed)
+
+=== bash -n (syntax) ===
+PASS bash -n (syntax)
+
+=== stray-artifacts ===
+PASS stray-artifacts
+
+SKIP zsh tests (zsh not installed)
+
+SKIP shellcheck (not installed)
+
+=== py_compile ===
+PASS py_compile
+
+=== unittest ===
+--- ai-authoring-rules tests/
+.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.006s
+
+OK
+--- ai-authoring-skills tests/
+.............................
+----------------------------------------------------------------------
+Ran 29 tests in 0.033s
+
+OK
+--- ai-conversation-review test_parse_conversation.py
+.................
+----------------------------------------------------------------------
+Ran 17 tests in 0.002s
+
+OK
+--- ai-conversation-review test_review_conversation.py
+.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.005s
+
+OK
+--- ai-conversation-review test_search_tools.py
+../app/.github/skills/ai-conversation-review/scripts/search_tools.py:226: DeprecationWarning: datetime.datetime.utcfromtimestamp() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.fromtimestamp(timestamp, datetime.UTC).
+  ts = datetime.utcfromtimestamp(sec).isoformat() + "Z"
+.............
+----------------------------------------------------------------------
+Ran 15 tests in 0.027s
+
+OK
+--- changelog-audit tests/
+........
+----------------------------------------------------------------------
+Ran 8 tests in 0.006s
+
+OK
+--- changelog-authoring tests/
+....
+----------------------------------------------------------------------
+Ran 4 tests in 0.001s
+
+OK
+--- code-security-audit tests/
+.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.466s
+
+OK
+--- git-expert tests/
+.....................cannot parse owner/repo from remote URL: not-a-url
+.............................................................................
+----------------------------------------------------------------------
+Ran 98 tests in 0.906s
+
+OK
+--- git-worktrees tests/
+..................
+----------------------------------------------------------------------
+Ran 18 tests in 1.060s
+
+OK
+--- github-cli tests/
+..........gh pr list failed:
+gh pr list failed
+.........................command failed: false
+some error...
+----------------------------------------------------------------------
+Ran 38 tests in 0.382s
+
+OK
+# PR state -- owner/repo
+
+| # | State | Draft | Head | Review | Merge | Checks | +/- | Files | Flags |
+|---|---|---|---|---|---|---|---|---|---|
+| #1 |  |  | `` `` | - | - | pending build | +0/-0 | ? |  |
+
+--- github-dependabot tests/
+...............cannot parse owner/repo from remote URL: not-a-url
+.
+----------------------------------------------------------------------
+Ran 16 tests in 0.046s
+
+OK
+--- github-pr-review tests/
+.........................................................................................
+----------------------------------------------------------------------
+Ran 89 tests in 29.329s
+
+OK
+--- github-pr tests/
+..
+----------------------------------------------------------------------
+Ran 2 tests in 0.813s
+
+OK
+--- google-jules-agent-prompts tests/
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.009s
+
+OK
+Target repositories for dispatch (1):
+  - org/repo1 (branch: main)
+
+=== Dispatching to org/repo1 (main) ===
+Launching bolt on org/repo1...
+✓ Session created: s123
+No repositories active in the last 30 days detected in Jules. Falling back to all connected sources.
+--- google-jules-api tests/
+........Error: API endpoint must be relative to the configured Jules URL.
+.usage: main.py call [-h] [--verbose] [--page-size PAGE_SIZE]
+                    [--page-token PAGE_TOKEN]
+                    {GET} endpoint
+main.py call: error: argument method: invalid choice: 'POST' (choose from GET)
+.usage: main.py [-h] [--verbose] [--page-size PAGE_SIZE]
+               [--page-token PAGE_TOKEN]
+               {sources,source,sessions,session,check-sessions,create-session,approve-plan,send-message,nudge,activities,activity,call,delete-session,archive-session,archive-closed-prs}
+               ...
+main.py: error: argument subcommand: invalid choice: 'secret' (choose from sources, source, sessions, session, check-sessions, create-session, approve-plan, send-message, nudge, activities, activity, call, delete-session, archive-session, archive-closed-prs)
+.........Error: API endpoint must be relative to the configured Jules URL.
+....................................
+----------------------------------------------------------------------
+Ran 55 tests in 0.072s
+
+OK
+Archived session cand-1 (reversible)
+Archived session cand-2 (reversible)
+--- google-jules-triage tests/
+..............Fetching sessions page 1... (0 collected so far)
+...
+----------------------------------------------------------------------
+Ran 17 tests in 0.363s
+
+OK
+| id | title | state | last-activity | last-user-msg | verdict |
+|---|---|---|---|---|---|
+| live-1 | Live | COMPLETED | - (Completed) | - | CLOSED_NO_PR |
+| id | title | state | last-activity | last-user-msg | verdict |
+|---|---|---|---|---|---|
+| arch-1 | Archived | COMPLETED | - (Completed) | - | CLOSED_NO_PR |
+| live-1 | Live | COMPLETED | - (Completed) | - | CLOSED_NO_PR |
+_No sessions found._
+_No sessions found._
+--- jira-api tests/
+.............[2026-11-10T13:11:13] jira.py: Error: API endpoint must be relative to the configured Jira URL.
+..............................[2026-11-10T13:11:13] jira.py: Error: direct API calls are read-only; only GET is allowed.
+...........
+----------------------------------------------------------------------
+Ran 54 tests in 0.014s
+
+OK
+--- youtube tests/
+Using CPython 3.12.13 interpreter at: /home/jules/.pyenv/versions/3.12.13/bin/python3
+Creating virtual environment at: .venv
+Downloading pygments (1.2MiB)
+Downloading yt-dlp (3.0MiB)
+ Downloaded pygments
+ Downloaded yt-dlp
+Installed 15 packages in 41ms
+.................................Warning: Template not found at /app/.github/skills/youtube/scripts/../templates/video_transcript.md.tmpl. Falling back to JSON.
+...Error: Could not extract video ID from https://invalid.com
+....
+----------------------------------------------------------------------
+Ran 40 tests in 0.038s
+
+OK
+--- tests/test_ai_guard SKIPPED (pre-existing failures on master)
+--- tests/test_ai_guard_wrapper
+...........................................................................................................
+----------------------------------------------------------------------
+Ran 107 tests in 0.101s
+
+OK
+--- tests/test_commands_config
+ss.........sssssss
+----------------------------------------------------------------------
+Ran 18 tests in 0.002s
+
+OK (skipped=9)
+--- tests/test_dl
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.129s
+
+OK
+--- tests/test_install_sh
+........................
+----------------------------------------------------------------------
+Ran 24 tests in 0.301s
+
+OK
+--- tests/test_link_scraper
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.045s
+
+OK
+--- tests/test_openai_bridge_server
+..........2026-11-10 13:11:21,390 [INFO] Starting new conversation...
+2026-11-10 13:11:21,391 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,391 [INFO] agentapi exit code: 0 (stdout bytes: 68)
+2026-11-10 13:11:21,391 [INFO] Cached history hash 6a6cf97dc9d8279e1311d4968755272c268a300acb447f053a9772ebebee0f3f to conversation conv-999
+.2026-11-10 13:11:21,392 [INFO] Starting new conversation...
+2026-11-10 13:11:21,392 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,392 [INFO] agentapi exit code: 0 (stdout bytes: 71)
+2026-11-10 13:11:21,392 [WARNING] Parsed conversation ID '-invalid-id' from agentapi output is invalid.
+.......2026-11-10 13:11:21,398 [INFO] Starting new conversation...
+2026-11-10 13:11:21,399 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,399 [INFO] agentapi exit code: 0 (stdout bytes: 81)
+2026-11-10 13:11:21,399 [INFO] Cached history hash 68681498a92b6a2d425fe80f900f14a02e787891e8ca631298767010b8f23029 to conversation conv-100
+2026-11-10 13:11:21,399 [INFO] Continuing conversation conv-100 using send-message...
+2026-11-10 13:11:21,399 [INFO] Running command: agentapi send-message
+2026-11-10 13:11:21,399 [INFO] agentapi exit code: 0 (stdout bytes: 84)
+2026-11-10 13:11:21,399 [INFO] Cached history hash 87d82fa39ab4e8f6b8578eeae7b4a9ef31934d15160ec7a05e6bbe22c2ce1ace to conversation conv-100
+..2026-11-10 13:11:21,401 [INFO] Starting new conversation...
+2026-11-10 13:11:21,401 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,401 [INFO] agentapi exit code: 0 (stdout bytes: 68)
+2026-11-10 13:11:21,401 [INFO] Cached history hash 9a797268c6a37466fbac74debefb904a1ff55a33b741f2a7a18ee4370156efab to conversation conv-123
+...2026-11-10 13:11:21,403 [INFO] Starting new conversation...
+2026-11-10 13:11:21,403 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,403 [INFO] agentapi exit code: 1 (stdout bytes: 32)
+2026-11-10 13:11:21,403 [ERROR] agentapi returned error: Rate limit exceeded
+.2026-11-10 13:11:21,404 [INFO] Starting new conversation...
+2026-11-10 13:11:21,404 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,404 [INFO] agentapi exit code: 1 (stdout bytes: 2)
+.2026-11-10 13:11:21,405 [INFO] Starting new conversation...
+2026-11-10 13:11:21,406 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,406 [INFO] agentapi exit code: 1 (stdout bytes: 0)
+.2026-11-10 13:11:21,407 [INFO] Starting new conversation...
+2026-11-10 13:11:21,407 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,407 [INFO] agentapi exit code: 1 (stdout bytes: 0)
+2026-11-10 13:11:21,407 [WARNING] agentapi stderr present (bytes: 23)
+.2026-11-10 13:11:21,408 [INFO] Starting new conversation...
+2026-11-10 13:11:21,408 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,408 [ERROR] Failed to execute agentapi: Command 'agentapi' not found
+.2026-11-10 13:11:21,409 [INFO] Starting new conversation...
+2026-11-10 13:11:21,409 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,409 [INFO] agentapi exit code: 0 (stdout bytes: 73)
+2026-11-10 13:11:21,409 [INFO] Cached history hash 7fa489bbf1c593b4d3ad6f3f2df96285e37ab05c9542899618bc0c3dda34f4e9 to conversation conv-456
+2026-11-10 13:11:21,410 [INFO] Starting new conversation...
+2026-11-10 13:11:21,410 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,410 [INFO] agentapi exit code: 0 (stdout bytes: 73)
+2026-11-10 13:11:21,410 [INFO] Cached history hash 7d3224ca01957162ec2b0463d64f98fbdafaf953fe3aba433e9b2a9d6b1974c0 to conversation conv-456
+2026-11-10 13:11:21,410 [INFO] Starting new conversation...
+2026-11-10 13:11:21,410 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,410 [INFO] agentapi exit code: 0 (stdout bytes: 73)
+2026-11-10 13:11:21,410 [INFO] Cached history hash a426ffdabcb321bb461aabe8871673a4194df49ac6422acfd1569a5484adf1d2 to conversation conv-456
+2026-11-10 13:11:21,410 [WARNING] Requested model ['flash'] not recognized. Falling back to 'flash_lite'.
+2026-11-10 13:11:21,411 [INFO] Starting new conversation...
+2026-11-10 13:11:21,411 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,411 [INFO] agentapi exit code: 0 (stdout bytes: 73)
+2026-11-10 13:11:21,411 [INFO] Cached history hash 7fa489bbf1c593b4d3ad6f3f2df96285e37ab05c9542899618bc0c3dda34f4e9 to conversation conv-456
+2026-11-10 13:11:21,411 [WARNING] Requested model {} not recognized. Falling back to 'flash_lite'.
+2026-11-10 13:11:21,411 [INFO] Starting new conversation...
+2026-11-10 13:11:21,411 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,411 [INFO] agentapi exit code: 0 (stdout bytes: 73)
+2026-11-10 13:11:21,411 [INFO] Cached history hash 7fa489bbf1c593b4d3ad6f3f2df96285e37ab05c9542899618bc0c3dda34f4e9 to conversation conv-456
+2026-11-10 13:11:21,411 [WARNING] Requested model None not recognized. Falling back to 'flash_lite'.
+2026-11-10 13:11:21,411 [INFO] Starting new conversation...
+2026-11-10 13:11:21,412 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,412 [INFO] agentapi exit code: 0 (stdout bytes: 73)
+2026-11-10 13:11:21,412 [INFO] Cached history hash 7fa489bbf1c593b4d3ad6f3f2df96285e37ab05c9542899618bc0c3dda34f4e9 to conversation conv-456
+2026-11-10 13:11:21,412 [WARNING] Requested model 123 not recognized. Falling back to 'flash_lite'.
+2026-11-10 13:11:21,412 [INFO] Starting new conversation...
+2026-11-10 13:11:21,412 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,412 [INFO] agentapi exit code: 0 (stdout bytes: 73)
+2026-11-10 13:11:21,412 [INFO] Cached history hash 7fa489bbf1c593b4d3ad6f3f2df96285e37ab05c9542899618bc0c3dda34f4e9 to conversation conv-456
+2026-11-10 13:11:21,412 [WARNING] Requested model True not recognized. Falling back to 'flash_lite'.
+2026-11-10 13:11:21,412 [INFO] Starting new conversation...
+2026-11-10 13:11:21,412 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,412 [INFO] agentapi exit code: 0 (stdout bytes: 73)
+2026-11-10 13:11:21,412 [INFO] Cached history hash 7fa489bbf1c593b4d3ad6f3f2df96285e37ab05c9542899618bc0c3dda34f4e9 to conversation conv-456
+2026-11-10 13:11:21,413 [WARNING] Requested model False not recognized. Falling back to 'flash_lite'.
+2026-11-10 13:11:21,413 [INFO] Starting new conversation...
+2026-11-10 13:11:21,413 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,413 [INFO] agentapi exit code: 0 (stdout bytes: 73)
+2026-11-10 13:11:21,413 [INFO] Cached history hash 7fa489bbf1c593b4d3ad6f3f2df96285e37ab05c9542899618bc0c3dda34f4e9 to conversation conv-456
+2026-11-10 13:11:21,413 [WARNING] Requested model '' not recognized. Falling back to 'flash_lite'.
+2026-11-10 13:11:21,413 [INFO] Starting new conversation...
+2026-11-10 13:11:21,413 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,413 [INFO] agentapi exit code: 0 (stdout bytes: 73)
+2026-11-10 13:11:21,413 [INFO] Cached history hash 7fa489bbf1c593b4d3ad6f3f2df96285e37ab05c9542899618bc0c3dda34f4e9 to conversation conv-456
+2026-11-10 13:11:21,413 [WARNING] Requested model 'FLASH' not recognized. Falling back to 'flash_lite'.
+2026-11-10 13:11:21,413 [INFO] Starting new conversation...
+2026-11-10 13:11:21,413 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,413 [INFO] agentapi exit code: 0 (stdout bytes: 73)
+2026-11-10 13:11:21,413 [INFO] Cached history hash 7fa489bbf1c593b4d3ad6f3f2df96285e37ab05c9542899618bc0c3dda34f4e9 to conversation conv-456
+2026-11-10 13:11:21,414 [WARNING] Requested model ' flash' not recognized. Falling back to 'flash_lite'.
+2026-11-10 13:11:21,414 [INFO] Starting new conversation...
+2026-11-10 13:11:21,414 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,414 [INFO] agentapi exit code: 0 (stdout bytes: 73)
+2026-11-10 13:11:21,414 [INFO] Cached history hash 7fa489bbf1c593b4d3ad6f3f2df96285e37ab05c9542899618bc0c3dda34f4e9 to conversation conv-456
+2026-11-10 13:11:21,414 [WARNING] Requested model 'flash ' not recognized. Falling back to 'flash_lite'.
+2026-11-10 13:11:21,414 [INFO] Starting new conversation...
+2026-11-10 13:11:21,414 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,414 [INFO] agentapi exit code: 0 (stdout bytes: 73)
+2026-11-10 13:11:21,414 [INFO] Cached history hash 7fa489bbf1c593b4d3ad6f3f2df96285e37ab05c9542899618bc0c3dda34f4e9 to conversation conv-456
+2026-11-10 13:11:21,414 [WARNING] Requested model '../../etc/passwd' not recognized. Falling back to 'flash_lite'.
+2026-11-10 13:11:21,414 [INFO] Starting new conversation...
+2026-11-10 13:11:21,414 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,414 [INFO] agentapi exit code: 0 (stdout bytes: 73)
+2026-11-10 13:11:21,414 [INFO] Cached history hash 7fa489bbf1c593b4d3ad6f3f2df96285e37ab05c9542899618bc0c3dda34f4e9 to conversation conv-456
+2026-11-10 13:11:21,415 [WARNING] Requested model 'flash;rm -rf /' not recognized. Falling back to 'flash_lite'.
+2026-11-10 13:11:21,415 [INFO] Starting new conversation...
+2026-11-10 13:11:21,415 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,415 [INFO] agentapi exit code: 0 (stdout bytes: 73)
+2026-11-10 13:11:21,415 [INFO] Cached history hash 7fa489bbf1c593b4d3ad6f3f2df96285e37ab05c9542899618bc0c3dda34f4e9 to conversation conv-456
+2026-11-10 13:11:21,415 [WARNING] Requested model 'gpt-4' not recognized. Falling back to 'flash_lite'.
+2026-11-10 13:11:21,415 [INFO] Starting new conversation...
+2026-11-10 13:11:21,415 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,415 [INFO] agentapi exit code: 0 (stdout bytes: 73)
+2026-11-10 13:11:21,415 [INFO] Cached history hash 7fa489bbf1c593b4d3ad6f3f2df96285e37ab05c9542899618bc0c3dda34f4e9 to conversation conv-456
+2026-11-10 13:11:21,415 [WARNING] Requested model 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' not recognized. Falling back to 'flash_lite'.
+2026-11-10 13:11:21,415 [INFO] Starting new conversation...
+2026-11-10 13:11:21,415 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,416 [INFO] agentapi exit code: 0 (stdout bytes: 73)
+2026-11-10 13:11:21,416 [INFO] Cached history hash 7fa489bbf1c593b4d3ad6f3f2df96285e37ab05c9542899618bc0c3dda34f4e9 to conversation conv-456
+..2026-11-10 13:11:21,429 [INFO] Starting new conversation...
+..2026-11-10 13:11:21,457 [INFO] Starting new conversation...
+2026-11-10 13:11:21,457 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,457 [INFO] agentapi exit code: 0 (stdout bytes: 68)
+2026-11-10 13:11:21,457 [INFO] Cached history hash ddfb6cae8a6df31957b502de11d274af067d6c108f76b025cabc7ff36ad27520 to conversation conv-789
+.2026-11-10 13:11:21,458 [INFO] Starting new conversation...
+2026-11-10 13:11:21,459 [INFO] Running command: agentapi new-conversation
+2026-11-10 13:11:21,459 [INFO] agentapi exit code: 0 (stdout bytes: 71)
+2026-11-10 13:11:21,459 [INFO] Cached history hash 71a957e15fd0db6153e4ce3e0ab1626f667c3e53a4ad499dc5be0e5c334b4df0 to conversation conv-555
+2026-11-10 13:11:21,459 [INFO] Continuing conversation conv-555 using send-message...
+2026-11-10 13:11:21,459 [INFO] Running command: agentapi send-message
+2026-11-10 13:11:21,459 [INFO] agentapi exit code: 0 (stdout bytes: 73)
+2026-11-10 13:11:21,459 [INFO] Cached history hash 77e60c7bde26bff988bc033dc4dba52a7e6469497bfad22c248f62446e72c7e6 to conversation conv-555
+.....2026-11-10 13:11:21,464 [INFO] Starting OpenAI Bridge server on localhost:18081...
+2026-11-10 13:11:21,464 [INFO] KeyboardInterrupt received.
+2026-11-10 13:11:21,464 [INFO] Stopping OpenAI Bridge server...
+2026-11-10 13:11:21,466 [INFO] Starting OpenAI Bridge server on 127.0.0.1:18081...
+2026-11-10 13:11:21,466 [INFO] KeyboardInterrupt received.
+2026-11-10 13:11:21,466 [INFO] Stopping OpenAI Bridge server...
+2026-11-10 13:11:21,467 [INFO] Starting OpenAI Bridge server on ::1:18081...
+2026-11-10 13:11:21,467 [INFO] KeyboardInterrupt received.
+2026-11-10 13:11:21,467 [INFO] Stopping OpenAI Bridge server...
+.2026-11-10 13:11:21,469 [INFO] Starting OpenAI Bridge server on 127.0.0.1:18081...
+2026-11-10 13:11:21,469 [INFO] KeyboardInterrupt received.
+2026-11-10 13:11:21,469 [INFO] Stopping OpenAI Bridge server...
+..2026-11-10 13:11:21,473 [WARNING] Non-loopback host '0.0.0.0' requested, but bridge is unauthenticated. Enforcing loopback (127.0.0.1).
+2026-11-10 13:11:21,473 [INFO] Starting OpenAI Bridge server on 127.0.0.1:18081...
+2026-11-10 13:11:21,473 [INFO] KeyboardInterrupt received.
+2026-11-10 13:11:21,473 [INFO] Stopping OpenAI Bridge server...
+2026-11-10 13:11:21,474 [WARNING] Non-loopback host '0.0.0.0' requested, but bridge is unauthenticated. Enforcing loopback (127.0.0.1).
+2026-11-10 13:11:21,475 [INFO] Starting OpenAI Bridge server on 127.0.0.1:18081...
+2026-11-10 13:11:21,475 [INFO] KeyboardInterrupt received.
+2026-11-10 13:11:21,475 [INFO] Stopping OpenAI Bridge server...
+2026-11-10 13:11:21,476 [WARNING] Non-loopback host '::' requested, but bridge is unauthenticated. Enforcing loopback (127.0.0.1).
+2026-11-10 13:11:21,476 [INFO] Starting OpenAI Bridge server on 127.0.0.1:18081...
+2026-11-10 13:11:21,476 [INFO] KeyboardInterrupt received.
+2026-11-10 13:11:21,476 [INFO] Stopping OpenAI Bridge server...
+2026-11-10 13:11:21,477 [WARNING] Non-loopback host '::' requested, but bridge is unauthenticated. Enforcing loopback (127.0.0.1).
+2026-11-10 13:11:21,478 [INFO] Starting OpenAI Bridge server on 127.0.0.1:18081...
+2026-11-10 13:11:21,478 [INFO] KeyboardInterrupt received.
+2026-11-10 13:11:21,478 [INFO] Stopping OpenAI Bridge server...
+2026-11-10 13:11:21,479 [WARNING] Non-loopback host '192.168.1.1' requested, but bridge is unauthenticated. Enforcing loopback (127.0.0.1).
+2026-11-10 13:11:21,479 [INFO] Starting OpenAI Bridge server on 127.0.0.1:18081...
+2026-11-10 13:11:21,479 [INFO] KeyboardInterrupt received.
+2026-11-10 13:11:21,479 [INFO] Stopping OpenAI Bridge server...
+2026-11-10 13:11:21,480 [WARNING] Non-loopback host '192.168.1.1' requested, but bridge is unauthenticated. Enforcing loopback (127.0.0.1).
+2026-11-10 13:11:21,480 [INFO] Starting OpenAI Bridge server on 127.0.0.1:18081...
+2026-11-10 13:11:21,481 [INFO] KeyboardInterrupt received.
+2026-11-10 13:11:21,481 [INFO] Stopping OpenAI Bridge server...
+2026-11-10 13:11:21,483 [WARNING] Non-loopback host '10.0.0.1' requested, but bridge is unauthenticated. Enforcing loopback (127.0.0.1).
+2026-11-10 13:11:21,483 [INFO] Starting OpenAI Bridge server on 127.0.0.1:18081...
+2026-11-10 13:11:21,483 [INFO] KeyboardInterrupt received.
+2026-11-10 13:11:21,483 [INFO] Stopping OpenAI Bridge server...
+2026-11-10 13:11:21,485 [WARNING] Non-loopback host '10.0.0.1' requested, but bridge is unauthenticated. Enforcing loopback (127.0.0.1).
+2026-11-10 13:11:21,485 [INFO] Starting OpenAI Bridge server on 127.0.0.1:18081...
+2026-11-10 13:11:21,485 [INFO] KeyboardInterrupt received.
+2026-11-10 13:11:21,485 [INFO] Stopping OpenAI Bridge server...
+2026-11-10 13:11:21,486 [WARNING] Non-loopback host 'attacker.com' requested, but bridge is unauthenticated. Enforcing loopback (127.0.0.1).
+2026-11-10 13:11:21,486 [INFO] Starting OpenAI Bridge server on 127.0.0.1:18081...
+2026-11-10 13:11:21,486 [INFO] KeyboardInterrupt received.
+2026-11-10 13:11:21,486 [INFO] Stopping OpenAI Bridge server...
+2026-11-10 13:11:21,487 [WARNING] Non-loopback host 'attacker.com' requested, but bridge is unauthenticated. Enforcing loopback (127.0.0.1).
+2026-11-10 13:11:21,487 [INFO] Starting OpenAI Bridge server on 127.0.0.1:18081...
+2026-11-10 13:11:21,488 [INFO] KeyboardInterrupt received.
+2026-11-10 13:11:21,488 [INFO] Stopping OpenAI Bridge server...
+......
+----------------------------------------------------------------------
+Ran 47 tests in 0.121s
+
+OK
+--- tests/test_optimise_img
+......
+----------------------------------------------------------------------
+Ran 6 tests in 0.194s
+
+OK
+--- tests/test_phrasegen
+.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.130s
+
+OK
+--- tests/test_software_hooks SKIPPED (pre-existing failures on master)
+--- tests/test_targz
+......
+----------------------------------------------------------------------
+Ran 6 tests in 0.157s
+
+OK
+--- tests/test_ts2date
+........
+----------------------------------------------------------------------
+Ran 8 tests in 0.054s
+
+OK
+--- tests/test_validate_sh
+...s......
+----------------------------------------------------------------------
+Ran 10 tests in 5.904s
+
+OK (skipped=1)
+PASS unittest
+
+=== summary ===
+PASS bash -n (syntax)
+PASS stray-artifacts
+PASS py_compile
+PASS unittest
+all checks passed
