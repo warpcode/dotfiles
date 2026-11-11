@@ -7,7 +7,11 @@ setopt ERR_EXIT PIPE_FAIL NO_UNSET WARN_CREATE_GLOBAL EXTENDED_GLOB
 
 0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
 typeset -r SCRIPT_DIR="${0:A:h}"
-typeset -r DOTFILES="${DOTFILES:-${SCRIPT_DIR:h}}"
+if [[ "${SCRIPT_DIR:t}" == "bin" && "${SCRIPT_DIR:h:t}" == "dot_local" ]]; then
+  typeset -r DOTFILES="${DOTFILES:-${SCRIPT_DIR:h:h}}"
+else
+  typeset -r DOTFILES="${DOTFILES:-${SCRIPT_DIR:h}}"
+fi
 
 if [[ -z "${OBSIDIAN_VAULT:-}" ]]; then
   if [[ -d "$DOTFILES/docs" ]]; then
@@ -20,8 +24,40 @@ typeset -r OBSIDIAN_RULES="${DOTFILES}/assets/configs/obsidian/rules"
 typeset -r OBSIDIAN_TEMPLATE="${DOTFILES}/assets/templates/obsidian/note.md.tmpl"
 typeset -r OBSIDIAN_DATE_FORMAT="+%Y-%m-%dT%H:%M:%S%z"
 
-# Load profile configuration utilities
-source "${DOTFILES}/src/zsh/functions/profile_loader.zsh"
+#######################################
+# Load a profile file, merging across profile directories
+# Arguments:
+#   $1 - Base directory relative to DOTFILES or absolute
+#   $2 - Filename to load
+# Outputs:
+#   Writes merged JSON to stdout
+# Returns:
+#   0 on success, 1 on failure
+#######################################
+_profile_load() {
+  local dir="$1"
+  local file="$2"
+  local -a config_files
+  # During dev/test scripts are prefixed with executable_
+  local fs_bin="$SCRIPT_DIR/df.fs"
+  [[ -f "$SCRIPT_DIR/executable_df.fs" ]] && fs_bin="$SCRIPT_DIR/executable_df.fs"
+  config_files=( ${(f)"$("$fs_bin" profile list "$dir" "$file" 2>/dev/null)"} )
+  if [[ ${#config_files} -eq 0 || -z "${config_files[1]}" ]]; then
+    return 1
+  fi
+  local merged="{}"
+  local cfg
+  # Reverse array so global/default is applied before specific profile overrides
+  local -a config_files_rev
+  local i
+  for (( i=${#config_files[@]}; i>0; i-- )); do
+    config_files_rev+=( "${config_files[i]}" )
+  done
+  for cfg in "${config_files_rev[@]}"; do
+    merged=$(jq -s '.[0] * (.[1] // {})' <<<"${merged}" <"${cfg}") || return 1
+  done
+  print -r -- "${merged}"
+}
 
 #######################################
 # Description: Print error message to stderr.
@@ -193,13 +229,13 @@ _resolve_rule() {
 
   # Load profile-specific default.json and note_type.json
   local default_json
-  default_json=$(fs.profile.load "assets/configs/obsidian/rules" "default.json") || {
+  default_json=$(_profile_load "assets/configs/obsidian/rules" "default.json") || {
     err "Failed to load default rules"
     return 1
   }
 
   local rule_json
-  rule_json=$(fs.profile.load "assets/configs/obsidian/rules" "${note_type}.json") || {
+  rule_json=$(_profile_load "assets/configs/obsidian/rules" "${note_type}.json") || {
     err "Rule not found for type: $note_type"
     return 1
   }
@@ -360,7 +396,9 @@ _prompt_field() {
 #######################################
 _get_available_note_type() {
   local -a available_note_types=()
-  local active_profile=$("$DOTFILES/bin/df.fs" profile name 2>/dev/null || echo "default")
+  local fs_bin="$SCRIPT_DIR/df.fs"
+  [[ -f "$SCRIPT_DIR/executable_df.fs" ]] && fs_bin="$SCRIPT_DIR/executable_df.fs"
+  local active_profile=$("$fs_bin" profile name 2>/dev/null || echo "default")
 
   # Discover base note types
   available_note_types+=($OBSIDIAN_RULES/*.json(N:t:r))
@@ -642,4 +680,6 @@ main() {
   esac
 }
 
-main "$@"
+if [[ "${ZSH_EVAL_CONTEXT:-}" == "toplevel" ]]; then
+  main "$@"
+fi
