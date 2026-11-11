@@ -208,7 +208,7 @@ ensure_bootstrap_packages() {
       run_as_root dnf install -y git zsh curl jq ca-certificates
       ;;
     arch)
-      run_as_root pacman -Sy --noconfirm git zsh curl jq
+      run_as_root pacman -Syu --noconfirm git zsh curl jq
       ;;
     macos)
       setup_macos
