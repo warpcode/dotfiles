@@ -101,6 +101,8 @@ class TestValidateShFailureModes(unittest.TestCase):
         self.temp_dir = tempfile.mkdtemp()
         # Initialize temp directory as a git repository
         subprocess.run(["git", "init"], cwd=self.temp_dir, capture_output=True, check=True)
+        subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=self.temp_dir, capture_output=True, check=True)
+        subprocess.run(["git", "config", "user.name", "Test User"], cwd=self.temp_dir, capture_output=True, check=True)
         # Copy validate.sh to the temp repo
         self.temp_validate = os.path.join(self.temp_dir, "validate.sh")
         shutil.copy2(VALIDATE_SH, self.temp_validate)
