@@ -26,10 +26,18 @@ script for a step, run it rather than writing an equivalent loop.
 
 ## Validation
 Run `./validate.sh` from the repo root before declaring any change verified — never hand-assemble
-the individual checks. It mirrors CI (`lint.yml`, `python-tests.yml`): `zsh -n`,
-`py_compile`, zsh suites, and `unittest` discovery under `.github/skills/*/scripts`
-and `tests/` (locally, `./validate.sh` also executes `bash -n` and `shellcheck`). `--fast` skips the test suites, `--lint-only` runs syntax checks only, `--json`
-emits a machine-readable summary.
+the individual checks. It mirrors CI (`lint.yml`, `python-tests.yml`, `test.yml`): `zsh -n`,
+`py_compile`, zsh suites (`dot_zsh/tests/*.zsh` in `lint.yml`; `*.test.zsh` across matrix
+containers in `test.yml`), and `unittest` discovery under `.github/skills/*/scripts` and `tests/`
+(skipping pre-existing master failures `test_ai_guard` and `test_software_hooks` — never use that
+list to hide a new failure). Locally, `./validate.sh` also executes `bash -n` and `shellcheck`
+(which has no CI workflow). `--fast` skips the test suites, `--lint-only` runs syntax checks
+only, `--json` emits a machine-readable summary.
+
+## Architecture Invariants
+- **Secrets Management**: Scripts and tools MUST remain blind to the secret provider (such as `cloakenv`); rely on standard environment variables (`GITHUB_TOKEN` / `GH_TOKEN`) or native tool configs. Secret resolution is handled via `bin/df.config` (`resolve`/`hydrate`) and `bin/df.keychain`/`bin/df.keepass`.
+- **Profile Configuration Hierarchy**: Base configuration is loaded first, layered with `fs.profile.load` (`df.fs profile list`) overrides via `jq` recursive merge.
+- **Service Logging**: macOS `launchd` agents use shell redirection (`>`) in `ProgramArguments` for log truncation on each run; Linux `systemd` services delegate to `journald` via `StandardOutput=journal`.
 
 ## Destructive gates (explicit approval required)
 - `chezmoi apply` / `mise bootstrap --only packages`

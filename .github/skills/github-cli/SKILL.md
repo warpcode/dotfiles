@@ -95,9 +95,21 @@ These apply to **all** operations executed via `gh` CLI:
 5. **Always confirm before executing** any mutating operation. Present the full
    content and wait for explicit approval.
 6. **Always check for existing PRs** before creating — verify one doesn't
-   already exist for the branch.
+   already exist for the branch, and run `git-expert/scripts/branch_base_check.sh`
+   before `gh pr create`.
 7. **Always get explicit permission before posting a review** (COMMENT,
    APPROVE, REQUEST_CHANGES).
+8. **Repo Routing**: When the user gives a bare PR or issue number, confirm which
+   `<owner>/<repo>` it belongs to before running `gh pr view`/`gh issue view` —
+   never default to `warpcode/dotfiles`.
+9. **No N+1 PR Inspection Loops**: Never loop `gh pr view <n>` across multiple
+   PRs in shell loops (`for pr in ...`). Use `pr_state_rollup.py` or bulk `gh pr list`.
+10. **`gh` Output & Scratch Path Invariant**: `gh pr diff` stdout is truncated
+    by the tool. Never create `./scratch/` in the repo working tree; save diffs
+    and raw files to `/tmp/` or `<appDataDir>/brain/<conversation-id>/scratch/`
+    via `gh api repos/<o>/<r>/pulls/<n> -H "Accept: application/vnd.github.v3.diff" > /tmp/pr<n>.diff`
+    (or `raw`), or run `pr_audit_bundle.sh`. (`gh api` has no `--output` flag,
+    and `--jq` breaks on non-JSON responses.)
 8. **Execution priority**: Bundled workflow scripts first, then GitHub MCP
    server, then `gh` CLI. Never use raw `curl` against the GitHub REST or
    GraphQL APIs.
