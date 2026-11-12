@@ -208,7 +208,7 @@ ensure_bootstrap_packages() {
       run_as_root dnf install -y git zsh curl jq ca-certificates
       ;;
     arch)
-      run_as_root pacman -Sy --noconfirm git zsh curl jq
+      run_as_root pacman -Syu --noconfirm git zsh curl jq
       ;;
     macos)
       setup_macos
@@ -361,7 +361,7 @@ ensure_mise() {
     # Default allowlist hashes pin known versions of the mise install script.
     # These may go stale when upstream updates the script.
     # Use MISE_INSTALL_SHA256 env var to override them if needed.
-    local default_mise_hashes="82d35715f9d54b9ca4ff5b909ebeb4f4ded457d4fae15814db2fe6da5b943e1f 0f8c5212184c41bae5597fc4abbbd032cb7716021e9be1c6c5b720e022af449d 9f4fe9fc83d98ea5e39cbd5c900e9ad4875e39bdabf8e301ae17f0fce9cb5867 61cb4d61d523a90fc9c479891897f8d0bbf0f622bd909119c06d32cd2202a414"
+    local default_mise_hashes="2a58dd5a58832180431da1372f223ccad5b037114471c088a7ba3a395b6135c3 4b10a637258803f8df4b167545784a3575a5fcb2dd228ed43e2f9aef333c7e09 4199431672d889d4b9a8faed878e0a866bf01d74824d4289423ab62b4aca3995 55ac56863078539ec6bf5146e269a927481335edd3478477be7dfc84a22c2be7 fc9949b47999c44b02e6e25883da707e5b5b42c902fd0e42030088d1847a1233 82d35715f9d54b9ca4ff5b909ebeb4f4ded457d4fae15814db2fe6da5b943e1f 0f8c5212184c41bae5597fc4abbbd032cb7716021e9be1c6c5b720e022af449d 9f4fe9fc83d98ea5e39cbd5c900e9ad4875e39bdabf8e301ae17f0fce9cb5867 61cb4d61d523a90fc9c479891897f8d0bbf0f622bd909119c06d32cd2202a414"
     local expected_mise_sha256="${MISE_INSTALL_SHA256:-${default_mise_hashes}}"
 
     if curl -fsSL https://mise.run > "${mise_install_script}" && [[ -s "${mise_install_script}" ]]; then

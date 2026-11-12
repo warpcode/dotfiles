@@ -44,7 +44,7 @@ class TestValidateShFlags(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.returncode, 0, msg=f"Stderr: {res.stderr}\nStdout: {res.stdout}")
         self.assertIn("SKIP unittest (--lint-only)", res.stdout)
         self.assertIn("all checks passed", res.stdout)
 
@@ -55,7 +55,7 @@ class TestValidateShFlags(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.returncode, 0, msg=f"Stderr: {res.stderr}\nStdout: {res.stdout}")
         self.assertIn("SKIP unittest (--fast)", res.stdout)
         self.assertIn("all checks passed", res.stdout)
 
@@ -66,7 +66,7 @@ class TestValidateShFlags(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.returncode, 0, msg=f"Stderr: {res.stderr}\nStdout: {res.stdout}")
         lines = res.stdout.strip().splitlines()
         last_line = lines[-1]
         data = json.loads(last_line)
@@ -81,6 +81,18 @@ class TestValidateShFlags(unittest.TestCase):
         self.assertEqual(data["failed"], 0)
         self.assertEqual(data["failures"], [])
 
+    def test_changed_flag(self):
+        # With no modified files, --changed should still pass cleanly
+        res = subprocess.run(
+            [VALIDATE_SH, "--changed"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(res.returncode, 0)
+        self.assertIn("all checks passed", res.stdout)
+        self.assertIn("PASS bash -n (syntax)", res.stdout)
+
 
 class TestValidateShFailureModes(unittest.TestCase):
     """Test validate.sh execution and error detection under failure conditions in an isolated repo."""
@@ -89,6 +101,8 @@ class TestValidateShFailureModes(unittest.TestCase):
         self.temp_dir = tempfile.mkdtemp()
         # Initialize temp directory as a git repository
         subprocess.run(["git", "init"], cwd=self.temp_dir, capture_output=True, check=True)
+        subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=self.temp_dir, capture_output=True, check=True)
+        subprocess.run(["git", "config", "user.name", "Test User"], cwd=self.temp_dir, capture_output=True, check=True)
         # Copy validate.sh to the temp repo
         self.temp_validate = os.path.join(self.temp_dir, "validate.sh")
         shutil.copy2(VALIDATE_SH, self.temp_validate)
@@ -107,7 +121,7 @@ class TestValidateShFailureModes(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        self.assertEqual(res.returncode, 1)
+        self.assertEqual(res.returncode, 1, msg=f"Stderr: {res.stderr}\nStdout: {res.stdout}")
         lines = res.stdout.strip().splitlines()
         last_line = lines[-1]
         data = json.loads(last_line)
@@ -130,7 +144,7 @@ class TestValidateShFailureModes(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        self.assertEqual(res.returncode, 1)
+        self.assertEqual(res.returncode, 1, msg=f"Stderr: {res.stderr}\nStdout: {res.stdout}")
         lines = res.stdout.strip().splitlines()
         last_line = lines[-1]
         data = json.loads(last_line)
@@ -153,13 +167,35 @@ class TestValidateShFailureModes(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        self.assertEqual(res.returncode, 1)
+        self.assertEqual(res.returncode, 1, msg=f"Stderr: {res.stderr}\nStdout: {res.stdout}")
         lines = res.stdout.strip().splitlines()
         last_line = lines[-1]
         data = json.loads(last_line)
 
         self.assertEqual(data["status"], 1)
         self.assertTrue(any("stray-artifacts" in f for f in data["failures"]))
+
+    def test_changed_flag_behavior(self):
+        # Create a clean branch history context so git diff HEAD...HEAD works as expected
+        subprocess.run(["git", "commit", "--allow-empty", "-m", "init"], cwd=self.temp_dir, capture_output=True, check=True)
+
+        # Untracked bad file should be picked up by validate.sh --changed
+        bad_sh = os.path.join(self.temp_dir, "broken.sh")
+        with open(bad_sh, "w") as f:
+            f.write("if then invalid syntax")
+
+        res = subprocess.run(
+            [self.temp_validate, "--changed", "--lint-only", "--json"],
+            cwd=self.temp_dir,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(res.returncode, 1)
+        lines = res.stdout.strip().splitlines()
+        last_line = lines[-1]
+        data = json.loads(last_line)
+        self.assertEqual(data["status"], 1)
+        self.assertTrue(any("bash -n (syntax)" in f for f in data["failures"]))
 
 
 if __name__ == "__main__":

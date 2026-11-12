@@ -24,9 +24,6 @@ on:
 permissions:
   contents: read
 
-env:
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 jobs:
   test-linux:
     name: test-linux-${{ matrix.container }}
@@ -47,9 +44,12 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       # Install dotfiles using install.sh
       - name: Install dotfiles
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export DOTFILES="$(pwd)"
           export DOTFILES_SKIP_CHSHELL=1
@@ -86,9 +86,12 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       # Install dotfiles using install.sh
       - name: Install dotfiles
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export DOTFILES="$(pwd)"
           export DOTFILES_SKIP_CHSHELL=1

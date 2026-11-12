@@ -15,6 +15,7 @@ This skill provides guidelines and procedures for authoring, structuring, managi
 ## 1. Base Branch & Safety Rules
 
 - **Base Branch Rule**: NEVER infer or assume a base branch. Always ask the user if not explicitly provided. NEVER create a PR targeting `main` or `master` by default unless explicitly instructed.
+- **New Branch Origin & Check**: Always create new branches from `origin/<default-branch>` (e.g., `origin/master`), never from whatever unrelated branch happens to be checked out. Run `git-expert/scripts/branch_base_check.sh` before opening a PR.
 - **Draft PR Policy**: ALWAYS create pull requests as drafts (`--draft`) first.
 - **Explicit Approval Required**: Present the full proposed content (title, body, base/head branches, draft state) to the user for explicit approval before creating, publishing, or updating a PR. Obtain explicit confirmation before merging any PR.
 - **Domain Separation**: Keep Git-specific commands and workspace logic (local branching, commits, diffs) logically separate from GitHub PR API management.

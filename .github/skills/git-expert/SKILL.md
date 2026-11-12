@@ -113,3 +113,8 @@ Additional rules:
 - NEVER run `git commit` without explicit user permission.
 - NEVER rebase or force-push shared/public branches.
 - Prefer `git push --force-with-lease` over `git push --force`.
+- Always create new branches from `origin/<default-branch>` (e.g., `origin/master`),
+  never from whatever unrelated branch happens to be checked out.
+- **Non-Interactive Git Execution**: Never run `git rebase` or other interactive
+  commands without `-c core.editor=true` or `GIT_EDITOR=true` to prevent
+  interactive terminal hangs.

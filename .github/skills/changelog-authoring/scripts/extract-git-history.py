@@ -66,8 +66,12 @@ def get_latest_tag(cwd: Optional[Path] = None) -> Optional[str]:
 
 
 def get_first_commit(cwd: Optional[Path] = None) -> str:
-    """Get the initial root commit in git history."""
-    return run_git_cmd(["rev-list", "--max-parents=0", "HEAD"], cwd=cwd).splitlines()[0]
+    """Get the initial root commit in git history, or empty string if no commits exist."""
+    try:
+        lines = run_git_cmd(["rev-list", "--max-parents=0", "HEAD"], cwd=cwd).splitlines()
+        return lines[0] if lines else ""
+    except RuntimeError:
+        return ""
 
 
 def get_commit_sha(ref: str, cwd: Optional[Path] = None) -> str:
@@ -230,11 +234,15 @@ def fetch_git_commits(
     cwd: Optional[Path] = None,
 ) -> List[Dict[str, Any]]:
     """Retrieve commits between from_ref and to_ref."""
+    first_commit = get_first_commit(cwd)
     if not from_ref:
         base_tag = get_latest_tag(cwd)
-        from_ref = base_tag if base_tag else get_first_commit(cwd)
+        from_ref = base_tag if base_tag else first_commit
 
-    rev_range = f"{from_ref}..{to_ref}"
+    if not from_ref:
+        return []
+
+    rev_range = to_ref if (first_commit and from_ref == first_commit) else f"{from_ref}..{to_ref}"
     delimiter = "---RECORD_SPLIT---"
     field_delim = "---FIELD_SPLIT---"
     git_format = f"%H{field_delim}%h{field_delim}%an{field_delim}%ad{field_delim}%s{field_delim}%b{delimiter}"
@@ -532,6 +540,10 @@ def main():
     base_ref = args.from_ref or get_latest_tag()
     if not base_ref:
         base_ref = get_first_commit()
+
+    if not base_ref:
+        print("No commits found in repository.", file=sys.stderr)
+        sys.exit(0)
 
     commits = fetch_git_commits(
         from_ref=base_ref,

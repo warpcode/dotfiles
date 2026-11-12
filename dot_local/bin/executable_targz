@@ -2,20 +2,28 @@
 
 # Taken from https://github.com/mathiasbynens/dotfiles/blob/master/.functions
 
-if [[ $1 == '' ]]
-then
-    echo "No Source specified"
+set -euo pipefail
+
+# Validate input presence
+if [[ -z "${1:-}" ]]; then
+    echo "Usage: targz <source_path>" >&2
     exit 1
 fi
 
+# Ensure target source exists before processing
+if [[ ! -e "$1" ]]; then
+    echo "targz: source '$1' does not exist" >&2
+    exit 1
+fi
 
 tmpFile="${1%/}.tar"
 
-tar -cvf "${tmpFile}" --exclude=".DS_Store" "${1}" || exit 1
+# Use -- delimiter to prevent option injection when source or target filename starts with -
+tar -cvf "${tmpFile}" --exclude=".DS_Store" -- "${1}" || exit 1
 
 size=$(
-	stat -f"%z" "${tmpFile}" 2> /dev/null; # OS X `stat`
-	stat -c"%s" "${tmpFile}" 2> /dev/null # GNU `stat`
+	stat -f"%z" -- "${tmpFile}" 2> /dev/null || # OS X `stat`
+	stat -c"%s" -- "${tmpFile}" 2> /dev/null # GNU `stat`
 )
 
 cmd=""
@@ -31,12 +39,12 @@ else
 fi
 
 echo "Compressing .tar ($((size / 1000)) kB) using \`${cmd}\`…";
-"${cmd}" -v "${tmpFile}" || exit 1
-[ -f "${tmpFile}" ] && rm "${tmpFile}"
+"${cmd}" -v -- "${tmpFile}" || exit 1
+[ -f "${tmpFile}" ] && rm -f -- "${tmpFile}"
 
 zippedSize=$(
-	stat -f"%z" "${tmpFile}.gz" 2> /dev/null; # macOS `stat`
-	stat -c"%s" "${tmpFile}.gz" 2> /dev/null; # GNU `stat`
+	stat -f"%z" -- "${tmpFile}.gz" 2> /dev/null || # macOS `stat`
+	stat -c"%s" -- "${tmpFile}.gz" 2> /dev/null # GNU `stat`
 );
 
 echo "${tmpFile}.gz ($((zippedSize / 1000)) kB) created successfully.";

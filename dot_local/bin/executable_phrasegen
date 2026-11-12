@@ -1,22 +1,68 @@
 #!/usr/bin/env bash
 
+# Security: validate words parameter to prevent option injection, integer overflow, and resource exhaustion (CWE-20 / CWE-190 / CWE-400)
+if [[ $# -ge 1 && -z "$1" ]]; then
+    echo "Usage: phrasegen [words (1-1000)] [delimiter]" >&2
+    exit 1
+fi
+
 words="${1:-4}"
+# Enforce integer range (1-1000) using strict regex to avoid bash arithmetic evaluation overflow
+if [[ ! "$words" =~ ^([1-9][0-9]{0,2}|1000)$ ]]; then
+    echo "Usage: phrasegen [words (1-1000)] [delimiter]" >&2
+    exit 1
+fi
+
+# Sanitize delimiter: default to single space, disallow newline characters to prevent command breakage
 delimiter="${2:- }"
+if [[ "$delimiter" =~ [$'\n'] ]]; then
+    echo "phrasegen: delimiter cannot contain newline characters" >&2
+    exit 1
+fi
+
+# Ensure wordlist directory and files exist
+wordlist_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/dotfiles/wordlists"
+shopt -s nullglob
+wordlists=("${wordlist_dir}"/google-10000-english-usa-no-swears-*.txt)
+shopt -u nullglob
+
+if (( ${#wordlists[@]} == 0 )); then
+    echo "phrasegen: no wordlist files found in ${wordlist_dir}" >&2
+    exit 1
+fi
 
 # Determine the best available random shuffling tool
+# PERF: When a single wordlist is present, shuf/gshuf accepts the file directly as an argument,
+# bypassing the 'cat' process fork and pipeline. When multiple wordlists exist, cat is used
+# because shuf/gshuf only accepts at most one FILE operand. sort -R accepts multiple files directly.
+# Furthermore, shuf/gshuf -n "${words}" already bounds output to the requested word count,
+# making a subsequent 'head -n "${words}"' process fork and pipeline redundant.
 if command -v shuf >/dev/null 2>&1; then
     shuffle_cmd=(shuf -n "${words}")
     [[ -e /dev/urandom ]] && shuffle_cmd+=(--random-source=/dev/urandom)
+    if (( ${#wordlists[@]} == 1 )); then
+        "${shuffle_cmd[@]}" -- "${wordlists[0]}" \
+            | exec paste -s --delimiters="${delimiter}" -- -
+    else
+        exec cat -- "${wordlists[@]}" \
+            | "${shuffle_cmd[@]}" \
+            | paste -s --delimiters="${delimiter}" -- -
+    fi
 elif command -v gshuf >/dev/null 2>&1; then
     shuffle_cmd=(gshuf -n "${words}")
     [[ -e /dev/urandom ]] && shuffle_cmd+=(--random-source=/dev/urandom)
+    if (( ${#wordlists[@]} == 1 )); then
+        "${shuffle_cmd[@]}" -- "${wordlists[0]}" \
+            | exec paste -s --delimiters="${delimiter}" -- -
+    else
+        exec cat -- "${wordlists[@]}" \
+            | "${shuffle_cmd[@]}" \
+            | paste -s --delimiters="${delimiter}" -- -
+    fi
 else
     # Fallback to sort -R if shuf is not available.
-    # Note: sort -R is less efficient as it sorts the entire input.
-    shuffle_cmd=(sort -R)
+    # Note: sort -R accepts multiple input files natively.
+    sort -R -- "${wordlists[@]}" \
+        | head -n "${words}" \
+        | exec paste -s --delimiters="${delimiter}" -- -
 fi
-
-exec cat "${XDG_CONFIG_HOME:-${HOME}/.config}"/dotfiles/wordlists/google-10000-english-usa-no-swears-*.txt \
-    | "${shuffle_cmd[@]}" \
-    | head -n "${words}" \
-    | paste -s -d "$delimiter" -

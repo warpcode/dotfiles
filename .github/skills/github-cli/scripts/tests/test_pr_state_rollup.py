@@ -295,6 +295,66 @@ class TestPRStateRollup(unittest.TestCase):
         # Slept duration should be capped at 10s (the remaining time until deadline).
         self.assertEqual(len(slept_durations), 1)
         self.assertAlmostEqual(slept_durations[0], 10.0, places=4)
+    @patch("pr_state_rollup.run")
+    def test_augment_with_graphql(self, mock_run):
+        mock_run.return_value = (0, """
+        {
+          "data": {
+            "repository": {
+              "pr_1": {
+                "commits": {
+                  "nodes": [
+                    {
+                      "commit": {
+                        "statusCheckRollup": {
+                          "contexts": {
+                            "nodes": [
+                              {
+                                "__typename": "CheckRun",
+                                "name": "CodeQL",
+                                "conclusion": "SUCCESS",
+                                "status": "COMPLETED"
+                              },
+                              {
+                                "__typename": "StatusContext",
+                                "context": "build",
+                                "state": "SUCCESS"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+        """, "")
+        prs_list = [
+            {
+                "number": 1,
+                "statusCheckRollup": [
+                    {"name": "build", "conclusion": "SUCCESS"}
+                ] * 100
+            }
+        ]
+        prs.augment_with_graphql("owner/repo", prs_list)
+        self.assertEqual(len(prs_list[0]["statusCheckRollup"]), 102)
+        # build is already present so it should not be added again
+        # CodeQL should be added
+        names = [c.get("name") or c.get("context") for c in prs_list[0]["statusCheckRollup"]]
+        self.assertIn("build", names)
+        self.assertIn("CodeQL", names)
+
+        args, kwargs = mock_run.call_args
+        cmd = args[0]
+        self.assertEqual(cmd[0:3], ["gh", "api", "graphql"])
+        self.assertIn("-f", cmd)
+        self.assertIn("owner=owner", cmd)
+        self.assertIn("name=repo", cmd)
+
     @patch("pr_state_rollup.subprocess.run")
     def test_run_success(self, mock_sub_run):
         mock_proc = MagicMock()
@@ -323,21 +383,31 @@ class TestPRStateRollup(unittest.TestCase):
 
     @patch("pr_state_rollup.run")
     def test_fetch_success(self, mock_run):
-        mock_json_data = '[{"number": 1, "title": "Test PR"}]'
-        mock_run.return_value = (0, mock_json_data, "")
+        mock_json_data = '[{"number": 1, "title": "Test PR", "statusCheckRollup": [' + ','.join(['{"name": "build", "conclusion": "SUCCESS"}'] * 100) + ']}]'
+
+        def run_side_effect(cmd, check=False):
+            if cmd[0:3] == ["gh", "pr", "list"]:
+                return (0, mock_json_data, "")
+            elif cmd[0:3] == ["gh", "api", "graphql"]:
+                return (0, "{}", "")
+            return (1, "", "unknown command")
+
+        mock_run.side_effect = run_side_effect
 
         result = prs.fetch("owner/repo", "open")
-        self.assertEqual(result, [{"number": 1, "title": "Test PR"}])
-        mock_run.assert_called_once()
-        args, _ = mock_run.call_args
-        cmd = args[0]
-        self.assertEqual(cmd[0], "gh")
-        self.assertEqual(cmd[1], "pr")
-        self.assertEqual(cmd[2], "list")
-        self.assertIn("--repo", cmd)
-        self.assertIn("owner/repo", cmd)
-        self.assertIn("--state", cmd)
-        self.assertIn("open", cmd)
+        self.assertEqual(result[0]["title"], "Test PR")
+
+        # mock_run should have been called twice: gh pr list and gh api graphql
+        self.assertEqual(mock_run.call_count, 2)
+        args_list = mock_run.call_args_list
+        cmd1 = args_list[0][0][0]
+        self.assertEqual(cmd1[0], "gh")
+        self.assertEqual(cmd1[1], "pr")
+        self.assertEqual(cmd1[2], "list")
+        self.assertIn("--repo", cmd1)
+        self.assertIn("owner/repo", cmd1)
+        self.assertIn("--state", cmd1)
+        self.assertIn("open", cmd1)
 
     @patch("pr_state_rollup.run")
     def test_fetch_empty_output(self, mock_run):
