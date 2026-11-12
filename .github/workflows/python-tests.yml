@@ -6,7 +6,7 @@ name: Python Skill Tests
 # request triggered no workflow at all and every "tests pass" claim in a PR body
 # was unverifiable. Suites referenced from an earlier PR review:
 #   ai-authoring-skills (10), git-expert (12), git-worktrees (.github/skills/git-worktrees/scripts/tests/test_worktrees.py), github-cli (6),
-#   google-jules-api (41), jira-api (45), ai-conversation-review (3)
+#   jira-api (45), ai-conversation-review (3)
 
 on:
   push:

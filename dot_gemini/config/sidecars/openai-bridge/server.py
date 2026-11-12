@@ -303,7 +303,7 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
 
             cmd = ["agentapi", "new-conversation", f"--model={model}", "--", initial_prompt]
 
-        # SECURITY: Log command identifiers without leaking full prompt or argument payloads to logs (.jules/sentinel.md)
+        # SECURITY: Log command identifiers without leaking full prompt or argument payloads to logs
         logging.info(f"Running command: {cmd[0]} {cmd[1]}")
         try:
             res = subprocess.run(cmd, capture_output=True, text=True, check=False)
@@ -315,7 +315,7 @@ class OpenAIBridgeHandler(http.server.BaseHTTPRequestHandler):
             self.send_error_response(500, f"Failed to execute agentapi command: {str(e)}")
             return
 
-        # SECURITY: Do not log raw stdout/stderr containing LLM responses or error details (.jules/sentinel.md)
+        # SECURITY: Do not log raw stdout/stderr containing LLM responses or error details
         logging.info(f"agentapi exit code: {returncode} (stdout bytes: {len(stdout)})")
         if stderr:
             logging.warning(f"agentapi stderr present (bytes: {len(stderr)})")

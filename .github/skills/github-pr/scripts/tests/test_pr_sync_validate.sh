@@ -64,13 +64,7 @@ bash "$SCRIPT" 1 --repo o/r --repo-dir "$T/clone" --wt "$T/wt1" >/dev/null 2>&1;
 set -e
 expect_rc "existing worktree refused" 1 "$rc"
 
-# 5. Jules-owned PR refused.
-set +e
-STUB_AUTHOR=google-labs-jules bash "$SCRIPT" 2 --repo o/r --repo-dir "$T/clone" --wt "$T/wt2" >/dev/null 2>&1; rc=$?
-set -e
-expect_rc "Jules-owned PR refused" 1 "$rc"
-
-# 6. Closed PR refused.
+# 5. Closed PR refused.
 set +e
 STUB_STATE=MERGED bash "$SCRIPT" 3 --repo o/r --repo-dir "$T/clone" --wt "$T/wt3" >/dev/null 2>&1; rc=$?
 set -e
