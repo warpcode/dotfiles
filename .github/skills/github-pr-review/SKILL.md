@@ -84,7 +84,7 @@ Systematically evaluate each area, prioritizing findings in the following order:
 - If the user requests multiple PRs, preserve strict boundaries by running them as separate lifecycles in the selected order; never broaden one lifecycle to cover multiple PRs.
 
 ### 2. Contextual Audit
-- **Resolve owner/repo first**: never assume the owner from the local directory or from a remembered `user/repo`. Run `git remote -v` (or `gh repo view --json nameWithOwner`) and use that `<owner>/<repo>` for every subsequent `gh` call. Verified 2026-09-26: a guessed owner (`exampleuser/cloakenv`) failed with `Could not resolve to a Repository` while the real remote was `warpcode/cloakenv`.
+- **Resolve owner/repo first**: never assume the owner or default to `warpcode/dotfiles` when given a bare PR number — confirm which `<owner>/<repo>` the PR belongs to if ambiguous, or verify with `git remote -v` / `gh repo view --json nameWithOwner` when operating inside the target repo. Verified 2026-09-26: a guessed owner (`exampleuser/cloakenv`) failed with `Could not resolve to a Repository` while the real remote was `warpcode/cloakenv`.
 - Use `gh pr view <pr> --repo <owner>/<repo> --json <fields>` and `gh pr diff <pr> --repo <owner>/<repo>` to retrieve the PR state without checking out the branch.
 - **Scratch Directory Location**: NEVER create or write to `./scratch/` in the active workspace tree. Always write temporary diffs, review payloads, and scratch files to `/tmp/` or the conversation artifact directory (`<appDataDir>/brain/<conversation-id>/scratch/`).
 - **Isolate the real diff with a blob-hash sweep (do this first)**: `gh pr diff` is merge-base-relative, so a branch cut before several merges reports files that `main` already contains verbatim. Comparing blob hashes per file collapses the diff to what actually changed, and a `SAME` production file is immediate evidence of a self-reverting refactor or an already-merged change:
@@ -370,7 +370,7 @@ The procedure below is for **resolving conflicts on a branch you may modify**,
 which the audit worktrees deliberately do not support:
 1. Create an isolated scratch worktree to preserve the main workspace:
    ```bash
-   git worktree add scratch/worktree-<pr> -b fix/pr-<pr> origin/<branch>
+   git worktree add /tmp/wt-pr-<pr> -b fix/pr-<pr> origin/<branch>
    ```
 2. Merge the default branch into the PR branch non-interactively:
    ```bash
@@ -386,7 +386,7 @@ which the audit worktrees deliberately do not support:
    ```
 5. Clean up the isolated worktree and branch:
    ```bash
-   git worktree remove scratch/worktree-<pr> && git branch -D fix/pr-<pr>
+   git worktree remove /tmp/wt-pr-<pr> && git branch -D fix/pr-<pr>
    ```
 > ⚠️ **Key Invariant**: Never use `git rebase` or force push to update PR branches. A merge commit pushed to the PR branch is fully supported by GitHub, passes CI, and will be cleanly squashed into a single commit upon squash-merging into `master`.
 

@@ -234,12 +234,12 @@ Note: `.github/workflows/` holds CI pipelines, not agent workflows. Do not route
 
 ## Stage 5: Report
 
-Use `templates/conversation-review-report.md`. The report MUST contain, in order:
+Keep conversation reviews **compact and lean**, containing strictly actionable suggestions, advice, and concrete improvements (diffs). **Omit metadata headers, event stats, and compliance audit sections** unless explicitly requested.
 
-1. **Metrics**: tool calls, failed calls, offloadable share, projected calls after scripting, review data-gathering calls used, and history baseline comparison.
-2. **Script candidates**: sequence replaced, occurrences, calls saved, class, suggested script, target skill.
-3. **Guideline violations**: rule, source file, turn/event evidence, diagnosis.
-4. **Suggestions / Advice**: one line each, with a priority (High/Medium/Low) and evidence (turn number).
-5. **Improvements**: concrete diffs per target file.
+Emphasize evaluating workflow scriptability (eliminating tool-call sprawl and cutting context token usage) and execution efficiency (identifying N+1 sequential loops, missing batch/bulk endpoints, un-cached immutable queries, and missing server-side filtering).
+
+1. **Script candidates**: sequence replaced, calls saved, suggested script, target skill.
+2. **Suggestions / Advice**: one line each, with priority (High/Medium/Low) and turn evidence.
+3. **Improvements**: concrete diffs per target file.
 
 No praise, no narrative recap, no findings without evidence.
