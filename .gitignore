@@ -67,6 +67,3 @@ venv.bak/
 *.temp
 .DS_Store?
 .serena/
-.jules/*
-!.jules/bolt.md
-!.jules/sentinel.md

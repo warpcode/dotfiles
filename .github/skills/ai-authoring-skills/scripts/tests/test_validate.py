@@ -240,7 +240,7 @@ class TestScriptability(unittest.TestCase):
     def test_passing_mention_is_not_flagged(self):
         self.assertEqual(self.findings(
             "Flag any use of `python3 -c \"...\"` as an audit finding.",
-            "There is no gh in the local clone; Jules has no API access.",
+            "There is no gh in the local clone; the runner has no API access.",
         ), [])
 
     def test_english_for_is_not_a_loop(self):

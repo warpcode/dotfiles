@@ -62,7 +62,7 @@ Pattern: `<optional-prefix>-<domain>-<task-or-type>` (lowercase, hyphen-separate
 | `shell-` | Shell scripting, idioms, and environment configuration | `shell-scripting` |
 | `database-` | Schema migration, query optimization, data modeling | `database-architecture` |
 | `project-` / `task-` / `pm-` | Project planning, PRDs, ADRs, task decomposition, progress tracking | `project-planner`, `project-tracker` |
-| (none) | Standalone tools, products, or converters | `email-classifier`, `google-jules-api` |
+| (none) | Standalone tools, products, or converters | `email-classifier`, `jira-api` |
 
 ### Description Rules
 

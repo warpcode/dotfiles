@@ -190,7 +190,7 @@ class TestSiblingConflicts(unittest.TestCase):
         carried a byte-identical server.py."""
         rows = [
             {"branch": "sentinel/x", "pr": 180, "verdict": "KEEP", "behind": 0,
-             "unique_files": ["server.py", ".jules/sentinel.md"], "landed": False},
+             "unique_files": ["server.py", "tests/test_server.py"], "landed": False},
             {"branch": "tools/y", "pr": 181, "verdict": "KEEP", "behind": 0,
              "unique_files": ["server.py", "new_tool.py"], "landed": False},
         ]

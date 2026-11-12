@@ -26,7 +26,6 @@ Options:
   --dry-run           print what would run; mutate nothing
   -h, --help          show this help
 
-Refuses Jules-owned PR branches (start a new Jules session instead).
 Exit codes: 0 ok | 1 usage/setup failure | 2 merge conflicts | 3 validation failed | 4 push failed
 EOF
 }
@@ -63,9 +62,6 @@ META="$(gh pr view "$PR" --repo "$REPO" --json headRefName,baseRefName,author,st
 IFS=$'\t' read -r HEAD BASE AUTHOR STATE <<<"$META"
 
 [ "$STATE" = "OPEN" ] || { echo "error: PR #$PR is $STATE, not OPEN" >&2; exit 1; }
-case "$AUTHOR" in
-  *jules*|*Jules*) echo "error: PR #$PR is Jules-owned ($AUTHOR); do not push to its branch. Start a new Jules session." >&2; exit 1 ;;
-esac
 echo "PR #$PR: $HEAD <- merge origin/$BASE (author: $AUTHOR, worktree: $WT)"
 
 if [ "$CONTINUE" = 0 ]; then

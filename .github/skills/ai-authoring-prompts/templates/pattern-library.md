@@ -189,7 +189,7 @@ Pre-write rebuttals to predictable model rationalizations:
 - **Cognitive Layer**: Layer 3 (Operational Boundaries)
 - **Intent**: Ensure all shell and tool invocations operate strictly non-interactively without terminal hangs, editor locks, or interactive confirmation blocks.
 - **Applicability**:
-  - *Apply When*: Scheduled tasks (e.g. Jules), CI/CD runners, background cron automations, autonomous subagents.
+  - *Apply When*: Scheduled tasks, CI/CD runners, background cron automations, autonomous subagents.
   - *Do NOT Apply When*: Interactive terminal pair programming where manual user input is intended.
 - **Companion Patterns**: `[P3.1]` Negative Constraints, `[P1.4]` Deterministic SOP Operator.
 - **Canonical Prompt Clause**:
