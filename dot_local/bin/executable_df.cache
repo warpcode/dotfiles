@@ -16,7 +16,7 @@ typeset -r SCRIPT_DIR="${0:A:h}"
 # Constants
 # ---------------------------------------------------------------------------
 
-readonly CACHE_BASE_DIR="${HOME}/.cache/dotfiles"
+readonly CACHE_BASE_DIR="${DF_CACHE_DIR:-${HOME}/.cache/dotfiles}"
 readonly CACHE_KEY_SERVICE="dotfiles-cache-key"
 readonly USER_NAME="${USER:-$(whoami)}"
 
@@ -311,6 +311,70 @@ cmd_can_encrypt() {
   _can_encrypt && _get_enc_key >/dev/null 2>&1
 }
 
+#######################################
+# Show cache statistics.
+# Arguments:
+#   $1 - TTL in seconds (default: 86400).
+#######################################
+cmd_stats() {
+  local ttl="${1:-86400}"
+  local total=0 expired=0 size=0
+
+  if [[ ! -d "${CACHE_BASE_DIR}" ]]; then
+    print -r -- "Total entries: 0"
+    print -r -- "Expired entries: 0"
+    print -r -- "Disk usage: 0 bytes"
+    return 0
+  fi
+
+  local f
+  for f in "${CACHE_BASE_DIR}"/**/*.cache(N-.); do
+    : $(( total++ ))
+    local mtime
+    mtime="$(_file_mtime "$f")"
+    local fsize
+    fsize="$(zstat +size "$f" 2>/dev/null || echo 0)"
+    : $(( size += fsize ))
+
+    local now="${EPOCHSECONDS}"
+    if (( now - mtime >= ttl )); then
+      : $(( expired++ ))
+    fi
+  done
+
+  print -r -- "Total entries: ${total}"
+  print -r -- "Expired entries: ${expired}"
+  print -r -- "Disk usage: ${size} bytes"
+
+  return 0
+}
+
+#######################################
+# Prune expired cache entries.
+# Arguments:
+#   $1 - TTL in seconds (default: 86400).
+#######################################
+cmd_prune() {
+  local ttl="${1:-86400}"
+
+  if [[ ! -d "${CACHE_BASE_DIR}" ]]; then
+    return 0
+  fi
+
+  local f
+  for f in "${CACHE_BASE_DIR}"/**/*.cache(N-.); do
+    local mtime
+    mtime="$(_file_mtime "$f")"
+
+    local now="${EPOCHSECONDS}"
+    if (( now - mtime >= ttl )); then
+      rm -f -- "$f"
+    fi
+  done
+
+  return 0
+}
+
 _usage() {
   print -r -- "Usage: df.cache <command> [args...]"
   print -r -- ""
@@ -321,6 +385,8 @@ _usage() {
   print -r -- "  clear [ns]               Clear namespace or all caches"
   print -r -- "  is-encrypted <ns> <key>  Check if entry is encrypted (exit code)"
   print -r -- "  can-encrypt              Check if encryption is available (exit code)"
+  print -r -- "  stats [ttl]              Show cache statistics (default TTL: 86400s)"
+  print -r -- "  prune [ttl]              Prune expired cache entries (default TTL: 86400s)"
 }
 
 # ---------------------------------------------------------------------------
@@ -340,6 +406,8 @@ main() {
     clear)        cmd_clear "$@" ;;
     is-encrypted) cmd_is_encrypted "$@" ;;
     can-encrypt)  cmd_can_encrypt ;;
+    stats)        cmd_stats "$@" ;;
+    prune)        cmd_prune "$@" ;;
     -h|--help)    _usage ;;
     *)
       err "Unknown command: ${cmd:-<none>}"
