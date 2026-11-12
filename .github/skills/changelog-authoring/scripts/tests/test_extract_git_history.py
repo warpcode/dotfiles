@@ -90,6 +90,26 @@ class TestExtractGitHistory(unittest.TestCase):
             self.assertIn("<!--\nchangelog-provenance:", md_output)
             self.assertIn("<details>\n<summary><b>Release Provenance & Audit Trail</b>", md_output)
 
+    def test_get_first_commit_empty_repo(self):
+        with patch.object(extract_git_history, "run_git_cmd", return_value=""):
+            self.assertEqual(extract_git_history.get_first_commit(), "")
+        with patch.object(extract_git_history, "run_git_cmd", side_effect=RuntimeError("ambiguous HEAD")):
+            self.assertEqual(extract_git_history.get_first_commit(), "")
+
+    def test_fetch_git_commits_empty_and_single_commit_repo(self):
+        with patch.object(extract_git_history, "get_first_commit", return_value=""), \
+             patch.object(extract_git_history, "get_latest_tag", return_value=None), \
+             patch.object(extract_git_history, "run_git_cmd") as mock_git:
+            self.assertEqual(extract_git_history.fetch_git_commits(None, "HEAD"), [])
+            mock_git.assert_not_called()
+
+        with patch.object(extract_git_history, "get_first_commit", return_value="rootsha"), \
+             patch.object(extract_git_history, "get_latest_tag", return_value=None), \
+             patch.object(extract_git_history, "run_git_cmd", return_value="") as mock_git:
+            extract_git_history.fetch_git_commits(None, "HEAD")
+            cmd_args = mock_git.call_args[0][0]
+            self.assertEqual(cmd_args[0:2], ["log", "HEAD"])
+
 
 if __name__ == "__main__":
     unittest.main()
