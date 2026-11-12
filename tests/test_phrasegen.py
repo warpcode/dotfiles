@@ -42,6 +42,14 @@ class TestPhrasegenScript(unittest.TestCase):
         generated = res.stdout.strip().split(" ")
         self.assertEqual(len(generated), 4)
 
+    def test_multiple_wordlists(self):
+        second_file = self.wordlist_dir / "google-10000-english-usa-no-swears-test2.txt"
+        second_file.write_text("kiwi\nlemon\nmango\n")
+        res = self._run_phrasegen()
+        self.assertEqual(res.returncode, 0, msg=f"stderr: {res.stderr}")
+        generated = res.stdout.strip().split(" ")
+        self.assertEqual(len(generated), 4)
+
     def test_custom_word_count_and_delimiter(self):
         res = self._run_phrasegen(["2", "-"])
         self.assertEqual(res.returncode, 0, msg=f"stderr: {res.stderr}")

@@ -32,26 +32,37 @@ if (( ${#wordlists[@]} == 0 )); then
 fi
 
 # Determine the best available random shuffling tool
-# PERF: shuf/gshuf -n "${words}" already bounds output to the requested word count,
+# PERF: When a single wordlist is present, shuf/gshuf accepts the file directly as an argument,
+# bypassing the 'cat' process fork and pipeline. When multiple wordlists exist, cat is used
+# because shuf/gshuf only accepts at most one FILE operand. sort -R accepts multiple files directly.
+# Furthermore, shuf/gshuf -n "${words}" already bounds output to the requested word count,
 # making a subsequent 'head -n "${words}"' process fork and pipeline redundant.
-# We only pipe through 'head' when falling back to 'sort -R' (which outputs all lines).
 if command -v shuf >/dev/null 2>&1; then
     shuffle_cmd=(shuf -n "${words}")
     [[ -e /dev/urandom ]] && shuffle_cmd+=(--random-source=/dev/urandom)
-    exec cat -- "${wordlists[@]}" \
-        | "${shuffle_cmd[@]}" \
-        | paste -s --delimiters="${delimiter}" -- -
+    if (( ${#wordlists[@]} == 1 )); then
+        "${shuffle_cmd[@]}" -- "${wordlists[0]}" \
+            | exec paste -s --delimiters="${delimiter}" -- -
+    else
+        exec cat -- "${wordlists[@]}" \
+            | "${shuffle_cmd[@]}" \
+            | paste -s --delimiters="${delimiter}" -- -
+    fi
 elif command -v gshuf >/dev/null 2>&1; then
     shuffle_cmd=(gshuf -n "${words}")
     [[ -e /dev/urandom ]] && shuffle_cmd+=(--random-source=/dev/urandom)
-    exec cat -- "${wordlists[@]}" \
-        | "${shuffle_cmd[@]}" \
-        | paste -s --delimiters="${delimiter}" -- -
+    if (( ${#wordlists[@]} == 1 )); then
+        "${shuffle_cmd[@]}" -- "${wordlists[0]}" \
+            | exec paste -s --delimiters="${delimiter}" -- -
+    else
+        exec cat -- "${wordlists[@]}" \
+            | "${shuffle_cmd[@]}" \
+            | paste -s --delimiters="${delimiter}" -- -
+    fi
 else
     # Fallback to sort -R if shuf is not available.
-    # Note: sort -R is less efficient as it sorts the entire input and requires head.
-    exec cat -- "${wordlists[@]}" \
-        | sort -R \
+    # Note: sort -R accepts multiple input files natively.
+    sort -R -- "${wordlists[@]}" \
         | head -n "${words}" \
-        | paste -s --delimiters="${delimiter}" -- -
+        | exec paste -s --delimiters="${delimiter}" -- -
 fi
