@@ -34,6 +34,7 @@ fi
 FAST=0
 LINT_ONLY=0
 JSON=0
+CHANGED=0
 
 usage() {
     sed -n '3,20p' "$0" | sed 's/^# \{0,1\}//'
@@ -45,6 +46,7 @@ for arg in "$@"; do
         --fast) FAST=1 ;;
         --lint-only) LINT_ONLY=1 ;;
         --json) JSON=1 ;;
+        --changed) CHANGED=1 ;;
         -h | --help) usage 0 ;;
         *)
             printf 'validate: unknown argument: %s\n' "$arg" >&2
@@ -55,6 +57,19 @@ done
 
 FAILED=()
 PASSED=()
+
+CHANGED_FILES=""
+if [ "$CHANGED" -eq 1 ]; then
+    base_ref="HEAD"
+    if git show-ref -q --verify refs/remotes/origin/master; then
+        base_ref="origin/master"
+    elif git show-ref -q --verify refs/heads/master; then
+        base_ref="master"
+    fi
+    # Get modified, added, and deleted files relative to base_ref, plus untracked files
+    CHANGED_FILES="$(git diff --name-only "$base_ref"...HEAD 2>/dev/null || true)"
+    CHANGED_FILES="$CHANGED_FILES"$'\n'"$(git ls-files --others --exclude-standard 2>/dev/null || true)"
+fi
 
 # ---------------------------------------------------------------------------
 # Check runner
@@ -80,6 +95,20 @@ have() {
     command -v "$1" >/dev/null 2>&1
 }
 
+is_changed() {
+    local target="$1"
+    # Remove leading ./ if present in the target for matching
+    target="${target#./}"
+
+    if [ "$CHANGED" -eq 1 ]; then
+        if echo "$CHANGED_FILES" | grep -F -q -x "$target"; then
+            return 0
+        fi
+        return 1
+    fi
+    return 0
+}
+
 # ---------------------------------------------------------------------------
 # Shell / Zsh syntax (mirrors lint.yml)
 # ---------------------------------------------------------------------------
@@ -87,6 +116,9 @@ have() {
 lint_zsh() {
     local failed=0
     while IFS= read -r f; do
+        if ! is_changed "$f"; then
+            continue
+        fi
         zsh -n "$f" || failed=1
     done < <(find . -name '*.zsh' -not -path './.git/*')
     return "$failed"
@@ -101,6 +133,9 @@ fi
 lint_bash() {
     local failed=0
     while IFS= read -r f; do
+        if ! is_changed "$f"; then
+            continue
+        fi
         bash -n "$f" || failed=1
     done < <(find . -name '*.sh' -not -path './.git/*')
     return "$failed"
@@ -109,11 +144,22 @@ lint_bash() {
 run "bash -n (syntax)" lint_bash
 
 check_stray_artifacts() {
-    local strays
+    local strays filtered_strays=""
     strays="$(git ls-files 2>/dev/null | grep -E '\.(rej|orig)$' || true)"
+
     if [ -n "$strays" ]; then
-        printf 'Found stray patch/merge artifact files:\n%s\n' "$strays" >&2
-        return 1
+        for stray in $strays; do
+            if is_changed "$stray"; then
+                filtered_strays="$filtered_strays$stray"$'\n'
+            fi
+        done
+        # Remove trailing newline
+        filtered_strays="${filtered_strays%?}"
+
+        if [ -n "$filtered_strays" ]; then
+            printf 'Found stray patch/merge artifact files:\n%s\n' "$filtered_strays" >&2
+            return 1
+        fi
     fi
     return 0
 }
@@ -132,6 +178,29 @@ run_zsh_tests() {
     local failed=0 ran=0
     for suite in dot_zsh/tests/*.zsh; do
         [ -f "$suite" ] || continue
+
+        if [ "$CHANGED" -eq 1 ]; then
+            local should_run=0
+            if is_changed "$suite"; then
+                should_run=1
+            else
+                # Check if the corresponding source file changed
+                local suite_basename
+                suite_basename="$(basename "$suite" .test.zsh)"
+                suite_basename="${suite_basename%.zsh}" # fallback if not .test.zsh
+                # Search for any changed file matching the basename
+                while IFS= read -r f; do
+                    [ -n "$f" ] || continue
+                    if [[ "$f" == *"/${suite_basename}.zsh" ]]; then
+                        should_run=1
+                        break
+                    fi
+                done <<< "$CHANGED_FILES"
+            fi
+
+            [ "$should_run" -eq 1 ] || continue
+        fi
+
         ran=$((ran + 1))
         printf -- '--- %s\n' "$suite"
         zsh "$suite" || failed=1
@@ -159,8 +228,21 @@ fi
 # SC1071, not real findings. Zsh is covered by the `zsh -n` check above.
 shellcheck_all() {
     local failed=0
+    local target_files=""
+
+    for f in $(git ls-files '*.sh'); do
+        if is_changed "$f"; then
+            target_files="$target_files $f"
+        fi
+    done
+
+    if [ -z "$target_files" ] && [ "$CHANGED" -eq 1 ]; then
+        return 0
+    fi
+
     # shellcheck disable=SC2046
-    shellcheck --severity=warning --external-sources $(git ls-files '*.sh') ||
+    # shellcheck disable=SC2086
+    shellcheck --severity=warning --external-sources $target_files ||
         failed=1
     return "$failed"
 }
@@ -176,7 +258,23 @@ fi
 # ---------------------------------------------------------------------------
 
 compile_python() {
-    python3 -m compileall -q .github/skills tests dot_agents
+    if [ "$CHANGED" -eq 1 ]; then
+        local target_files=""
+        while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            # Only consider files ending in .py
+            case "$f" in
+                *.py) target_files="$target_files $f" ;;
+            esac
+        done <<< "$CHANGED_FILES"
+
+        if [ -n "$target_files" ]; then
+            # shellcheck disable=SC2086
+            python3 -m compileall -q $target_files
+        fi
+    else
+        python3 -m compileall -q .github/skills tests dot_agents
+    fi
 }
 
 run "py_compile" compile_python
@@ -230,6 +328,26 @@ run_skill_tests() {
 
     for scripts_dir in .github/skills/*/scripts; do
         [ -d "$scripts_dir" ] || continue
+
+        if [ "$CHANGED" -eq 1 ]; then
+            # Extract the skill directory (one level up from scripts_dir)
+            local skill_dir
+            skill_dir="$(dirname "$scripts_dir")"
+            # Remove leading ./ if present for matching
+            skill_dir="${skill_dir#./}"
+
+            local should_run=0
+            while IFS= read -r f; do
+                [ -n "$f" ] || continue
+                if [[ "$f" == "$skill_dir/"* ]]; then
+                    should_run=1
+                    break
+                fi
+            done <<< "$CHANGED_FILES"
+
+            [ "$should_run" -eq 1 ] || continue
+        fi
+
         run_single_skill_tests "$scripts_dir" || failed=1
     done
 
@@ -244,6 +362,31 @@ run_root_python_tests() {
     # is invoked as tests.<module>.
     for test_file in tests/test_*.py; do
         [ -e "$test_file" ] || continue
+
+        if [ "$CHANGED" -eq 1 ]; then
+            local should_run=0
+            if is_changed "$test_file"; then
+                should_run=1
+            else
+                local module_basename
+                module_basename="$(basename "$test_file" .py)"
+                # Typical naming: test_foo.py tests foo.py or foo/
+                # Check for either test_foo or foo changes
+                local src_pattern="${module_basename#test_}"
+                local src_pattern2="${src_pattern//_/-}"
+                local src_pattern3="${src_pattern//_/.}"
+                while IFS= read -r f; do
+                    [ -n "$f" ] || continue
+                    if [[ "$f" == *"$src_pattern"* ]] || [[ "$f" == *"$src_pattern2"* ]] || [[ "$f" == *"$src_pattern3"* ]]; then
+                        should_run=1
+                        break
+                    fi
+                done <<< "$CHANGED_FILES"
+            fi
+
+            [ "$should_run" -eq 1 ] || continue
+        fi
+
         module="$(basename "$test_file" .py)"
         case " $skip_root_suites " in
             *" $module "*)
