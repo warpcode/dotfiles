@@ -33,11 +33,13 @@ Review code only. Use issue/PR context to validate requirements and surface defe
 - For security-scanner comment triage, load `code-security-audit` and assess each claim against the changed code and actual response contract. Keep the review limited to the reported findings.
 - **Scrutinize Validity & Utility**: Never assume proposed changes are correct, necessary, or useful. Verify whether the underlying bug or requirement is genuine or based on a false premise/hallucination, and whether the modification provides real utility rather than code churn or unneeded complexity.
 - **Source Issue Requirements Verification**: When the PR or branch originates from or references an issue/ticket (Jira or GitHub), always review the source issue to verify that the implementation completely and accurately fulfills the stated requirements and acceptance criteria.
+- **Leftover Test/Debug Artifacts**: Check the diff for test data or test/debug code left in by accident—such as debug statements (`console.log`, `print`, `debugger`, `breakpoint()`, `set -x`), hardcoded dummy/mock values, temporary bypasses or feature overrides, commented-out code, or stray scratch/fixture files in production paths or configs.
 - Prioritize:
   - requirement fulfillment against source issue/ticket
   - validity of premise and genuine utility
   - bugs and functional correctness
   - security issues
+  - leftover test/debug code and test data
   - style guideline violations (load the relevant style guideline skill if available)
   - performance and efficiency improvements
   - readability and maintainability

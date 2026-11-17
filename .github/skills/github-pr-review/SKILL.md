@@ -56,13 +56,14 @@ calls. `--help` documents each one. Paths are relative to this skill's directory
 Systematically evaluate each area, prioritizing findings in the following order:
 1. **Bugs and functional correctness**
 2. **Security issues**
-3. **Style guideline violations**
-4. **Performance and efficiency**
-5. **Readability and maintainability**
-6. **Anti-patterns and duplication**
-7. **Project convention consistency**
-8. **Issue requirement compliance**
-9. **Unresolved PR comments and review questions**
+3. **Leftover test/debug code and test data**
+4. **Style guideline violations**
+5. **Performance and efficiency**
+6. **Readability and maintainability**
+7. **Anti-patterns and duplication**
+8. **Project convention consistency**
+9. **Issue requirement compliance**
+10. **Unresolved PR comments and review questions**
 
 ### General Review & Branch Constraints
 - **Branch Dynamism**: PR review workflows and scripts MUST NOT hardcode default branch names (e.g. `origin/master` or `master`). Instead, query the PR metadata dynamically (`baseRefName`) to determine the target base branch.
@@ -115,6 +116,10 @@ Systematically evaluate each area, prioritizing findings in the following order:
       - *Fabricated Format Assumptions*: A bot may invent a domain fact and build on it. Observed on warpcode/cloakenv#203, which changed the tag delimiter to `strings.IndexAny(s, ",;")` on the stated premise that "KeePass tag strings can use both commas and semicolons as delimiters" — the repository's tag parser split on commas exclusively, and no fixture used semicolons. Verify claimed domain facts against existing implementations and fixtures rather than PR descriptions; check consistency across all call sites.
     - **Relevance & Scope**: Is the change relevant and appropriately scoped to the repository and task?
     - **Genuine Utility**: Does the change deliver concrete value, or is it superficial churn, redundant abstractions, or unnecessary refactoring?
+- **Leftover Test Code & Test Data Check**: Inspect added and modified files—especially production paths, configs, and newly added files—for test/debug artifacts left in by accident:
+    - Debug statements (`console.log`, `print`, `fmt.Println`, `debugger`, `breakpoint()`, `set -x`), commented-out blocks, or temporary `WIP`/`HACK` overrides.
+    - Hardcoded test data, dummy/placeholder values, mock responses, or auth/validation bypasses in non-test code.
+    - Stray scratch files, local output dumps, or unintended test fixtures/seed data committed in the diff.
 - Analyze the diff for functional correctness, security, and conventions.
 - For independent coverage, load `code-review` and `code-security-audit` before synthesizing findings; verify every proposed anchor against the PR diff.
 - **Large-PR Delegation**: For diffs beyond ~500 lines or >5 files, skip loading those skills into the main context; instead launch two parallel `general` subagents (functional/conventions + security) with a shared evidence protocol: strictly read-only, head evidence via `git show origin/pr-<n>:<path>` (fetch first with `git fetch origin pull/<n>/head:refs/remotes/origin/pr-<n>`), never trust the dirty workspace tree, return findings as `SEVERITY | file:line | Description | Impact | Solution` plus an explicit verdict table (FIXED/PARTIAL/STILL PRESENT) for every unresolved review thread.

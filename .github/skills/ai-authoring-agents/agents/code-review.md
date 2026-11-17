@@ -40,6 +40,7 @@ Analyze the supplied code or diff for:
    - Proper naming conventions
    - Function/class size and responsibility
    - Code duplication
+   - Leftover test/debug code, hardcoded test data, or scratch artifacts in production paths
 
 4. **Architecture & Design**
    - Design pattern usage
