@@ -90,6 +90,28 @@ Fallback when repo has no `.github/PULL_REQUEST_TEMPLATE.md`. Adapt to fit — d
 
 ---
 
+## Stacked PR
+
+```markdown
+## Stack Context
+Part of {Epic #N / Stack description} (stacks on #{parent-PR} targeting `{base-branch}`).
+
+## Summary
+{what this specific layer does and why — 1-3 sentences}
+
+## Changes
+- {layer change 1}
+- {layer change 2}
+
+## Verification
+- {verification command / test suite passing at this layer}
+
+## Related Issues
+{Part of #X, Closes #Y}
+```
+
+---
+
 ## Template Selection
 
 | Signal | Template |
@@ -98,5 +120,6 @@ Fallback when repo has no `.github/PULL_REQUEST_TEMPLATE.md`. Adapt to fit — d
 | Emergency fix, production bug, urgent | Hotfix |
 | Restructure, cleanup, no behavior change | Refactor |
 | Docs only, README, guides | Documentation |
+| Dependent layer in a multi-PR chain or epic stack | Stacked PR |
 
 Default: Standard.

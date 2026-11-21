@@ -85,4 +85,9 @@ set -e
 if [ "$rc" != 0 ]; then ok "failure path returns nonzero (rc $rc)"; else bad "failure path returns nonzero"; fi
 
 echo
-[ "$FAILS" = 0 ] && echo "All tests passed." || { echo "$FAILS test(s) failed."; exit 1; }
+if [ "$FAILS" = 0 ]; then
+  echo "All tests passed."
+else
+  echo "$FAILS test(s) failed."
+  exit 1
+fi

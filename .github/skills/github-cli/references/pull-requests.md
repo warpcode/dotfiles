@@ -10,6 +10,7 @@ Execution commands for pull requests: create, update, publish, view, review, and
 | **Create PR** | `create_pull_request` | N/A | `gh pr create --draft ...` |
 | **Read PR** | `pull_request_read` | N/A | `gh pr view <num> --comments` |
 | **Rollup / CI Status**| N/A | `pr_state_rollup.py` | `gh pr list` / `gh pr checks` |
+| **Stacked PRs** | N/A | N/A | `gh stack` (see `@references/stacked-prs.md`) |
 | **Update PR** | `update_pull_request` | N/A | `gh pr edit <num> ...` |
 | **Merge PR** | `merge_pull_request` | `merge_pull_request.sh` | `gh pr merge <num> --squash` |
 | **List PRs** | `list_pull_requests` | `list_pull_requests.sh` | `gh pr list` |

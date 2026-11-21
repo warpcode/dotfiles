@@ -8,7 +8,7 @@ user-invocable: false
 
 # GitHub CLI & MCP Execution
 
-Manage GitHub platform operations end-to-end through CLI and MCP tools. This skill is strictly for execution logic. For procedural guidelines (like when a PR is ready, review formatting, and workflows), load the `github` skill.
+Manage GitHub platform operations end-to-end through CLI and MCP tools. This skill is strictly for execution logic. For procedural guidelines (like when a PR is ready, review formatting, and workflows), load the `github-pr` skill.
 
 ## Execution Priority
 
@@ -36,6 +36,7 @@ reference file before executing:
 |-----------|----------------|----------------------------------|--------------|
 | **Issues** | `@references/issues.md` | Create, update, query, comment, close, sub-issues, issue types, Copilot assignment (`get_issue`, `issue_write`, `add_issue_comment`, `list_issues`, `search_issues`, `list_issue_fields`, `list_issue_types`, `sub_issue_write`, `assign_copilot_to_issue`) | Read + Mutating |
 | **Pull Requests** | `@references/pull-requests.md` | Create, update, publish, view, merge, list, triage/filter, branch update, merge status, Copilot review request (`create_pull_request`, `update_pull_request`, `update_pull_request_branch`, `get_pull_request`, `list_pull_requests`, `search_pull_requests`, `merge_pull_request`, `request_copilot_review`) | Read + Mutating |
+| **Stacked PRs** | `@references/stacked-prs.md` | Create, view, checkout, cascade-rebase, push, submit, sync, link, unstack, and merge stacked pull requests via `gh stack` (`gh extension install github/gh-stack`) | Read + Mutating |
 | **Reviews** | `@references/reviews.md` | Thread discovery, batch payloads, thread resolution (`pull_request_review_write`, `add_comment_to_pending_review`, `add_reply_to_pull_request_comment`) | Read + Mutating |
 | **Repository** | `@references/repository.md` | Remote file CRUD, atomic commits, remote branches, tags, collaborators, repo create/fork (`get_file_contents`, `create_or_update_file`, `delete_file`, `push_files`, `list_branches`, `create_branch`, `get_tag`, `list_tags`, `get_commit`, `list_commits`, `create_repository`, `fork_repository`, `list_repository_collaborators`) | Read + Mutating |
 | **Releases** | `@references/releases.md` | Releases and release assets (`get_latest_release`, `get_release_by_tag`, `list_releases`) | Read + Mutating |
@@ -54,6 +55,8 @@ Run bundled helper scripts relative to this skill's root directory (`<skill-dir>
 | List / Filter PRs script | `@scripts/list_pull_requests.sh` | `bash <skill-dir>/scripts/list_pull_requests.sh [OPTIONS]` | List and filter PRs (approved, commits after review, waiting on author, unresponded) |
 | List PR review threads script | `@scripts/list_pull_request_review_threads.sh` | `bash <skill-dir>/scripts/list_pull_request_review_threads.sh [OPTIONS]` | Retrieve review threads for a pull request via GraphQL |
 | Merge PR script | `@scripts/merge_pull_request.sh` | `bash <skill-dir>/scripts/merge_pull_request.sh --pull-number <n> [--admin]` | Ruleset-gated squash merge with safety bypass |
+| Batch merge PRs script | `@scripts/pr_batch_merge.sh` | `bash <skill-dir>/scripts/pr_batch_merge.sh [--repo <owner/repo>] [--dry-run] <pr>...` | Silently approve and squash-merge verified green PRs |
+| PR review queue script | `@scripts/pr_review_queue.sh` | `bash <skill-dir>/scripts/pr_review_queue.sh [--threads] [owner/repo ...]` | Fast multi-repository PR review queue inspector |
 | Resolve thread script | `@scripts/update_pull_request_review_thread_resolution.sh` | `bash <skill-dir>/scripts/update_pull_request_review_thread_resolution.sh [OPTIONS]` | Resolve PR review threads via GraphQL |
 | Submit review payload script | `@scripts/submit_pull_request_review_payload.sh` | `bash <skill-dir>/scripts/submit_pull_request_review_payload.sh [OPTIONS]` | Submit structured PR review payload (with file/line comments) via REST |
 | PR status query | `@queries/find_prs.gql` | GraphQL query for PR status, review, and activity classification |

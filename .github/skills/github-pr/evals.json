@@ -12,6 +12,12 @@
       "name": "pr-conflict-resolution-author",
       "prompt": "Resolve merge conflicts on PR branch feature/auth against origin/main as the author.",
       "expected_output": "Guidance on using an isolated worktree in /tmp/, merging origin/main, resolving conflicts, and standard pushing without force-push."
+    },
+    {
+      "id": 2,
+      "name": "pr-stack-general-rules-and-rebase-policy",
+      "prompt": "How do we handle conflicts and mid-stack review changes in a stacked pull request chain compared to a standalone PR?",
+      "expected_output": "Explains that stacked PRs rely on cascading rebases rather than merge commits to preserve linear layer diffs, requires checking out the owning lower layer for mid-stack fixes followed by an upstack rebase, ensures every layer compiles and passes tests independently, and delegates concrete gh stack CLI execution commands to the github-cli skill."
     }
   ]
 }
