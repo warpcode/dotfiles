@@ -1,5 +1,10 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "compaction": {
+    "auto": true,
+    "keep": { "tokens": 8000 },
+    "buffer": 10000
+  },
   {{ template "commands/opencode.tmpl" . }},
   "instructions": [
     "AGENTS.md",
