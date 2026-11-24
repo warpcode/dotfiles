@@ -7,59 +7,31 @@ description: >
   networking and volume persistence, or setting up dev environments.
 ---
 
-# Docker & Container Infrastructure Skill
+# Docker & Container Infrastructure Knowledge Centre
 
-Standard Operating Procedure for auditing, creating, and optimizing Dockerfiles, Docker Compose topologies, multi-stage builds, and container development environments.
+Reference hub for Dockerfile hardening, multi-stage builds, layer caching, Docker Compose network topology, and persistent volume design.
 
-## When to use
+## When to Use
 
-- Reviewing or creating `Dockerfile` definitions (multi-stage builds, layer caching, security hardening).
-- Inspecting `docker-compose.yml` configurations (services, networks, volumes, environment variable resolution).
-- Troubleshooting container build failures, bloated images, or permission issues with mounted volumes.
-- Hardening container security (non-root execution, minimal base images, secrets isolation).
+- Authoring or reviewing `Dockerfile` definitions (multi-stage builds, layer ordering, pinned tags, non-root `USER`, `.dockerignore`).
+- Auditing `docker-compose.yml` service dependencies (`service_healthy`), isolated networks, and `.env` variable hydration.
+- Troubleshooting bloated images, broken layer caches, or mounted volume permission/persistence issues.
 
-## Container Inspection Workflow
+## Key Focus Areas
 
-```mermaid
-flowchart LR
-    A["1. Dockerfile Hardening"] --> B["2. Compose & Network Topology Audit"] --> C["3. Volume & State Persistence"]
-```
+- **Dockerfiles**: Separate build toolchains from lean runtime stages, copy dependency manifests before source code, pin explicit base tags, and enforce non-root execution.
+- **Compose & Networks**: Isolate frontend/backend/database networks, gate startup on healthchecks, and avoid hardcoded credentials.
+- **Volumes & State**: Use named volumes for stateful datastores and reserve bind mounts for local development hot-reloading.
 
-### Phase 1: Dockerfile Audit & Optimization
-1. Verify multi-stage builds to separate build dependencies (compilers, npm build artifacts) from the lean runtime image.
-2. Check layer caching: Ensure frequently changing files (`COPY . .`) appear after dependency installation steps (`package.json`, `composer.json`).
-3. Audit security: Enforce non-root `USER` execution, pin explicit base image tags (avoid `:latest`), and check `.dockerignore` for credentials/artifacts.
-4. Read `@references/dockerfile-best-practices.md`.
+## Domain Knowledge Index
 
-### Phase 2: Docker Compose & Network Topology
-1. Inspect service definitions, container relationships (`depends_on` with `service_healthy`), and port bindings.
-2. Map isolated networks (frontend, backend, db) to prevent unauthorized container communication.
-3. Verify environment variables rely on `.env` hydration rather than hardcoded credentials.
-4. Read `@references/compose-and-topology.md`.
+| Topic | Resource | Use When |
+|---|---|---|
+| Dockerfile hardening & caching | `@references/dockerfile-best-practices.md` | Auditing multi-stage builds, layer order, non-root users, and `.dockerignore` |
+| Compose & network topology | `@references/compose-and-topology.md` | Reviewing service healthchecks, isolated networks, secrets hydration, and volumes |
 
-### Phase 3: Volume Mounts & State Persistence
-1. Verify named volumes for persistent data (MySQL, Postgres, Redis, Elasticsearch).
-2. Audit bind mounts for development hot-reloading vs. production volume isolation.
+## Report Template
 
-## Output Contract: Container Topology
-
-````markdown
-### Container Infrastructure Overview
-- **Base Images**: [e.g., `php:8.3-fpm-alpine`, `node:20-alpine`]
-- **Multi-Stage Build**: [Yes / No]
-- **Total Services**: [Count] (e.g., `app`, `webserver`, `db`, `redis`)
-
-### Service Topology
-
-```mermaid
-graph LR
-    User[Client] -->|Port 80/443| Nginx[webserver]
-    Nginx -->|FastCGI 9000| App[app / php-fpm]
-    App -->|Internal 5432| DB[(postgres)]
-    App -->|Internal 6379| Redis[(redis)]
-```
-
-### Optimization & Hardening Findings
-- **Image Size Improvements**: [e.g. Multi-stage build can reduce final image by ~350MB]
-- **Security Recommendations**: [e.g. Add non-root user `appuser`]
-````
+| Template | Path | Use When |
+|---|---|---|
+| Container topology report | `@templates/container-topology-report.md` | Documenting base images, service dependency graph, size wins, and hardening findings |

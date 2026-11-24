@@ -1,4 +1,4 @@
-"""Tests for review-pull-request/scripts/apply_mutation.py.
+"""Tests for code-review/scripts/apply_mutation.py.
 
 A mutation that silently does not apply proves nothing, so the "pattern not
 found" and "found fewer times than required" cases are hard errors rather than

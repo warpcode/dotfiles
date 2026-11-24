@@ -5,82 +5,33 @@ description: >
   injection flaws (SQLi, XSS, CSRF, Command Injection), SSRF, deserialization flaws,
   authentication/authorization bypasses, secret leakage, and insecure headers.
   Use when reviewing PRs for security, running pre-deployment security audits,
-  or scanning for OWASP Top 10 risks.
+  verifying listening socket exposure, or scanning for OWASP Top 10 risks.
 ---
 
-# Code Security Audit Skill
+# Code Security Audit Knowledge Centre
 
-Standard Operating Procedure for performing static application security testing (SAST), vulnerability identification, and configuration hardening across web applications and backend services.
+Reference hub for static application security testing (SAST), configuration hardening, OWASP Top 10 vulnerability patterns, and runtime socket-exposure verification.
 
-## When to use
+## When to Use
 
-- Conducting pre-merge or pre-deployment code security reviews.
-- Auditing authentication, authorization, session management, or encryption layers.
-- Investigating potential injection vectors (SQLi, XSS, Command Injection, SSRF, Deserialization).
-- Scanning for hardcoded secrets, exposed environment variables, or insecure configuration headers.
-- Assessing compliance against OWASP Top 10 vulnerabilities.
+- Conducting pre-merge or pre-deployment security reviews and triaging scanner alerts.
+- Auditing authentication, authorization/IDOR, session cookie flags, constant-time token checks, and encryption configs.
+- Investigating SQLi, XSS, CSRF, mass assignment, file upload traversal, SSRF, OS command injection, or insecure deserialization.
+- Scanning for committed secrets, insecure HTTP headers, or outdated/vulnerable dependencies.
+- Verifying live TCP bind exposure claims against running services.
 
-## Audit Workflow
+## Domain Knowledge Index
 
-```mermaid
-flowchart LR
-    A["1. Configuration Hardening"] --> B["2. Vulnerability Code Scan"] --> C["3. Evidence & Risk Report Output"]
-```
+| Topic | Resource | Use When |
+|---|---|---|
+| Configuration & environment hardening | `@references/configuration-hardening.md` | Checking secrets, HTTP security headers, session/cookie flags, cipher configs, and dependency audits |
+| Vulnerability patterns & SAST rules | `@references/vulnerability-patterns.md` | Auditing SQLi, XSS, CSRF, IDOR, mass assignment, file uploads, SSRF, command injection, and deserialization |
+| Security review report schema | `@templates/security-review-report.md` | Formatting calibrated findings with CWE/OWASP category, location, snippet, and remediation |
 
-### Phase 1: Configuration & Environment Hardening
-Inspect environment files, middleware definitions, and server configuration:
-1. Check for committed secrets, credentials, or private keys in repository history and `.env` files.
-2. Verify HTTP security headers (`Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options`, `X-Content-Type-Options`).
-3. Inspect session cookie settings (`HttpOnly`, `Secure`, `SameSite=Lax/Strict`) and session fixation defenses (`session_regenerate_id(true)`).
-4. Audit constant-time comparisons (`hash_equals()`) for secrets, CSRF tokens, and HMAC signatures.
-5. Audit application encryption keys, cipher configurations (`AES-256-CBC`/`GCM`), and encrypted model attributes.
-6. Run dependency vulnerability and freshness audits (`composer audit`/`outdated`, `npm audit`/`outdated`).
-7. Read `@references/configuration-hardening.md` for exhaustive checklists and regex patterns.
+## Runtime Verification Scripts
 
-### Phase 2: Vulnerability Code Scan
-Search codebase for common vulnerability anti-patterns:
-1. **SQL Injection**: Unparameterized SQL queries, string interpolation in ORM `whereRaw` / raw queries.
-2. **Cross-Site Scripting (XSS)**: Unescaped template output (`v-html`, `dangerouslySetInnerHTML`, raw blade `{!! !!}`).
-3. **Cross-Site Request Forgery (CSRF)**: Missing middleware or excluded state-modifying POST/PUT/DELETE routes.
-4. **Mass Assignment**: Unfiltered model updates binding directly to raw request payloads.
-5. **Authorization / IDOR**: Missing ownership checks on resource retrieval and mutation.
-6. **File Upload Vulnerabilities**: Unvalidated file types, client MIME trust, magic byte bypasses, path traversal in filenames, executable upload directories.
-7. **SSRF & Cloud Metadata**: Unvalidated outbound URL fetching, accessing cloud metadata endpoints (`169.254.169.254`, `metadata.google.internal`) or private subnets.
-8. **OS Command Injection**: Direct shell execution, unescaped process arguments (`exec`, `proc_open`, `subprocess.Popen(shell=True)`).
-9. **Insecure Deserialization**: Deserializing untrusted object streams (`unserialize`, `pickle.loads`, `yaml.load`).
-10. Read `@references/vulnerability-patterns.md` for concrete detection rules.
+Static reading shows the *intended* bind address; only a live probe proves what the OS accepts. Capture both loopback (bound) and LAN interface (refused) results with `--json` instead of inline `python3 -c` probes:
 
-### Phase 3: Calibrated Reporting
-Document all findings citing exact file paths, line ranges, and reproduction snippets.
-
-### Phase 4: Runtime Verification of Exposure Claims
-Static reading shows the *intended* bind address; only a live probe proves what the OS accepts. When a finding concerns a listening service, verify it before reporting rather than asserting it from the source.
-
-| Script | Purpose | Run when |
-|--------|---------|----------|
-| `@scripts/probe_tcp_bind.py --port N [--host H] [--expect-bound\|--expect-refused] [--json]` | Attempt a TCP connect and report whether the port is reachable on that interface; exits 1 when the expectation is not met | Confirming an unauthenticated listener is or is not LAN-exposed |
-
-Two probes are the minimum for a bind claim: loopback (should be bound) plus the host's LAN address (should be refused). Use `--json` to capture both results as evidence. Do not hand-write an inline `python3 -c` probe; the repo's `AGENTS.md` forbids inline Python, and this script is portable where `ss`/`lsof` are absent.
-
-## Findings Output Format
-
-````markdown
-### Security Review Summary
-- **Review Result**: `NO_FINDINGS_IN_SCOPE` | `ACTION_REQUIRED` | `CRITICAL_RISK` (a clean review is not proof that the system is secure)
-- **Critical Vulnerabilities**: [Count]
-- **High/Medium Warnings**: [Count]
-- **Hardening Suggestions**: [Count]
-
-### Findings
-
-#### [SEVERITY: CRITICAL | HIGH | MEDIUM | LOW] [Vulnerability Name]
-- **Location**: `path/to/file.ext:L123-L145`
-- **CWE / OWASP Category**: [e.g., CWE-89: SQL Injection / OWASP A03:2021]
-- **Vulnerability Explanation**: Detailed mechanism of how the vulnerability can be exploited.
-- **Vulnerable Code Snippet**:
-  ```lang
-  // code excerpt
-  ```
-- **Remediation**: Concrete refactored code demonstrating the secure pattern.
-````
-
+| Script | Purpose | Run When |
+|---|---|---|
+| `@scripts/probe_tcp_bind.py` | Attempts a TCP connect (`--port N [--host H] [--expect-bound\|--expect-refused] [--json]`); exits `1` if expectation fails | Confirming whether an unauthenticated listener is loopback-only or LAN-exposed |
