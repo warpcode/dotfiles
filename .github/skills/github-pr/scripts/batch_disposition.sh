@@ -54,7 +54,6 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ -n "$REPO" && "$REPO" == */* ]] || die "--repo owner/name is required"
-OWNER="${REPO%%/*}"; NAME="${REPO#*/}"
 [[ -f "$SUBMIT" ]] || die "missing $SUBMIT"
 
 declare -a APPROVE_LIST=() RC_PRS=()
@@ -82,7 +81,7 @@ done
 # Phase 1: validate every REQUEST_CHANGES spec before anything is written.
 bad=0
 for n in "${RC_PRS[@]}"; do
-  if out="$(bash "$SUBMIT" --spec "$RC_DIR/pr$n.json" --owner "$OWNER" --repo "$NAME" \
+  if out="$(bash "$SUBMIT" --spec "$RC_DIR/pr$n.json" --repo "$REPO" \
         --pr "$n" --validate-only 2>&1)"; then
     printf 'VALID    request-changes #%s\n' "$n"
   else
@@ -110,7 +109,7 @@ for n in "${APPROVE_LIST[@]}"; do
   printf 'approved          #%s\n' "$n"
 done
 for n in "${RC_PRS[@]}"; do
-  url="$(bash "$SUBMIT" --spec "$RC_DIR/pr$n.json" --owner "$OWNER" --repo "$NAME" \
+  url="$(bash "$SUBMIT" --spec "$RC_DIR/pr$n.json" --repo "$REPO" \
         --pr "$n" --event REQUEST_CHANGES --body "$RC_BODY" | tail -n 1)" \
     || fail "request-changes #$n"
   printf 'changes-requested #%s  %s\n' "$n" "$url"

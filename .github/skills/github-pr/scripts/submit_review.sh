@@ -11,12 +11,15 @@
 # matches, which looks like a valid cross-check while proving nothing.
 #
 # Usage:
-#   submit_review.sh [--spec findings.json] --owner o --repo r --pr N [options]
+#   submit_review.sh [--spec findings.json] --repo OWNER/NAME --pr N [options]
+#   submit_review.sh [--spec findings.json] --owner OWNER --repo NAME --pr N [options]
 #
 #   --spec FILE        findings spec (path/line/severity/title/description/
 #                      impact/solution)                  [required for REQUEST_CHANGES]
-#   --owner OWNER      repository owner                  [default: from origin]
-#   --repo NAME        repository name                   [default: from origin]
+#   --repo OWNER/NAME  repository in owner/name format (or name with --owner)
+#                                                        [default: from origin]
+#   --owner OWNER      repository owner (legacy; optional if --repo is owner/name)
+#                                                        [default: from origin]
 #   --pr N             pull request number               [required]
 #   --event EVENT      REQUEST_CHANGES | COMMENT | APPROVE
 #                                                      [default: REQUEST_CHANGES]
@@ -69,6 +72,16 @@ if [[ -n "$SPEC" ]]; then
   [[ -f "$SPEC" ]] || die "spec file not found: $SPEC"
 elif [[ "$EVENT" == "REQUEST_CHANGES" ]]; then
   die "--spec is required for REQUEST_CHANGES"
+fi
+
+# Support standardized --repo owner/name while remaining backwards-compatible
+# with separate --owner and --repo flags.
+if [[ "$REPO" == */* ]]; then
+  if [[ -n "$OWNER" ]]; then
+    die "pass either --repo owner/name or separate --owner and --repo, not both"
+  fi
+  OWNER="${REPO%%/*}"
+  REPO="${REPO#*/}"
 fi
 
 # Resolve owner/repo from the remote rather than trusting a remembered value or
@@ -144,5 +157,5 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
 fi
 
 # --- 3. submit --------------------------------------------------------------
-bash "$SUBMIT" --owner "$OWNER" --repo "$REPO" --pull-number "$PR" --input "$PAYLOAD" \
+bash "$SUBMIT" --repo "$OWNER/$REPO" --pull-number "$PR" --input "$PAYLOAD" \
   || exit 3

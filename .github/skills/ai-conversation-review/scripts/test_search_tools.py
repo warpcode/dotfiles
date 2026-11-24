@@ -58,7 +58,7 @@ class TestSearchTools(unittest.TestCase):
     def test_match_tool_call_by_script(self):
         tc = {
             "name": "run_command",
-            "args": {"CommandLine": "python3 .github/skills/github-pr-review/scripts/verify_review_anchors.sh --list"},
+            "args": {"CommandLine": "python3 .github/skills/github-pr/scripts/verify_review_anchors.sh --list"},
         }
         matched, target = match_tool_call(tc, script_targets={"verify_review_anchors.sh", "other_script.py"})
         self.assertTrue(matched)
@@ -71,7 +71,7 @@ class TestSearchTools(unittest.TestCase):
     def test_match_tool_call_by_script_patterns(self):
         tc = {
             "name": "run_command",
-            "args": {"CommandLine": "python3 .github/skills/github-pr-review/scripts/verify_review_anchors.sh --list"},
+            "args": {"CommandLine": "python3 .github/skills/github-pr/scripts/verify_review_anchors.sh --list"},
         }
         targets = {"verify_review_anchors.sh", "other_script.py"}
         patterns = {s: re.compile(rf"(?:^|[\s/\"']){re.escape(s)}(?:[\s\"']|$)") for s in targets}

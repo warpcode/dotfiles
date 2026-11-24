@@ -15,8 +15,8 @@ Execution commands and scripts for review discovery, inspection, and thread reso
   # Standard auto-detected repo
   bash @scripts/list_pull_request_review_threads.sh --pull-number 42
 
-  # Explicit repo overrides
-  bash @scripts/list_pull_request_review_threads.sh --owner octocat --repo hello-world --pull-number 42
+  # Explicit repo override (standardized owner/repo or legacy --owner/--repo)
+  bash @scripts/list_pull_request_review_threads.sh --repo octocat/hello-world --pull-number 42
   ```
   The script's GraphQL query requests the first 100 threads and first 100 comments per thread. For complete review inventories, check `totalCount` against the returned node counts. Never report first-page counts as exhaustive.
 
@@ -46,12 +46,10 @@ Execution commands and scripts for review discovery, inspection, and thread reso
   ```
 
 - **Submit Structured Review Payload (Line & File Comments)**:
-  ⚠️ `--owner` and `--repo` must be **separate flags**: `--owner warpcode --repo dotfiles`.
-  A combined `--repo warpcode/dotfiles` expands to `repos/warpcode/warpcode/dotfiles` and dies
-  with a silent exit 1 (verified 2026-11-02, PR #356). Flags are `--pull-number` and `--input`.
+  Pass `--repo <owner>/<repo>` (legacy separate `--owner <owner> --repo <name>` is also accepted; never mix both). Flags are `--pull-number` and `--input`.
   ```bash
   # Submit structured payload with staged line/file comments via REST:
-  bash @scripts/submit_pull_request_review_payload.sh --owner <owner> --repo <name> --pull-number 42 --input review_payload.json
+  bash @scripts/submit_pull_request_review_payload.sh --repo <owner>/<repo> --pull-number 42 --input review_payload.json
   ```
 
 ---

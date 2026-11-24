@@ -9,7 +9,7 @@ driven by a skill's bundled script.
 
 | Task | Skill |
 |---|---|
-| Auditing or reviewing any PR | `github-pr-review` |
+| Auditing or reviewing any PR | `code-review` + `github-pr` (`code-reviewer` agent) |
 | Git/PR workflow, branch hygiene, conflict triage | `git-expert` |
 | Security findings, exposure, auth review | `code-security-audit` |
 | Running `gh` commands | `github-cli` |

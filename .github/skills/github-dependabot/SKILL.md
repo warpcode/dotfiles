@@ -1,95 +1,57 @@
 ---
 name: github-dependabot
 description: >
-  Monitor, triage, and remediate Dependabot security alerts, manage Dependabot
-  PRs, and configure .github/dependabot.yml. Use when auditing repository dependency
-  alerts, triaging security advisories, performing lockfile bumps, or reviewing
-  Dependabot pull requests.
+  Reference hub for Dependabot alert classification, phantom alert dismissal,
+  ecosystem lockfile bump patterns, Dependabot PR bot commands, and
+  .github/dependabot.yml schemas. Use when triaging Dependabot alerts, bumping
+  vulnerable dependencies, reviewing Dependabot PRs, or configuring dependabot.yml.
 ---
 
-# GitHub Dependabot Skill
+# GitHub Dependabot Reference Hub
 
-Standard operating procedures for dependency vulnerability monitoring, alert classification, lockfile remediation, Dependabot pull request management, and configuration maintenance.
-
-## Workflow Overview
-
-```mermaid
-flowchart TD
-    A["1. Run Audit Script"] --> B{"Classify Alerts"}
-    B -->|"Phantom Alert (Deleted/Stale Manifest)"| C["Dismiss as Inaccurate + Remove Stale Manifest"]
-    B -->|"Unfixable (first_patched_version: NONE)"| D["Record Advisory & Monitor"]
-    B -->|"Active Vulnerability"| E["In-Tree Lockfile Remediation"]
-    E --> F["Verify Local Tests"]
-    F --> G["Push & Create / Merge PR"]
-```
+Domain reference for classifying Dependabot security alerts, applying ecosystem lockfile upgrades, interacting with `@dependabot` PRs, and configuring `.github/dependabot.yml`.
 
 ## Shared Resources
 
-Run bundled helper scripts relative to this skill's root directory (`<skill-dir>/scripts/...` e.g. `<skills-dir>/github-dependabot/scripts/...`):
+Run bundled helper scripts relative to this skill's root directory (`<skill-dir>/scripts/...`):
 
 | Resource | Location | Invocation Syntax | Purpose |
-|----------|----------|-------------------|---------|
-| Repo alert audit | `@scripts/audit_repo_alerts.py` | `python3 <skill-dir>/scripts/audit_repo_alerts.py --repo <owner/repo> [--base <default-branch>] [--json] [--fetch]` | Dependabot + code-scanning triage in one call. Classifies each alert against the default branch, separates **phantom** alerts from real ones, flags `first_patched_version: NONE`, and outputs precise dismissal commands. Read-only. |
+|---|---|---|---|
+| Repo alert audit | `@scripts/audit_repo_alerts.py` | `python3 <skill-dir>/scripts/audit_repo_alerts.py --repo <owner/repo> [--base <default-branch>] [--json] [--fetch]` | Dependabot + code-scanning triage in one call. Classifies each alert against the default branch, separates **phantom** alerts from real ones, flags `first_patched_version: NONE`, and prints dismissal commands. Read-only. |
 
 ---
 
-## 1. Alert Monitoring & Triage
+## 1. Alert Classification & Triage Reference
 
-Always start alert reviews by running the bundled audit script to get a clean classification snapshot.
+Run `audit_repo_alerts.py --repo <owner/repo> --base <default-branch>` first to obtain a single-snapshot classification:
 
-### Step 1: Run the Audit Script
+| Alert Class | Condition on `origin/<default-branch>` | Action |
+|---|---|---|
+| **Active Vulnerability** | Manifest exists on default branch and `fixed_in` is defined | Upgrade dependency in-tree via ecosystem lockfile recipes below and verify tests |
+| **Phantom Alert** | Manifest path is absent from default branch (moved, renamed, deleted, or backup tree) | Dismiss as `inaccurate` via `gh api` (command printed by `audit_repo_alerts.py`) and remove stale manifests from the tree |
+| **Unfixable Advisory** | `first_patched_version: NONE` | Record GHSA ID in tracking issue and re-audit periodically; do not open empty churn PRs |
 
-```bash
-python3 <skill-dir>/scripts/audit_repo_alerts.py --repo <owner/repo> --base <default-branch>
-```
+### Dismissal API Constraints
 
-### Step 2: Classify Findings
-
-1. **Active Alerts (Real Manifests)**
-   - The manifest path exists on the default branch (`origin/<default-branch>`).
-   - If a patched version exists (`fixed_in`), proceed to **Section 2: Automated Remediation Flow**.
-
-2. **Phantom Alerts (Deleted, Moved, or Stale Manifests)**
-   - **Architecture Note**: Security alerts originate from GitHub's Dependency Graph, which scans all manifest files across the repository tree. `.github/dependabot.yml` configures automated version updates only, not security alert discovery.
-   - Dependabot retains historical alerts for files that were moved, renamed, or deleted (e.g. old `.bk` files, unused lockfiles, or deleted trees).
-   - **Dismissal & Resolution Procedure**: Dismiss phantom alerts as `inaccurate` using the exact `gh` command emitted by `audit_repo_alerts.py`:
-     ```bash
-     gh api --method PATCH repos/<owner/repo>/dependabot/alerts/<alert_number> \
-       -f state=dismissed -f dismissed_reason=inaccurate \
-       -f dismissed_comment="Manifest absent from <default-branch>; live path is <live_manifest>"
-     ```
-     *(Note: `dismissed_comment` is capped at 280 characters by the GitHub API).*
-   - **Root Cause Resolution**: Dismissing an alert updates its status permanently unless a new scan finds the file again. To prevent phantom alert generation entirely, remove stale manifest files, backup directories, or unused lockfiles from the repository tree.
-
-3. **Unfixable Advisories (`first_patched_version: NONE`)**
-   - Upstream vendor has not released a patched version yet.
-   - Do not churn or create empty PRs. Document the GHSA ID in the triage issue/discussion and schedule periodic re-audits.
+- **Endpoint**: `PATCH repos/<owner>/<repo>/dependabot/alerts/<alert_number>` with `-f state=dismissed -f dismissed_reason=inaccurate -f dismissed_comment="..."`
+- **Comment Length**: `dismissed_comment` is capped at **280 characters** (GitHub returns HTTP 422 if exceeded).
+- **Architecture Boundary**: GitHub's Dependency Graph discovers manifests repo-wide for security alerts; `.github/dependabot.yml` controls automated version-update PRs only.
 
 ---
 
-## 2. Automated Remediation Flow
+## 2. Ecosystem Lockfile Bump Recipes
 
-When an active vulnerability has a known fix, perform in-tree lockfile updates and verify locally before pushing changes.
-
-### Ecosystem Lockfile Bump Recipes
+Targeted, lockfile-preserving update commands (run local tests, `git diff`, and syntax/compilation checks before committing):
 
 - **Python (`uv`)**:
   ```bash
-  # Target single package update
-  uv lock -P <package_name>
-
-  # Full lockfile upgrade (if required)
-  uv lock -U
+  uv lock -P <package_name>   # single-package bump
+  uv lock -U                  # full lockfile upgrade
   ```
 - **Node.js (`npm` / `pnpm` / `yarn`)**:
   ```bash
-  # npm
   npm update <package_name> --package-lock-only
-
-  # pnpm
   pnpm update <package_name>
-
-  # yarn
   yarn upgrade <package_name>
   ```
 - **Ruby (`bundler`)**:
@@ -98,58 +60,38 @@ When an active vulnerability has a known fix, perform in-tree lockfile updates a
   ```
 - **Go (`go.mod`)**:
   ```bash
-  go get <package_name>@latest
-  go mod tidy
-  ```
-
-### Local Verification & Validation
-
-Before committing dependency updates:
-1. **Run Local Test Suite**: Ensure no breaking changes or regressions were introduced.
-2. **Verify Lockfile Integrity**: Confirm git diff shows minimal, targeted changes to lockfiles and manifest files.
-3. **Validate Syntax & Compilation**: Run language linters or compilers (e.g., `py_compile`, `npm test`).
-
----
-
-## 3. Dependabot PR Management
-
-When reviewing automated PRs submitted by `@dependabot`:
-
-### Evaluation Checklist
-1. **Compatibility Score**: Check GitHub's compatibility score in the Dependabot PR body (based on CI outcomes across public repos).
-2. **Release Notes & Changelogs**: Review linked release notes for semver breaking changes in major/minor version bumps.
-3. **CI Status**: Verify all required check runs pass on the PR branch.
-
-### Dependabot Bot Commands & PR Merging
-Interact with Dependabot PRs by commenting directly on the PR or using GitHub CLI:
-- `@dependabot rebase`: Rebase the PR against the default branch.
-- `@dependabot recreate`: Re-create the PR from scratch with updated lockfiles.
-- `@dependabot ignore this package version`: Stop Dependabot from opening PRs for this version update.
-- `@dependabot ignore this dependency`: Stop all future updates for this dependency.
-- **Merging PRs**: The `@dependabot merge` command is deprecated. Use native GitHub CLI to auto-merge or squash merge:
-  ```bash
-  gh pr merge <pr_number> --repo <owner/repo> --squash --auto
+  go get <package_name>@latest && go mod tidy
   ```
 
 ---
 
-## 4. Configuration Best Practices (`.github/dependabot.yml`)
+## 3. Dependabot PR Evaluation & Bot Commands
 
-Maintain an explicit `.github/dependabot.yml` configuration file to define package ecosystems, update schedules, and directory targets for automated version updates.
+### Evaluation Signals
+- **Compatibility Score**: Check GitHub's compatibility badge in the Dependabot PR body.
+- **Release Notes**: Inspect linked changelogs for breaking changes across major/minor bumps.
+- **CI Status**: Verify all required workflows pass on the PR branch.
 
-### Standard Configuration Template
+### `@dependabot` PR Comment Commands
+- `@dependabot rebase` — rebase against the target branch.
+- `@dependabot recreate` — recreate the PR and lockfiles from scratch.
+- `@dependabot ignore this package version` — suppress PRs for this specific version.
+- `@dependabot ignore this dependency` — suppress future PRs for this dependency.
+- **Merging**: `@dependabot merge` is deprecated; use `gh pr merge <pr_number> --repo <owner/repo> --squash --auto` (or `github-pr/scripts/pr_merge.sh`).
+
+---
+
+## 4. `.github/dependabot.yml` Schema & Patterns
 
 ```yaml
 version: 2
 updates:
-  # Python ecosystem
-  - package-ecosystem: "pip" # or "uv" / "poetry" depending on tooling
+  - package-ecosystem: "pip" # or "uv" / "poetry" / "npm" / "gomod"
     directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
 
-  # GitHub Actions ecosystem
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -157,7 +99,6 @@ updates:
     open-pull-requests-limit: 5
 ```
 
-### Key Principles
-- **Version Updates Scope**: `.github/dependabot.yml` controls automated version update PRs and schedule frequencies.
-- **Group Updates**: Group non-critical minor/patch updates to reduce PR noise.
-- **Limit Open PRs**: Use `open-pull-requests-limit` to prevent PR overload.
+- **Pin `directory:`**: Explicitly target live manifest directories so automated PRs do not target stale or backup paths.
+- **Group Minor/Patch Updates**: Use `groups:` for non-breaking updates to reduce PR noise.
+- **Cap Concurrency**: Set `open-pull-requests-limit` per ecosystem to avoid PR saturation.

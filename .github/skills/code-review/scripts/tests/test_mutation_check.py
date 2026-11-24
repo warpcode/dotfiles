@@ -1,4 +1,4 @@
-"""End-to-end tests for review-pull-request/scripts/mutation_check.sh.
+"""End-to-end tests for code-review/scripts/mutation_check.sh.
 
 The three verdicts are the whole point of the script, because they separate an
 actionable finding from a non-finding:
@@ -141,8 +141,8 @@ class MutationCheckTests(unittest.TestCase):
         return self._git(*args)
 
     def _cleanup_worktrees(self):
-        wt = os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
-                                          "review_worktree.sh"))
+        wt = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..",
+                                          "github-pr", "scripts", "review_worktree.sh"))
         subprocess.run(["bash", wt, "rm", "--pr", "9", "--all-roles", "--force",
                         "--root", self.root],
                        cwd=self.repo, stdout=subprocess.DEVNULL,

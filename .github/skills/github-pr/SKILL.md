@@ -1,122 +1,73 @@
 ---
 name: github-pr
 description: >
-  Workflow guidelines and standards for authoring, structuring, managing, and merging Pull Requests and Stacked Pull Requests.
-  Use when creating, updating, resolving conflicts in, or merging standalone or stacked pull requests.
+  GitHub Pull Requests Knowledge Centre covering PR lifecycle, draft conventions,
+  mainline and epic-tree/stacked baseRefName targeting and retargeting, REST inline
+  comment anchoring, GraphQL thread triage, conflict resolution, and merging. Use
+  when creating, updating, reviewing, syncing, retargeting, or merging pull requests.
 user-invocable: false
 ---
 
-# Pull Request Workflows and Standards
+# GitHub Pull Requests Knowledge Centre
 
-This skill provides guidelines and procedures for authoring, structuring, managing, and merging GitHub Pull Requests.
+Domain guidelines, platform mechanics, and black-box script toolkit for GitHub Pull Requests (standalone, epic-tree, and stacked). For raw `gh` CLI / MCP tool routing and GraphQL query files, pair with `github-cli`.
 
-> **Prerequisites:** This skill requires either the GitHub MCP server or the `gh` CLI to be available and authenticated. However, this file contains **ZERO** script or MCP direct references for usage. For execution, refer to the `github-cli` skill.
+---
 
-## 1. Base Branch & Safety Rules
+## 1. Base Branch, Targeting & Draft Conventions
 
-- **Base Branch Rule**: NEVER infer or assume a base branch. Always ask the user if not explicitly provided. NEVER create a PR targeting `main` or `master` by default unless explicitly instructed.
-- **New Branch Origin & Check**:
-  - **Standalone PRs**: Always create new branches from `origin/<default-branch>` (e.g., `origin/master` or `origin/main`), never from whatever unrelated branch happens to be checked out. Run `git-expert/scripts/branch_base_check.sh` before opening a PR.
-  - **Stacked PRs**: A stack is an ordered linear chain of branches `(trunk) <- layer-1 <- layer-2 <- ... <- layer-N`. The bottom layer branches from the trunk (`origin/<default-branch>` or an explicitly approved epic base branch), and each subsequent layer branches from the layer immediately below it so reviewers see only that layer's incremental diff.
-- **Draft PR Policy**: ALWAYS create pull requests as drafts (`--draft`) first.
-- **Explicit Approval Required**: Present the full proposed content (title, body, base/head branches, draft state) to the user for explicit approval before creating, publishing, or updating a PR. Obtain explicit confirmation before merging any PR.
-- **Domain Separation**: Keep Git-specific commands and workspace logic (local branching, commits, diffs) logically separate from GitHub PR API management.
+- **Never Infer Base Branch**: Query or confirm `baseRefName` explicitly. Never default to `main` or `master` without explicit instruction.
+- **Mainline vs. Epic-Tree vs. Stacked Targeting**:
+  - **Standalone**: Branch from `origin/<default-branch>` and verify ancestry with `git-expert/scripts/branch_base_check.sh`.
+  - **Epic Integration**: Target `epic/<id>-<slug>` when subtasks land into a shared epic branch before merging to trunk.
+  - **Stacked**: Target the immediate upstream dependency branch `(trunk) <- layer-1 <- layer-2`. When an upstream PR squash-merges, retarget `baseRefName` (`gh pr edit <n> --base <new-base>`) and replay with `git rebase --onto` so squashed commits are not replayed.
+  - See `@references/stacked-epic-prs.md` for layer ordering, retargeting, `rerere`, and CI branch-filter rules.
+- **Draft First**: Always create PRs as `--draft` first unless explicitly instructed otherwise.
+- **Explicit Approval**: Present proposed title, body, base/head branches, and draft state before creating, publishing, or merging.
 
-## 2. Title Formatting Standards
+---
 
-Choose the format based on context:
-- **User provides a ticket/issue ID**: `[TICKET-ID] Summary` (e.g., `[PROJ-123] Add user authentication`)
-- **Linked GitHub issue**: `[#42] Summary` (e.g., `[#42] Fix null pointer in search`)
-- **Standard (no ticket)**: `type(scope): summary` (e.g., `feat(ui): add dark mode toggle`)
-- **Draft with unclear scope**: `WIP: Summary` (e.g., `WIP: Explore caching strategies`)
+## 2. Title & Body Standards
 
-**Rules for PR titles**:
-- Use the imperative mood (e.g., "Add feature", "Fix bug", not "Added" or "Fixes").
-- Keep under 70 characters.
-- Capitalise the first letter of the summary.
-- Avoid vague or generic titles (e.g., "Fix stuff", "Update code").
+- **Title Format**: `[TICKET-ID] Summary`, `[#42] Summary`, `type(scope): summary`, or `WIP: Summary` — imperative mood, under 70 characters, capitalized summary.
+- **Body Template**: Prefer repo templates (`.github/PULL_REQUEST_TEMPLATE.md` or `.github/PULL_REQUEST_TEMPLATE/*.md`); fallback to `@templates/pull_request.md`. Include what/why, linked issues (`Closes #N` / `Depends on #N`), stack position if stacked, and observed verification results.
+- **Inline Review Finding Format**: Use `@templates/pull_request_review_comment.md` (`Severity`, `Description`, `Impact`, `Proposed Solution`).
 
-## 3. Body Content & Formatting
+---
 
-Use repository-specific PR templates if available (`.github/PULL_REQUEST_TEMPLATE.md` or `.github/PULL_REQUEST_TEMPLATE/*.md`). If none exist, use the fallback template at `@templates/pull_request.md`.
+## 3. Inline Comment Anchoring & Review Mechanics
 
-Ensure the body:
-- Explains **what** changed and **why**.
-- Links related issues or tickets (`Closes #number`, `Fixes #number`).
-- For **stacked PRs**, clearly states the layer's position and purpose within the stack/epic and links the parent PR or overarching epic issue.
-- Highlights specific areas needing reviewer attention.
-- Includes testing notes and verification proof if behavior changed.
+- **REST Inline Anchors**: Always use `side: "RIGHT"` and 1-indexed post-change line numbers on `+` lines within diff hunks. Never include GraphQL-only `subject_type` in REST payloads.
+- **Pre-Submit Anchor Gate**: Always run `scripts/verify_review_anchors.sh` (or `scripts/submit_review.sh`, which runs build + anchor gate + submit in one fetch).
+- **Single-Fetch Consistency**: Never pass stale `--diff`/`--head` artifacts across separate fetches; use `scripts/pr_preflight.sh` or plain `scripts/submit_review.sh`.
+- **Self-Authored PRs**: GitHub rejects `REQUEST_CHANGES` and `APPROVE` on self-authored PRs (HTTP 422); use `COMMENT`.
+- **Thread Resolution & Replies**: `github-cli/scripts/update_pull_request_review_thread_resolution.sh` emits plain text (never pipe to `jq`); `scripts/reply_to_review_thread.sh` requires the integer REST `databaseId` (never the `PRRC_...` node ID).
+- **Full Mechanics Reference**: Load `@references/review-mechanics.md` for stale-ref races, blob-hash sweeps, duplicate sibling PR detection, stacked-base inspection, and shipped-dependency checks.
 
-## 4. Author-Side Conflict Resolution
+---
 
-### Standalone (Unstacked) PRs
-When resolving base branch merge conflicts on a standalone PR branch as the PR author (using a local workspace):
-1. Use an isolated git worktree in `/tmp/` to prevent main workspace contamination.
-2. Fetch the remote branch and base branch.
-3. Merge the base branch into the PR branch non-interactively (`git -c core.editor=true merge origin/<base>`).
-4. Resolve conflicts while preserving both PR additions and base branch code.
-5. Push the resolved branch using a standard `git push` (NEVER force-push `--force` or `--force-with-lease`).
-6. Clean up the isolated worktree.
+## 4. Conflict Resolution & Merging
 
-Bundled helper: `bash <skill-dir>/scripts/pr_sync_validate.sh <pr> --repo <owner/repo> [--dry-run] [--push] [--cleanup]` performs steps 1-3, validation (`./validate.sh`) and the push in one call. It exits `2` and lists the conflicted files when conflicts occur; after resolving and `git add`-ing them, re-run with `--continue`. When finishing a conflicted merge by hand, use `GIT_EDITOR=true git merge --continue`, never `git commit -m` (it failed at event #90 of session 4ff115e0). Do not open the script source; `--help` documents every flag.
+- **Standalone PRs**: Sync by merging `origin/<base>` in an isolated worktree (`scripts/pr_sync_validate.sh`) — never `git rebase` or force-push standalone PR branches.
+- **Stacked PRs**: Update via bottom-up cascading rebase (`--onto`) rather than merge commits. See `@references/stacked-epic-prs.md`.
+- **Merging**: Prefer squash-merge (`scripts/pr_merge.sh` / `scripts/batch_merge.sh`) after CI passes and explicit user approval. Pass `--admin` only for ruleset-gated repos where the user has bypass privileges. Remote branch deletion requires separate explicit approval.
 
-### Stacked PRs
-Stacked pull requests rely on **rebasing rather than merge commits** to update branches. Merging upstream changes into a stacked branch creates merge-commit knots and pollutes diffs in higher layers. Instead, replay the commits from each head branch on top of the latest base in bottom-to-top order:
-1. Check out the stack of branches locally (preferring an isolated worktree if the main workspace has active uncommitted work).
-2. Perform a cascading rebase across the stack from the updated base/trunk upward so each layer replays cleanly onto the tip of the layer immediately below it.
-3. If conflicts occur at any layer, resolve the conflicted files, stage them, and continue the cascading rebase until all layers in the stack are rebased and pass local verification.
-4. Push the updated stack branches atomically to the remote after explicit user approval.
-5. For CLI execution instructions (`gh stack`), refer to the `github-cli` skill.
+---
 
-## 5. Pull Request Merging Rules
+## 5. Bundled Script Toolkit (`scripts/`)
 
-- **Explicit User Confirmation**: Always obtain explicit user approval before executing a merge.
-- **CI Requirement**: All GitHub Actions / CI checks MUST pass before merging.
-- **Squash-Merge Preference**: Prefer squash-and-merge (`gh pr merge --squash`) for standalone pull requests.
-- **Stacked PR Merging**: Stacked PRs must be merged **bottom-up** (merging the target layer and every unmerged layer beneath it as an all-or-nothing atomic operation) using native stack merge tooling rather than single-PR merge commands. When a lower PR is squash-merged, synchronize the remaining stack so upper layers automatically retarget and replay (`--onto`) against the trunk without replaying already-merged commits. Refer to the `github-cli` skill for execution.
-- **Ruleset-Gated PR Merges**: On repositories using active GitHub branch rulesets where the user has bypass privileges, if `gh pr merge --squash` fails due to base branch policy, supply `--admin` to bypass the ruleset gate once CI checks and approvals are satisfied.
-- **Remote Branch Deletion**: Remote branch deletion is optional and separate. Delete a remote branch only after explicit user approval for that deletion.
+All scripts accept standardized `--repo <owner>/<repo>` flags (legacy `--owner <o> --repo <r>` also supported where noted). Run via `--help` without reading source code.
 
-### Automated Merging Tool (`scripts/pr_merge.sh`)
-
-Use the bundled helper script `scripts/pr_merge.sh` to safely preflight and squash-merge a PR in one call:
-```bash
-bash <skill-dir>/scripts/pr_merge.sh <pr> --repo <owner/repo> [--admin] [--dry-run] [--delete-branch]
-```
-The script automatically verifies:
-1. PR open status and mergeability (fails loudly with exit code 2 on merge conflicts).
-2. CI status check rollup (fails with exit code 3 if CI checks are failing or pending).
-3. Applies `--admin` for ruleset bypass if requested.
-4. Supports `--dry-run` to preview the preflight without executing the merge.
-
-### Batch Merging Tool (`scripts/batch_merge.sh`)
-
-Use `scripts/batch_merge.sh` to preflight and squash-merge multiple approved pull requests sequentially:
-```bash
-bash <skill-dir>/scripts/batch_merge.sh --repo <owner/repo> --prs <1,2,3> [--admin] [--delete-branch] [--dry-run]
-```
-The script preflights every PR first, prints a clean Markdown status table, skips blocked/conflicting PRs, and sequentially merges conflict-free candidates with `--admin` ruleset bypass and branch deletion.
-
-## 6. Stacked Pull Request Rules & Architecture
-
-Stacked pull requests decompose large features or architectural migrations into an ordered chain of small, logically dependent pull requests:
-
-```text
-(trunk) <- layer-1 (bottom) <- layer-2 (middle) <- layer-3 (top)
-```
-
-### Layer Design & Dependency Ordering
-- **Plan Layers Before Writing Code**: A stack is a strict dependency chain. If code in one layer depends on code in another, the dependency must live in the same layer or a lower one. Plan the layer order upfront rather than writing a monolithic branch and splitting it later.
-- **Bottom-Up Architectural Order**:
-  1. *Bottom (Foundation)*: ADRs/plans, schemas, core types, data models, shared interfaces, or pure preparatory refactors.
-  2. *Middle (Core Logic)*: Engine rules, services, pipelines, and business logic consuming the foundation.
-  3. *Top (Surface & Teardown)*: CLI/UI wiring, consumer integrations, end-to-end tests, and removal of deprecated/legacy code once all callers have been migrated in lower layers.
-- **Atomic Layer Compilation**: Every individual PR in the stack must compile and pass all tests and verification gates independently when checked out in isolation. Never commit broken intermediate state or delete legacy interfaces at the bottom of a stack before upper layers migrate their callers.
-- **One Stack, One Story / One Layer, One Concern**: Group branches into a single stack only when they serve the same feature or epic. Start a separate stack for unrelated bug fixes or features. If a layer cannot be described in one sentence, split it into two layers.
-- **Stack Depth & Epic Integration Branches**: Keep routine feature stacks shallow (2–4 layers) to minimize review and rebase overhead. For large architectural epics (5+ layers), consider rooting the stack on an epic integration branch or keeping bottom layers non-controversial so they can land early.
-
-### Modifying & Maintaining a Stack
-- **Editing a Lower Layer**: Never fix a defect or review comment belonging to a lower layer by committing on the top branch. Always switch to the layer that owns the concern, commit the change there, and run an upstack cascading rebase so all higher layers inherit the fix linearly.
-- **Conflict Resolution Reuse (`rerere`)**: Enable Git reuse of recorded conflict resolutions (`rerere`) when working with stacks so a conflict resolved on a lower layer is replayed automatically as upper layers cascade.
-- **CI Branch-Filter Awareness**: If repository CI workflows restrict `pull_request` triggers to the default branch (e.g., `branches: [main]`), mid-stack PRs targeting parent feature branches will not trigger full CI suites on GitHub until retargeted to trunk. Always run the project's full local verification suite across rebased stack layers before pushing.
-- **Execution Delegation**: For concrete CLI commands to initialize, add layers, view, checkout, rebase, sync, submit, and merge stacks, refer to the `github-cli` skill (Stacked PRs reference).
+| Script | Invocation | Run When |
+|---|---|---|
+| `pr_preflight.sh` | `bash <skill-dir>/scripts/pr_preflight.sh --repo <owner/repo> --pr <n> [--expect-sha <sha>]` | Capturing PR diff + head ref in one fetch and checking for mid-audit head movement |
+| `review_worktree.sh` | `bash <skill-dir>/scripts/review_worktree.sh add\|rm\|list\|exec --pr <n> [--role head\|base\|merge]` | Creating, running tests inside, or tearing down isolated throwaway audit worktrees |
+| `prebundle_prs.sh` | `bash <skill-dir>/scripts/prebundle_prs.sh --repo <owner/repo> (--prs <list> \| --all-open)` | Pre-generating `/tmp/pr<N>/` audit bundles in parent session before parallel subagent reviews |
+| `build_review_payload.py` | `python3 <skill-dir>/scripts/build_review_payload.py <spec.json> --out <payload.json> [--event ...]` | Converting a structured findings JSON spec into a REST review payload |
+| `verify_review_anchors.sh` | `bash <skill-dir>/scripts/verify_review_anchors.sh --diff <pr.diff> --payload <payload.json> [--head <ref>]` | Hard-gating every inline `path`/`line` anchor against `+` lines in the diff before submission |
+| `submit_review.sh` | `bash <skill-dir>/scripts/submit_review.sh --spec <spec.json> --repo <owner/repo> --pr <n> [--validate-only]` | Building, anchor-gating, and submitting a PR review from one consistent fetch |
+| `reply_to_review_thread.sh` | `bash <skill-dir>/scripts/reply_to_review_thread.sh --repo <owner/repo> --pr <n> --comment-id <databaseId> --body "..."` | Posting a contextual reply to an unresolved PR review thread using its integer `databaseId` |
+| `batch_disposition.sh` | `bash <skill-dir>/scripts/batch_disposition.sh --repo <owner/repo> [--approve ...] [--request-changes-dir ...] [--close ...] [--execute]` | Dry-running (default) or executing validated multi-PR review dispositions |
+| `pr_sync_validate.sh` | `bash <skill-dir>/scripts/pr_sync_validate.sh <pr> --repo <owner/repo> [--push] [--cleanup]` | Merging base into a standalone PR branch in an isolated worktree, running `./validate.sh`, and pushing |
+| `pr_merge.sh` | `bash <skill-dir>/scripts/pr_merge.sh <pr> --repo <owner/repo> [--admin] [--dry-run]` | Preflighting mergeability + CI checks and squash-merging a single approved PR |
+| `batch_merge.sh` | `bash <skill-dir>/scripts/batch_merge.sh --repo <owner/repo> --prs <1,2,3> [--admin] [--dry-run]` | Preflighting and sequentially squash-merging multiple approved PRs |

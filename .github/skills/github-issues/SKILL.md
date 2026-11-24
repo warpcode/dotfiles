@@ -1,8 +1,9 @@
 ---
 name: github-issues
 description: >
-  Guidelines, procedures, and templates for managing GitHub issues, issue triage, and issue comments.
-  Use when authoring, updating, triaging, or commenting on GitHub issues.
+  Guidelines, procedures, and templates for managing GitHub issues, issue triage,
+  issue comments, native Sub-Issues, parent Epics, and dependency markers. Use
+  when authoring, updating, triaging, linking hierarchies, or commenting on GitHub issues.
 user-invocable: false
 ---
 
@@ -46,3 +47,10 @@ If no repository-specific templates exist, use the standard fallback templates l
 - **Technical Content**: Focus on actionable technical updates, minimal reproduction steps, specific error logs, or concrete proposed fixes.
 - **Referencing**: Explicitly cross-reference linked pull requests, parent issues, or related tickets (`#number` or `owner/repo#number`).
 - **Batching & Updates**: When posting status updates on ongoing tasks, consolidate updates to avoid comment spamming.
+
+## 5. Sub-Issues, Epics & Dependency Markers
+
+- **Native Sub-Issues**: Link child tasks to parent Epics via GitHub's `sub_issues` REST/GraphQL APIs (remembering REST `sub_issue_id` takes the integer database `id`, not the issue `number`).
+- **Epic Structuring**: Define clear non-goals, shared integration branches (`epic/<id>-<slug>`) when applicable, tasklists, and Epic-level acceptance criteria.
+- **Dependency Markers**: Record prerequisites in issue/PR bodies using machine-parseable markers (`Depends on #N`, `Blocked by #N`, or `Depends on owner/repo#N`). Verify a dependency actually shipped via a merged PR or base-branch presence rather than trusting `CLOSED` state alone.
+- **Full Reference**: See `@references/sub-issues-and-epics.md` for REST/GraphQL endpoint details, Epic layout templates, and shipped-dependency rules.

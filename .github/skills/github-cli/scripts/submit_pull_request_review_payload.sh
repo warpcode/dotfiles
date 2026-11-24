@@ -5,6 +5,7 @@ export PAGER=cat
 
 owner="$(gh repo view --json owner -q '.owner.login' 2>/dev/null || echo '')"
 repo="$(gh repo view --json name -q '.name' 2>/dev/null || echo '')"
+owner_explicit=0
 pull_number=""
 input_file=""
 
@@ -16,8 +17,8 @@ while [[ $# -gt 0 ]]; do
       echo "Submit a structured review payload (with file/line comments) on a pull request."
       echo ""
       echo "Options:"
-      echo "  --owner <value>        Repository owner (auto-detected if omitted)"
-      echo "  --repo <value>         Repository NAME only, no owner (use --owner separately)"
+      echo "  --repo <value>         Repository in owner/name format, or name with --owner (auto-detected if omitted)"
+      echo "  --owner <value>        Repository owner (auto-detected if omitted; optional if --repo is owner/name)"
       echo "  --pull-number <value>  Pull request number (Required)"
       echo "  --input <value>        Path to JSON review payload file (Required)"
       echo "  -h, --help             Show this help message"
@@ -25,6 +26,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --owner)
       owner="$2"
+      owner_explicit=1
       shift 2
       ;;
     --repo)
@@ -46,12 +48,17 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "$owner" ]]; then
-  echo "Error: --owner is required. Use --help for usage." >&2
-  exit 1
-fi
 if [[ "$repo" == */* ]]; then
-  echo "Error: --repo expects the repository NAME only (e.g. dotfiles), not owner/name. Pass --owner and --repo separately." >&2
+  if [[ "$owner_explicit" -eq 1 ]]; then
+    echo "Error: pass either --repo owner/name or separate --owner and --repo, not both." >&2
+    exit 1
+  fi
+  owner="${repo%%/*}"
+  repo="${repo#*/}"
+fi
+
+if [[ -z "$owner" ]]; then
+  echo "Error: --owner is required (or pass --repo owner/name). Use --help for usage." >&2
   exit 1
 fi
 if [[ -z "$repo" ]]; then

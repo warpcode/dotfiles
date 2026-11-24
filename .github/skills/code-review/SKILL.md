@@ -1,61 +1,43 @@
 ---
 name: code-review
-description: Use when reviewing a Jira issue, GitHub issue, pull request, or branch against master/main. Prioritizes bugs, security, style, efficiency, readability, and unresolved review feedback.
+description: >
+  Technical code review rubrics, premise scrutiny, mutation testing, and CI test
+  coverage verification. Use when reviewing a Jira issue, GitHub issue, pull
+  request, or branch against its base for correctness, security, test strength,
+  and requirements compliance.
 ---
 
-# Code Review
+# Code Review Knowledge Centre
 
-Review code only. Use issue/PR context to validate requirements and surface defects.
+Standards, defect prioritization rubrics, and test/CI verification tools for auditing code changes. For GitHub PR mechanics (diff preflight, inline anchor verification, review submission, and thread triage), pair with `github-pr` and `github-cli`. For orchestration, parallel subagent dispatch, and disposition policies, see `.github/agents/code-reviewer.agent.md`.
+
+---
 
 ## Input Expectations
 
-- Accepts one of:
-  - Jira issue link
-  - GitHub issue link
-  - GitHub pull request link
-  - Branch name
-- If the input is a Jira issue, use the `jira-api` skill to load it.
-- If the Jira issue is an epic, retrieve the epic and its tasks/subtasks, but treat the provided issue as primary.
-- If the Jira issue is not an epic, use that issue and its subtasks as the review context.
-- If the provided Jira issue does not include a primary PR, stop and ask for the PR.
-- If the input is a GitHub issue, use the `github-cli` skill (issues reference) to load details and verify it references a PR.
-- If the GitHub issue has no linked PR, halt and ask for the PR.
-- If the input is a PR, use the `github-cli` skill (pull-requests reference) and also try to find associated issue/Jira context from PR description, comments, or branch name.
-- If the input is a branch name, compare latest `origin/<branch>` to latest `origin/master` or `origin/main`.
+- **Jira Issue**: Load via `jira-api` (if epic, include tasks/subtasks). Require a linked PR before reviewing code.
+- **GitHub Issue**: Load via `github-cli` (issues reference) and verify a linked PR exists (`closingIssuesReferences`).
+- **Pull Request**: Gather full snapshot via `github-cli/scripts/pr_audit_bundle.sh` and inspect any linked source issue/ticket.
+- **Branch**: Compare `origin/<branch>` against `origin/<baseRefName>` (never hardcode `master`/`main` if an explicit base exists).
 
-## Review Behavior
+---
 
-- Never commit.
-- Never checkout a branch unless explicitly asked.
-- Never make local changes unless explicitly asked.
-- Do not proceed without a pull request when one is required for context.
-- Use origin refs and remote diff context when needed.
-- For security-scanner comment triage, load `code-security-audit` and assess each claim against the changed code and actual response contract. Keep the review limited to the reported findings.
-- **Scrutinize Validity & Utility**: Never assume proposed changes are correct, necessary, or useful. Verify whether the underlying bug or requirement is genuine or based on a false premise/hallucination, and whether the modification provides real utility rather than code churn or unneeded complexity.
-- **Source Issue Requirements Verification**: When the PR or branch originates from or references an issue/ticket (Jira or GitHub), always review the source issue to verify that the implementation completely and accurately fulfills the stated requirements and acceptance criteria.
-- **Leftover Test/Debug Artifacts**: Check the diff for test data or test/debug code left in by accident—such as debug statements (`console.log`, `print`, `debugger`, `breakpoint()`, `set -x`), hardcoded dummy/mock values, temporary bypasses or feature overrides, commented-out code, or stray scratch/fixture files in production paths or configs.
-- Prioritize:
-  - requirement fulfillment against source issue/ticket
-  - validity of premise and genuine utility
-  - bugs and functional correctness
-  - security issues
-  - leftover test/debug code and test data
-  - style guideline violations (load the relevant style guideline skill if available)
-  - performance and efficiency improvements
-  - readability and maintainability
-  - anti-patterns and duplication
-  - consistency with project conventions
-  - unresolved PR comments and review questions
+## Review Principles
 
-## When to Choose This Skill
+- **Read-Only Audit**: Never commit, check out branches in the primary workspace, or make local edits during a code review unless explicitly instructed.
+- **Premise & Utility Scrutiny**: Verify the reported bug or requirement actually exists in code/fixtures; reject false premises, superficial churn, or already-superseded fixes.
+- **Source Issue Compliance**: Verify every acceptance criterion and edge case from the linked issue/ticket is satisfied.
+- **Prioritization & Deep Checks**: Follow the 10-tier defect hierarchy, leftover debug/test artifact checks, merge-regression checks, mutation-testing rules, and benchmark verification in `@references/review-rubrics.md`.
+- **Security Triage**: Load `code-security-audit` when reviewing security-sensitive paths or scanner findings.
 
-Use this skill for formal code reviews or when a review requires issue/PR context. It is best for:
+---
 
-- reviewing a PR or branch before merge
-- validating code against Jira or GitHub issue requirements
-- checking whether review feedback has been answered
-- finding defects and improvement opportunities in a focused way
+## Bundled Script Toolkit (`scripts/`)
 
-## Questions Before Continuing
+Run scripts with `--help` without reading source code.
 
-If the request lacks a PR or a branch comparison target, ask for it before reviewing.
+| Script | Invocation | Run When |
+|---|---|---|
+| `mutation_check.sh` | `bash <skill-dir>/scripts/mutation_check.sh --pr <n> --spec <mutations.json> --test-cmd "<pkg-cmd>"` | Verifying test-only PRs or test assertions actually fail when branches under test are mutated (head vs. base) |
+| `apply_mutation.py` | `python3 <skill-dir>/scripts/apply_mutation.py --check --root <dir> <spec.json>` | Pre-checking multi-line `old`/`new` mutation patterns against exact indentation before running `mutation_check.sh` |
+| `audit_ci_test_coverage.sh` | `bash <skill-dir>/scripts/audit_ci_test_coverage.sh --repo <owner>/<repo> [--ref <ref>] [path ...]` | Verifying whether CI workflows actually discover and execute new/existing test files and checking `paths:` filters |

@@ -8,7 +8,7 @@ user-invocable: false
 
 # GitHub CLI & MCP Execution
 
-Manage GitHub platform operations end-to-end through CLI and MCP tools. This skill is strictly for execution logic. For procedural guidelines (like when a PR is ready, review formatting, and workflows), load the `github-pr` skill.
+Manage GitHub platform operations end-to-end through CLI and MCP tools. This skill is strictly for execution logic. For procedural guidelines (PR targeting, review anchoring, issue templates, Sub-Issues, and Dependabot reference), pair with `github-pr`, `github-issues`, and `github-dependabot`.
 
 ## Execution Priority
 
@@ -68,19 +68,16 @@ Run bundled helper scripts relative to this skill's root directory (`<skill-dir>
 ### Alert triage notes
 
 - **Phantom alerts are the norm without a `dependabot.yml`.** Dependabot auto-discovers
-  manifests repo-wide and keeps alerts for files that were later deleted or moved. Observed:
-  9 open alerts for 3 real ones — the same advisories triplicated across a live path, a
-  deleted tree, and a `.bk` backup directory. Dismissal does not fix the cause; pin
-  `directory:` in `.github/dependabot.yml`.
+  manifests repo-wide and keeps alerts for files that were later deleted, moved, or
+  kept in backup paths. Dismissal does not fix the cause; pin `directory:` in
+  `.github/dependabot.yml` and remove stale manifests.
 - **`dismissed_comment` is capped at 280 characters** — the API returns HTTP 422 if you exceed
   it. Valid code-scanning `dismissed_reason` values are exactly `false positive`, `won't fix`,
   `used in tests`, `mitigated`.
 - **Never bind a shell loop variable to `path` in zsh.** `path` is tied to `PATH`, so the
   assignment removes `git`/`gh` from `PATH` and every manifest-existence check silently
-  returns "absent" — producing a confident, complete-looking answer that marks real alerts as
-  phantoms. Observed classifying 10/10 as missing when 3 existed. The script `audit_repo_alerts.py`
-  (in `github-dependabot`) is written in Python for that reason and refuses to run outside a
-  work tree, where the same failure would mark *every* alert phantom.
+  returns "absent" — marking real alerts as phantoms. `audit_repo_alerts.py` (in
+  `github-dependabot`) avoids this in Python and refuses to run outside a work tree.
 - A `py/command-line-injection` finding on `subprocess.run(cmd, ...)` is usually a false
   positive when `cmd` is an argv **list**. Check for `shell=True`, `os.system`,
   `subprocess.call` and `Popen` before treating it as real.
@@ -113,8 +110,8 @@ These apply to **all** operations executed via `gh` CLI:
     via `gh api repos/<o>/<r>/pulls/<n> -H "Accept: application/vnd.github.v3.diff" > /tmp/pr<n>.diff`
     (or `raw`), or run `pr_audit_bundle.sh`. (`gh api` has no `--output` flag,
     and `--jq` breaks on non-JSON responses.)
-8. **Execution priority**: Bundled workflow scripts first, then GitHub MCP
-   server, then `gh` CLI. Never use raw `curl` against the GitHub REST or
-   GraphQL APIs.
-9. **Write operations require authentication** — guide the user to
-   `gh auth login` or enable the GitHub MCP server when missing.
+11. **Execution priority**: Bundled workflow scripts first, then GitHub MCP
+    server, then `gh` CLI. Never use raw `curl` against the GitHub REST or
+    GraphQL APIs.
+12. **Write operations require authentication** — guide the user to
+    `gh auth login` or enable the GitHub MCP server when missing.
