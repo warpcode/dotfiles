@@ -13,8 +13,6 @@ model: inherit
 subagent: true
 skills:
   - git-expert
-  - git-commit
-  - git-worktrees
   - github
   - github-cli
 ---
@@ -41,20 +39,17 @@ You MUST load the skill(s) relevant to the task BEFORE executing anything. Skill
 ### Mandatory loading procedure
 
 1. **Classify the task** — determine which skill applies before touching git or GitHub:
-   - Local git operation (status, diff, rebase, branch, triage, stash, worktree) → `git-expert`
-   - Commit preparation and execution → `git-commit`
+   - Local git operation (status, diff, rebase, branch, triage, stash, worktree, commit preparation) → `git-expert`
    - GitHub platform operation (issue, PR, review, search) → `github`
    - GitHub CLI execution (`gh` commands) → `github-cli`
-2. **Load the skill** — read the skill's `SKILL.md` and the reference file(s) relevant to the task (e.g. `git-commit SKILL.md` for commits) before executing.
-3. **Use the skill's resources** — prefer the skill's bundled scripts (e.g. `status.sh`) and follow its safety rules and format constraints.
+2. **Load the skill** — read the skill's `SKILL.md` and the reference file(s) relevant to the task (e.g. `git-expert/references/commit-conventions.md` for commits, `git-expert/references/worktrees.md` for worktrees, `git-expert/references/branching-strategies.md` for branching) before executing.
+3. **Use the skill's resources** — prefer the skill's bundled scripts (e.g. `status.sh`, `worktrees.sh`, `git-diff-triage.py`) and follow its safety rules and format constraints.
 4. **Then execute** — only after loading, run the workflow.
 
 Never skip loading because a prompt file appears self-contained. If a task spans multiple domains, load all applicable skills.
 
 ### Skill map
 
-- git-expert: for local git operations (rebase, branch naming, triage)
-- git-commit: to prepare and execute git commits with strict Conventional Commit formatting
-- git-worktrees: for isolated workspace and worktree operations (detect isolation, create/manage worktrees)
+- git-expert: for local git operations (branching strategies, commit conventions via `references/commit-conventions.md`, worktree isolation via `references/worktrees.md`, rebase, conflict resolution, triage)
 - github: for GitHub platform operations (issues, pull requests, reviews)
 - github-cli: for GitHub CLI operations (gh commands, gh_repo_info.sh)

@@ -12,7 +12,9 @@
 # Usage:
 #   branch_base_check.sh [--base REF] [--head REF] [--json]
 #
-#   --base REF   base ref to check ancestry against  [default: origin/master]
+#   --base REF   parent base ref to check ancestry against (e.g. origin/master,
+#                epic/<id>-<slug>, or an upstream dependency branch)
+#                [default: auto-detected repository default branch]
 #   --head REF   head ref                            [default: HEAD]
 #   --json       machine-readable output
 #   -h, --help   show this help
@@ -22,7 +24,24 @@
 
 set -euo pipefail
 
-BASE="origin/master"
+resolve_default_base() {
+  local sym=""
+  sym=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null || true)
+  if [ -n "$sym" ]; then
+    echo "$sym"
+    return
+  fi
+  local candidate
+  for candidate in origin/main origin/master main master; do
+    if git rev-parse --verify -q "$candidate" >/dev/null 2>&1; then
+      echo "$candidate"
+      return
+    fi
+  done
+  echo "origin/master"
+}
+
+BASE=""
 HEAD_REF="HEAD"
 JSON=0
 
@@ -36,6 +55,10 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+if [ -z "$BASE" ]; then
+  BASE=$(resolve_default_base)
+fi
+
 if ! git rev-parse --verify -q "$BASE" >/dev/null; then
   echo "base ref not found: $BASE (fetch it first, or pass --base)" >&2
   exit 1
@@ -48,12 +71,19 @@ fi
 # Refresh the remote-tracking ref so ancestry reflects the current base, but never
 # move a local branch: a check must not be able to rewrite history.
 #
-# The remote is the leading path segment of the base ref (origin/master -> origin).
-# Asking rev-parse for the symbolic name would return the *ref* (origin/master),
-# not the remote, and `git fetch origin/master master` always fails.
+# Only treat the leading path segment as a remote if a matching git remote is
+# configured; slashed local branch names such as epic/402-demo or issue/12-auth
+# must not be mistaken for <remote>/<branch>.
+REMOTE=""
+TRACKED=""
 case "$BASE" in
-  */*) REMOTE="${BASE%%/*}"; TRACKED="${BASE#"$REMOTE"/}" ;;
-  *)   REMOTE=""; TRACKED="" ;;   # local branch: no remote-tracking ref to refresh
+  */*)
+    CANDIDATE_REMOTE="${BASE%%/*}"
+    if git config --get "remote.${CANDIDATE_REMOTE}.url" >/dev/null 2>&1; then
+      REMOTE="$CANDIDATE_REMOTE"
+      TRACKED="${BASE#"$REMOTE"/}"
+    fi
+    ;;
 esac
 if [ -n "$REMOTE" ]; then
   # The ref actually refreshed is "$REMOTE/$TRACKED", which is not "$BASE"
