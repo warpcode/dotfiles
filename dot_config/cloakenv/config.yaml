@@ -17,6 +17,10 @@ vaults:
     provider: "keepass"
     vault_path: "~/.keepass/Accounts.kdbx"
     resolve_references: true
+    cache:
+      enabled: false
+      ttl: "15m"
+      mode: "keyring"
 
 # Declarative environment sets with RuleEngine transformations
 envs:
