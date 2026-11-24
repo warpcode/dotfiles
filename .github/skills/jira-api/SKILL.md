@@ -8,7 +8,7 @@ description: >-
 
 # Jira API
 
-Use the bundled CLI for read-only Jira queries. For report interpretation and team or project analysis, use the `jira-reporting` skill.
+Use the bundled CLI for read-only Jira queries. For report interpretation and team or project analysis, use the `jira-reporting` skill. For criterion-to-code progress assessment, see `jira-issue-assessment` / `project-tracker`.
 
 ## Authentication and Invocation
 

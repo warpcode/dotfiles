@@ -2,10 +2,11 @@
 
 | Metadata | Details |
 |---|---|
-| **Parent Epic** | [PROJ-100](url) or [`SPEC.md`](../docs/plans/YYYY-MM-DD-slug/SPEC.md) |
+| **Parent Epic** | [#100 / PROJ-100](url) or [`SPEC.md`](../docs/plans/YYYY-MM-DD-slug/SPEC.md) |
 | **Estimate** | 1.0 pt \| 2.0 pt \| 3.0 pt (max) |
-| **Plan Link** | `Plan: <slug>:<TSK-xxx>` |
-| **Depends On** | [PROJ-xxx] or None |
+| **Traceability (Optional)** | `Closes #100` / `Plan: <slug>:<TSK-xxx>` |
+| **Depends On / Blocked By** | [#xxx / PROJ-xxx] or None |
+| **Blocks** | [#yyy / PROJ-yyy] or None |
 
 ---
 
@@ -40,5 +41,5 @@ Every criterion must be testable without human ambiguity:
 ## 4. Definition of Done Checklist
 - [ ] Code implemented against named target files.
 - [ ] Unit or regression test added verifying all AC.
-- [ ] Pull request authored with trailer `Plan: <slug>:<TSK-xxx>`.
+- [ ] Pull request authored with issue reference (`Closes #...`) or optional `Plan: <slug>:<TSK-xxx>` trailer.
 - [ ] CI validation passes (`./validate.sh`).
