@@ -65,7 +65,7 @@ Run bundled helper scripts relative to the `git-expert` skill directory (`.githu
 |---|---|---|
 | `@scripts/worktrees.sh` | Create, list, prune, or remove isolated worktrees | `bash <skill-dir>/scripts/worktrees.sh [-C <dir>] [--create <branch>] [--base <ref>] [--path <dir>] [--remove <path>] [--raw]` |
 | `@scripts/wt_test.sh` | Run a command or test suite inside a worktree with execution summary | `bash <skill-dir>/scripts/wt_test.sh <worktree-path> <command...>` |
-| `@scripts/pr_sync.sh` | Sync a PR branch with a base ref (`origin/master` or `--base <ref>`) in an isolated worktree | `bash <skill-dir>/scripts/pr_sync.sh <pr-or-branch> [--base <ref>] [--continue \| --abort]` |
+| `@scripts/pr_sync.sh` | Sync a PR branch with a base ref (`--base <ref>`, defaulting to the auto-detected repository default branch) in an isolated worktree | `bash <skill-dir>/scripts/pr_sync.sh <pr-or-branch> [--base <ref>] [--continue \| --abort]` |
 
 ### Common Invocations
 

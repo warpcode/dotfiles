@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# pr_sync.sh - Synchronize a PR branch with origin/master in an isolated worktree
+# pr_sync.sh - Synchronize a PR branch with a base ref in an isolated worktree
 set -euo pipefail
 export GH_PAGER=""
 export PAGER=cat
@@ -8,7 +8,7 @@ usage() {
   cat <<'EOF'
 Usage: pr_sync.sh <pr-number-or-branch> [OPTIONS]
 
-Synchronizes a PR branch with origin/master inside an isolated worktree
+Synchronizes a PR branch with a base ref inside an isolated worktree
 following repository safety invariants.
 
 Arguments:
@@ -16,11 +16,28 @@ Arguments:
 
 Options:
   -R, --repo <owner/repo>   Target repository (e.g. warpcode/dotfiles)
-  --base <ref>              Base branch to merge into PR branch (default: origin/master)
+  --base <ref>              Base branch to merge into PR branch (default: auto-detected repository default branch)
   --continue                Resume after resolving merge conflicts: runs tests, pushes, and removes worktree
   --abort                   Abort in-progress merge conflict and remove worktree
   -h, --help                Show this help message
 EOF
+}
+
+resolve_default_base() {
+  local sym=""
+  sym="$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null || true)"
+  if [[ -n "$sym" ]]; then
+    echo "$sym"
+    return
+  fi
+  local candidate
+  for candidate in origin/main origin/master main master; do
+    if git rev-parse --verify -q "$candidate" >/dev/null 2>&1; then
+      echo "$candidate"
+      return
+    fi
+  done
+  echo "origin/master"
 }
 
 if [[ $# -eq 0 || "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
@@ -32,7 +49,7 @@ TARGET="$1"
 shift
 
 REPO=""
-BASE_REF="origin/master"
+BASE_REF=""
 CONTINUE=0
 ABORT=0
 
@@ -130,10 +147,17 @@ if [[ $CONTINUE -eq 1 ]]; then
   exit 0
 fi
 
+if [[ -z "$BASE_REF" ]]; then
+  BASE_REF="$(resolve_default_base)"
+fi
+
 echo "Fetching latest $BRANCH and $BASE_REF..."
 git fetch origin "$BRANCH"
-if [[ "$BASE_REF" == origin/* ]]; then
-  git fetch origin "${BASE_REF#origin/}"
+if [[ "$BASE_REF" == */* ]]; then
+  CANDIDATE_REMOTE="${BASE_REF%%/*}"
+  if git config --get "remote.${CANDIDATE_REMOTE}.url" >/dev/null 2>&1; then
+    git fetch "$CANDIDATE_REMOTE" "${BASE_REF#"$CANDIDATE_REMOTE"/}"
+  fi
 fi
 
 echo "Creating isolated worktree at $WT_PATH..."

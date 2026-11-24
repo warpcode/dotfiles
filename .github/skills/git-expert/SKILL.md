@@ -56,7 +56,7 @@ Run bundled helper scripts relative to this skill's root directory (`<skill-dir>
 | `@scripts/audit_repo_branches.py` | Classify every remote branch as `KEEP`/`DELETE_MERGED`/`DELETE_STALE`/`SUPERSEDED`/`REVIEW`/`REVIEW_STALE` against `--base <ref>` (defaults to repo default branch, or pass an epic/parent ref); detects sibling conflicts; emits ready-to-run delete commands for safe branches (`--repo`, `--base`, `--json`, `--fetch`). **Requires `BypassSandbox: true`** on the first call due to `gh` network access. | "Which branches are obsolete?", "which of these two PR branches wins?", pre-prune cleanup |
 | `@scripts/worktrees.sh` | Create, list, prune, or remove isolated worktrees (`[-C <dir>] [--create <branch>] [--base <ref>] [--path <dir>] [--remove <path>] [--raw]`) | Setting up, inspecting, or cleaning up worktrees |
 | `@scripts/wt_test.sh` | Run a command or test suite inside an isolated worktree with an execution summary | Running builds/tests inside a worktree |
-| `@scripts/pr_sync.sh` | Synchronize a PR branch with a base ref (`origin/master` or `--base <ref>`) inside an isolated worktree | Updating a PR branch with conflicts or validating before push |
+| `@scripts/pr_sync.sh` | Synchronize a PR branch with a base ref (`--base <ref>`, defaulting to the auto-detected repository default branch) inside an isolated worktree | Updating a PR branch with conflicts or validating before push |
 
 ### Default branch
 Never hard-code `main` or `master`. Resolve it first:
