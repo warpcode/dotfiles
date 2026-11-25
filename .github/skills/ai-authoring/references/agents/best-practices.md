@@ -69,7 +69,7 @@ Coordinator agents synthesize subagent findings into final user responses. Make 
 - Prefer structured JSON or Markdown summaries over raw tool transcripts.
 - Include confidence ratings, file locations (`file:///path`), and line numbers (`#L10-L20`).
 - Put the verdict / summary first, followed by supporting evidence.
-- Use Layer 5 Output Contract specifications from `ai-authoring-prompts` (`[P5.1]` Diff Contract, `[P5.2]` Rubric-as-Judge, `[P5.4]` Rollup / Checklist Log).
+- Use Layer 5 Output Contract specifications from `references/prompts.md` (`[P5.1]` Diff Contract, `[P5.2]` Rubric-as-Judge, `[P5.4]` Rollup / Checklist Log).
 
 
 ---

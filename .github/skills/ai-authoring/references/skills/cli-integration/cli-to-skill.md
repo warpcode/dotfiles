@@ -208,7 +208,7 @@ Split into separate `read` and `write` skills when:
    2 enumeration, then write the `SKILL.md` that routes to them. Inverting this
    order — prose first, scripts never — is how skills end up documenting call
    chains instead of procedures.
-2. Apply `ai-authoring-prompts` rules to all LLM-facing instructions.
+2. Apply `references/prompts.md` rules to all LLM-facing instructions.
 3. Follow `templates/integration-tool.md` for skill layout.
 4. For wrapper scripts, follow the header conventions and patterns in [`script-patterns.md`](@references/cli-integration/script-patterns.md).
 5. Run validation: `python3 scripts/validate.py <skill-dir>`, including the

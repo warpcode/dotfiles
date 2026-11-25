@@ -56,7 +56,7 @@ Pattern: `<optional-prefix>-<domain>-<task-or-type>` (lowercase, hyphen-separate
 
 | Family Prefix | Domain Scope | Examples |
 |---|---|---|
-| `ai-authoring-` | AI artifacts (prompts, skills, agents, rules, commands, hooks) | `ai-authoring-skills`, `ai-authoring-prompts` |
+| `ai-authoring` | AI artifacts (skills, agents, commands, rules, hooks, prompts) | `ai-authoring` |
 | `code-` | Codebase architecture, quality, testing, security | `code-tdd`, `code-architecture`, `code-security-audit` |
 | `git-` / `github-` | Version control & GitHub platform operations | `git-expert`, `github-cli`, `github` |
 | `shell-` | Shell scripting, idioms, and environment configuration | `shell-scripting` |

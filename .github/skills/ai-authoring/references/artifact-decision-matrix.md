@@ -1,6 +1,6 @@
 # Artifact Decision Matrix (Knowledge Centre vs. Agent)
 
-Single canonical reference for choosing the right AI customization artifact. All `ai-authoring-*` skills link here instead of maintaining duplicate tables.
+Single canonical reference inside `ai-authoring` for choosing the right AI customization artifact.
 
 ## Architecture Boundary
 
@@ -12,14 +12,14 @@ Single canonical reference for choosing the right AI customization artifact. All
 
 ## Choosing the Right Artifact
 
-| Requirement | Artifact | Typical Location / Mechanism | Authoring Skill |
+| Requirement | Artifact | Typical Location / Mechanism | `ai-authoring` Guide |
 |---|---|---|---|
-| Domain knowledge hub, API/tool references, timeless pitfalls, and deterministic black-box scripts | **Skill** | `.github/skills/<name>/SKILL.md`, `references/`, `scripts/` | `ai-authoring-skills` |
-| Workflows, role personas, multi-step orchestration, isolated context window & least-privilege tools | **Agent / Subagent** | `.github/agents/*.agent.md`, `.agents/agents/*.md`, `.claude/agents/*.md` | `ai-authoring-agents` |
-| Thin user-invoked parameterized shortcut (`/name`) | **Command** | `.github/prompts/*.prompt.md`, `.claude/commands/*.md`, `.agents/workflows/*.md` | `ai-authoring-commands` |
-| Always-on or path-scoped conventions & safety invariants | **Rule** | `AGENTS.md`, `*.instructions.md`, `.mdc`, `.claude/rules/` | `ai-authoring-rules` |
-| Deterministic lifecycle gate, command blocker, auto-formatter, or dynamic rule simulator | **Hook** | `hooks.json`, `.github/hooks/*.json`, `.opencode/plugins/*.ts` | `ai-authoring-hooks` |
-| Prompt body craft, 5-layer cognitive stack, scheduled maintenance prompts, Mermaid.js flows | **Prompt Pattern** | Inline body / `references/maintenance-agents.md` | `ai-authoring-prompts` |
+| Domain knowledge hub, API/tool references, timeless pitfalls, and deterministic black-box scripts | **Skill** | `.github/skills/<name>/SKILL.md`, `references/`, `scripts/` | `references/skills.md` |
+| Workflows, role personas, multi-step orchestration, isolated context window & least-privilege tools | **Agent / Subagent** | `.github/agents/*.agent.md`, `.agents/agents/*.md`, `.claude/agents/*.md` | `references/agents.md` |
+| Thin user-invoked parameterized shortcut (`/name`) | **Command** | `.github/prompts/*.prompt.md`, `.claude/commands/*.md`, `.agents/workflows/*.md` | `references/commands.md` |
+| Always-on or path-scoped conventions & safety invariants | **Rule** | `AGENTS.md`, `*.instructions.md`, `.mdc`, `.claude/rules/` | `references/rules.md` |
+| Deterministic lifecycle gate, command blocker, auto-formatter, or dynamic rule simulator | **Hook** | `hooks.json`, `.github/hooks/*.json`, `.opencode/plugins/*.ts` | `references/hooks.md` |
+| Prompt body craft, 5-layer cognitive stack, scheduled maintenance prompts, Mermaid.js flows | **Prompt Pattern** | Inline body / `references/prompts/maintenance-agents.md` | `references/prompts.md` |
 
 ## Placement & Boundary Rules
 

@@ -30,4 +30,4 @@ Convert repeated procedures and developer corrections into reusable skills.
 - No essays; frame everything as executable workflows.
 
 ### Validation Gate
-- Run the ai-authoring-skills validation workflow on the new skill.
+- Run the `ai-authoring` skill validator (`scripts/validate.py`) on the new skill.

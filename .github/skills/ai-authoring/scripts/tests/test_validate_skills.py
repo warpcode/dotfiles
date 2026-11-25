@@ -302,7 +302,7 @@ class TestKnowledgeCentreRoutingHub(unittest.TestCase):
                 "|---|---|\n"
                 "| Core rules | `@references/core-rules.md` |\n"
                 "| Report schema | `templates/report.md` |\n"
-                "| Artifact placement | `../ai-authoring-skills/references/artifact-decision-matrix.md` |\n"
+                "| Artifact placement | `../other-skill/references/artifact-decision-matrix.md` |\n"
             )
             results = validate.validate_skill(skill)
             statuses = {c: s for c, s, _ in results}

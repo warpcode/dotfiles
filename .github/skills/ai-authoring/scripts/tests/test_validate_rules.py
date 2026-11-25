@@ -7,7 +7,7 @@ from pathlib import Path
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, SCRIPT_DIR)
 
-import validate
+import validate_rules as validate
 
 
 class TestValidateRule(unittest.TestCase):

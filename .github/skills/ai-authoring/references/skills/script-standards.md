@@ -106,7 +106,7 @@ Agents execute shell commands from the workspace root (`CWD`). Never assume `./s
 1. **Explicit Skill-Directory Path**: Always invoke scripts using the full or relative path to the skill directory:
    ```bash
    python3 <skill-dir>/scripts/<script-name>.py [args]
-   # Example: python3 .github/skills/ai-authoring-skills/scripts/validate.py .
+   # Example: python3 .github/skills/ai-authoring/scripts/validate.py .
    ```
 2. **`@scripts/` Notation**: In markdown documentation and skill instruction tables, mark bundled helper scripts as `@scripts/<name>` to signal that they reside inside the skill folder.
 3. **No Verbatim Bare Paths in Code Blocks**: In `SKILL.md` usage examples, write `<skill-dir>/scripts/<script-name>` instead of bare `scripts/<script-name>` so LLMs do not copy-paste broken relative paths.

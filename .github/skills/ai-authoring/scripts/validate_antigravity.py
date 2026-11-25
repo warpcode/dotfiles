@@ -28,7 +28,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from validate import split_agent_file
+from validate_agents import split_agent_file
 
 # https://antigravity.google/docs/subagents/#frontmatter-configuration-yaml
 DOCUMENTED_KEYS = {
