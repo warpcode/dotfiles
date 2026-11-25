@@ -53,7 +53,9 @@ and architectural invariants (`ADR-*`).
    - **Story / Sub-Issue** (`templates/story.md`): End-to-end vertical slice
      (`1.0–3.0 pt`).
    - **Task** (`templates/task.md`): Focused engineering step (`0.5–1.0 pt`)
-     when a story requires separate PRs.
+     when a story requires separate PRs. Local `Plan:` trailers apply only
+     when using the optional `docs/plans/` adapter; issue-first repos link
+     with `Closes #N` or Jira keys.
 2. **Wire Explicit Dependency Edges**: Record `Depends on #N` / `Blocked by #N`
    between downstream and upstream nodes.
 3. **Verify Acyclicity & Compute Ready Frontier**: Run a cycle check (Kahn's

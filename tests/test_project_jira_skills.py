@@ -65,6 +65,13 @@ class TestProjectJiraSkills(unittest.TestCase):
         skill_text = (SKILLS_DIR / "jira-issue-assessment" / "SKILL.md").read_text(encoding="utf-8")
         self.assertNotIn("exactly: do not omit", skill_text.lower())
 
+    def test_ticket_templates_make_plan_trailer_optional(self) -> None:
+        templates_dir = SKILLS_DIR / "project-tickets" / "templates"
+        for name in ("task.md", "story.md"):
+            text = (templates_dir / name).read_text(encoding="utf-8")
+            self.assertNotIn("| **Plan Link** |", text, f"Mandatory Plan Link in {name}")
+            self.assertIn("Traceability (Optional)", text, f"Missing optional Traceability in {name}")
+
 
 if __name__ == "__main__":
     unittest.main()
