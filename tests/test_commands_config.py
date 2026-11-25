@@ -433,12 +433,18 @@ class TestCanonicalCommandsGenerator(unittest.TestCase):
 
     def test_dynamic_skills_parity_across_all_assistants(self):
         """Verify dynamic skill scripts in canonical data are correctly formatted by each assistant template."""
-        sample_script = "~/src/dotfiles/.github/skills/github-cli/scripts/list_pull_requests.sh"
-        sample_variant = "~/.agents/skills/github-cli/scripts/list_pull_requests.sh"
+        home = os.path.expanduser("~")
+        repo_prefix = (
+            "~" + REPO_ROOT[len(home):]
+            if REPO_ROOT.startswith(home + "/")
+            else REPO_ROOT
+        )
+        sample_script = f"{repo_prefix}/.github/skills/github/scripts/list_pull_requests.sh"
+        sample_variant = "~/.agents/skills/github/scripts/list_pull_requests.sh"
 
         # 1. Canonical data compiler
         out_canon = subprocess.check_output(
-            ["chezmoi", "execute-template", '{{ includeTemplate "commands/canonical.tmpl" . }}'],
+            ["chezmoi", "execute-template", "--source", REPO_ROOT, '{{ includeTemplate "commands/canonical.tmpl" . }}'],
             cwd=REPO_ROOT,
             text=True,
         )
@@ -448,7 +454,7 @@ class TestCanonicalCommandsGenerator(unittest.TestCase):
 
         # 2. Antigravity CLI provider template
         out_agy = subprocess.check_output(
-            ["chezmoi", "execute-template", '{{ template "commands/antigravity.tmpl" . }}'],
+            ["chezmoi", "execute-template", "--source", REPO_ROOT, '{{ template "commands/antigravity.tmpl" . }}'],
             cwd=REPO_ROOT,
             text=True,
         )
@@ -459,7 +465,7 @@ class TestCanonicalCommandsGenerator(unittest.TestCase):
 
         # 3. Claude Code provider template
         out_claude = subprocess.check_output(
-            ["chezmoi", "execute-template", '{{ template "commands/claude.tmpl" . }}'],
+            ["chezmoi", "execute-template", "--source", REPO_ROOT, '{{ template "commands/claude.tmpl" . }}'],
             cwd=REPO_ROOT,
             text=True,
         )
@@ -469,7 +475,7 @@ class TestCanonicalCommandsGenerator(unittest.TestCase):
 
         # 4. GitHub Copilot provider template
         out_copilot = subprocess.check_output(
-            ["chezmoi", "execute-template", '{{ template "commands/copilot.tmpl" . }}'],
+            ["chezmoi", "execute-template", "--source", REPO_ROOT, '{{ template "commands/copilot.tmpl" . }}'],
             cwd=REPO_ROOT,
             text=True,
         )
@@ -479,7 +485,7 @@ class TestCanonicalCommandsGenerator(unittest.TestCase):
 
         # 5. OpenCode provider template
         out_opencode = subprocess.check_output(
-            ["chezmoi", "execute-template", '{{ template "commands/opencode.tmpl" . }}'],
+            ["chezmoi", "execute-template", "--source", REPO_ROOT, '{{ template "commands/opencode.tmpl" . }}'],
             cwd=REPO_ROOT,
             text=True,
         )
@@ -489,7 +495,7 @@ class TestCanonicalCommandsGenerator(unittest.TestCase):
 
         # 6. VS Code provider template
         out_vscode = subprocess.check_output(
-            ["chezmoi", "execute-template", '{{ template "commands/vscode.tmpl" . }}'],
+            ["chezmoi", "execute-template", "--source", REPO_ROOT, '{{ template "commands/vscode.tmpl" . }}'],
             cwd=REPO_ROOT,
             text=True,
         )

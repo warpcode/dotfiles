@@ -142,7 +142,7 @@ class MutationCheckTests(unittest.TestCase):
 
     def _cleanup_worktrees(self):
         wt = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..",
-                                          "github-pr", "scripts", "review_worktree.sh"))
+                                          "github", "scripts", "review_worktree.sh"))
         subprocess.run(["bash", wt, "rm", "--pr", "9", "--all-roles", "--force",
                         "--root", self.root],
                        cwd=self.repo, stdout=subprocess.DEVNULL,

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""test_pr_sync.py - Python unit test wrapper for github-pr shell tests."""
+"""test_pr_sync.py - Python unit test wrapper for github shell tests."""
 
 import os
 import subprocess

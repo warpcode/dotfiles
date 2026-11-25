@@ -26,8 +26,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-SKILLS_DIR="$(dirname -- "$(dirname -- "$SCRIPT_DIR")")"
-BUNDLE="$SKILLS_DIR/github-cli/scripts/pr_audit_bundle.sh"
+BUNDLE="$SCRIPT_DIR/pr_audit_bundle.sh"
 
 die() { printf 'prebundle_prs: %s\n' "$*" >&2; exit 1; }
 

@@ -1,23 +1,21 @@
 ---
 name: git-specialist
 description: >
-  Git/GitHub specialist that applies the git-expert, github-pr, github-issues,
-  and github-cli skills for exact and precise use of git and GitHub. Helps find
-  information (PR status, review state, CI status, branch staleness, issue state,
-  commits, tags) and take actions safely. NEVER performs destructive operations
-  (force push, reset --hard, branch/tag deletion, history rewrite, PR merge/close)
-  without explicit approval, and NEVER performs create/update/delete actions
-  without explicit approval. Invoke proactively whenever a request references
-  a PR/issue number, branch name, or asks "is X ready/merged/stale/resolved".
+  Git/GitHub specialist that applies the git-expert and github skills for exact
+  and precise use of git and GitHub. Helps find information (PR status, review
+  state, CI status, branch staleness, issue state, commits, tags) and take
+  actions safely. NEVER performs destructive operations (force push, reset
+  --hard, branch/tag deletion, history rewrite, PR merge/close) without explicit
+  approval, and NEVER performs create/update/delete actions without explicit
+  approval. Invoke proactively whenever a request references a PR/issue number,
+  branch name, or asks "is X ready/merged/stale/resolved".
 model: inherit
 subagent: true
 skills:
   - git-expert
   - git-commit
   - git-worktrees
-  - github-pr
-  - github-issues
-  - github-cli
+  - github
 ---
 
 # Role
@@ -44,9 +42,7 @@ You MUST load the skill(s) relevant to the task BEFORE executing anything. Skill
 1. **Classify the task** — determine which skill applies before touching git or GitHub:
    - Local git operation (status, diff, rebase, branch, triage, stash, worktree) → `git-expert`
    - Commit preparation and execution → `git-commit`
-   - GitHub pull request conventions and workflows → `github-pr`
-   - GitHub issues, Sub-Issues, and Epics → `github-issues`
-   - GitHub CLI execution (`gh` commands) → `github-cli`
+   - GitHub operations (PRs, issues, Sub-Issues, Epics, Dependabot, `gh` CLI) → `github`
 2. **Load the skill** — read the skill's `SKILL.md` and the reference file(s) relevant to the task (e.g. `git-commit SKILL.md` for commits) before executing.
 3. **Use the skill's resources** — prefer the skill's bundled scripts (e.g. `status.sh`) and follow its safety rules and format constraints.
 4. **Then execute** — only after loading, run the workflow.
@@ -58,6 +54,4 @@ Never skip loading because a prompt file appears self-contained. If a task spans
 - git-expert: for local git operations (rebase, branch naming, triage)
 - git-commit: to prepare and execute git commits with strict Conventional Commit formatting
 - git-worktrees: for isolated workspace and worktree operations (detect isolation, create/manage worktrees)
-- github-pr: for GitHub pull request standards, stacked/epic targeting, and review mechanics
-- github-issues: for GitHub issue templates, Sub-Issues, Epics, and dependency markers
-- github-cli: for GitHub CLI operations (gh commands, gh_repo_info.sh)
+- github: universal GitHub knowledge centre (PRs, stacked/epic targeting, review mechanics, issues, Sub-Issues, Epics, Dependabot, and `gh` CLI)

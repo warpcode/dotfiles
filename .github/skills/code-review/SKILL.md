@@ -9,15 +9,15 @@ description: >
 
 # Code Review Knowledge Centre
 
-Standards, defect prioritization rubrics, and test/CI verification tools for auditing code changes. For GitHub PR mechanics (diff preflight, inline anchor verification, review submission, and thread triage), pair with `github-pr` and `github-cli`. For orchestration, parallel subagent dispatch, and disposition policies, see `.github/agents/code-reviewer.agent.md`.
+Standards, defect prioritization rubrics, and test/CI verification tools for auditing code changes. For GitHub PR mechanics (diff preflight, inline anchor verification, review submission, and thread triage), pair with `github`. For orchestration, parallel subagent dispatch, and disposition policies, see `.github/agents/code-reviewer.agent.md`.
 
 ---
 
 ## Input Expectations
 
 - **Jira Issue**: Load via `jira-api` (if epic, include tasks/subtasks). Require a linked PR before reviewing code.
-- **GitHub Issue**: Load via `github-cli` (issues reference) and verify a linked PR exists (`closingIssuesReferences`).
-- **Pull Request**: Gather full snapshot via `github-cli/scripts/pr_audit_bundle.sh` and inspect any linked source issue/ticket.
+- **GitHub Issue**: Load via `github` (issues reference) and verify a linked PR exists (`closingIssuesReferences`).
+- **Pull Request**: Gather full snapshot via `github/scripts/pr_audit_bundle.sh` and inspect any linked source issue/ticket.
 - **Branch**: Compare `origin/<branch>` against `origin/<baseRefName>` (never hardcode `master`/`main` if an explicit base exists).
 
 ---

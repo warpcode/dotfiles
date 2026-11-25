@@ -1,4 +1,4 @@
-"""Tests for github-pr/scripts/submit_review.sh."""
+"""Tests for github/scripts/submit_review.sh."""
 
 import json
 import os

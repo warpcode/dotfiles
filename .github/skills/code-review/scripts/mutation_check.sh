@@ -66,7 +66,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_DIR="$(dirname -- "$(dirname -- "$SCRIPT_DIR")")"
-WORKTREE="$SKILLS_DIR/github-pr/scripts/review_worktree.sh"
+WORKTREE="$SKILLS_DIR/github/scripts/review_worktree.sh"
 APPLY="$SCRIPT_DIR/apply_mutation.py"
 
 die() { printf 'mutation_check: %s\n' "$*" >&2; exit 2; }

@@ -1,4 +1,4 @@
-"""Tests for github-pr/scripts/reply_to_review_thread.sh."""
+"""Tests for github/scripts/reply_to_review_thread.sh."""
 
 import os
 import subprocess

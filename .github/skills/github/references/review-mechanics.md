@@ -42,7 +42,7 @@ Reference guide for GitHub PR diff isolation, REST inline comment anchoring, sta
 ## 4. GraphQL Review Thread Triage
 
 - **Pagination**: `list_pull_request_review_threads.sh` queries up to 100 threads and 100 comments per thread. Always reconcile returned counts against `totalCount` / the header summary (`Total Threads: N (X resolved, Y unresolved)`) before concluding a list is complete.
-- **Plain-Text Output on Resolution**: `github-cli/scripts/update_pull_request_review_thread_resolution.sh` invokes GraphQL `resolveReviewThread` and prints plain text (`Thread ID: <id> | Resolved: <bool>`), not JSON. Do not pipe its output to `jq`, which causes false-negative failures even though the resolution succeeded. Re-query `list_pull_request_review_threads.sh` to verify final state.
+- **Plain-Text Output on Resolution**: `scripts/update_pull_request_review_thread_resolution.sh` invokes GraphQL `resolveReviewThread` and prints plain text (`Thread ID: <id> | Resolved: <bool>`), not JSON. Do not pipe its output to `jq`, which causes false-negative failures even though the resolution succeeded. Re-query `list_pull_request_review_threads.sh` to verify final state.
 - **Reply ID Types**: `scripts/reply_to_review_thread.sh` requires the integer REST `databaseId` (shown in thread listings), never the GraphQL node ID (`PRRC_...`).
 - **Thread Triage Hygiene**: Resolve outdated threads only after verifying the fix in the current head blob. Never credit empty commits or unverified commit-message/reply claims as fixes; inspect `git diff <prev>..<head>` and `git show origin/pr-<n>:<path>` directly.
 

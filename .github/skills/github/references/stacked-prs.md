@@ -1,6 +1,6 @@
 # Stacked Pull Requests (`gh stack`)
 
-Execution reference for managing stacked branches and pull requests with the official `github/gh-stack` GitHub CLI extension. For general stacked PR design rules and merge policies, refer to the `github-pr` skill.
+Execution reference for managing stacked branches and pull requests with the official `github/gh-stack` GitHub CLI extension. For general stacked PR design rules and merge policies, refer to `@references/stacked-epic-prs.md`.
 
 A **stack** is an ordered linear chain of branches rooted on a trunk (e.g., `main`):
 

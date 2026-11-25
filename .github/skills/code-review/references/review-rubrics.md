@@ -55,5 +55,5 @@ When a diff adds or modifies tests without changing production behavior, "all N 
 - **Verify "Tests Pass" Claims Against CI**: Run `bash <skill-dir>/scripts/audit_ci_test_coverage.sh --repo <owner>/<repo> [--ref <base-ref>] [test/path ...]` to check whether any `.github/workflows/*.yml` job actually discovers and executes the tests, and whether `paths:` filters skip the workflow for the PR's changed file extensions. Flag unexecuted tests and unverified test claims.
 - **Benchmark & Performance Claims**:
   - Confirm any cited benchmark or test function is actually committed to the PR head blob (not local-only).
-  - Re-run cited benchmarks on both head and base in isolated worktrees (`github-pr/scripts/review_worktree.sh`) to verify headline deltas exceed measurement noise.
+  - Re-run cited benchmarks on both head and base in isolated worktrees (`github/scripts/review_worktree.sh`) to verify headline deltas exceed measurement noise.
   - Confirm the benchmark actually exercises the changed code path before accepting reported numbers.

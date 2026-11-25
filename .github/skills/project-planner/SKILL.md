@@ -152,7 +152,7 @@ Before agreeing to any new idea, scope change, or architectural pivot:
 
 ### Workflow C — Retrospective Documentation
 Documenting existing work without service lock-in (see `references/planning-reference.md`):
-1. Extract evidence from git history, PRs, Jira dumps, or docs via provider skills (`git-expert`, `github-cli`, `jira-api`).
+1. Extract evidence from git history, PRs, Jira dumps, or docs via provider skills (`git-expert`, `github`, `jira-api`).
 2. Use the date of the earliest evidence as the folder prefix; note today's documentation date in the SPEC header.
 3. Mark imported items `Accepted (Retrospective)` with explicit `Source:` provenance links. Record unverified items as `Q-*` or `ASM-*`.
 

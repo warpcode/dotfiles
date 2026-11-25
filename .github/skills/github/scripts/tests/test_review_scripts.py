@@ -1,4 +1,4 @@
-"""Tests for standardized --repo owner/name flag support in github-cli review scripts."""
+"""Tests for standardized --repo owner/name flag support in github review scripts."""
 
 import json
 import os

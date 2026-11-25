@@ -43,7 +43,7 @@ When an upstream PR in a stack (or an epic integration branch) merges or closes,
    ```
    Verify the resulting diff against `origin/<new-base>` contains only the child layer's changes, run local tests/validation, and push after approval.
 
-*(For automated stack cascading via the `gh stack` extension, see `github-cli/references/stacked-prs.md`.)*
+*(For automated stack cascading via the `gh stack` extension, see `@references/stacked-prs.md`.)*
 
 ---
 

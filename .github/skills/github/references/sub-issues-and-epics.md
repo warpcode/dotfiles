@@ -47,7 +47,7 @@ Structure Epic issues so both humans and automated trackers can reconcile scope,
 
 ## 3. Machine-Parseable Dependency Markers
 
-Use standardized, single-line dependency markers in issue and PR bodies so triage scripts (`github-cli/scripts/pr_audit_bundle.sh`, project trackers) can detect ordering constraints automatically:
+Use standardized, single-line dependency markers in issue and PR bodies so triage scripts (`scripts/pr_audit_bundle.sh`, project trackers) can detect ordering constraints automatically:
 
 | Marker | Meaning | Example |
 |---|---|---|

@@ -35,12 +35,10 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-SKILLS_DIR="$(dirname -- "$(dirname -- "$SCRIPT_DIR")")"
-GITHUB_CLI_SCRIPTS="$SKILLS_DIR/github-cli/scripts"
 
 BUILD="$SCRIPT_DIR/build_review_payload.py"
 VERIFY="$SCRIPT_DIR/verify_review_anchors.sh"
-SUBMIT="$GITHUB_CLI_SCRIPTS/submit_pull_request_review_payload.sh"
+SUBMIT="$SCRIPT_DIR/submit_pull_request_review_payload.sh"
 
 die() { printf 'submit_review: %s\n' "$*" >&2; exit 1; }
 

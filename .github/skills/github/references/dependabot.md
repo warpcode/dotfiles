@@ -1,29 +1,12 @@
----
-name: github-dependabot
-description: >
-  Reference hub for Dependabot alert classification, phantom alert dismissal,
-  ecosystem lockfile bump patterns, Dependabot PR bot commands, and
-  .github/dependabot.yml schemas. Use when triaging Dependabot alerts, bumping
-  vulnerable dependencies, reviewing Dependabot PRs, or configuring dependabot.yml.
----
-
-# GitHub Dependabot Reference Hub
+# GitHub Dependabot Reference
 
 Domain reference for classifying Dependabot security alerts, applying ecosystem lockfile upgrades, interacting with `@dependabot` PRs, and configuring `.github/dependabot.yml`.
 
-## Shared Resources
-
-Run bundled helper scripts relative to this skill's root directory (`<skill-dir>/scripts/...`):
-
-| Resource | Location | Invocation Syntax | Purpose |
-|---|---|---|---|
-| Repo alert audit | `@scripts/audit_repo_alerts.py` | `python3 <skill-dir>/scripts/audit_repo_alerts.py --repo <owner/repo> [--base <default-branch>] [--json] [--fetch]` | Dependabot + code-scanning triage in one call. Classifies each alert against the default branch, separates **phantom** alerts from real ones, flags `first_patched_version: NONE`, and prints dismissal commands. Read-only. |
-
 ---
 
-## 1. Alert Classification & Triage Reference
+## 1. Alert Classification & Triage
 
-Run `audit_repo_alerts.py --repo <owner/repo> --base <default-branch>` first to obtain a single-snapshot classification:
+Run `scripts/audit_repo_alerts.py --repo <owner/repo> --base <default-branch>` first to obtain a single-snapshot classification:
 
 | Alert Class | Condition on `origin/<default-branch>` | Action |
 |---|---|---|
@@ -31,11 +14,13 @@ Run `audit_repo_alerts.py --repo <owner/repo> --base <default-branch>` first to 
 | **Phantom Alert** | Manifest path is absent from default branch (moved, renamed, deleted, or backup tree) | Dismiss as `inaccurate` via `gh api` (command printed by `audit_repo_alerts.py`) and remove stale manifests from the tree |
 | **Unfixable Advisory** | `first_patched_version: NONE` | Record GHSA ID in tracking issue and re-audit periodically; do not open empty churn PRs |
 
-### Dismissal API Constraints
+### Dismissal API & Alert Triage Invariants
 
 - **Endpoint**: `PATCH repos/<owner>/<repo>/dependabot/alerts/<alert_number>` with `-f state=dismissed -f dismissed_reason=inaccurate -f dismissed_comment="..."`
-- **Comment Length**: `dismissed_comment` is capped at **280 characters** (GitHub returns HTTP 422 if exceeded).
-- **Architecture Boundary**: GitHub's Dependency Graph discovers manifests repo-wide for security alerts; `.github/dependabot.yml` controls automated version-update PRs only.
+- **Comment Length**: `dismissed_comment` is capped at **280 characters** (GitHub returns HTTP 422 if exceeded). Valid code-scanning `dismissed_reason` values are `false positive`, `won't fix`, `used in tests`, and `mitigated`.
+- **Architecture Boundary**: GitHub's Dependency Graph discovers manifests repo-wide for security alerts; `.github/dependabot.yml` controls automated version-update PRs only. Pinning `directory:` and deleting stale/backup manifests prevents recurring phantom alerts.
+- **Zsh Loop Hazard**: Never bind a shell loop variable to `path` in zsh (`path` is tied to `PATH`, stripping `git`/`gh` from `PATH` and falsely reporting every manifest as absent). Use `scripts/audit_repo_alerts.py` in Python instead.
+- **CodeQL False Positives**: A `py/command-line-injection` finding on `subprocess.run(cmd, ...)` is usually a false positive when `cmd` is an argv list; check for `shell=True`, `os.system`, `subprocess.call`, or `Popen` before treating it as real.
 
 ---
 
@@ -77,7 +62,7 @@ Targeted, lockfile-preserving update commands (run local tests, `git diff`, and 
 - `@dependabot recreate` — recreate the PR and lockfiles from scratch.
 - `@dependabot ignore this package version` — suppress PRs for this specific version.
 - `@dependabot ignore this dependency` — suppress future PRs for this dependency.
-- **Merging**: `@dependabot merge` is deprecated; use `gh pr merge <pr_number> --repo <owner/repo> --squash --auto` (or `github-pr/scripts/pr_merge.sh`).
+- **Merging**: `@dependabot merge` is deprecated; use `gh pr merge <pr_number> --repo <owner/repo> --squash --auto` (or `scripts/pr_merge.sh`).
 
 ---
 

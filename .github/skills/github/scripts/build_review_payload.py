@@ -7,7 +7,7 @@ Spec JSON (list, or object with "findings"):
 
 Writes the payload (event REQUEST_CHANGES, neutral one-line body, inline comments
 only, side RIGHT, no subject_type) to --out. Submit it with
-github-cli/scripts/submit_pull_request_review_payload.sh.
+github/scripts/submit_pull_request_review_payload.sh.
 Use verify_review_anchors.sh to check every line against the PR diff first.
 """
 import argparse
