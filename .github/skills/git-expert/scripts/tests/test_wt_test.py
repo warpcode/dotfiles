@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit and integration tests for wt_test.sh in git-worktrees skill."""
+"""Unit and integration tests for wt_test.sh in git-expert skill."""
 
 import os
 import shutil
