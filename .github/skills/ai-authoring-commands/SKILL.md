@@ -17,15 +17,7 @@ Commands and workflows are user- or agent-invocable prompt artifacts (`/name`) t
 
 ## 1. Choosing the Artifact
 
-| Need | Right Artifact | Skill to Consult |
-|---|---|---|
-| Reusable prompt directive with parameters | **Command** | `ai-authoring-commands` (this skill) |
-| Multi-step procedure with checkpoints or JS orchestration | **Workflow** | `ai-authoring-commands` (this skill) |
-| Prompt bodies, personas, orchestration patterns & Mermaid.js | **Prompt Pattern** | `ai-authoring-prompts` |
-| Knowledge/runbook loaded dynamically on demand | **Skill** | `ai-authoring-skills` |
-| Persistent background context (always-on or path-scoped) | **Rule** | `ai-authoring-rules` |
-| Delegated execution in isolated context & permissions | **Subagent** | `ai-authoring-agents` |
-| Deterministic lifecycle gate, command blocker, or auto-formatter | **Hook** | `ai-authoring-hooks` |
+Commands are thin user-invoked entrypoints that bind parameters and dispatch to an Agent or Skill. Consult the canonical [Artifact Decision Matrix](../ai-authoring-skills/references/artifact-decision-matrix.md) before authoring to confirm a Command/Workflow fits better than a Skill, Agent, Rule, or Hook.
 
 ---
 

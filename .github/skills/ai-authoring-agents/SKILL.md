@@ -26,16 +26,9 @@ self-contained system prompt body.
 - They are debugging why an agent is not being discovered or picked up.
 - They need to decide whether a problem requires a subagent, skill, command, or rule.
 
-## Decision Matrix: Subagent vs Alternatives
+## Choosing the Right Artifact
 
-| Requirement | Artifact | Skill to load |
-|---|---|---|
-| Prompt bodies, personas, orchestration patterns & Mermaid.js | **Prompt Pattern** | `ai-authoring-prompts` |
-| Reusable SOP, guidelines, or tool integration loaded on demand | **Skill** (`SKILL.md`) | `ai-authoring-skills` |
-| Interactive user shortcut or parameterized slash command | **Command** (`/name`) | `ai-authoring-commands` |
-| Persistent instructions/memory always or conditionally injected | **Rule** (`rules/`, `AGENTS.md`) | `ai-authoring-rules` |
-| Delegated task running in an **isolated context window** with dedicated tool policy & model tier | **Subagent** (`<name>.md` / `.agent.md`) | `ai-authoring-agents` |
-| Deterministic lifecycle gate, command blocker, or auto-formatter | **Hook** (`hooks.json`, `.github/hooks/`, plugins) | `ai-authoring-hooks` |
+Agents own **role personas, multi-step workflows, orchestration, isolated context windows, and least-privilege tool policies**; domain knowledge and black-box scripts belong in Skills. See the canonical [Artifact Decision Matrix](../ai-authoring-skills/references/artifact-decision-matrix.md) to compare Skills, Agents, Commands, Rules, Hooks, and Prompt Patterns.
 
 **House Delegation Heuristic**: High-noise exploration (broad codebase grepping,
 large logs, multi-file surveys) belongs in a subagent so the coordinator's

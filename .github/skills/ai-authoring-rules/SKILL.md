@@ -25,18 +25,9 @@ Rules are persistent context injected into prompts — always-on, path-scoped, o
 
 ---
 
-## Decision Matrix: Choosing the Right Artifact
+## Choosing the Right Artifact
 
-| Need | Artifact | Platform Mechanism | Skill to Load |
-|---|---|---|---|
-| Project-wide coding conventions & bootstrap commands | **Root Memory** | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md` | `ai-authoring-rules` |
-| Guidelines active only when editing matching files | **Path-Scoped Rule** | `applyTo:`, `globs:`, `paths:` | `ai-authoring-rules` |
-| Infrequently needed domain guidance | **Model-Decision Rule** | `trigger: model_decision`, Cursor Intelligent | `ai-authoring-rules` |
-| Prompt bodies, personas, orchestration patterns & Mermaid.js | **Prompt Pattern** | Universal prompt design & decision matrices | `ai-authoring-prompts` |
-| Multi-step procedure or reusable tool integration | **Skill** | `SKILL.md` (Agentskills.io standard) | `ai-authoring-skills` |
-| Interactive user shortcut with parameters | **Command** | Slash command (`/name`, `.prompt.md`) | `ai-authoring-commands` |
-| Isolated, high-noise exploration or audited execution | **Subagent** | `<name>.agent.md` / `<name>.md` | `ai-authoring-agents` |
-| Deterministic binary pass/fail guardrail or hook simulation | **Lifecycle Hook** | `hooks.json`, TypeScript plugins | `ai-authoring-hooks` |
+Rules provide **persistent always-on (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`), path-scoped (`applyTo:`/`globs:`/`paths:`), or model-decision context**; deterministic enforcement belongs in Hooks and on-demand domain knowledge belongs in Skills. See the canonical [Artifact Decision Matrix](../ai-authoring-skills/references/artifact-decision-matrix.md).
 
 ---
 

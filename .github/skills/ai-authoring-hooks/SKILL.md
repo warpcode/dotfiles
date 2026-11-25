@@ -34,16 +34,9 @@ audit logging, and dynamic context injection.
   or `ephemeralMessage`.
 - They are debugging why a hook is failing, timing out, or not activating.
 
-## Decision Matrix: Hooks vs Other Artifacts
+## Choosing the Right Artifact
 
-| Requirement | Artifact | Primary Skill |
-|---|---|---|
-| Prompt bodies, personas, orchestration patterns & Mermaid.js | **Prompt Pattern** | `ai-authoring-prompts` |
-| Reusable multi-step SOP, runbook, or CLI tool guide | **Skill** (`SKILL.md`) | `ai-authoring-skills` |
-| Interactive user shortcut or parameterized slash command | **Command** (`/name`) | `ai-authoring-commands` |
-| Persistent behavioral prompt instructions & style guidance | **Rule** (`rules/`, `AGENTS.md`) | `ai-authoring-rules` |
-| Delegated persona in isolated context with dedicated tools | **Subagent** (`.agent.md`, `<name>.md`) | `ai-authoring-agents` |
-| **Deterministic gate, command blocker, auto-formatter, or dynamic context injector** | **Hook** (`hooks.json`, `.github/hooks/`, plugins) | `ai-authoring-hooks` |
+Hooks provide **deterministic lifecycle gates, command blockers, auto-formatters, and dynamic context injectors**; consult the canonical [Artifact Decision Matrix](../ai-authoring-skills/references/artifact-decision-matrix.md) before authoring.
 
 **Rule vs Hook Principle**: Rules *guide* LLM behavior through prompt context;
 hooks *enforce* behavior through programmatic execution boundaries. Where security,

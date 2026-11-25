@@ -1,19 +1,6 @@
----
-name: ai-prompts
-description: >
-  Write, improve, review, or extend prompts for scheduled/unattended coding and
-  maintenance agents (Bolt performance, Sentinel security, Docs Auditor, Test Smith,
-  Workflow Warden, Ratchet, Flake Hunter, Release Scribe, etc.) that open GitHub
-  PRs on a schedule. Use when the user mentions scheduled maintenance agents,
-  unattended coding tasks, "Bolt", "Sentinel", janitor agents for GitHub repos,
-  agents that create duplicate PRs, miss issues, are pedantic or micro-optimise,
-  or asks for new agent ideas for repositories, even if they don't say "skill" or
-  "prompt".
----
-
 # Scheduled Maintenance Agent Prompts
 
-Produce prompts for unattended repo-maintenance agents that run in a scheduled or async coding runner. A scheduled run is a fresh VM with no memory, nobody to answer questions, and a very limited view of GitHub. Prompts that ignore this produce duplicate PRs, trivial changes and noise, so most of this skill is about designing for that environment.
+Produce prompts for unattended repo-maintenance agents that run in a scheduled or async coding runner. A scheduled run is a fresh VM with no memory, nobody to answer questions, and a very limited view of GitHub. Prompts that ignore this produce duplicate PRs, trivial changes and noise, so this reference focuses on designing for that environment.
 
 ## Environment facts (treat as hard constraints)
 
@@ -23,22 +10,22 @@ Produce prompts for unattended repo-maintenance agents that run in a scheduled o
 - The clone may be shallow, so history checks can be limited. The agent should say so and be more conservative.
 - Runner-specific limits (such as prompt length caps, daily task quotas, and concurrency limits) vary by platform — check current docs and flag them when relevant rather than presenting them as universal facts.
 
-## Design rules (the user rejected the opposite more than once)
+## Design rules
 
 1. **No repo litter.** A PR contains only the fix and its tests. Never have an agent create or modify an agent-named state directory, journals, ledgers, state files, fingerprints, signatures, tags, ID strings, or any housekeeping file. Lessons, near misses and recommendations go in the final message only. Do not propose companion automation (Actions that maintain state, etc.) unless asked.
-2. **Don't invent machinery.** Add only what fixes a problem the user stated. If you think a mechanism would help, say so in one sentence in your reply as an option instead of putting it in the prompt. Prior over-engineering cost trust.
+2. **Don't invent machinery.** Add only what fixes a problem the user stated. If you think a mechanism would help, say so in one sentence in your reply as an option instead of putting it in the prompt.
 3. **Dedupe honestly with what is visible:** code, git history (`git log -S`, recent commits, reverts), an optional human-maintained ignore list the user creates themselves, and a weekly focus slice (different top-level directory per run) to spread agents out. The agent must say in the PR that open and rejected PRs could not be checked, and must never claim it checked them. Warn the user that occasional duplicates remain possible and that schedules should be slower than their review cycle.
 4. **Quality gates beat volume.** No PR is a successful run. Every agent needs an evidence requirement, an impact threshold, a "do not ship" list, and a final-message "near misses" list. This is what fixes pedantry, over-zealous changes and micro-optimisation.
-5. **Stack-agnostic discovery.** Agents must detect the repo's real commands from AGENTS.md, README and CI files and run a baseline first. Never hardcode pnpm, React, TypeScript, or `{{PLACEHOLDER}}` values that an unattended runner won't fill in.
+5. **Stack-agnostic discovery.** Agents must detect the repo's real commands from `AGENTS.md`, README and CI files and run a baseline first. Never hardcode pnpm, React, TypeScript, or `{{PLACEHOLDER}}` values that an unattended runner won't fill in.
 6. **Verify honestly.** Never claim tests pass unless run. Prefer a test that fails before and passes after.
 
-## Workflow
+## Authoring Workflow
 
 1. Identify what the user wants: improve an existing prompt, write a prompt for a listed agent, or invent a new agent.
-2. Read `references/protocol.md` (shared protocol, already encodes the rules above).
-3. For known agents read `references/agents/<name>.md`. Available: `bolt`, `sentinel`, `docs-auditor`, `test-smith`, `workflow-warden`, `ratchet`, `flake-hunter`, `release-scribe`. For an existing user prompt, diagnose it against the failure list below, then rewrite it in the same agent-block style.
+2. Read `maintenance-agents/protocol.md` (shared protocol, already encodes the rules above).
+3. For known agents read `maintenance-agents/agents/<name>.md`. Available: `bolt`, `sentinel`, `docs-auditor`, `test-smith`, `workflow-warden`, `ratchet`, `flake-hunter`, `release-scribe`. For an existing user prompt, diagnose it against the failure list below, then rewrite it in the same agent-block style.
 4. For a new agent, write an agent block with: mission, how to choose a target, evidence requirement, threshold, do-not-ship list, final message. Keep it short; the protocol carries everything shared. Add an agent offset in the focus-slice line of the protocol if you add an agent (next unused integer).
-5. Present each standalone prompt by combining the agent block with `references/protocol.md` inlined, one per scheduled task.
+5. Present each standalone prompt by combining the agent block with `maintenance-agents/protocol.md` inlined, one per scheduled task.
 6. In the reply, state what changed and why, list anything unverified, and keep it short.
 
 ## Failure list for diagnosing existing prompts

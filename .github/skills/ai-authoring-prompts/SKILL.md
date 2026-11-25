@@ -2,21 +2,25 @@
 name: ai-authoring-prompts
 description: >
   Design and optimize cognitive prompt architectures, system prompts,
-  orchestration topologies, decision matrices, and output contracts. Use
-  when authoring or refining system prompts.
+  orchestration topologies, output contracts, and scheduled/unattended repo
+  maintenance agent prompts (Bolt, Sentinel, Docs Auditor, Test Smith, Workflow
+  Warden, Ratchet, Flake Hunter, Release Scribe, janitor agents). Use when
+  authoring or refining system prompts, scheduled maintenance prompts, or when
+  agents create duplicate PRs, miss issues, or micro-optimise.
 ---
 
-# Authoring Prompts, Personas & Workflows
+# Authoring Prompts, Personas & Maintenance Agents
 
-Universal guidelines, architectural design patterns, and composite archetypes for authoring prompt bodies, orchestration flows, personas, and structured output contracts across all AI artifacts.
+Universal guidelines, architectural design patterns, and composite archetypes for authoring prompt bodies, orchestration flows, personas, structured output contracts, and standalone scheduled maintenance agent prompts.
 
-This skill governs **prompt content, cognitive architecture, language standards, and pattern composition**, regardless of the container artifact (agent, command, skill, rule, or hook) holding the prompt.
+This skill governs **prompt content, cognitive architecture, language standards, and pattern composition**, regardless of the container artifact holding the prompt. To decide which artifact container (Skill, Agent, Command, Rule, or Hook) to create, consult the canonical [Artifact Decision Matrix](../ai-authoring-skills/references/artifact-decision-matrix.md).
 
 ---
 
 ## 1. When to Use
 
 - Designing or optimizing the **prompt body** for a subagent, skill, command, workflow, or rule.
+- Writing, reviewing, or extending **scheduled/unattended repo-maintenance agent prompts** (`Bolt`, `Sentinel`, `Docs Auditor`, `Test Smith`, `Workflow Warden`, `Ratchet`, `Flake Hunter`, `Release Scribe`).
 - Selecting an **orchestration topology** (Supervisor-Workers, Sequential Pipeline, Router, Evaluator-Optimizer, Fan-Out/Fan-In).
 - Choosing an **execution workflow** (Plan-and-Execute, SOP Checklist, State Machine, Verification Loop).
 - Assembling **full-stack composite archetypes** (Specialist Implementer, Fact-Based Auditor, Autonomous Supervisor, SOP Runner).
@@ -96,6 +100,10 @@ Select the appropriate coordination pattern for multi-agent or multi-step execut
 | **Human Checkpoint** | High-risk or destructive actions | Plan &rarr; **Approval Gate** &rarr; Execute |
 
 See `@references/orchestration-and-topologies.md` for architecture diagrams and delegation rules.
+
+### Scheduled & Unattended Maintenance Agents
+
+For unattended repository-maintenance agents that open PRs on a schedule (fresh local clone with no `gh`/API access, no repo litter, local dedupe gate, quality thresholds, and inlined shared protocol), read `@references/maintenance-agents.md`. That guide routes to the shared protocol (`references/maintenance-agents/protocol.md`) and per-agent definitions (`references/maintenance-agents/agents/*.md`).
 
 ---
 

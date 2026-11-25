@@ -280,5 +280,61 @@ class TestScriptability(unittest.TestCase):
             self.assertFalse(any(s == "FAIL" for _, s, _ in results))
 
 
+class TestKnowledgeCentreRoutingHub(unittest.TestCase):
+    """Routing-hub Knowledge Centre skills pass validation cleanly."""
+
+    def test_pure_knowledge_centre_hub_passes_without_warnings(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = Path(tmp) / "domain-knowledge"
+            (skill / "references").mkdir(parents=True)
+            (skill / "templates").mkdir()
+            (skill / "references" / "core-rules.md").write_text("# Core Rules\n")
+            (skill / "templates" / "report.md").write_text("# Report\n")
+            (skill / "SKILL.md").write_text(
+                "---\n"
+                "name: domain-knowledge\n"
+                "description: >\n"
+                "  Domain knowledge centre for sample architecture. Use when\n"
+                "  reviewing or designing sample modules.\n"
+                "---\n"
+                "# Domain Knowledge Centre\n\n"
+                "| Need | Resource |\n"
+                "|---|---|\n"
+                "| Core rules | `@references/core-rules.md` |\n"
+                "| Report schema | `templates/report.md` |\n"
+                "| Artifact placement | `../ai-authoring-skills/references/artifact-decision-matrix.md` |\n"
+            )
+            results = validate.validate_skill(skill)
+            statuses = {c: s for c, s, _ in results}
+            self.assertFalse(any(s in ("FAIL", "WARN") for _, s, _ in results), results)
+            self.assertEqual(statuses["resources-exist"], "PASS")
+            self.assertEqual(statuses["workflow-scriptability"], "PASS")
+
+    def test_tool_backed_routing_hub_passes_without_warnings(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = Path(tmp) / "tool-hub"
+            (skill / "references").mkdir(parents=True)
+            (skill / "scripts").mkdir()
+            (skill / "references" / "api-gotchas.md").write_text("# Gotchas\n")
+            (skill / "scripts" / "gather.py").write_text("print('ok')\n")
+            (skill / "SKILL.md").write_text(
+                "---\n"
+                "name: tool-hub\n"
+                "description: >\n"
+                "  Tool knowledge centre. Use when inspecting tool state.\n"
+                "---\n"
+                "# Tool Hub\n\n"
+                "| Need | Resource |\n"
+                "|---|---|\n"
+                "| API gotchas | `@references/api-gotchas.md` |\n"
+                "| Snapshot gather | `@scripts/gather.py` |\n"
+            )
+            results = validate.validate_skill(skill)
+            statuses = {c: s for c, s, _ in results}
+            self.assertFalse(any(s in ("FAIL", "WARN") for _, s, _ in results), results)
+            self.assertEqual(statuses["orphan-scripts"], "PASS")
+            self.assertEqual(statuses["scripts-compile"], "PASS")
+
+
 if __name__ == "__main__":
     unittest.main()
