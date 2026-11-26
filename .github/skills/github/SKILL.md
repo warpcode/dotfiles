@@ -78,8 +78,8 @@ Run scripts with `--help` without reading source code. PR/review scripts standar
 | `pr_sync_validate.sh` | `bash <skill-dir>/scripts/pr_sync_validate.sh <pr> --repo <owner/repo> [--push] [--cleanup]` | Merging `origin/<base>` into a standalone PR in an isolated worktree, validating, and pushing |
 | `pr_merge.sh` | `bash <skill-dir>/scripts/pr_merge.sh <pr> --repo <owner/repo> [--admin] [--dry-run]` | Preflighting mergeability + CI checks and squash-merging a single approved PR |
 | `batch_merge.sh` | `bash <skill-dir>/scripts/batch_merge.sh --repo <owner/repo> --prs <1,2,3> [--admin] [--dry-run]` | Preflighting and sequentially squash-merging multiple approved PRs |
-| `merge_pull_request.sh` | `bash <skill-dir>/scripts/merge_pull_request.sh --owner <o> --repo <r> --pull-number <n> [--admin]` | Merging an open PR with ruleset-aware method detection and optional `--admin` bypass |
-| `pr_batch_merge.sh` | `bash <skill-dir>/scripts/pr_batch_merge.sh [--repo <owner/repo>] [--dry-run] <pr>...` | Silently approving and squash-merging verified green PRs |
+| `merge_pull_request.sh` | `bash <skill-dir>/scripts/merge_pull_request.sh --repo <owner/repo> --pull-number <n> [--admin]` | Merging an open PR with ruleset-aware method detection and optional `--admin` bypass |
+| `pr_batch_merge.sh` | `bash <skill-dir>/scripts/pr_batch_merge.sh [--repo <owner/repo>] [--admin] [--delete-branch] [--dry-run] <pr>...` | Silently approving and squash-merging verified green PRs (`--admin` and `--delete-branch` are disabled by default; `--no-admin` / `--no-delete-branch` also accepted) |
 | `audit_repo_alerts.py` | `python3 <skill-dir>/scripts/audit_repo_alerts.py --repo <owner/repo> [--base <default-branch>] [--json]` | Auditing Dependabot and code-scanning alerts against the default branch (separates phantoms) |
 
 ---

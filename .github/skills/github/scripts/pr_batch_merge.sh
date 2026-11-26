@@ -12,8 +12,10 @@ Silently approve and squash-merge verified green PRs.
 
 Options:
   -R, --repo <owner/repo>   Target repository (e.g. warpcode/dotfiles)
-  --admin                   Use administrator privileges to bypass rulesets (default: enabled)
-  --delete-branch           Delete remote branch after merge (default: enabled)
+  --admin                   Use administrator privileges to bypass rulesets (default: disabled)
+  --no-admin                Explicitly disable administrator bypass (default)
+  --delete-branch           Delete remote branch after merge (default: disabled)
+  --no-delete-branch        Explicitly keep remote branch after merge (default)
   -n, --dry-run             Check eligibility without applying merges
   -h, --help                Show this help message
 EOF
@@ -21,8 +23,8 @@ EOF
 
 REPO=""
 DRY_RUN=0
-ADMIN="--admin"
-DELETE_BRANCH="--delete-branch"
+ADMIN=""
+DELETE_BRANCH=""
 PRS=()
 
 while [[ $# -gt 0 ]]; do

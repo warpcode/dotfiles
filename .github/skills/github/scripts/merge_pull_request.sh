@@ -5,6 +5,7 @@ export PAGER=cat
 
 owner="$(gh repo view --json owner -q '.owner.login' 2>/dev/null || echo '')"
 repo="$(gh repo view --json name -q '.name' 2>/dev/null || echo '')"
+owner_explicit=0
 pull_number=""
 admin=""
 delete_branch=""
@@ -18,8 +19,8 @@ while [[ $# -gt 0 ]]; do
       echo "Merge an open pull request into its target base branch."
       echo ""
       echo "Options:"
-      echo "  --owner <value>                   (Required)"
-      echo "  --repo <value>                    (Required)"
+      echo "  --repo <value>                    Repository in owner/name format, or name with --owner (Required)"
+      echo "  --owner <value>                   Repository owner (optional if --repo is owner/name)"
       echo "  --pull-number <value>             (Required)"
       echo "  --merge-method, --type <squash|merge|rebase>"
       echo "                                    Merge strategy (defaults to auto-detected allowed method, preferring squash)"
@@ -30,6 +31,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --owner)
       owner="$2"
+      owner_explicit=1
       shift 2
       ;;
     --repo)
@@ -58,6 +60,15 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ "$repo" == */* ]]; then
+  if [[ "$owner_explicit" -eq 1 ]]; then
+    echo "Error: pass either --repo owner/name or separate --owner and --repo, not both." >&2
+    exit 1
+  fi
+  owner="${repo%%/*}"
+  repo="${repo#*/}"
+fi
 
 if [[ -z "$owner" ]]; then
   echo "Error: --owner is required. Use --help for usage." >&2

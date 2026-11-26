@@ -7,6 +7,8 @@ tools:
   - view_file
   - grep_search
   - list_dir
+  - run_command
+  - invoke_subagent
 ---
 
 # Pull Request Review Orchestrator & Auditor

@@ -162,5 +162,39 @@ exit 0
         self.assertEqual(res.returncode, 1)
         self.assertIn("Error: Merge method 'merge' is not allowed for branch 'main'. Allowed methods: squash, rebase", res.stderr)
 
+    def test_combined_repo_flag_overrides_autodetect(self):
+        fake_gh = """
+echo "$@" >> "$GH_CALL_LOG"
+if [[ "$1" == "repo" && "$2" == "view" ]]; then
+  if [[ "$*" == *"owner"* ]]; then
+    echo "autodetected-owner"
+  else
+    echo "autodetected-repo"
+  fi
+  exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "view" ]]; then
+  echo '{"baseRefName": "main"}'
+  exit 0
+fi
+if [[ "$1" == "api" && "$2" == "repos/octocat/hello/rules/branches/main" ]]; then
+  echo '[{"type": "pull_request", "parameters": {"allowed_merge_methods": ["SQUASH"]}}]'
+  exit 0
+fi
+exit 0
+"""
+        self._create_fake_gh(fake_gh)
+        res = self._run_script(["--repo", "octocat/hello", "--pull-number", "10"])
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+        logs = self._read_log()
+        self.assertTrue(any("pr view 10 --repo octocat/hello" in l for l in logs))
+        self.assertTrue(any("pr merge 10 --repo octocat/hello --squash" in l for l in logs))
+
+    def test_conflicting_owner_and_combined_repo_rejected(self):
+        self._create_fake_gh("exit 0\n")
+        res = self._run_script(["--owner", "octocat", "--repo", "other/hello", "--pull-number", "10"])
+        self.assertEqual(res.returncode, 1)
+        self.assertIn("not both", res.stderr)
+
 if __name__ == "__main__":
     unittest.main()
