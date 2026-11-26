@@ -106,7 +106,7 @@ NEGATION_RE = re.compile(
 )
 MAX_SCRIPTABILITY_CHAIN = 2
 RESOURCE_RE = re.compile(
-    r"(?<![\w/.])@?((?:references|templates|scripts|assets)/[\w][\w./-]*[.\w])"
+    r"(?<![\w/.])@?((?:\.\./[a-z0-9]+(?:-[a-z0-9]+)*/)?(?:references|templates|scripts|assets)/[\w][\w./-]*[.\w])"
 )
 SCRIPT_CHECKS = {
     ".sh": ["bash", "-n"],

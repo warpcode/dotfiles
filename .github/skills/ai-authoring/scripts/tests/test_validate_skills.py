@@ -290,6 +290,9 @@ class TestKnowledgeCentreRoutingHub(unittest.TestCase):
             (skill / "templates").mkdir()
             (skill / "references" / "core-rules.md").write_text("# Core Rules\n")
             (skill / "templates" / "report.md").write_text("# Report\n")
+            sibling = Path(tmp) / "other-skill" / "references"
+            sibling.mkdir(parents=True)
+            (sibling / "artifact-decision-matrix.md").write_text("# Matrix\n")
             (skill / "SKILL.md").write_text(
                 "---\n"
                 "name: domain-knowledge\n"
@@ -309,6 +312,28 @@ class TestKnowledgeCentreRoutingHub(unittest.TestCase):
             self.assertFalse(any(s in ("FAIL", "WARN") for _, s, _ in results), results)
             self.assertEqual(statuses["resources-exist"], "PASS")
             self.assertEqual(statuses["workflow-scriptability"], "PASS")
+
+    def test_missing_cross_skill_resource_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = Path(tmp) / "domain-knowledge"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text(
+                "---\n"
+                "name: domain-knowledge\n"
+                "description: >\n"
+                "  Domain knowledge centre for sample architecture. Use when\n"
+                "  reviewing or designing sample modules.\n"
+                "---\n"
+                "# Domain Knowledge Centre\n\n"
+                "| Need | Resource |\n"
+                "|---|---|\n"
+                "| Missing sibling | `../other-skill/references/missing.md` |\n"
+            )
+            results = validate.validate_skill(skill)
+            self.assertIn(
+                ("resources-exist", "FAIL", "missing: ../other-skill/references/missing.md"),
+                results,
+            )
 
     def test_tool_backed_routing_hub_passes_without_warnings(self):
         with tempfile.TemporaryDirectory() as tmp:
