@@ -55,6 +55,9 @@ class TestProjectJiraSkills(unittest.TestCase):
         text = agent_file.read_text(encoding="utf-8")
         self.assertRegex(text, r"^---\s*\n[\s\S]*?\bname:\s*project-architect\b[\s\S]*?\n---")
         self.assertIn("Socratic", text)
+        self.assertIn("mainAgent: true", text)
+        self.assertIn("plain assistant text", text)
+        self.assertIn("## Interaction Model", text)
 
     def test_jira_issue_assessment_rigid_prompt_removed(self) -> None:
         old_template = SKILLS_DIR / "jira-issue-assessment" / "templates" / "assessment-report.md"
@@ -71,6 +74,9 @@ class TestProjectJiraSkills(unittest.TestCase):
             text = (templates_dir / name).read_text(encoding="utf-8")
             self.assertNotIn("| **Plan Link** |", text, f"Mandatory Plan Link in {name}")
             self.assertIn("Traceability (Optional)", text, f"Missing optional Traceability in {name}")
+        task_text = (templates_dir / "task.md").read_text(encoding="utf-8")
+        self.assertIn("Parent Story / Epic (Optional)", task_text)
+        self.assertNotIn("| **Parent Story / Epic** |", task_text)
 
 
 if __name__ == "__main__":

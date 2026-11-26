@@ -2,7 +2,7 @@
 
 | Metadata | Details |
 |---|---|
-| **Parent Story / Epic** | [#101 / PROJ-101](url) or [`SPEC.md`](../docs/plans/YYYY-MM-DD-slug/SPEC.md) |
+| **Parent Story / Epic (Optional)** | [#101 / PROJ-101](url) or [`SPEC.md`](../docs/plans/YYYY-MM-DD-slug/SPEC.md) (docs/plans adapter only) |
 | **Estimate** | 0.5 pt \| 1.0 pt |
 | **Traceability (Optional)** | `Closes #...` / `Plan: <slug>:<TSK-xxx>` (docs/plans adapter only) |
 | **Target Files** | `path/to/target_file.ext` |
