@@ -34,7 +34,8 @@ Usage
 -----
   audit_repo_branches.py --repo owner/name
   audit_repo_branches.py --repo owner/name --json
-  audit_repo_branches.py --repo owner/name --base main --include-open
+  audit_repo_branches.py --repo owner/name --base main
+  audit_repo_branches.py --repo owner/name --base epic/402-demo
   audit_repo_branches.py --repo owner/name --fetch   # required to see OPEN PR siblings:
                                                      # unfetched open branches are skipped
 
@@ -97,7 +98,7 @@ def fetch_pr_map(repo: str) -> dict[str, dict]:
     return outmap
 
 
-def list_branches() -> list[str]:
+def list_branches(base: str | None = None) -> list[str]:
     code, out, _ = run(["git", "for-each-ref", "--format=%(refname:short)",
                         "refs/remotes/origin"])
     if code != 0:
@@ -108,6 +109,8 @@ def list_branches() -> list[str]:
         if not line or line.endswith("/HEAD") or line == "origin/master" or line == "origin/main":
             continue
         name = line[len("origin/"):] if line.startswith("origin/") else line
+        if base and name == base:
+            continue
         # Skip `pr-<n>` refs: these are pull-request FETCH_HEADs created by
         # pr_audit_bundle.sh (`git fetch origin pull/<n>/head:.../pr-<n>`), not
         # branches. Enumerating them made every audited PR appear as its own
@@ -169,9 +172,9 @@ def clear_caches() -> None:
     _conflict_markers_cached.cache_clear()
 
 
-def analyse(branch: str, base: str, prmap: dict[str, dict]) -> dict:
+def analyse(branch: str, base: str, prmap: dict[str, dict], base_ref: str | None = None) -> dict:
     tip = rev(f"origin/{branch}")
-    base_ref = f"origin/{base}"
+    resolved_base = base_ref or f"origin/{base}"
     row: dict = {"branch": branch, "pr": None, "behind": 0, "ahead": 0,
                  "files": 0, "landed": False, "unique_files": []}
     if not tip:
@@ -183,22 +186,22 @@ def analyse(branch: str, base: str, prmap: dict[str, dict]) -> dict:
     row["pr"] = pr["number"] if pr else None
     row["pr_state"] = (pr["state"].upper() if pr else None)
 
-    mb = merge_base(base_ref, tip)
+    mb = merge_base(resolved_base, tip)
     if not mb:
         row["verdict"] = "REVIEW"
-        row["reason"] = f"no merge base with origin/{base}"
+        row["reason"] = f"no merge base with {resolved_base}"
         return row
 
-    _, out, _ = run(["git", "rev-list", "--left-right", "--count", f"{tip}...{base_ref}"])
+    _, out, _ = run(["git", "rev-list", "--left-right", "--count", f"{tip}...{resolved_base}"])
     parts = out.split()
     if len(parts) == 2:
         row["ahead"], row["behind"] = int(parts[0]), int(parts[1])
 
-    files = changed_files(base_ref, tip, mb)
+    files = changed_files(resolved_base, tip, mb)
     row["files"] = len(files)
     unique = []
     for f in files:
-        if blob(base_ref, f) != blob(tip, f):
+        if blob(resolved_base, f) != blob(tip, f):
             unique.append(f)
     row["unique_files"] = unique
     row["landed"] = not unique
@@ -289,7 +292,7 @@ def find_siblings(rows: list[dict], base: str) -> list[dict]:
 
 
 
-def render(rows: list[dict], pairs: list[dict], base: str, repo: str) -> str:
+def render(rows: list[dict], pairs: list[dict], base: str, repo: str, base_ref: str | None = None) -> str:
     order = {"DELETE_MERGED": 0, "DELETE_STALE": 1, "SUPERSEDED": 2,
              "REVIEW": 3, "REVIEW_STALE": 4, "KEEP": 5}
     rows = sorted(rows, key=lambda r: (order.get(r["verdict"], 9), r["branch"]))
@@ -297,7 +300,8 @@ def render(rows: list[dict], pairs: list[dict], base: str, repo: str) -> str:
     for r in rows:
         by_verdict[r["verdict"]].append(r)
 
-    out = [f"# Branch audit -- {repo} (base `origin/{base}`)", ""]
+    display_base = base_ref or f"origin/{base}"
+    out = [f"# Branch audit -- {repo} (base `{display_base}`)", ""]
     out.append("Content comparison against the base branch, not `--is-ancestor` or "
                "`git cherry`: both misreport squash-merged work as unmerged.")
     out.append("")
@@ -400,6 +404,16 @@ def resolve_base_branch(explicit: str | None) -> str:
     return "master"
 
 
+def resolve_base_ref(base: str) -> str:
+    """Resolve an arbitrary parent base ref, preferring origin/<base> over local/direct refs."""
+    remote_ref = f"origin/{base}"
+    if rev(remote_ref):
+        return remote_ref
+    if rev(base):
+        return base
+    return ""
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(
         description="Classify remote branches as keep/delete/review (read-only).",
@@ -407,7 +421,11 @@ def main() -> None:
         epilog=__doc__,
     )
     ap.add_argument("--repo", help="owner/name. Defaults to origin remote.")
-    ap.add_argument("--base", default=None, help="base branch (default: auto-detected from origin/HEAD, main, or master)")
+    ap.add_argument(
+        "--base",
+        default=None,
+        help="parent base ref (e.g. main, epic/<id>-<slug>, or upstream dependency branch; default: auto-detected from origin/HEAD, main, or master)",
+    )
     ap.add_argument("--json", action="store_true", help="emit JSON instead of Markdown")
     ap.add_argument("--fetch", action="store_true", help="git fetch --prune first")
     args = ap.parse_args()
@@ -416,8 +434,9 @@ def main() -> None:
     if args.fetch:
         run(["git", "fetch", "--prune", "origin"])
     base = resolve_base_branch(args.base)
-    if not rev(f"origin/{base}"):
-        sys.stderr.write(f"origin/{base} not found; pass --base or --fetch\n")
+    base_ref = resolve_base_ref(base)
+    if not base_ref:
+        sys.stderr.write(f"origin/{base} or {base} not found; pass --base or --fetch\n")
         raise SystemExit(1)
 
     prmap = fetch_pr_map(repo)
@@ -434,7 +453,7 @@ def main() -> None:
             f"excluded from sibling detection: "
             f"{', '.join(f'#{n}' for n in unfetched)}. Re-run with --fetch.\n"
         )
-    rows = [analyse(b, base, prmap) for b in list_branches()]
+    rows = [analyse(b, base, prmap, base_ref=base_ref) for b in list_branches(base)]
     pairs = find_siblings(rows, base)
 
     for r in rows:
@@ -444,10 +463,10 @@ def main() -> None:
             r["verdict"] = "SUPERSEDED"
 
     if args.json:
-        print(json.dumps({"repo": repo, "base": base, "branches": rows,
+        print(json.dumps({"repo": repo, "base": base, "base_ref": base_ref, "branches": rows,
                           "sibling_conflicts": pairs}, indent=2))
     else:
-        print(render(rows, pairs, base, repo))
+        print(render(rows, pairs, base, repo, base_ref=base_ref))
 
 
 if __name__ == "__main__":

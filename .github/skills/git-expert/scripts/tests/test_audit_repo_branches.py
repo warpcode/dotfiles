@@ -237,6 +237,56 @@ class TestPrFetchRefsNotBranches(unittest.TestCase):
             names = branches.list_branches()
         self.assertEqual(names, ["feature/pr-9", "pr-181-hotfix", "pricing-tool"])
 
+    def test_list_branches_excludes_custom_base(self):
+        refs = "origin/master\norigin/epic/402-demo\norigin/issue/403-sub\n"
+        with mock.patch.object(branches, "run", return_value=(0, refs, "")):
+            names = branches.list_branches("epic/402-demo")
+        self.assertEqual(names, ["issue/403-sub"])
+
+
+class TestCustomBaseRef(unittest.TestCase):
+    def setUp(self):
+        branches.clear_caches()
+
+    def test_resolve_base_ref_prefers_origin_and_falls_back_to_local_ref(self):
+        with mock.patch.object(
+            branches, "rev", side_effect=lambda ref: "sha1" if ref == "origin/epic/402-demo" else None
+        ):
+            self.assertEqual(branches.resolve_base_ref("epic/402-demo"), "origin/epic/402-demo")
+
+        with mock.patch.object(
+            branches, "rev", side_effect=lambda ref: "sha2" if ref == "epic/402-demo" else None
+        ):
+            self.assertEqual(branches.resolve_base_ref("epic/402-demo"), "epic/402-demo")
+
+        with mock.patch.object(branches, "rev", return_value=None):
+            self.assertEqual(branches.resolve_base_ref("missing-ref"), "")
+
+    def test_analyse_accepts_custom_base_ref(self):
+        def fake_rev(ref):
+            return {"origin/issue/403-sub": "tip-sha"}.get(ref)
+
+        def fake_run(cmd):
+            if cmd[:2] == ["git", "merge-base"]:
+                return (0, "mb-sha\n", "")
+            if cmd[:2] == ["git", "rev-list"]:
+                return (0, "2\t1\n", "")
+            if cmd[:2] == ["git", "diff"]:
+                return (0, "README.md\n", "")
+            if cmd[:2] == ["git", "rev-parse"]:
+                return (0, "blob-a\n" if "epic/402-demo" in cmd[2] else "blob-b\n", "")
+            return (0, "", "")
+
+        prmap = {"issue/403-sub": {"number": 403, "state": "OPEN", "mergedAt": None, "title": "sub"}}
+        with mock.patch.object(branches, "rev", side_effect=fake_rev), \
+             mock.patch.object(branches, "run", side_effect=fake_run):
+            row = branches.analyse("issue/403-sub", "epic/402-demo", prmap, base_ref="epic/402-demo")
+
+        self.assertEqual(row["verdict"], "KEEP")
+        self.assertEqual(row["ahead"], 2)
+        self.assertEqual(row["behind"], 1)
+        self.assertEqual(row["unique_files"], ["README.md"])
+
 
 if __name__ == "__main__":
     unittest.main()

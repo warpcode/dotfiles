@@ -65,16 +65,13 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-if [[ -n "${REVIEW_WORKTREE_SCRIPT:-}" ]]; then
-  WORKTREE="$REVIEW_WORKTREE_SCRIPT"
-elif [[ -f "$SCRIPT_DIR/review_worktree.sh" ]]; then
-  WORKTREE="$SCRIPT_DIR/review_worktree.sh"
-else
-  WORKTREE="$SCRIPT_DIR/../../github-pr-review/scripts/review_worktree.sh"
-fi
+SKILLS_DIR="$(dirname -- "$(dirname -- "$SCRIPT_DIR")")"
+WORKTREE="${REVIEW_WORKTREE_SCRIPT:-$SKILLS_DIR/github/scripts/review_worktree.sh}"
 APPLY="$SCRIPT_DIR/apply_mutation.py"
 
 die() { printf 'mutation_check: %s\n' "$*" >&2; exit 2; }
+
+[[ -f "$WORKTREE" ]] || die "review_worktree.sh not found at '$WORKTREE'; set REVIEW_WORKTREE_SCRIPT to override"
 
 pr=""; spec=""; test_cmd=""; fail_regex=""
 skip_base=0; keep=0; root="/tmp/opencode/wt"

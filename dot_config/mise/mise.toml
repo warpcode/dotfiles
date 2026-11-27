@@ -1,5 +1,6 @@
 [settings]
 experimental = true
+minimum_release_age = "6h"
 
 [bootstrap.hooks]
 pre-packages = "bash ~/.config/mise/scripts/setup_repos.sh"
