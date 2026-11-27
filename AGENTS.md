@@ -13,8 +13,12 @@ driven by a skill's bundled script.
 | Git/PR workflow, branch hygiene, conflict triage | `git-expert` |
 | Security findings, exposure, auth review | `code-security-audit` |
 | GitHub operations (PRs, issues, Sub-Issues, Dependabot, `gh` CLI) | `github` |
-| Project/feature planning, ADRs, PRDs, task breakdown & scrutiny | `project-planner` |
+| Project/feature planning, RFC/SPEC & ADR schemas | `project-planner`, `project-adr` |
+| Ticket decomposition, epics, dependency DAGs | `project-tickets` |
+| Progress and ground-truth reconciliation | `project-tracker` |
 | Post-session skill/instruction improvement | `ai-conversation-review` |
+
+For interactive plan stress-testing and Socratic refinement, use the `project-architect` agent (`.github/agents/project-architect.agent.md`).
 
 Prefer a loaded skill's bundled script over a hand-rolled command chain — if the skill ships a
 script for a step, run it rather than writing an equivalent loop.

@@ -104,12 +104,21 @@ Rigorous progress tracking means catching violations before they become tech deb
 - **Signal**: Re-implementing a rejected alternative, bypassing a decision tree rule, or introducing a pattern forbidden by an ADR.
 - **Action**: Flag as an **Architectural Contradiction**. Work must pause until an ADR amendment or redesign is approved.
 
-### 3. Sequencing & Prerequisite Violations
-- **Check**: Verify the `Depends On:` graph for every active or completed task/requirement.
-- **Signal**: A task is marked `IN_PROGRESS` or `DONE` while one of its prerequisite tasks or requirements is still `OPEN`, `BLOCKED`, or marked `Needs Review`.
-- **Action**: Flag as a **Sequencing Violation**. Identify hidden dependencies or unblock prerequisites before declaring progress.
+### 3. Sequencing & Dependency Breaches
+- **Check**: Inspect the `Depends on:` / `Blocked by:` DAG and the Branch / PR Stack Tree for every active or completed item.
+- **Signals**:
+  - A downstream issue is marked `IN_PROGRESS` or `DONE` while any upstream dependency is still `OPEN`, `BLOCKED`, or has an unmerged PR.
+  - A downstream PR targets `main`/`master` directly while an upstream dependency is unmerged.
+  - A stacked PR's `baseRefName` does not match its upstream dependency branch (or a stacked PR was merged before its parent PR).
+  - A dependency cycle (`A -> ... -> A`) exists in the tracker links.
+- **Action**: Flag as a **Sequencing Breach**. Retarget PR bases to match the DAG, pause/unblock prerequisites, or re-slice cycles before continuing.
 
-### 4. Scope Creep & Phantom Work
+### 4. Stub / Unwired Code
+- **Check**: Inspect call sites, exports, CLI/router registrations, and test suites for target symbols.
+- **Signal**: Files or functions exist and may compile, but are never invoked from live code paths, never wired into configuration/entrypoints, or lack assertions for claimed criteria.
+- **Action**: Flag as **Stub / Unwired Code** and keep the criterion classified as `Partially visible` or `Not visible` until wired end-to-end.
+
+### 5. Scope Creep & Phantom Work
 - **Check**: Identify any issue in the tracker dump or any major code addition in the worktree that does not trace back to an approved `REQ-*` or `G-*`.
 - **Signal**: "Nice-to-have" features, refactorings, or unrelated bugfixes bundled into project branches without plan coverage.
 - **Action**: Flag as **Scope Creep**. The engineer must either extract the work into a separate plan, reject it, or submit it for Workflow B scrutiny.
@@ -122,20 +131,24 @@ Ensure the documentation is completely accurate and reflects reality:
 
 ### Three-Way State Reconciliation
 
-Audit the alignment between the three sources:
+Audit alignment across the three primary truth sources (with `SPEC.md` as an optional fourth source when present):
 
 ```text
-       [ Plan Document (SPEC.md) ]
-                 ▲      ▲
-                /        \
-               ▼          ▼
-[ Issue Tracker Dump ] ◄──► [ Code Ground Truth ]
+          [ Branch / PR Stack Tree ]
+                  ▲         ▲
+                 /           \
+                ▼             ▼
+[ Issue Tracker State ] ◄──► [ Code Ground Truth ]
+                ▲             ▲
+                 \           /
+         (Optional) [ SPEC.md ]
 ```
 
-- **Tracker Done, Plan Proposed**: Issue tracker closed the ticket, but `SPEC.md` was never updated.
-- **Plan Done, Tracker Open**: Plan marked complete, but ticket was abandoned or forgotten in tracker.
-- **Tracker/Plan Done, Code Missing**: Task claimed complete by team or tracker, but files or tests do not exist in the repository (phantom completion).
-- **Code Done, Plan Missing**: Code merged or implemented without requirement or task coverage.
+- **Tracker Done, PR Unmerged**: Issue tracker closed the ticket, but the PR never merged into the target branch.
+- **PR Merged, Tracker Open**: Code landed on trunk or epic branch, but the ticket stayed `OPEN` / `IN_PROGRESS`.
+- **PR Merged, Code Missing / Stubbed**: PR merged without implementing the criterion end-to-end or leaving unwired stubs (phantom completion).
+- **Code Done, Tracker Missing**: Code merged or implemented without an owning issue or requirement.
+- **Branch/PR Exists, Tracker Missing**: Orphaned branch or PR without a linked issue or task.
 
 ### Governance Gates Audit
 
@@ -154,7 +167,7 @@ Audit the alignment between the three sources:
 When the audit is complete:
 
 1. **Produce the Audit Report**: Render using `templates/progress-report.md`.
-2. **Review with User**: Present findings, progress metrics, and discovered violations (`ask_question`, recommended action first).
+2. **Review with User**: Present findings, progress metrics, and discovered violations to the user (recommended action first).
 3. **Update Plan Documents**:
    - Query commits (`git log --grep="<slug>" --format="%h %s"`) and PRs (`gh pr list --search "<slug> in:body"`) to discover linked evidence.
    - Update `TSK-*` statuses (`[Proposed]` → `[Accepted]` → `[In Progress]` → `[Done]`) and backfill `- **Evidence**: PR <number> · Commit <sha> · Ticket <id>`.

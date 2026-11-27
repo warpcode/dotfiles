@@ -53,22 +53,21 @@ Acceptance criteria must leave zero room for hallucination or interpretation:
 
 ---
 
-## 4. Zero-Hunting Git Trailer Linking
+## 4. Traceability & Commit/PR Linkage
 
-To eliminate manual hunting across repositories, all tickets specify a canonical plan link:
-```text
-Plan: <slug>:<TSK-xxx>
-```
-When engineers or agents commit code and open PRs, this trailer is included in the commit message or PR description:
+Link commits and pull requests to their owning work items using the repository's active convention—no single format is mandatory:
+
+- **GitHub Issue-First**: Reference issues in PR bodies and commit messages (`Closes #102`, `Refs #101`, `Part of #100`) and record dependency edges (`Depends on #101`, `Blocked by #101`).
+- **Jira**: Include the Jira issue key (`PROJ-102`) in branch names, PR titles, or commit messages.
+- **Local Plan Trailer (Optional)**: When tracking against an in-repo `docs/plans/` spec, include the canonical trailer in the commit or PR body:
+
 ```text
 feat(sandbox): enforce plugin memory limits
 
 Isolate plugin execution in dedicated cgroup with 512MB threshold.
 
+Closes #102
 Plan: plugin-sandbox:TSK-102
 ```
-This enables `project-tracker` to automatically discover all related commits and PRs using:
-```bash
-git log --grep="Plan: <slug>:<TSK-xxx>"
-gh pr list --search "Plan: <slug>:<TSK-xxx> in:body"
-```
+
+Using consistent issue keys, PR references, or optional `Plan:` trailers allows `project-tracker` to reconcile tracker state, branch/PR topology, and code ground truth automatically.

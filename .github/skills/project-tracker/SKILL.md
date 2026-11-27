@@ -1,111 +1,117 @@
 ---
 name: project-tracker
 description: >
-  Track epic and issue progress across external trackers (Jira, GitHub Issues,
-  Redmine, Kanban) and code ground truth. Delegates code inspections to
-  subagents, gathers evidence from comments and commits, evaluates criteria in
-  the context of the entire epic, and audits non-goals. Use when tracking
-  project or epic progress, verifying ticket criteria in code, auditing ground
-  truth, or reconciling external tracker status.
+  Track epic and issue progress across external trackers (GitHub Issues, Jira,
+  Redmine, Kanban), branch/PR stack trees, and codebase ground truth. Reconciles
+  three-way state, verifies criterion-level source evidence, and flags
+  sequencing breaches, stub/unwired code, and non-goal violations. Use when
+  auditing epic or issue progress, verifying criteria in code, or checking
+  dependency compliance.
 user-invocable: false
 ---
 
 # Project Tracker
 
-A service-agnostic tracking and compliance audit skill: reconciles external issue tracker data
-(Jira, GitHub Issues, Redmine, Kanban boards, Linear, or plain text dumps) and repository code
-ground truth against project specifications (`docs/plans/`) and architectural invariants (`docs/adr/`).
+A service-agnostic tracking, ground-truth verification, and compliance knowledge
+centre. Reconciles external issue tracker state (GitHub Issues, Jira, Redmine,
+Linear, Kanban, or plain text dumps) against **Branch / PR Stack Trees** and
+**Codebase Ground Truth**, with optional `docs/plans/` and `docs/adr/` specs.
 
 ## 1. Principles of Ground-Truth Tracking
 
-1. **Service-Agnostic Ingestion**: Does not care how tracker data is retrieved. If issue data is
-   missing or outdated, the agent prompts the user for the necessary dump (JSON, CSV, markdown, or comments).
-2. **Subagent Code Inspection**: Delegates deep code sweeps and file inspections to an isolated subagent
-   (`invoke_subagent`) to gather ground-truth evidence without bloating the tracking context.
-3. **Contextual Epic Evaluation**: Evaluates ticket criteria in the context of the entire epic:
-   identifying blocked dependencies, tracking overall epic completion, and detecting orphaned work.
-4. **Code Ground Truth Over Claimed Status**: Never trust a "Closed" ticket without verifying
-   target files, test assertions in code, and clickable evidence links.
-5. **Zero Tolerance for Boundary Breaches**: Work that violates an explicit Non-Goal (`NG-*`) or
-   contradicts an accepted Architecture Decision Record (`ADR-NNNN`) is flagged immediately.
+1. **Tracker-Agnostic Ingestion**: Consumes GitHub Issues, Jira, or arbitrary
+   JSON/CSV/Markdown dumps by normalizing fields into canonical states (`OPEN`,
+   `IN_PROGRESS`, `BLOCKED`, `DONE`).
+2. **Three-Way Reconciliation**: Truth lives across `Tracker State <-> Branch / PR Stack Tree <-> Codebase Ground Truth` (with `docs/plans/` SPEC as an optional fourth source when present).
+3. **Code Ground Truth Over Claimed Status**: Never trust a `Closed`/`Done`
+   ticket, merged PR, or comment without verifying target files, call-site
+   wiring, and acceptance criteria in pinned source.
+4. **DAG & Sequencing Integrity**: Evaluate every active or closed item against
+   its upstream `Depends on` / `Blocked by` prerequisites and branch base
+   ancestry.
+5. **Isolated Read-Only Inspection**: Code sweeps may be delegated to an
+   isolated read-only inspector; the inspector must return exact `file:line`
+   references, commit SHAs, and pinned revision identifiers (`headRefOid`).
 
-## 2. Ingestion & Information Request
+## 2. Ingestion & Status Normalization
 
-### Requesting Missing Tracker Data
-If external issue tracker data is not already provided, request the necessary information:
-> *"To audit progress on Epic `<slug>`, please provide the latest ticket list, status updates, or comments (pasted JSON, CSV, Markdown table, Jira/Redmine dump, or issue links)."*
-
-Extract canonical fields (see `references/progress-and-compliance.md`):
-- `Identifier`, `Title`, `Status`, `Type`, `Estimate`, `Dependencies`, `Target Scope`, `PRs/Commits`, `Comments/Updates`.
-
-Map tracker-specific workflows into four normalized states:
+Extract canonical fields (`Identifier`, `Title`, `Status`, `Type`, `Estimate`,
+`Parent`, `Dependencies`, `Target Scope`, `PRs / Branches / Commits`) and map
+tracker workflows into four states (see `references/progress-and-compliance.md`):
 - **`OPEN`**: Backlog, To Do, Ready, Proposed, New, Triaged.
 - **`IN_PROGRESS`**: In Dev, Doing, Started, WIP, In Review, Review.
 - **`BLOCKED`**: On Hold, Waiting, Impeded, Paused.
 - **`DONE`**: Closed, Resolved, Complete, Merged, Shipped, Fixed.
 
-## 3. Audit Protocol & Subagent Code Inspection
+## 3. Three-Way Reconciliation & Audit Protocol
 
-### Step 1: Delegate Code Inspection to Subagent
-To preserve token context and ensure rigorous verification, invoke a specialized subagent:
-```json
-{
-  "Subagents": [{
-    "TypeName": "research",
-    "Role": "Code Ground-Truth Inspector",
-    "Prompt": "Inspect repository for evidence satisfying acceptance criteria for Epic <slug> / Ticket <id>. Check target files <paths>, search git history for 'Plan: <slug>:<id>', verify exact file:line references for implementation, and confirm test assertions pass. Return a concise JSON summary of verified criteria and evidence."
-  }]
-}
+### Step 1: Discover Linked Branches, PRs & Commits
+Discover work across the repository using whichever linkage convention it uses
+(GitHub issue refs `Closes #N`, Jira keys `PROJ-123` in branch/PR/commit text,
+or optional `Plan: <slug>:<TSK-xxx>` trailers):
+```bash
+git log --grep="<issue-key-or-slug>" --format="%h %s"
+gh pr list --search "<issue-key-or-slug>" --state all --json number,title,url,state,baseRefName,headRefName,headRefOid,mergedAt
+git merge-base --is-ancestor <upstream-sha> <downstream-head>
 ```
-The subagent inspects the repository read-only and returns verified `file:line` references, commit SHAs, and test outcomes.
 
-### Step 2: Contextual Epic Evaluation
-Evaluate each ticket in the context of the entire epic:
-1. **Criteria Accounting**: For every child ticket, compare claimed status against subagent-verified code evidence.
-2. **Epic Completion Percentage**: Calculate the proportion of total epic acceptance criteria provably satisfied in code.
-3. **Blockers & Sequencing**: Identify tickets blocked by incomplete upstream dependencies or unmerged PRs.
+### Step 2: Three-Way State Reconciliation
+Compare **Tracker State**, **Branch / PR Stack Tree**, and **Codebase Ground Truth**
+(plus optional `SPEC.md`):
 
-### Step 3: Violation & Guardrail Detection
-Actively audit for four distinct classes of violations:
-1. **Non-Goal (`NG-*`) Violations (Critical)**: Code or tickets implementing explicitly excluded capabilities.
-2. **Architectural Contradictions (`ADR-*`, `REJ-*`)**: Code violating accepted ADRs or reviving rejected patterns.
-3. **Sequencing Violations**: Tasks marked `DONE` whose upstream prerequisites are not complete.
-4. **Scope Creep / Phantom Work**: Code changes or tickets lacking approved requirement coverage.
+| Discrepancy Pattern | Classification | Meaning |
+|---|---|---|
+| Tracker `DONE` / PR open or unmerged | **Premature Closure** | Ticket closed before code landed on target base. |
+| PR merged / Tracker `OPEN` or `IN_PROGRESS` | **Stale Tracker** | Code landed, but tracker state was never transitioned. |
+| PR merged / Code missing or stubbed | **Phantom / Unwired Completion** | PR merged without satisfying criterion or wiring into runtime path. |
+| Code present / No tracker item | **Scope Creep / Untracked Work** | Repository changes lack an owning issue or requirement. |
+| Branch or PR exists / No tracker item | **Orphaned Branch** | Active branch/PR has no linked epic, issue, or plan task. |
 
+### Step 3: Criterion-to-Code Ground-Truth Verification
+Apply `references/criterion-evidence-verification.md` to build an evidence
+packet and a 1:1 criterion matrix (one issue key + one testable requirement per
+row). Classify each criterion as `Visible`, `Partially visible`, `Not visible`,
+or `External`, citing exact `file:line` locations and pinned PR/commit SHAs.
 
-### Step 3: Governance Gates Check
-1. **Unvalidated Assumptions (`ASM-*`)**: Flag active requirements whose underlying assumptions remain unvalidated.
-2. **Open Blocking Questions (`Q-*`)**: Work must not proceed on requirements blocked by unanswered questions.
-3. **Unmitigated High Risks (`RSK-*`)**: High-impact risks must have assigned mitigation tasks (`TSK-*`).
+### Step 4: Violation & Sequencing-Breach Detection
+Audit for five violation classes:
+1. **Non-Goal (`NG-*`) Violations (Critical)**: Code or issues implementing
+   explicitly excluded capabilities.
+2. **Architectural Contradictions (`ADR-*`, `REJ-*`)**: Code violating accepted
+   ADRs, fitness functions, or reviving rejected alternatives.
+3. **Sequencing & Dependency Breaches**:
+   - Downstream issue marked `IN_PROGRESS` or `DONE` while upstream dependency is not merged.
+   - Downstream PR targets `main`/`master` while an upstream dependency PR is unmerged.
+   - Downstream PR `baseRefName` does not match its DAG upstream dependency branch.
+   - Stacked PR merged before its upstream parent PR.
+   - Dependency cycle present in the DAG (`A -> ... -> A`).
+4. **Stub / Unwired Code**: Functions, modules, or flags exist in files but are
+   never called, registered, exported, or covered by assertions.
+5. **Scope Creep**: Unmapped issues, branches, or code additions lacking goal/issue coverage.
 
-### Step 4: Automated Evidence Discovery (Zero Hunting)
-Query Git and GitHub to discover all work linked to the plan slug without manual searching:
-1. **Commits matching plan**: `git log --grep="<slug>" --format="%h %s"`
-2. **PRs mentioning plan**: `gh pr list --search "<slug> in:body" --state all --json number,title,url,headRefName`
-3. **Trailers**: Extract `Plan: <slug>:<TSK-xxx>` or `Ticket: <key>` trailers from commit bodies.
+### Step 5: Governance Gates Check (When Applicable)
+1. **Unvalidated Assumptions (`ASM-*`)**: Flag active requirements relying on unvalidated assumptions.
+2. **Open Blocking Questions (`Q-*`)**: Flag active work proceeding under unanswered blocking questions.
+3. **Unmitigated High Risks (`RSK-*`)**: Flag high-impact risks lacking assigned mitigation tasks.
 
-### Step 5: Reconcile & Report
-1. **Generate Report**: Render audit findings using `templates/progress-report.md`.
-2. **Review Discrepancies**: Present findings, progress percentages, and proposed fixes to the user via `ask_question` (recommended action first).
-3. **Update Documentation**: Upon explicit user approval:
-   - Update `TSK-*` statuses (`[Proposed]` $\to$ `[In Progress]` $\to$ `[Done]`) and backfill `- **Evidence**: [PR #...](url) · Commit `sha` · [Ticket ...](url)` (PRs and tickets formatted as clickable links; git SHAs as code literals).
-   - Check off verified acceptance criteria (`- [x] Given...`).
-   - Append an audit row with Evidence links to the plan's `## Revision Log`.
+### Step 6: Report & Reconcile
+Render findings using `templates/progress-report.md` and present discrepancies,
+sequencing breaches, and proposed status/base corrections (recommended action
+first). Update tracker items or optional `SPEC.md` only upon explicit approval.
 
 ## 4. Definition of Done (Audit Gate)
 
-Before declaring any task, milestone, or plan complete:
-- [ ] Every completed task has verified target files present in the codebase.
-- [ ] Acceptance criteria checked `[x]` only when implementation and test assertions are confirmed in code.
-- [ ] Completed tasks have `- **Evidence**:` populated with verified PR/ticket links and commit SHAs.
+Before declaring an epic, milestone, or plan complete:
+- [ ] Three-way reconciliation complete across `Tracker <-> Branch/PR Stack Tree <-> Code` (and optional `SPEC.md`).
+- [ ] Every criterion in the matrix has verified `file:line` source evidence (`Visible` vs. explicit gap).
+- [ ] Completed items have `- **Evidence**:` / link provenance (PR URL, ticket link, commit SHA).
+- [ ] Zero dependency or sequencing breaches (no unmerged upstreams, mismatched PR bases, out-of-order merges, or DAG cycles).
+- [ ] Zero stub/unwired implementations on closed items.
 - [ ] Zero unaddressed Non-Goal (`NG-*`) or Architecture (`ADR-*`/`REJ-*`) violations.
-- [ ] No sequencing violations: all `Depends On` prerequisites completed before downstream work.
-- [ ] Scope creep triaged (rejected, extracted into a new plan, or formally approved).
-- [ ] Governance gates intact: no active work proceeding under unvalidated `ASM-*` or open blocking `Q-*`.
-- [ ] Three-way reconciliation complete across tracker, plan, and code ground truth.
-- [ ] Plan revision log updated with audit record, date, and Evidence links.
+- [ ] Scope creep and governance gates (`ASM-*`, `Q-*`, `RSK-*`) triaged.
 
 ## 5. Templates & References
 
-- `templates/progress-report.md` — Progress, ground truth, and compliance audit report
-- `references/progress-and-compliance.md` — Ingestion heuristics, status normalization, and ground-truth code auditing
+- `templates/progress-report.md` — Three-way progress, branch/PR stack tree, and compliance audit report
+- `references/criterion-evidence-verification.md` — Scoping, evidence packets, 1:1 criterion matrix, visibility classification, and completeness gate
+- `references/progress-and-compliance.md` — Ingestion heuristics, status normalization, violation taxonomy, and reconciliation protocol

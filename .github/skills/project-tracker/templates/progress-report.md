@@ -1,6 +1,6 @@
-# Progress & Compliance Audit: `<Plan Slug>`
+# Progress & Compliance Audit: `<Epic / Plan Slug>`
 
-> **Plan**: [`<slug>`](SPEC.md) · **Audit Date**: YYYY-MM-DD · **Plan Status**: Draft | Active | Done
+> **Epic / Plan**: [`<id-or-slug>`](SPEC.md) · **Audit Date**: YYYY-MM-DD · **Status**: Open | Active | Done
 > **Code Path**: `<path-to-repo-or-worktree>` or "None provided"
 > **Issue Dump**: `<source or record count>` or "None provided"
 
@@ -18,7 +18,16 @@
 
 ---
 
-## 2. Milestone Health & Deliverable Status
+## 2. Branch / PR Stack Tree
+
+| Issue | PR | Branch (Head) | Base | Upstream Dependency | Merged? | Sequencing Breach? |
+|---|---|---|---|---|---|---|
+| `#101` | `#201` | `feat/101-schema` | `master` | — | Yes | No |
+| `#102` | `#202` | `feat/102-service` | `feat/101-schema` | `#101` | No | No |
+
+---
+
+## 3. Milestone Health & Deliverable Status
 
 | Milestone | Status | Tasks (Done/Total) | Points (Done/Total) | Progress | Exit Criteria Fulfilled? |
 |---|---|---|---|---|---|
@@ -26,20 +35,20 @@
 
 ---
 
-## 3. Requirement Verification & Acceptance Criteria Matrix
+## 4. Requirement Verification & Acceptance Criteria Matrix
 
-| Requirement | Priority | Child Tasks (Done/Total) | Acceptance Criteria (Met/Total) | Code Visibility | Status |
+| Requirement / Issue | Priority | Child Tasks (Done/Total) | Acceptance Criteria (Met/Total) | Code Visibility | Status |
 |---|---|---|---|---|---|
-| `REQ-001`: <Title> | P0 | <d>/<t> | <m>/<tot> | Met in Code / Partial / Unverified | In Progress / Complete |
+| `REQ-001` / `#101`: <Title> | P0 | <d>/<t> | <m>/<tot> | Visible / Partially visible / Not visible / External | In Progress / Complete |
 
 ### Acceptance Criteria Breakdown
-- **`REQ-001`**:
+- **`REQ-001` / `#101`**:
   - [x] Given <state>, when <action>, then <outcome> — *Verified in `<test_file>:<line>`*
   - [ ] Given <edge case>, when <action>, then <fallback> — *Missing in code / test*
 
 ---
 
-## 4. Violations & Guardrail Audits
+## 5. Violations & Guardrail Audits
 
 ### Non-Goal (`NG-*`) Violations
 - [x] **No Non-Goal violations detected.**
@@ -49,20 +58,24 @@
 - [x] **No Architecture or Decision violations detected.**
 *(Or: ⚠️ `<Issue / Code>` violates decision `ADR-xxx` / attempts rejected alternative `REJ-xxx`: `<details>`)*
 
-### Sequencing & Prerequisite Violations
-- [x] **All dependency sequences verified.**
-*(Or: ⚠️ `<TSK-xxx>` marked In Progress/Done, but prerequisite `<TSK-yyy>` is `<Status>`)*
+### Sequencing & Dependency Breaches
+- [x] **All dependency sequences and PR bases verified.**
+*(Or: ⚠️ `<#102 / TSK-xxx>` is `In Progress`/`Done` or targets `master` while upstream `<#101>` is `<Status>`)*
+
+### Stub / Unwired Code
+- [x] **No stub or unwired implementations detected.**
+*(Or: ⚠️ `<symbol>` in `<file:line>` is not called or registered in active execution paths)*
 
 ### Scope Creep / Unplanned Work
 - [x] **Zero unmapped issues or untracked changes detected.**
-*(Or: ⚠️ `<n>` issues / files lack plan provenance: `<List of external IDs or files>`)*
+*(Or: ⚠️ `<n>` issues / files lack epic or plan provenance: `<List of external IDs or files>`)*
 
 ---
 
-## 5. Documentation Accuracy & Ground-Truth Drift
+## 6. Documentation Accuracy & Ground-Truth Drift
 
-### State Discrepancies (Plan vs Tracker vs Code)
-- `<Item ID>`: Plan says `<Plan Status>`, tracker says `<Tracker Status>`, code shows `<Code Status>`.
+### State Discrepancies (Tracker vs Branch/PR Tree vs Code)
+- `<Item ID>`: Tracker says `<Tracker Status>`, Branch/PR tree shows `<PR/Base State>`, Code shows `<Code Status>` (Optional SPEC: `<Plan Status>`).
 
 ### Target Files & Evidence Link Verification
 - [ ] `<TSK-xxx>`: Expected target file `<path>` does not exist in code path.
@@ -75,7 +88,7 @@
 
 ---
 
-## 6. Actionable Reconciliation Plan
+## 7. Actionable Reconciliation Plan
 
 Checklist of exact edits required to align documentation with reality:
 
