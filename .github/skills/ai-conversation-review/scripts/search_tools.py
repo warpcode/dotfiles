@@ -14,7 +14,7 @@ Usage:
   search_tools.py --script submit_review.sh --sessions 100
 
   # Audit all bundled scripts in a skill directory:
-  search_tools.py --scripts-dir .github/skills/github-cli/scripts --sessions 200
+  search_tools.py --scripts-dir .github/skills/github/scripts --sessions 200
 
   # Output structured JSON for consumption by audit tools:
   search_tools.py --scripts "audit_repo_alerts.py,pr_audit_bundle.sh" --json

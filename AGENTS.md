@@ -9,10 +9,10 @@ driven by a skill's bundled script.
 
 | Task | Skill |
 |---|---|
-| Auditing or reviewing any PR | `github-pr-review` |
+| Auditing or reviewing any PR | `code-review` + `github` (`code-reviewer` agent) |
 | Git/PR workflow, branch hygiene, conflict triage | `git-expert` |
 | Security findings, exposure, auth review | `code-security-audit` |
-| Running `gh` commands | `github-cli` |
+| GitHub operations (PRs, issues, Sub-Issues, Dependabot, `gh` CLI) | `github` |
 | Project/feature planning, ADRs, PRDs, task breakdown & scrutiny | `project-planner` |
 | Post-session skill/instruction improvement | `ai-conversation-review` |
 

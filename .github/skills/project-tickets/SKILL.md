@@ -63,7 +63,7 @@ Request explicit user review before provisioning remote issues.
 
 ### Step 5: Provisioning Remote Tickets (Delegation)
 Upon user confirmation, delegate ticket creation to the appropriate provider skills:
-- **GitHub Issues**: Use `github-issues` (or `gh issue create`) specifying title, body, labels, and milestone.
+- **GitHub Issues**: Use `github` (or `gh issue create`) specifying title, body, labels, and milestone.
 - **Jira**: Use `jira-api` (or Jira REST CLI) specifying project key, issue type, summary, description, and Epic link.
 - **Markdown / Local**: Export the decomposed tickets to the plan's `SPEC.md` or a sprint backlog file.
 
