@@ -71,8 +71,6 @@ APPLY="$SCRIPT_DIR/apply_mutation.py"
 
 die() { printf 'mutation_check: %s\n' "$*" >&2; exit 2; }
 
-[[ -f "$WORKTREE" ]] || die "review_worktree.sh not found at '$WORKTREE'; set REVIEW_WORKTREE_SCRIPT to override"
-
 pr=""; spec=""; test_cmd=""; fail_regex=""
 skip_base=0; keep=0; root="/tmp/opencode/wt"
 
@@ -95,7 +93,7 @@ done
 [[ -n "$test_cmd" ]] || die "--test-cmd is required"
 [[ -f "$spec"   ]] || die "spec file not found: $spec"
 [[ -f "$APPLY"  ]] || die "missing $APPLY"
-[[ -f "$WORKTREE" ]] || die "missing $WORKTREE"
+[[ -f "$WORKTREE" ]] || die "review_worktree.sh not found at '$WORKTREE'; set REVIEW_WORKTREE_SCRIPT to override"
 command -v jq >/dev/null 2>&1 || die "jq is required"
 
 # Default: the shapes of a failing test name across the common runners.

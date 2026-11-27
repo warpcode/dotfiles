@@ -282,5 +282,41 @@ class MutationCheckTests(unittest.TestCase):
         self.assertIn("--test-cmd is required", res.stderr)
 
 
+class MutationCheckWorktreeGuardTests(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.spec_path = os.path.join(self._tmp.name, "muts.json")
+        with open(self.spec_path, "w") as fh:
+            json.dump([{"name": "x", "path": "pkg/guard.go", "old": "a", "new": "b"}], fh)
+
+    def test_help_succeeds_even_when_worktree_script_missing(self):
+        env = os.environ.copy()
+        env["REVIEW_WORKTREE_SCRIPT"] = "/nonexistent/review_worktree.sh"
+        res = subprocess.run(
+            ["bash", SCRIPT, "--help"],
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertIn("Usage:", res.stdout)
+
+    def test_missing_worktree_script_exits_with_diagnostic(self):
+        env = os.environ.copy()
+        env["REVIEW_WORKTREE_SCRIPT"] = "/nonexistent/review_worktree.sh"
+        res = subprocess.run(
+            ["bash", SCRIPT, "--pr", "9", "--spec", self.spec_path, "--test-cmd", "true"],
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        self.assertEqual(res.returncode, 2)
+        self.assertIn("/nonexistent/review_worktree.sh", res.stderr)
+        self.assertIn("REVIEW_WORKTREE_SCRIPT", res.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()
