@@ -1,10 +1,22 @@
 # Clean Architecture & SOLID Principles
 
-Reference guide for evaluating architectural boundaries and object-oriented design hygiene.
+Reference guide for evaluating architectural layer boundaries and object-oriented design hygiene.
 
 ---
 
-## 1. SOLID Principles in Practice
+## 1. Clean Architecture Layer Taxonomy
+
+Verify separation of concerns across architectural layers and flag leaky abstractions (e.g., raw SQL or database transactions inside presentation controllers, direct HTTP calls inside UI components):
+
+- **Presentation Layer**: Controllers, API Handlers, CLI Commands, View Templates.
+- **Frontend Client Layer**: Centralized HTTP clients, auth token injection, CSRF interceptors, error normalizers, and WCAG 2.1 AA compliant UI compound components.
+- **Application Layer**: Use Cases, Action Classes, Event Handlers.
+- **Domain Layer**: Entities, Value Objects, Domain Services.
+- **Infrastructure Layer**: Repositories, Third-Party API Clients, DB Drivers.
+
+---
+
+## 2. SOLID Principles in Practice
 
 - **Single Responsibility Principle (SRP)**:
   - A class should have one, and only one, reason to change.
@@ -28,7 +40,7 @@ Reference guide for evaluating architectural boundaries and object-oriented desi
 
 ---
 
-## 2. Common Architectural Anti-Patterns
+## 3. Common Architectural Anti-Patterns
 
 1. **Fat Controller / Anemic Domain**:
    - Controllers accumulating 500+ lines of raw database and business logic while domain entities are mere passive property bags.
@@ -39,7 +51,7 @@ Reference guide for evaluating architectural boundaries and object-oriented desi
 
 ---
 
-## 3. Frontend API Client Abstractions
+## 4. Frontend API Client Abstractions
 
 Audit centralized HTTP clients, API client wrappers, and network middleware to ensure proper architectural abstraction between UI components and backend communication:
 

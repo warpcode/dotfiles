@@ -39,24 +39,13 @@ Tracker and PR context is optional enrichment, never a gate before reviewing:
 
 ## Review Prioritization Hierarchy
 
-Evaluate changes systematically in this priority order:
-
-1. **Requirement fulfillment & premise validity** — verify the defect/requirement is real, domain assumptions match existing code, and linked ACs (if any) are met.
-2. **Bugs & functional correctness** — logic errors, edge cases, race conditions, error handling, semantic merge drift.
-3. **Security issues** — load `code-security-audit` for injection, auth/authz, exposure, or scanner triage.
-4. **Leftover test/debug artifacts** — stray `print`/`console.log`/`set -x`, hardcoded dummy data, `WIP`/`HACK` bypasses, or scratch files.
-5. **Style guideline violations** — apply relevant language/project style conventions.
-6. **Performance & efficiency** — load `code-performance` for hot paths, N+1 queries, or unverified benchmark claims.
-7. **Readability & maintainability** — clarity, shallow nesting, modularity; consult `code-architecture` for layering and dead-code audits.
-8. **Anti-patterns & duplication** — redundant abstractions, unnecessary churn, or copy-pasted logic.
-9. **Project convention consistency** — alignment with repository patterns and architecture invariants.
-10. **Unresolved review feedback** — open review comments or unanswered questions on active PRs.
+Evaluate changes systematically in the 10-tier defect priority order defined in `@references/review-rubrics.md` §1 (bugs & correctness first, through unresolved review feedback).
 
 ## Knowledge Centre Index
 
 | Topic | Resource | Use When |
 |---|---|---|
-| Prioritization rubric & benchmark validation | `@references/review-rubrics.md` | Applying the 10-tier defect hierarchy, premise/supersession checks, and benchmark-claim validation |
+| Prioritization rubric | `@references/review-rubrics.md` | Applying the 10-tier defect prioritization hierarchy |
 | Premise, scope & diff integrity | `@references/premise-and-diff-scrutiny.md` | Auditing premise validity, optional issue ACs, debug artifacts, blob-hash sweeps, self-reverts, or base drift |
 | Test & mutation verification | `@references/test-and-mutation-verification.md` | Auditing test-only diffs, assertion strength, mutation coverage, CI test discovery, or injection tests |
 | Standard finding schema | `@templates/review-finding.md` | Formatting structured review findings (`Severity`, `Description`, `Impact`, `Proposed Solution`) |

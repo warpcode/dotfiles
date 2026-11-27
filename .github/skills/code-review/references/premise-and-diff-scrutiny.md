@@ -11,6 +11,7 @@ Never assume proposed changes are correct, relevant, or useful simply because a 
 - **Premise Validity**: Verify that the alleged defect, requirement, or bug actually exists in the code rather than stemming from a false premise or hallucination.
   - *Fabricated Format Assumptions*: Verify claimed domain facts against existing implementations and fixtures rather than descriptions alone (e.g., claiming a delimiter supports both `,` and `;` when the parser splits on `,` exclusively). Check consistency across all call sites.
 - **Relevance & Scope**: Verify the change is relevant and appropriately scoped to the repository and task without unrequested scope creep.
+- **Superseded Sibling Changes**: If the target defect or cleanup was already resolved by a recent commit on the base branch, flag the change as superseded rather than drafting line-by-line review findings.
 - **Genuine Utility**: Confirm the modification delivers concrete value rather than superficial churn, redundant abstractions, or unneeded complexity.
 
 ---

@@ -56,7 +56,7 @@ bash <skills-dir>/code-review/scripts/audit_ci_test_coverage.sh \
   --repo <owner>/<repo> [--ref origin/master] [test/path ...]
 ```
 - Reports detected test files on the ref, test-runner invocations in `.github/workflows/*.yml`, and `paths:` filters that can skip CI on partial diffs.
-- Treat `NO test file is named in any workflow` as grounds to flag test-verification claims as **unconfirmed** and newly added tests as never executed by CI.
+- Treat `NO test file is named in any workflow` as grounds to confirm the workflow's discovery command reaches the file (e.g., `unittest discover -s tests`, `pytest`), not as proof that the test never runs.
 - Reproduce a newly added test's pass/fail behavior locally in an isolated worktree before trusting a green CI check.
 
 ---

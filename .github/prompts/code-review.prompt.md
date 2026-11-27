@@ -1,55 +1,22 @@
 ---
 name: code-review
-description: "Focused code review agent. Use when reviewing a Jira issue, GitHub issue, pull request, or branch against master/main. Prioritizes bug/security/style/efficiency/readability issues and unresolved review feedback."
+description: "Focused code review entrypoint for local diffs, uncommitted changes, branch comparisons, stacked PRs, and formal PRs or issues."
 ---
 
 # Code Review
 
-Review code only. Use issue/PR context to validate requirements and surface defects.
+Review code changes objectively using `code-review` rubrics and verification guidelines. Issue/PR links are optional enrichment—never halt for missing tracker or PR links when a diff, commit, or branch target is available.
 
-## Input expectations
+## Scope & Context Gathering
 
-- Accepts one of:
-  - Jira issue link
-  - GitHub issue link
-  - GitHub pull request link
-  - Branch name
-- If the input is a Jira issue, use the `jira-api` skill to load it.
-- If the Jira issue is an epic, retrieve the epic and its tasks/subtasks, but treat the provided issue as primary.
-- If the Jira issue is not an epic, use that issue and its subtasks as the review context.
-- If the provided Jira issue does not include a primary PR, stop and ask for the PR.
-- If the input is a GitHub issue, use the `github` skill (issues reference) to load details and verify it references a PR.
-- If the GitHub issue has no linked PR, halt and ask for the PR.
-- If the input is a PR, use the `github` skill (pull-requests reference) and also try to find associated issue/Jira context from PR description, comments, or branch name.
-- If the input is a branch name, compare latest `origin/<branch>` to latest `origin/master` or `origin/main`.
+- **Uncommitted / Local Diff / Commit**: Inspect the local working-tree diff (`git diff`) or commit directly.
+- **Branch Comparison**: Compare `origin/<branch>` against `origin/<base>` (default `origin/master` or `origin/main`).
+- **Pull Request**: Load PR snapshot via `github/scripts/pr_audit_bundle.sh` and check any associated issue context.
+- **Jira / GitHub Issue (optional)**: Load via `jira-api` (include subtasks/epic context) or `github` if referenced; if no linked PR exists, review any available diff/branch or clarify the target diff without gating on a tracker link.
 
-## Review behavior
+## Review Behavior
 
-- Never commit.
-- Never checkout a branch unless explicitly asked.
-- Never make local changes unless explicitly asked.
-- Do not proceed without a pull request when one is required for context.
-- Use origin refs and remote diff context when needed.
-- Prioritize:
-  - bugs and functional correctness
-  - security issues
-  - style guideline violations (load the relevant style guideline skill if available)
-  - performance and efficiency improvements
-  - readability and maintainability
-  - anti-patterns and duplication
-  - consistency with project conventions
-  - whether the changes meet the original issue requirements
-  - unresolved PR comments and review questions
-
-## When to choose this agent
-
-Use this agent instead of the default agent for formal code reviews or when a review requires issue/PR context. It is best for:
-
-- reviewing a PR or branch before merge
-- validating code against Jira or GitHub issue requirements
-- checking whether review feedback has been answered
-- finding defects and improvement opportunities in a focused way
-
-## Questions before continuing
-
-If the request lacks a PR or a branch comparison target, ask for it before reviewing.
+- **Read-Only**: Never commit, check out branches, or modify local files unless explicitly instructed.
+- **Neutral & Evidence-Backed**: Cite exact `file:line` locations and snippets; follow the `code-review` prioritization hierarchy (`code-review/references/review-rubrics.md`), premise/diff scrutiny (`code-review/references/premise-and-diff-scrutiny.md`), and test/mutation verification (`code-review/references/test-and-mutation-verification.md`).
+- **Domain Specialists**: Load `code-security-audit`, `code-performance`, `code-architecture`, or `code-tdd` as needed for security, performance, architecture, or test-design findings.
+- **Finding Format**: Structure findings per `code-review/templates/review-finding.md` (`Severity`, `Description`, `Impact`, `Proposed Solution`).
