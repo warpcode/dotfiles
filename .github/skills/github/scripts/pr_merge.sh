@@ -123,12 +123,17 @@ elif [[ "$repo" != *"/"* ]]; then
   fi
 fi
 
-# Fetch PR state and CI rollup
+# Fetch PR state and CI rollup.
+# gh writes hints (e.g. the `gh event listen` suggestion) to stderr; folding stderr into
+# $meta corrupts the JSON and every jq call below fails. Capture it separately instead.
+gh_err="$(mktemp)"
 meta="$(gh pr view "$pr" --repo "$repo" \
-  --json number,title,state,mergeable,mergeStateStatus,statusCheckRollup,headRefName,baseRefName 2>&1)" || {
-  echo "Error: failed to fetch PR #$pr for repo $repo: $meta" >&2
+  --json number,title,state,mergeable,mergeStateStatus,statusCheckRollup,headRefName,baseRefName 2>"$gh_err")" || {
+  echo "Error: failed to fetch PR #$pr for repo $repo: $(cat "$gh_err")" >&2
+  rm -f "$gh_err"
   exit 1
 }
+rm -f "$gh_err"
 
 state="$(jq -r '.state' <<< "$meta")"
 title="$(jq -r '.title' <<< "$meta")"
