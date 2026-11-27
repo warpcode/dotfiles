@@ -77,6 +77,11 @@ class TestProjectJiraSkills(unittest.TestCase):
         task_text = (templates_dir / "task.md").read_text(encoding="utf-8")
         self.assertIn("Parent Story / Epic (Optional)", task_text)
         self.assertNotIn("| **Parent Story / Epic** |", task_text)
+        parent_line = next(line for line in task_text.splitlines() if "Parent Story / Epic (Optional)" in line)
+        self.assertNotIn("docs/plans adapter only", parent_line)
+        trace_line = next(line for line in task_text.splitlines() if "Traceability (Optional)" in line)
+        self.assertIn("`Closes #...` (issue-first)", trace_line)
+        self.assertIn("`Plan: <slug>:<TSK-xxx>` (docs/plans adapter only)", trace_line)
 
 
 if __name__ == "__main__":
