@@ -6,261 +6,77 @@ description: >
   clipping web content, or cleaning HTML formatting.
 ---
 
-# HTML → Markdown
+# HTML to Markdown Knowledge Centre
 
-Universal skill for converting HTML to Markdown across three modes: CLI (defuddle),
-Python (markdownify / html2text), and LLM-native (direct rule-based conversion).
-
----
+Universal guide for converting HTML to clean Markdown and GFM across three modes: `defuddle` CLI, Python (`markdownify` / `html2text`), and LLM-native conversion.
 
 ## Mode Selection
 
-```
-Input available as…         Preferred mode
-────────────────────────────────────────────────────────────────
-File or URL on disk         defuddle CLI  ← always try this first
-Piped HTML string           defuddle CLI (stdin) or Python
-Embedded in Python script   markdownify (pip)
-No shell/exec available     LLM-native conversion (this SKILL.md)
-Full web page + extraction  defuddle CLI (handles noise removal)
-Fragment / snippet only     LLM-native or markdownify
-```
+| Input Context | Preferred Mode | Notes |
+|---|---|---|
+| File or URL on disk | `defuddle` CLI | Always try first; removes nav/ads/sidebars |
+| Piped HTML string | `defuddle` CLI (stdin) or Python | Use `defuddle` for noisy pages |
+| Embedded in Python script | `markdownify` / `html2text` | `markdownify` for fragments, `html2text` for pages |
+| No shell execution available | LLM-native conversion | Follow Conversion Order + `@references/element-mapping.md` |
+| Obsidian vault web clipping | Any mode + Obsidian schema | Apply `@references/obsidian-clippings.md` |
 
 ---
 
-## Mode 1 — defuddle CLI (Primary)
+## Mode 1 — `defuddle` CLI (Primary)
 
-`defuddle` is the library powering the official Obsidian Web Clipper. It handles
-noise removal (nav, ads, sidebars), HTML standardisation, and Markdown conversion
-in one pass. **Always prefer this when a shell is available.**
-
-### Install / run (zero global install required)
+`defuddle` (the Obsidian Web Clipper engine) handles noise removal, HTML standardisation, and Markdown conversion in one pass.
 
 ```bash
-# One-shot via npx (no install needed)
+# One-shot via npx (no global install needed)
 npx defuddle parse page.html --markdown
-
-# From URL (fetches + converts)
 npx defuddle parse https://example.com/article --markdown
-
-# From stdin
 curl -s https://example.com/article | npx defuddle parse - --markdown
-
-# Save to file
-npx defuddle parse page.html --markdown > output.md
-
-# Global install (faster for repeated use in pipelines)
-npm install -g defuddle
-defuddle parse page.html --markdown
 ```
 
-### Useful flags
-
-```bash
---markdown          # Output Markdown (required; default is JSON)
---url <url>         # Base URL for resolving relative links when parsing local HTML
---title             # Prefix output with extracted title as H1
---no-remove         # Skip element removal (keep nav/footer — rarely needed)
-```
-
-### In a shell skill / agy pipeline
-
-```bash
-#!/usr/bin/env bash
-# html_to_md.sh — convert HTML file or URL to Markdown
-# Usage: html_to_md.sh <file-or-url> [base-url]
-
-input="${1:?Usage: html_to_md.sh <file|url> [base-url]}"
-base_url="${2:-}"
-
-if [[ -n "$base_url" ]]; then
-  npx defuddle parse "$input" --markdown --url "$base_url"
-else
-  npx defuddle parse "$input" --markdown
-fi
-```
-
-### Node.js API (for agy skills that embed JS)
-
-```javascript
-import { Defuddle } from 'defuddle/node';  // requires: npm i defuddle
-import { readFileSync } from 'fs';
-
-const html = readFileSync('page.html', 'utf8');
-const result = new Defuddle(html, { url: 'https://example.com' }).parse();
-
-console.log(result.content);    // Markdown string
-console.log(result.title);      // Extracted title
-console.log(result.author);     // Extracted author (if available)
-console.log(result.published);  // Extracted date (if available)
-```
-
-> **Verify:** defuddle API surface changes with minor versions. Confirm flags
-> against `npx defuddle --help` or https://github.com/kepano/defuddle before
-> scripting in CI.
+Key flags: `--markdown` (required for Markdown instead of JSON), `--url <url>` (base URL for relative links), `--title` (prepend H1), `--no-remove` (keep nav/footer). See `@references/defuddle-options.md` for Node.js API, JSON fields, and shell pipeline scripts, and verify flags against `npx defuddle --help`.
 
 ---
 
 ## Mode 2 — Python
 
-Use when the conversion is embedded in a Python script (e.g. inside a jira_report
-pipeline or a Python-based agy skill).
+Use when embedding HTML conversion in Python scripts. Neither library removes page boilerplate — pipe full web pages through `defuddle` first if noisy.
 
-### markdownify (recommended for fragments)
+| Feature | `markdownify` (fragments) | `html2text` (full pages) |
+|---|---|---|
+| GFM tables & style stripping | Yes | Yes |
+| Code block language hints | Partial | No |
+| Noise removal / footnotes | No | No |
 
-```bash
-pip install markdownify
-```
-
-```python
-from markdownify import markdownify as md
-
-html = "<h1>Title</h1><p>Hello <strong>world</strong></p>"
-markdown = md(html, heading_style="ATX")   # ATX = # style headings
-print(markdown)
-# → # Title\n\nHello **world**
-```
-
-Key options:
-
-```python
-md(html,
-   heading_style="ATX",          # "ATX" (# style) or "SETEXT" (underline style)
-   bullets="-",                  # List bullet character: -, *, +
-   strip=["script","style"],     # Tags to remove before conversion
-   convert=["a","p","h1"],       # Only convert these tags (allowlist mode)
-   newline_style="backslash",    # How to handle <br>: "backslash" or "spaces"
-)
-```
-
-### html2text (recommended for full-page conversion)
-
-```bash
-pip install html2text
-```
-
-```python
-import html2text
-
-h = html2text.HTML2Text()
-h.ignore_links = False
-h.ignore_images = False
-h.body_width = 0          # Disable line wrapping
-h.unicode_snob = True     # Use Unicode chars instead of ASCII approximations
-h.bypass_tables = False   # Convert tables to Markdown GFM tables
-
-with open("page.html") as f:
-    markdown = h.handle(f.read())
-```
-
-CLI usage:
-
-```bash
-html2text page.html > output.md
-cat page.html | html2text > output.md
-```
-
-### Comparison
-
-| Feature              | markdownify | html2text |
-|----------------------|-------------|-----------|
-| GFM tables           | ✅           | ✅        |
-| Code block language  | ⚠ partial  | ❌        |
-| Noise removal        | ❌           | ❌        |
-| Inline style strip   | ✅           | ✅        |
-| Footnotes            | ❌           | ❌        |
-| Best for             | Fragments   | Full pages|
-
-Neither Python library does noise removal. For full pages with nav/footer/sidebar
-clutter, **pipe through defuddle first**, then use Python for any post-processing.
+- **`markdownify`**: `md(html, heading_style="ATX", bullets="-", strip=["script", "style"])`
+- **`html2text`**: Set `h.body_width = 0`, `h.unicode_snob = True`, `h.bypass_tables = False`
 
 ---
 
 ## Mode 3 — LLM-Native Conversion
 
-Use when no shell execution is available and the HTML is provided directly as text
-in the prompt. Apply the element mapping table below to convert inline.
+When no shell is available, convert inline HTML in this sequence against `@references/element-mapping.md`:
 
-Read `@references/element-mapping.md` for the full mapping table.
+1. Strip `<script>`, `<style>`, `<noscript>`, `<iframe>`, `<form>`, `<button>`, and HTML comments (`<!-- ... -->`).
+2. Strip inline styles and `class`/`id` attributes (retain `href`, `src`, `alt`, `lang`).
+3. Convert block elements (headings, paragraphs, lists, blockquotes, GFM pipe tables) and inline elements.
+4. Convert fenced code blocks, preserving language hints from `class="language-X"` / `class="lang-X"`.
+5. Resolve relative URLs against any known base URL, collapse 3+ blank lines to 2, and trim block whitespace.
 
-**Conversion order (process in this sequence):**
-
-```
-1. Strip:      <script>, <style>, <noscript>, <iframe>, <form>, <button>
-2. Strip:      HTML comments <!-- ... -->
-3. Strip:      Inline styles and class/id attributes (keep href, src, alt, lang)
-4. Convert:    Block elements (headings, paragraphs, lists, blockquotes, tables)
-5. Convert:    Inline elements (bold, italic, code, links, images)
-6. Convert:    Code blocks (preserve language hint from class="language-X")
-7. Resolve:    Relative URLs → absolute (using known base URL if provided)
-8. Collapse:   3+ consecutive blank lines → 2 blank lines
-9. Trim:       Leading/trailing whitespace per block
-```
-
-**Critical rules:**
-
-- MUST NOT invent content not present in the HTML.
-- MUST NOT drop link `href` values — always render as `[text](url)`.
-- MUST NOT render `<img>` as text; always render as `![alt](src)`. If `alt` is
-  empty, use an empty alt: `![](src)`.
-- MUST preserve code block language from `class="language-X"` or `class="lang-X"`.
-- Tables MUST use GFM pipe syntax (see `@references/element-mapping.md`).
-- Nested lists MUST be indented by 2 spaces per level.
-
----
-
-## Obsidian-Specific Extensions
-
-When the output targets an Obsidian vault, apply these additional rules:
-
-```
-Highlights:    <mark>text</mark>           →  ==text==
-Callouts:      See @references/element-mapping.md §Callouts
-Wikilinks:     Do NOT convert — leave [[...]] as-is if already present
-Frontmatter:   Prepend YAML block if metadata is available. The YAML block must follow this exact format:
-               ---
-               title: "{{title}}"
-               source: "{{url}}"
-               author:
-                 - "[[{{author_1}}]]"
-                 - "[[{{author_2}}]]"
-               published: {{published_date}}
-               created: {{created_date}}
-               description: "{{description}}"
-               tags:
-                 - "clippings"
-               ---
-
-               Rules for metadata fields:
-               - **title**: The title of the article, double quoted.
-               - **source**: The URL of the article, double quoted.
-               - **author**: A list of authors formatted as double-quoted Obsidian wikilinks (e.g., `- "[[Rachel Flynn]]"`). Split comma-separated names, "and", or list items into separate list items. If no author is found, omit this field or use `[]`.
-               - **published**: The publication date of the article in `YYYY-MM-DD` format.
-               - **created**: The current date when the note is created in `YYYY-MM-DD` format.
-               - **description**: A concise summary/description of the article, double quoted.
-               - **tags**: A list of tags, containing `- "clippings"` by default.
-```
+**Critical invariants**: Never invent content, never drop `href` values, always render images as `![alt](src)` (empty alt allowed), and indent nested lists by 2 spaces per level.
 
 ---
 
 ## Output Quality Checklist
 
-Before passing converted Markdown downstream, verify:
-
-- [ ] No raw `<tag>` strings remain (except intentional HTML escapes)
-- [ ] All links are absolute URLs or valid relative paths
-- [ ] Code blocks have opening and closing fence (` ``` `)
-- [ ] Tables have header row separator (`|---|---|`)
-- [ ] No 3+ consecutive blank lines
-- [ ] Heading hierarchy is intact (no skipped levels if possible)
-- [ ] No `&amp;`, `&lt;`, `&gt;` — decoded to `&`, `<`, `>`
-- [ ] Images have `![alt](url)` form (empty alt OK, missing `!` is a bug)
-
----
+- [ ] No stray raw `<tag>` strings or un-decoded `&amp;` / `&lt;` / `&gt;` entities
+- [ ] Links resolved (absolute or valid relative) and images use `![alt](url)`
+- [ ] Fenced code blocks (` ``` `) closed; GFM tables include `|---|---|` header separators
+- [ ] No 3+ consecutive blank lines; heading hierarchy intact
 
 ## Reference Files
 
-| File | Load when |
-|------|-----------|
-| `@references/element-mapping.md` | LLM-native conversion, or checking a specific element |
-| `@references/defuddle-options.md` | Scripting defuddle in Node.js or verifying CLI flags |
+| File | Load When |
+|---|---|
+| `@references/element-mapping.md` | LLM-native conversion, or checking specific HTML elements, tables, math, or callouts |
+| `@references/defuddle-options.md` | Scripting `defuddle` in Node.js, shell pipelines, or verifying CLI options |
+| `@references/obsidian-clippings.md` | Output targets an Obsidian vault (`==highlights==`, wikilinks, YAML clipping frontmatter) |
