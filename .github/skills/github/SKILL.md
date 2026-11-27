@@ -48,7 +48,7 @@ Load only the reference file(s) needed for the current task:
 
 ## Templates & Queries
 
-- **PR & Review Templates**: `@templates/pull_request.md`, `@templates/pull_request_review_comment.md`
+- **PR & Review Templates**: `@templates/pull_request.md`, `code-review/templates/review-finding.md`
 - **Issue Templates** (fallback when `.github/ISSUE_TEMPLATE/` is absent): `@templates/bug_report.md`, `@templates/feature_request.md`, `@templates/task_chore.md`, `@templates/question_discussion.md`, `@templates/security_vulnerability.md`
 - **GraphQL Queries**: `@queries/find_prs.gql`, `@queries/pr_state.gql`, `@queries/review_threads.gql`, `@queries/batch_review_threads.gql`, `@queries/resolve_review_thread.gql`
 

@@ -1,4 +1,4 @@
-"""Tests for review-pull-request/scripts/audit_ci_test_coverage.sh.
+"""Tests for code-review/scripts/audit_ci_test_coverage.sh.
 
 Two behaviours matter:
 

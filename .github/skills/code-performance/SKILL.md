@@ -2,68 +2,36 @@
 name: code-performance
 description: >
   Diagnose, profile, and optimize application performance across database
-  queries, backend compute, and frontend asset delivery. Use when identifying
-  N+1 query loops, slow API endpoints, unindexed database queries, memory
-  leaks, asset bloat, or hot-path computational bottlenecks.
+  queries, backend compute, and frontend asset delivery, and verify benchmark
+  baseline claims. Use when identifying N+1 query loops, slow API endpoints,
+  unindexed database queries, memory leaks, asset bloat, hot-path bottlenecks,
+  or reproducing claimed benchmark speedups.
 ---
 
-# Code Performance Optimization Skill
+# Code Performance Optimization Knowledge Centre
 
-Standard Operating Procedure for identifying, measuring, and eliminating performance bottlenecks across the stack.
+Reference hub for profiling database access, caching strategies, algorithmic hot paths, frontend asset delivery, and reproducing benchmark claims.
 
-## When to use
+## When to Use
 
 - Profiling slow endpoints, API latency spikes, or background job delays.
-- Auditing database query patterns (N+1 query loops, missing indexes, unbuffered large result sets).
-- Detecting frontend asset bloat, missing code-splitting, or client-side rendering bottlenecks.
-- Investigating memory leaks, unclosed connections, or CPU-intensive hot paths.
+- Auditing database query patterns (N+1 loops, index selectivity vs. write cost, unbounded queries, connection pooling).
+- Designing caching headers, key namespacing, TTL jitter, and stampede protection.
+- Detecting `O(n^2)` collection loops, ReDoS regexes, resource leaks, or frontend bundle/rendering bloat.
+- Verifying committed benchmarks and claimed speedups against real base-branch baselines.
 
-## Diagnostic Workflow
+## Domain Knowledge Index
 
-```mermaid
-flowchart LR
-    A["1. Data Layer & Caching"] --> B["2. Compute & Memory Hot-Paths"] --> C["3. Frontend & Asset Optimization"]
-```
+| Topic | Resource | Use When |
+|---|---|---|
+| Database bottlenecks & pooling | `@references/database-bottlenecks.md` | Auditing ORM N+1 loops, index selectivity, pagination, connection pools, and search queries |
+| Caching strategies | `@references/caching-strategies.md` | Reviewing HTTP `Cache-Control`/`ETag` headers, TTL jitter, and cache stampede mitigations |
+| Algorithmic complexity & leaks | `@references/algorithmic-complexity.md` | Eliminating nested `O(n^2)` lookups, ReDoS backtracking, and daemon memory/handle leaks |
+| Frontend & asset performance | `@references/frontend-performance.md` | Auditing bundle tree-shaking, route/component code splitting, and list virtualization |
+| Benchmark baseline verification | `@references/benchmark-verification.md` | Confirming benchmarks are committed, exercise changed paths, and reproduce head vs. base numbers |
 
-### Phase 1: Database, Caching & Data Layer Profiling
-1. Identify ORM N+1 query patterns: Look for relation accesses inside loops or template iterations without eager loading (`with()`, `preload`, `include`).
-2. Audit index use against representative query plans, selectivity, table size, and write workload. Consider indexes for foreign keys, unique constraints, and frequent filters or ordering, but do not recommend one solely because a column appears in `WHERE` or `ORDER BY`.
-3. Check for unbounded result sets: Enforce pagination or chunked streaming for large data sets.
-4. Audit connection lifecycle & socket pooling: Verify database connection pool limits (PgBouncer, ProxySQL) and HTTP keep-alive socket reuse (Node `http.Agent`, Python `HTTPAdapter`) to avoid `TIME_WAIT` socket exhaustion.
-5. Profile search engine queries (Elasticsearch/OpenSearch): Ensure filter context usage over scoring clauses, eliminate leading wildcards, and enforce cursor-based (`search_after`) deep pagination.
-6. Audit caching strategies: Verify HTTP caching directives (`Cache-Control`, `ETags`), application cache topologies, key namespacing, TTL jittering, and stampede mitigations.
-7. Read `@references/database-bottlenecks.md` and `@references/caching-strategies.md` for patterns.
+## Report Template
 
-### Phase 2: Compute & Memory Hot-Paths
-1. Detect nested collection iterations (`O(n^2)` or worse) when maps/hash lookups (`O(1)`) should be used.
-2. Check for resource leaks: Unclosed file handles, unreleased database connections, or runaway memory accumulators in daemon workers.
-3. Review algorithmic complexity and catastrophic regex backtracking.
-4. Read `@references/algorithmic-complexity.md`.
-
-### Phase 3: Frontend & Asset Profiling
-1. Audit bundle sizes & pipeline: Check for un-treeshaken dependencies, duplicate packages, unminified loaders, or missing font preload/`font-display: swap` headers.
-2. Inspect route-level and component-level code splitting: Verify heavy views and modals use dynamic `import()` / lazy loading.
-3. Profile client-side rendering & list virtualization: Enforce DOM virtualization (`vue-virtual-scroller`, `react-window`) for large data tables, verify stable loop keys (avoid index keys), and memoize heavy reactive computations.
-4. Read `@references/frontend-performance.md`.
-
-## Performance Report Output Format
-
-````markdown
-### Performance Audit Summary
-- **Primary Bottleneck**: [Database Query Loop / Memory Accumulation / Asset Bloat]
-- **Estimated Impact**: [High / Medium / Low]
-- **Recommended Action**: [Eager Loading / Index Addition / Lazy Splitting]
-
-### Bottlenecks Identified
-
-#### [IMPACT: HIGH | MEDIUM | LOW] [Bottleneck Title]
-- **Location**: `path/to/file.ext:L123-L145`
-- **Root Cause**: Explanation of inefficient mechanism (e.g. N+1 query executing in `foreach`).
-- **Optimization Strategy**: Step-by-step refactoring proposal.
-- **Before / After Snippet**:
-  ```diff
-  - Inefficient code
-  + Optimized code
-  ```
-````
-
+| Template | Path | Use When |
+|---|---|---|
+| Performance audit report | `@templates/performance-audit-report.md` | Reporting bottlenecks with root cause, optimization strategy, and before/after diffs |
