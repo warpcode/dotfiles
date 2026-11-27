@@ -30,9 +30,9 @@ OPENCODE_PLUGIN = REPO_ROOT / "dot_config" / "opencode" / "plugins" / "security-
 OPENCODE_TEST_MJS = REPO_ROOT / "tests" / "test_opencode_plugin.mjs"
 LLAMACPP_TEST_MJS = REPO_ROOT / "tests" / "test_llamacpp_plugin.mjs"
 VSCODE_SETTINGS_TMPL = REPO_ROOT / "dot_config" / "Code" / "User" / "settings.json.tmpl"
-VALIDATE_SCRIPT = Path.home() / ".gemini" / "config" / "skills" / "ai-authoring-hooks" / "scripts" / "validate.py"
+VALIDATE_SCRIPT = Path.home() / ".gemini" / "config" / "skills" / "ai-authoring" / "scripts" / "validate_hooks.py"
 if not VALIDATE_SCRIPT.is_file():
-    VALIDATE_SCRIPT = REPO_ROOT / ".github" / "skills" / "ai-authoring-hooks" / "scripts" / "validate.py"
+    VALIDATE_SCRIPT = REPO_ROOT / ".github" / "skills" / "ai-authoring" / "scripts" / "validate_hooks.py"
 
 
 def resolve_binary(name: str) -> str | None:

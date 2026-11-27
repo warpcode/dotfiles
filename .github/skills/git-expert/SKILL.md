@@ -1,33 +1,36 @@
 ---
 name: git-expert
 description: >
-  Expert local Git operations: branch strategies, rebase and merge conflict
-  resolution, reflog triage, and submodules.
-  Use when executing local Git operations, or load FIRST for "fix my conflict",
-  "rebase conflict", "unmerged paths", "MERGING/REBASING state",
-  "cherry-pick in progress" — run `scripts/merge_state.sh` before reading diffs.
+  Expert local Git operations and domain knowledge centre: multi-strategy branching
+  (mainline, Git Flow, GitHub Flow, epic-tree/stacked), Conventional Commit standards,
+  worktrees and workspace isolation, rebase and merge conflict resolution, reflog
+  triage, and submodules. Use when executing local Git operations, authoring commits,
+  managing worktrees, or load FIRST for "fix my conflict", "rebase conflict",
+  "unmerged paths", "MERGING/REBASING state", "cherry-pick in progress" — run
+  `scripts/merge_state.sh` before reading diffs.
 user-invocable: false
 ---
 
 # Git Expert
 
 You are an expert DevOps engineer and Git archivist. Provide precise, safe,
-and clean Git workflows for local repository operations.
+and clean Git guidance and operations across branching topologies, commits,
+worktrees, merges, and recovery.
 
 ## Architecture
 
-This skill is a routing hub. Do not answer from memory alone — identify the
-sub-domain of the query and read the corresponding reference file before
-responding:
+This skill is a routing hub and Git domain knowledge centre. Do not answer from
+memory alone — identify the sub-domain of the query and read the corresponding
+reference file before responding:
 
 | Sub-domain | Reference file | When |
 |----------|----------------|------|
 | CLI syntax, triage, recovery | `@references/cli-commands.md` | Command syntax, status/diff/log, detached HEAD, reflog, rebase recovery, stash |
 | Merge conflict resolution | `@references/merge-conflicts.md` | Conflict markers, resolution strategies, merge vs rebase conflicts, abort options |
 | Merge strategies | `@references/merge-strategies.md` | Explicit merges, fast-forward, rebase, squash-on-merge, decision matrix |
-| Branch strategies & handling | `@references/branching-strategies.md` | Git Flow vs trunk-based vs GitHub Flow, branch naming rules, merge vs rebase |
-| Worktrees | Delegated to `git-worktrees` skill | Detect existing isolation, create/manage worktrees, directory ignore checks |
-| Commit message workflow | Delegated to `git-commit` skill | Generate/draft a commit message, format rules, staged-only enforcement |
+| Branch strategies & handling | `@references/branching-strategies.md` | Mainline/trunk, GitHub Flow, Git Flow, epic-tree & dependency-stacked branching, naming rules, merge vs rebase |
+| Worktrees & isolation | `@references/worktrees.md` | Detect existing isolation, native vs manual worktrees, `.gitignore` safety, worktree lifecycle |
+| Commit conventions | `@references/commit-conventions.md` | Conventional Commits spec, type table, hotfix override, atomic standards, staged-only constraints |
 
 Read only the reference(s) needed for the query. Never load all references
 upfront.
@@ -40,17 +43,20 @@ Run bundled helper scripts relative to this skill's root directory (`<skill-dir>
 |--------|---------|----------|
 | `@scripts/status.sh` | Working tree state, branch, staged/unstaged changes, push/pull counts | Before commit workflow or checking local status |
 | `@scripts/context.sh <base> <head>` | Collect commits, diffstat, and full diff into temp files | Comparing base and head branches, PR prep |
-| `@scripts/branch_base_check.sh [--base REF] [--head REF] [--json]` | Fail if the head branch does not descend from the base (exits 1, prints cherry-pick remedy) | **Before `gh pr create`** — catches a branch cut from a stale feature branch |
+| `@scripts/branch_base_check.sh [--base REF] [--head REF] [--json]` | Fail if the head branch does not descend from `--base` (arbitrary parent ref such as `epic/<id>-<slug>` or upstream branch; defaults to repo default branch) | **Before `gh pr create`** — catches a branch cut from the wrong or stale parent |
 | `@scripts/git-diff-triage.py` | Token-efficient diff (full for small files, headers only for large) | Reviewing staged/unstaged changes |
 | `@scripts/branches.sh` | Branch overview: last commit, upstream, ahead/behind, merged status (optional `--prune`, `--delete-merged`) | "What branches exist?", "Is X merged?", branch pruning/cleanup |
-| `@scripts/branch_diff.sh` | Branch comparison vs base: divergence, commits, and file diffs | Comparing feature branch to main/base, PR prep |
+| `@scripts/branch_diff.sh` | Branch comparison vs base: divergence, commits, and file diffs | Comparing feature branch to parent/base, PR prep |
 | `@scripts/repo_overview.sh` | One-shot repo state: remotes, recent commits, tags, worktrees, stashes, config | "Give me the lay of the land" |
 | `@scripts/merge_state.sh` | Detect in-progress merge/rebase/cherry-pick/revert/bisect + conflict files + recovery commands | "Am I mid-merge?", "What's conflicting?", recovery triage |
 | `@scripts/stash.sh` | Stash list with message, age, changed files (optional `--older-than N`, `--drop`) | "What's in my stash?", stash inspection/cleanup |
 | `@scripts/sync.sh` | Safe remote rebase sync (fetch, auto-stash tracked modifications, rebase non-interactively, pop stash, preserve untracked files) | "Pull/sync latest changes", "sync branch with remote" |
 | `@scripts/push.sh` | Safe push with preflight commit preview and status reporting | "Push commits", "push branch" |
 | `@scripts/repo_size.sh` | Object count & repo size report (optional `--aggressive` maintenance) | "How big is the repo?", git object statistics/cleanup |
-| `@scripts/audit_repo_branches.py` | Classify every remote branch as `KEEP`/`DELETE_MERGED`/`DELETE_STALE`/`SUPERSEDED`/`REVIEW`/`REVIEW_STALE`; detects sibling branches that conflict with each other; emits a ready-to-run `git push origin --delete` for only the safe ones (`--repo`, `--base`, `--json`, `--fetch`). **Requires `BypassSandbox: true`** on the first call due to `gh` network access. | "Which branches are obsolete?", "which of these two PR branches wins?", pre-prune cleanup |
+| `@scripts/audit_repo_branches.py` | Classify every remote branch as `KEEP`/`DELETE_MERGED`/`DELETE_STALE`/`SUPERSEDED`/`REVIEW`/`REVIEW_STALE` against `--base <ref>` (defaults to repo default branch, or pass an epic/parent ref); detects sibling conflicts; emits ready-to-run delete commands for safe branches (`--repo`, `--base`, `--json`, `--fetch`). **Requires `BypassSandbox: true`** on the first call due to `gh` network access. | "Which branches are obsolete?", "which of these two PR branches wins?", pre-prune cleanup |
+| `@scripts/worktrees.sh` | Create, list, prune, or remove isolated worktrees (`[-C <dir>] [--create <branch>] [--base <ref>] [--path <dir>] [--remove <path>] [--raw]`) | Setting up, inspecting, or cleaning up worktrees |
+| `@scripts/wt_test.sh` | Run a command or test suite inside an isolated worktree with an execution summary | Running builds/tests inside a worktree |
+| `@scripts/pr_sync.sh` | Synchronize a PR branch with a base ref (`--base <ref>`, defaulting to the auto-detected repository default branch) inside an isolated worktree | Updating a PR branch with conflicts or validating before push |
 
 ### Default branch
 Never hard-code `main` or `master`. Resolve it first:
@@ -91,7 +97,7 @@ plus a `git show <sha>:<path>` per side — that is four calls and ~25 KB of con
 script answers it in one. Only then read the conflicted blobs themselves; choosing how two
 divergent revisions compose is judgement and stays with you.
 
-`git rebase --continue` is not commit authoring — the `git-commit` skill does not apply to it.
+`git rebase --continue` is not new commit authoring — the Conventional Commit rules in `@references/commit-conventions.md` do not apply to it.
 Approval is still required where the repo instructions demand it, and always pass
 `GIT_EDITOR=true` (or `-c core.editor=true`) so the editor never opens.
 
@@ -113,8 +119,11 @@ Additional rules:
 - NEVER run `git commit` without explicit user permission.
 - NEVER rebase or force-push shared/public branches.
 - Prefer `git push --force-with-lease` over `git push --force`.
-- Always create new branches from `origin/<default-branch>` (e.g., `origin/master`),
-  never from whatever unrelated branch happens to be checked out.
+- Select the parent base branch according to the active branching strategy
+  (repo default branch for mainline/trunk streaming, or the epic/upstream
+  dependency branch for epic-tree and stacked workflows — see
+  `@references/branching-strategies.md`), never from an unrelated branch that
+  happens to be checked out.
 - **Non-Interactive Git Execution**: Never run `git rebase` or other interactive
   commands without `-c core.editor=true` or `GIT_EDITOR=true` to prevent
   interactive terminal hangs.

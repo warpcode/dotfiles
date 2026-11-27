@@ -91,8 +91,8 @@ to external trackers:
 
 ### Step 5: Provision via Target Adapter (Optional)
 Upon confirmation, export or create tickets using the repository's adapter:
-- **GitHub Issues**: `github-issues` / `github-cli` (parent epic, native
-  sub-issues, `Depends on #N` / `Blocked by #N` links).
+- **GitHub Issues**: `github` (parent epic, native sub-issues,
+  `Depends on #N` / `Blocked by #N` links).
 - **Jira**: `jira-api` (Epic parent link and `Blocks` / `is blocked by` links).
 - **Local Markdown (`docs/plans/`)**: Optional export to `SPEC.md` or backlog
   files when in-repo specs are used.

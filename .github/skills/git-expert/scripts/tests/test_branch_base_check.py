@@ -194,6 +194,66 @@ class TestBranchBaseCheck(unittest.TestCase):
                              cwd=self.repo, capture_output=True, text=True)
         self.assertIn("could not refresh origin/master", res.stderr)
 
+    def test_slashed_local_base_does_not_fetch(self):
+        """A slashed local parent branch (e.g. epic/402-demo) must not be
+        mistaken for <remote>/<branch>."""
+        self.repo_remote_points_nowhere()
+        _git(self.repo, "checkout", "-b", "epic/402-demo")
+        _git(self.repo, "commit", "--allow-empty", "-m", "epic base")
+        _git(self.repo, "checkout", "-b", "issue/403-sub")
+        _git(self.repo, "commit", "--allow-empty", "-m", "sub issue work")
+        res = subprocess.run([BRANCH_BASE_CHECK, "--base", "epic/402-demo", "--head", "issue/403-sub"],
+                             cwd=self.repo, capture_output=True, text=True)
+        self.assertEqual(res.returncode, 0)
+        self.assertNotIn("could not refresh", res.stderr)
+
+    def test_slashed_remote_base_is_refreshed(self):
+        """A slashed remote tracking ref (origin/epic/402-demo) must fetch
+        `origin` `epic/402-demo` and detect stale tracking refs."""
+        upstream = os.path.join(tempfile.mkdtemp(), "upstream.git")
+        subprocess.run(["git", "init", "-q", "--bare", upstream], check=True)
+
+        _git(self.repo, "remote", "add", "origin", upstream)
+        _git(self.repo, "checkout", "-b", "epic/402-demo")
+        _git(self.repo, "commit", "--allow-empty", "-m", "epic base")
+        _git(self.repo, "push", "-q", "origin", "epic/402-demo")
+
+        _git(self.repo, "checkout", "-b", "sibling", "epic/402-demo")
+        _git(self.repo, "commit", "--allow-empty", "-m", "sibling work")
+        _git(self.repo, "push", "-q", "origin", "sibling")
+
+        _git(self.repo, "checkout", "epic/402-demo")
+        _git(self.repo, "commit", "--allow-empty", "-m", "epic advances")
+        _git(self.repo, "push", "-q", "origin", "epic/402-demo")
+
+        _git(self.repo, "checkout", "-b", "bad-sub", "sibling")
+        _git(self.repo, "commit", "--allow-empty", "-m", "stale sub")
+
+        old_epic = _git(self.repo, "rev-parse", "sibling^").stdout.strip()
+        _git(self.repo, "update-ref", "refs/remotes/origin/epic/402-demo", old_epic)
+
+        res = subprocess.run(
+            [BRANCH_BASE_CHECK, "--base", "origin/epic/402-demo", "--head", "bad-sub"],
+            cwd=self.repo, capture_output=True, text=True,
+        )
+        self.assertEqual(res.returncode, 1)
+        self.assertIn("FAIL", res.stderr)
+
+    def test_default_base_resolves_origin_head(self):
+        """Omitting --base in a main-based repo resolves refs/remotes/origin/HEAD."""
+        _git(self.repo, "branch", "-m", "master", "main")
+        _git(self.repo, "update-ref", "refs/remotes/origin/main", "main")
+        _git(self.repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
+        _git(self.repo, "checkout", "-b", "feat/demo")
+        _git(self.repo, "commit", "--allow-empty", "-m", "feat work")
+
+        res = subprocess.run([BRANCH_BASE_CHECK, "--head", "feat/demo", "--json"],
+                             cwd=self.repo, capture_output=True, text=True)
+        self.assertEqual(res.returncode, 0)
+        data = json.loads(res.stdout)
+        self.assertEqual(data["base"], "origin/main")
+        self.assertIs(data["is_ancestor"], True)
+
     def repo_remote_points_nowhere(self):
         """Add an `origin` remote whose URL cannot be reached, so any fetch
         the script attempts fails."""
