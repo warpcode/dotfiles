@@ -289,7 +289,7 @@ consistent snapshot because the correlation happens in code.
 
 Use the CRUD prefix for the primary noun plus a composite suffix — `-bundle`
 (fixed set gathered), `-rollup` (N aggregated to state), `-audit` (read-only
-verification with a verdict). See `@references/script-standards.md`.
+verification with a verdict). See `@references/skills/script-standards.md`.
 
 ---
 
@@ -381,7 +381,7 @@ In the skill's SKILL.md, reference each script like this:
 ````markdown
 ## Wrapper Scripts
 
-### `scripts/list-my-prs.sh`
+### `<skill-dir>/scripts/list-my-prs.sh`
 Lists open PRs authored by the current user.
 
 **Input:** Optional `--repo <owner/repo>`, `--state <open|closed|all>`  

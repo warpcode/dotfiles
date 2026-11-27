@@ -259,6 +259,18 @@ class TestScriptability(unittest.TestCase):
         ])
         self.assertEqual(validate._scriptability_findings(text), [])
 
+    def test_nested_four_backtick_fenced_code_is_ignored(self):
+        text = validate.strip_fenced_blocks([
+            "Example:",
+            "````markdown",
+            "```bash",
+            "bash scripts/example-only.sh",
+            "```",
+            "````",
+            "After fence.",
+        ])
+        self.assertEqual(text, ["Example:", "After fence."])
+
     def test_warn_does_not_fail_the_skill(self):
         with tempfile.TemporaryDirectory() as tmp:
             skill = Path(tmp) / "loopy-skill"
@@ -332,6 +344,50 @@ class TestKnowledgeCentreRoutingHub(unittest.TestCase):
             results = validate.validate_skill(skill)
             self.assertIn(
                 ("resources-exist", "FAIL", "missing: ../other-skill/references/missing.md"),
+                results,
+            )
+
+    def test_missing_resource_in_reference_file_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = Path(tmp) / "domain-knowledge"
+            (skill / "references").mkdir(parents=True)
+            (skill / "references" / "guide.md").write_text(
+                "See `@references/missing.md` for details.\n"
+            )
+            (skill / "SKILL.md").write_text(
+                "---\n"
+                "name: domain-knowledge\n"
+                "description: >\n"
+                "  Domain knowledge centre. Use when checking guide links.\n"
+                "---\n"
+                "# Domain Knowledge\n\n"
+                "See `@references/guide.md`.\n"
+            )
+            results = validate.validate_skill(skill)
+            self.assertIn(
+                ("resources-exist", "FAIL", "missing: references/guide.md: references/missing.md"),
+                results,
+            )
+
+    def test_missing_resource_in_template_file_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = Path(tmp) / "domain-knowledge"
+            (skill / "templates").mkdir(parents=True)
+            (skill / "templates" / "sample.md").write_text(
+                "Use `templates/missing.md`.\n"
+            )
+            (skill / "SKILL.md").write_text(
+                "---\n"
+                "name: domain-knowledge\n"
+                "description: >\n"
+                "  Domain knowledge centre. Use when checking template links.\n"
+                "---\n"
+                "# Domain Knowledge\n\n"
+                "See `templates/sample.md`.\n"
+            )
+            results = validate.validate_skill(skill)
+            self.assertIn(
+                ("resources-exist", "FAIL", "missing: templates/sample.md: templates/missing.md"),
                 results,
             )
 

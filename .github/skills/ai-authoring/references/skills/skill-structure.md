@@ -29,7 +29,7 @@ Comprehensive specifications for directory layouts, frontmatter keys, naming con
 ├── references/              # Optional: Deep-dive domain docs loaded on demand
 │   ├── environments.md
 │   └── architecture.md
-├── scripts/                  # Optional: Executable black-box helpers (see references/script-standards.md)
+├── scripts/                  # Optional: Executable black-box helpers (see references/skills/script-standards.md)
 │   └── validate.py
 └── templates/                # Optional: Fixed output structures & schemas
     └── output-spec.md
@@ -58,7 +58,7 @@ Pattern: `<optional-prefix>-<domain>-<task-or-type>` (lowercase, hyphen-separate
 |---|---|---|
 | `ai-authoring` | AI artifacts (skills, agents, commands, rules, hooks, prompts) | `ai-authoring` |
 | `code-` | Codebase architecture, quality, testing, security | `code-tdd`, `code-architecture`, `code-security-audit` |
-| `git-` / `github-` | Version control & GitHub platform operations | `git-expert`, `github-cli`, `github` |
+| `git-` / `github-` | Version control & GitHub platform operations | `git-expert`, `github` |
 | `shell-` | Shell scripting, idioms, and environment configuration | `shell-scripting` |
 | `database-` | Schema migration, query optimization, data modeling | `database-architecture` |
 | `project-` / `task-` / `pm-` | Project planning, PRDs, ADRs, task decomposition, progress tracking | `project-planner`, `project-tracker` |
@@ -79,11 +79,11 @@ Consult platform reference documents when layering optional extension fields:
 
 | Platform | Extension Features | Reference |
 |---|---|---|
-| Claude Code | Invocation control, tool grants, model/effort, forked context, `!` injection | `@references/platforms/claude-code.md` |
-| Copilot / VS Code | `argument-hint`, `user-invocable`, experimental `context: fork` | `@references/platforms/copilot-vscode.md` |
-| OpenCode | `license`, `compatibility`, `metadata` map | `@references/platforms/opencode.md` |
-| Cursor | `paths` file scoping, Custom Mode badges (`icon`/`color`), `metadata` | `@references/platforms/cursor.md` |
-| Codex | `license`, `compatibility`, `metadata` map | `@references/platforms/codex.md` |
-| Antigravity | Declarative JSON discovery (`skills.json`/`plugins.json`), agent scoping | `@references/platforms/antigravity.md` |
-| Hermes Agent | Version/platform gating, tool requirements, env vars, blueprints | `@references/platforms/hermes.md` |
+| Claude Code | Invocation control, tool grants, model/effort, forked context, `!` injection | `@references/skills/platforms/claude-code.md` |
+| Copilot / VS Code | `argument-hint`, `user-invocable`, experimental `context: fork` | `@references/skills/platforms/copilot-vscode.md` |
+| OpenCode | `license`, `compatibility`, `metadata` map | `@references/skills/platforms/opencode.md` |
+| Cursor | `paths` file scoping, Custom Mode badges (`icon`/`color`), `metadata` | `@references/skills/platforms/cursor.md` |
+| Codex | `license`, `compatibility`, `metadata` map | `@references/skills/platforms/codex.md` |
+| Antigravity | Declarative JSON discovery (`skills.json`/`plugins.json`), agent scoping | `@references/skills/platforms/antigravity.md` |
+| Hermes Agent | Version/platform gating, tool requirements, env vars, blueprints | `@references/skills/platforms/hermes.md` |
 

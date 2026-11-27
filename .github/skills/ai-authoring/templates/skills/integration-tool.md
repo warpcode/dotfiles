@@ -72,7 +72,7 @@ Workflow shape: **GATHER (one script) → REASON (agent) → ACT (one confirmed 
   backups.
 - No hand-orchestrated call chains — if the agent needs more than one invocation
   per step, the bundle script is missing. See
-  `@references/cli-integration/script-patterns.md` (Pattern 0).
+  `@references/skills/cli-integration/script-patterns.md` (Pattern 0).
 
 ### Error Handling
 - Auth failures: [re-auth path]. Unreachable target: report and stop.

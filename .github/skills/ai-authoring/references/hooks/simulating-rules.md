@@ -38,7 +38,7 @@ flowchart TD
 
 ### Implementation Recipe (Cross-Platform Bash Script)
 
-Place this script at `scripts/rule-injector.sh`:
+Place this script at `./scripts/rule-injector.sh`:
 
 ```bash
 #!/usr/bin/env bash

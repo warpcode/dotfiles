@@ -278,12 +278,22 @@ def split_skill_md(path):
 
 def strip_fenced_blocks(lines):
     """Drop fenced code blocks so example paths are not validated."""
-    out, in_fence = [], False
+    out, fence_char, fence_len = [], None, 0
     for ln in lines:
-        if ln.lstrip().startswith("```"):
-            in_fence = not in_fence
-            continue
-        if not in_fence:
+        stripped = ln.lstrip()
+        m = re.match(r"^(`{3,}|~{3,})(.*)$", stripped)
+        if m:
+            marker, tail = m.group(1), m.group(2)
+            if fence_char is None:
+                if marker[0] == "`" and "`" in tail:
+                    out.append(ln)
+                    continue
+                fence_char, fence_len = marker[0], len(marker)
+                continue
+            elif marker[0] == fence_char and len(marker) >= fence_len and not tail.strip():
+                fence_char, fence_len = None, 0
+                continue
+        if fence_char is None:
             out.append(ln)
     return out
 
@@ -346,14 +356,32 @@ def validate_skill(skill_dir, audit_script_usage=False, sessions=200):
 
     missing = []
     seen = set()
-    for ln in strip_fenced_blocks(body_lines):
-        for ref in RESOURCE_RE.findall(ln):
-            ref = ref.rstrip(".")
-            if ref in seen:
+
+    def _scan_resources(lines, source_label=None):
+        for ln in strip_fenced_blocks(lines):
+            for ref in RESOURCE_RE.findall(ln):
+                ref = ref.rstrip(".")
+                key = (source_label, ref)
+                if key in seen:
+                    continue
+                seen.add(key)
+                if not (skill_dir / ref).exists():
+                    missing.append(f"{source_label}: {ref}" if source_label else ref)
+
+    _scan_resources(body_lines)
+    for subdir_name in ("references", "templates"):
+        subdir = skill_dir / subdir_name
+        if not subdir.is_dir():
+            continue
+        for md_file in sorted(subdir.rglob("*.md")):
+            if not md_file.is_file():
                 continue
-            seen.add(ref)
-            if not (skill_dir / ref).exists():
-                missing.append(ref)
+            rel_source = str(md_file.relative_to(skill_dir))
+            _scan_resources(
+                md_file.read_text(encoding="utf-8").splitlines(),
+                source_label=rel_source,
+            )
+
     if missing:
         add("resources-exist", "FAIL", "missing: " + ", ".join(missing))
     else:

@@ -62,7 +62,7 @@ gh-admin      → auth, config, secrets (likely read-only for most agents)
 
 **Analysis:** Single operational mode. No subcommands. Rich filter language.
 
-**Decision:** One skill. However, the filter language is complex enough to warrant a `@references/filters.md` with common filter patterns, rather than embedding them all in SKILL.md.
+**Decision:** One skill. However, the filter language is complex enough to warrant a `<skill-dir>/references/filters.md` with common filter patterns, rather than embedding them all in SKILL.md.
 
 **Result:**
 ```

@@ -186,7 +186,7 @@ the workflow well enough to script it.
 
 ## Phase 3: Decomposition Decisions
 
-> For detailed heuristics and worked examples, read [`decomposition.md`](@references/cli-integration/decomposition.md).
+> For detailed heuristics and worked examples, read [`decomposition.md`](@references/skills/cli-integration/decomposition.md).
 
 ### 3.1 How Many Skills?
 
@@ -209,8 +209,8 @@ Split into separate `read` and `write` skills when:
    order — prose first, scripts never — is how skills end up documenting call
    chains instead of procedures.
 2. Apply `references/prompts.md` rules to all LLM-facing instructions.
-3. Follow `templates/integration-tool.md` for skill layout.
-4. For wrapper scripts, follow the header conventions and patterns in [`script-patterns.md`](@references/cli-integration/script-patterns.md).
+3. Follow `templates/skills/integration-tool.md` for skill layout.
+4. For wrapper scripts, follow the header conventions and patterns in [`script-patterns.md`](@references/skills/cli-integration/script-patterns.md).
 5. Run validation: `python3 scripts/validate.py <skill-dir>`, including the
    `workflow-scriptability` check.
 

@@ -10,11 +10,11 @@ Standard Operating Procedure for auditing triggering reliability, structural hea
 2. **Triggering Review**:
    - Inspect frontmatter `description` for literal user trigger phrases.
    - Verify length is under 1024 characters.
-   - Address undertriggering or overtriggering using evaluation protocols in `@references/evals.md`.
+   - Address undertriggering or overtriggering using evaluation protocols in `@references/skills/evals.md`.
 3. **Progressive Disclosure Audit**:
    - Verify `SKILL.md` body is concise (<500 lines, target ~60-80 lines).
    - Ensure deep domain knowledge is deferred to `@references/`.
-   - Verify helper scripts in `scripts/` follow `@references/script-standards.md`.
+   - Verify helper scripts in `scripts/` follow `@references/skills/script-standards.md`.
 4. **Gather-Before-Act Audit**:
    - [ ] **Every mutation is preceded by a single gather step** that establishes
          the facts it depends on, in one call.

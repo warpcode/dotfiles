@@ -8,23 +8,23 @@ Comprehensive catalog of prompt patterns, decision matrices, compatibility graph
 
 | Operational Need / Observed Symptom | Primary Pattern | Companion Pattern | Target Template / Library Card |
 |---|---|---|---|
-| **Surgical code generation or refactoring** | Diff/Patch Contract | Structured Markdown Frame, Negative Constraints | `templates/archetype-surgical-implementer.md` |
-| **Strict security, PR, or fact audit** | Cite-or-Abstain | Calibrated Confidence, Rubric-as-Judge | `templates/archetype-fact-based-auditor.md` |
-| **Multi-agent decomposition & rollup** | Supervisor Topology | State Tracker, Clarify-Before-Act | `templates/archetype-autonomous-supervisor.md` |
-| **Deterministic ordered runbook / procedure** | SOP Checklist | Least-to-Most, Negative Constraints | `templates/archetype-sop-task-runner.md` |
-| **Ambiguous or underspecified user request** | Clarify-Before-Act | Calibrated Confidence, State Tracker | `templates/pattern-library.md` (`[P3.2]`) |
-| **Single-turn quality boost without subagents** | Self-Critique-Refine | Rubric-as-Judge | `templates/pattern-library.md` (`[P4.6]`) |
-| **Multi-turn state loss or context compaction** | State Tracker | Plan-and-Execute, Clarify-Before-Act | `templates/pattern-library.md` (`[P4.3]`) |
-| **Over-confident fabrication or hallucinations** | Calibrated Confidence | Cite-or-Abstain | `templates/pattern-library.md` (`[P4.2]`) |
-| **Context-bound Q&A / extraction** | Cite-or-Abstain | Structured Markdown Frame, Calibrated Confidence | `templates/pattern-library.md` (`[P4.1]`) |
-| **Model rationalizes shortcuts or scope creep** | Negative Constraints | RFC 2119 Directives | `templates/pattern-library.md` (`[P3.1]`) |
-| **Auditable evidence required before verdict** | Structured Scratchpad | Rubric-as-Judge, Cite-or-Abstain | `templates/pattern-library.md` (`[P4.4]`) |
-| **Multi-step problem below subagent complexity** | Least-to-Most | Structured Markdown Frame | `templates/pattern-library.md` (`[P4.5]`) |
-| **Long-form document / architecture plan** | Outline-First | Plan-and-Execute | `templates/pattern-library.md` (`[P2.2]`) |
-| **Untrusted data, prompt injection, mixed inputs** | Structured Markdown Frame | Few-Shot Exemplars | `templates/pattern-library.md` (`[P2.1]`) |
-| **Non-standard custom DSL syntax or regex** | Few-Shot Exemplars | Structured Markdown Frame | `templates/pattern-library.md` (`[P5.3]`) |
-| **Subjective quality grading or evaluation** | Rubric-as-Judge | Structured Scratchpad | `templates/pattern-library.md` (`[P5.2]`) |
-| **Visual architecture, decision trees, lifecycles** | Mermaid.js Standard | Flowchart, Sequence, State Diagram | `@references/visual-diagrams.md` |
+| **Surgical code generation or refactoring** | Diff/Patch Contract | Structured Markdown Frame, Negative Constraints | `templates/prompts/archetype-surgical-implementer.md` |
+| **Strict security, PR, or fact audit** | Cite-or-Abstain | Calibrated Confidence, Rubric-as-Judge | `templates/prompts/archetype-fact-based-auditor.md` |
+| **Multi-agent decomposition & rollup** | Supervisor Topology | State Tracker, Clarify-Before-Act | `templates/prompts/archetype-autonomous-supervisor.md` |
+| **Deterministic ordered runbook / procedure** | SOP Checklist | Least-to-Most, Negative Constraints | `templates/prompts/archetype-sop-task-runner.md` |
+| **Ambiguous or underspecified user request** | Clarify-Before-Act | Calibrated Confidence, State Tracker | `templates/prompts/pattern-library.md` (`[P3.2]`) |
+| **Single-turn quality boost without subagents** | Self-Critique-Refine | Rubric-as-Judge | `templates/prompts/pattern-library.md` (`[P4.6]`) |
+| **Multi-turn state loss or context compaction** | State Tracker | Plan-and-Execute, Clarify-Before-Act | `templates/prompts/pattern-library.md` (`[P4.3]`) |
+| **Over-confident fabrication or hallucinations** | Calibrated Confidence | Cite-or-Abstain | `templates/prompts/pattern-library.md` (`[P4.2]`) |
+| **Context-bound Q&A / extraction** | Cite-or-Abstain | Structured Markdown Frame, Calibrated Confidence | `templates/prompts/pattern-library.md` (`[P4.1]`) |
+| **Model rationalizes shortcuts or scope creep** | Negative Constraints | RFC 2119 Directives | `templates/prompts/pattern-library.md` (`[P3.1]`) |
+| **Auditable evidence required before verdict** | Structured Scratchpad | Rubric-as-Judge, Cite-or-Abstain | `templates/prompts/pattern-library.md` (`[P4.4]`) |
+| **Multi-step problem below subagent complexity** | Least-to-Most | Structured Markdown Frame | `templates/prompts/pattern-library.md` (`[P4.5]`) |
+| **Long-form document / architecture plan** | Outline-First | Plan-and-Execute | `templates/prompts/pattern-library.md` (`[P2.2]`) |
+| **Untrusted data, prompt injection, mixed inputs** | Structured Markdown Frame | Few-Shot Exemplars | `templates/prompts/pattern-library.md` (`[P2.1]`) |
+| **Non-standard custom DSL syntax or regex** | Few-Shot Exemplars | Structured Markdown Frame | `templates/prompts/pattern-library.md` (`[P5.3]`) |
+| **Subjective quality grading or evaluation** | Rubric-as-Judge | Structured Scratchpad | `templates/prompts/pattern-library.md` (`[P5.2]`) |
+| **Visual architecture, decision trees, lifecycles** | Mermaid.js Standard | Flowchart, Sequence, State Diagram | `@references/prompts/visual-diagrams.md` |
 
 ---
 
@@ -128,10 +128,10 @@ flowchart TD
 ```
 
 ### Canonical Starter Archetypes
-1. **The Surgical Implementer**: Layer 1 (`[P1.1]`) + Layer 2 (`[P2.1]`) + Layer 3 (`[P3.1]`) + Layer 5 (`[P5.1]`) &rarr; `templates/archetype-surgical-implementer.md`
-2. **The Fact-Based Auditor**: Layer 1 (`[P1.2]`) + Layer 2 (`[P2.1]`) + Layer 3 (`[P3.3]`) + Layer 4 (`[P4.1]`, `[P4.2]`) + Layer 5 (`[P5.2]`) &rarr; `templates/archetype-fact-based-auditor.md`
-3. **The Autonomous Supervisor**: Layer 1 (`[P1.3]`) + Layer 2 (`[P2.1]`) + Layer 3 (`[P3.2]`) + Layer 4 (`[P4.3]`) + Layer 5 (`[P5.4]`) &rarr; `templates/archetype-autonomous-supervisor.md`
-4. **The Strict SOP Task Runner**: Layer 1 (`[P1.4]`) + Layer 2 (`[P2.1]`) + Layer 3 (`[P3.3]`) + Layer 4 (`[P4.5]`) + Layer 5 (`[P5.4]`) &rarr; `templates/archetype-sop-task-runner.md`
+1. **The Surgical Implementer**: Layer 1 (`[P1.1]`) + Layer 2 (`[P2.1]`) + Layer 3 (`[P3.1]`) + Layer 5 (`[P5.1]`) &rarr; `templates/prompts/archetype-surgical-implementer.md`
+2. **The Fact-Based Auditor**: Layer 1 (`[P1.2]`) + Layer 2 (`[P2.1]`) + Layer 3 (`[P3.3]`) + Layer 4 (`[P4.1]`, `[P4.2]`) + Layer 5 (`[P5.2]`) &rarr; `templates/prompts/archetype-fact-based-auditor.md`
+3. **The Autonomous Supervisor**: Layer 1 (`[P1.3]`) + Layer 2 (`[P2.1]`) + Layer 3 (`[P3.2]`) + Layer 4 (`[P4.3]`) + Layer 5 (`[P5.4]`) &rarr; `templates/prompts/archetype-autonomous-supervisor.md`
+4. **The Strict SOP Task Runner**: Layer 1 (`[P1.4]`) + Layer 2 (`[P2.1]`) + Layer 3 (`[P3.3]`) + Layer 4 (`[P4.5]`) + Layer 5 (`[P5.4]`) &rarr; `templates/prompts/archetype-sop-task-runner.md`
 
 ---
 

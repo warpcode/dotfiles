@@ -41,7 +41,7 @@ Codex supports lifecycle hooks configured in `.codex/hooks.json` or `~/.codex/co
 }
 ```
 
-### Python Helper: Rule Injector Script (`scripts/codex_rule_injector.py`)
+### Python Helper: Rule Injector Script (`./scripts/codex_rule_injector.py`)
 
 This script parses all `.instructions.md` or `.agents/rules/*.md` files in the repository, evaluates their `applyTo:` / `globs:` against mentioned files, and outputs matching rules to stdout for Codex to include in the context:
 

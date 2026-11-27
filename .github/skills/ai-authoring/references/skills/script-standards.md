@@ -78,12 +78,12 @@ Prefix helper scripts with standard CRUD operations to enable clean wildcard per
 
 | Prefix | Operation Type | Example | Behavior |
 |---|---|---|---|
-| `get-` | Read single resource | `@scripts/get-profile.py` | Fetches specific resource by ID or key |
-| `list-` | Read collection | `@scripts/list-configs.py` | Lists known entities with compact output |
-| `search-` | Query / filter | `@scripts/search-logs.py` | Executes targeted search query |
-| `create-` | Mutate / create | `@scripts/create-item.py` | Provisions a new resource |
-| `update-` | Mutate / edit | `@scripts/update-state.py` | Modifies existing resource |
-| `delete-` | Destructive mutate | `@scripts/delete-stack.py` | Deletes resource (requires confirmation) |
+| `get-` | Read single resource | `<skill-dir>/scripts/get-profile.py` | Fetches specific resource by ID or key |
+| `list-` | Read collection | `<skill-dir>/scripts/list-configs.py` | Lists known entities with compact output |
+| `search-` | Query / filter | `<skill-dir>/scripts/search-logs.py` | Executes targeted search query |
+| `create-` | Mutate / create | `<skill-dir>/scripts/create-item.py` | Provisions a new resource |
+| `update-` | Mutate / edit | `<skill-dir>/scripts/update-state.py` | Modifies existing resource |
+| `delete-` | Destructive mutate | `<skill-dir>/scripts/delete-stack.py` | Deletes resource (requires confirmation) |
 | `validate.py` | Self-contained validation | `@scripts/validate.py` | Validates package integrity and compiles assets |
 
 ### Composite Script Naming
@@ -93,9 +93,9 @@ the primary noun, so wildcard policies still group them correctly:
 
 | Suffix | Meaning | Example |
 |---|---|---|
-| `-bundle` | Gathers a fixed set of resources for one question | `@scripts/pr_audit_bundle.sh` |
-| `-rollup` | Aggregates N resources into one state summary | `@scripts/pr_state_rollup.py` |
-| `-audit` | Read-only verification pass with a verdict | `@scripts/audit_repo_alerts.py` |
+| `-bundle` | Gathers a fixed set of resources for one question | `<skill-dir>/scripts/pr_audit_bundle.sh` |
+| `-rollup` | Aggregates N resources into one state summary | `<skill-dir>/scripts/pr_state_rollup.py` |
+| `-audit` | Read-only verification pass with a verdict | `<skill-dir>/scripts/audit_repo_alerts.py` |
 
 ---
 
