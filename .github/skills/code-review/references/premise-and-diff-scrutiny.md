@@ -50,4 +50,4 @@ Inspect all added and modified files—especially production paths, configs, and
 
 ## 5. File Lifecycle & Dead-Code Checks
 
-When any file is emptied, significantly reduced, or appears obsolete, consult `code-architecture` (`references/dead-code-and-refactoring.md`) to audit static and dynamic references before recommending keep vs. delete.
+When any file is emptied, significantly reduced, or appears obsolete, consult `code-architecture` (`code-architecture/references/dead-code-and-refactoring.md`) to audit static and dynamic references before recommending keep vs. delete.
