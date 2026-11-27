@@ -16,7 +16,7 @@ Reference hub for application topology, route/middleware pipelines, clean archit
 
 - Mapping unfamiliar codebase entrypoints, monorepo trees, and rendering strategies (SPA/SSR).
 - Auditing HTTP routes, canonical middleware order, and OpenAPI/Swagger contract alignment.
-- Evaluating SOLID layering (Presentation, Application, Domain, Infrastructure) and GoF design patterns.
+- Evaluating SOLID layering (Presentation, Frontend Client, Application, Domain, Infrastructure) and GoF design patterns.
 - Auditing frontend HTTP client wrappers, UI compound components, and WCAG 2.1 Level AA accessibility.
 - Detecting Fowler code smells, reducing cyclomatic/cognitive complexity, or verifying whether emptied/refactored files can be safely deleted.
 
@@ -26,7 +26,7 @@ Reference hub for application topology, route/middleware pipelines, clean archit
 |---|---|---|
 | Routing & middleware pipelines | `@references/routing-and-controllers.md` | Discovering entrypoints, route manifests, and middleware execution order |
 | API contracts & OpenAPI | `@references/api-contracts-openapi.md` | Detecting contract drift, undocumented endpoints, and breaking schema changes |
-| Clean layers & SOLID | `@references/clean-layers-and-solid.md` | Auditing Presentation/Application/Domain/Infrastructure boundaries and leaky abstractions |
+| Clean layers & SOLID | `@references/clean-layers-and-solid.md` | Auditing Presentation/Frontend Client/Application/Domain/Infrastructure boundaries and leaky abstractions |
 | Design patterns | `@references/design-patterns.md` | Selecting or reviewing Factory, Builder, Adapter, Decorator, Strategy, Observer, or Command patterns |
 | Frontend accessibility | `@references/accessibility-wcag.md` | Auditing UI compound components and WCAG 2.1 AA compliance |
 | Code smells & complexity | `@references/code-smells-and-complexity.md` | Identifying Fowler smells and flattening deep nesting with guard clauses or table-driven dispatch |

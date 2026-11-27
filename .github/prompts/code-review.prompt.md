@@ -13,6 +13,7 @@ Review code changes objectively using `code-review` rubrics and verification gui
 - **Branch Comparison**: Compare `origin/<branch>` against `origin/<base>` (default `origin/master` or `origin/main`).
 - **Pull Request**: Load PR snapshot via `github/scripts/pr_audit_bundle.sh` and check any associated issue context.
 - **Jira / GitHub Issue (optional)**: Load via `jira-api` (include subtasks/epic context) or `github` if referenced; if no linked PR exists, review any available diff/branch or clarify the target diff without gating on a tracker link.
+- **No Target Supplied**: Review the local `git diff`; if the working tree is clean, ask which commit, branch, or PR to review.
 
 ## Review Behavior
 
