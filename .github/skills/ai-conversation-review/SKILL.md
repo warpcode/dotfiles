@@ -10,236 +10,75 @@ description: >
 
 # AI Conversation Review
 
-Turn a finished session into measurable improvements for the skills, agents and instructions that ran in it.
-
-**Core principle:** scripts gather and count; the model only judges. If a review step can be done deterministically, it MUST be done by a script in `<skill-dir>/scripts/`.
+Turn a finished session into measurable improvements for skills, agents, and instructions. **Scripts gather and count; the model only judges.**
 
 `<skill-dir>` = the directory containing this file. Always invoke scripts by that path; never assume the working directory.
 
----
+## Stage 1: Gather Audit Dossier (Budget: <=3 Tool Calls)
 
-## Pipeline
+Always pass an explicit conversation UUID, session ID (`ses_...`), or transcript path. Never default to `--latest` when reviewing an active session — `--latest` picks the newest transcript machine-wide across all workspaces and concurrent sessions.
 
-```mermaid
-flowchart LR
-  A["1. Unified Audit Dossier<br/>(review_conversation.py --record)"] --> B["2. Guideline & Skill Audit<br/>(model judgement)"]
-  B --> C["3. Route Fixes<br/>(Scope x Specificity)"]
-  C --> D["4. Report<br/>(conversation-review-report.md)"]
-```
-
-**Data-gathering budget: 3 or fewer tool calls per review.**
-Using `review_conversation.py` executes ingest, smells audit, offload analysis, timeline extraction, and history recording in **1 single tool call**, leaving 2 spare calls if targeted inspection of a rule file or git commit is required.
-
-> **Resolving the target is itself budgeted as 1 of those 3 calls.** Use an explicit
-> session ID or transcript path, never `--latest`, when reviewing the conversation in progress — a wrong target means
-> re-deriving the session ID by querying the database by hand, which cost 4 calls and 10 total on
-> 2026-10-07. If you exceed the budget, say so explicitly in §1 of the report rather than quietly
-> absorbing it.
-
----
-
-## Stage 1: Gather Audit Dossier (Single Command)
-
-Supported platforms (natively resolved without manual exports):
-- **VS Code Copilot Chat**: Pass session UUID or transcript path (searches `workspaceStorage`).
-- **Google Antigravity / Gemini CLI**: Pass conversation UUID (auto-resolves `~/.gemini/antigravity/brain/<uuid>/.system_generated/logs/transcript.jsonl` or `~/.gemini/antigravity-cli/brain/...`).
-- **OpenCode**: Pass session ID (`ses_...`) (directly queries `~/.local/share/opencode/opencode.db` in read-only SQLite mode; zero temporary files needed).
-- **Claude Code**: Pass UUID or path in `~/.claude/projects/`.
-- **Markdown / Plain text**: Pass file path.
-
-### ⚠️ `--latest` is NOT "the conversation we are in"
-
-`--latest` answers *"which transcript changed most recently, anywhere on this machine."* That is a
-different question from *"which conversation am I in right now."* It resolves wrongly whenever:
-
-- a **long-running** session is still being written to but a **shorter session started later** —
-  the later session wins on recency, so a conversation you have been in for hours loses to one that
-  ended ten minutes ago;
-- you work in **multiple workspaces** and another directory has a fresher session;
-- several agents are active concurrently.
-
-Verified 2026-10-07 on `warpcode/cloakenv`: `--latest --platform opencode` returned a `dotfiles`
-session (`ses_ee89234…`, 19:00:37) while the active cloakenv review session (`ses_eef919dd…`,
-19:56:02) was still running — a 56-minute gap that cost 4 extra tool calls to recover by hand.
-
-**Resolution order — use the first one available:**
-
-| Priority | Form | When |
-|---|---|---|
-| 1 | `<uuid_or_path_or_ses_id>` explicitly | Always pass the explicit conversation ID, UUID, or transcript path. Always correct. |
-| 2 | `--latest` | Only when you genuinely want the newest transcript on the machine, regardless of workspace. |
-
-Always explicitly specify the conversation ID or transcript path. Do **not** guess or silently fall
-back to `--latest`.
-
-### Canonical Single-Step Execution
-
-Run the unified review script with `--record`. It resolves file paths or session UUIDs,
-computes all offload metrics, audits command smells, extracts user corrections with
-verified turn numbers, and updates review history in **one call**:
+| Platform | Target Argument |
+|---|---|
+| Copilot Chat / Claude Code / Markdown | Session UUID or transcript file path |
+| Google Antigravity / Gemini CLI | Conversation UUID |
+| OpenCode | Session ID (`ses_...`, read-only SQLite) |
 
 ```bash
-# Review by UUID or path across any platform (records baseline automatically):
+# Unified dossier (metrics, offload candidates, smells, user corrections, history baseline):
 python3 <skill-dir>/scripts/review_conversation.py <uuid_or_path_or_ses_id> --record
 
-# Machine-wide newest transcript -- NOT the current conversation. Use with care:
-python3 <skill-dir>/scripts/review_conversation.py --latest --record
+# Diagnostic modes (use instead of ad-hoc scripts):
+python3 <skill-dir>/scripts/review_conversation.py <target> --sizes          # byte breakdown & context hogs
+python3 <skill-dir>/scripts/review_conversation.py <target> --schema         # transcript schema keys
+python3 <skill-dir>/scripts/review_conversation.py <target> --segment final  # or turn:N / start:end
+python3 <skill-dir>/scripts/review_conversation.py <target> --user-turns     # chronological user timeline
 
-# Filter by platform when using --latest:
-python3 <skill-dir>/scripts/review_conversation.py --latest --platform [copilot|antigravity|opencode]
+# Cross-session empirical tool & script audit (default 200 sessions):
+python3 <skill-dir>/scripts/search_tools.py --scripts-dir <target-skill>/scripts/ [--sessions 200] [--json]
 ```
 
-### Deep Statistics & Diagnostic Modes
+| Supporting Script | Purpose |
+|---|---|
+| `@scripts/parse_conversation.py` | Multi-platform transcript parser (Antigravity, VS Code, OpenCode, Claude Code) |
+| `@scripts/offload_analysis.py` | Detector for tool sequences, retry loops, and script offload candidates |
+| `@scripts/export_opencode_session.py` | Dump OpenCode SQLite sessions to portable JSONL |
+| `@scripts/audit_vscode_session.py` | Structural auditor for VS Code Copilot Chat session records |
 
-When diagnosing huge transcripts, exploring unfamiliar formats, or investigating specific turns, use the built-in deterministic inspection modes instead of writing ad-hoc scratch scripts:
+**Prohibitions:** Never write inline `python3 -c` / heredocs, chain multi-pipe shell filters, or dump raw transcripts into context.
 
-```bash
-# 1. Byte size breakdown & top context hogs (largest single events, tool costs):
-python3 <skill-dir>/scripts/review_conversation.py <target> --sizes
+## Stage 2: Offload & Efficiency Assessment
 
-# 2. Schema introspection, depth <= 3 nested keys, & universal field mapping:
-python3 <skill-dir>/scripts/review_conversation.py <target> --schema
-
-# 3. Slice a specific segment, turn, or final turn as a bounded table:
-python3 <skill-dir>/scripts/review_conversation.py <target> --segment final
-python3 <skill-dir>/scripts/review_conversation.py <target> --segment turn:17
-python3 <skill-dir>/scripts/review_conversation.py <target> --segment 2707:2787
-
-# 4. Chronological user prompts timeline with timestamps & correction flags:
-python3 <skill-dir>/scripts/review_conversation.py <target> --user-turns
-```
-
-### Multi-Session Tool & Script Search (`search_tools.py`)
-
-Search conversation transcripts across recent sessions to find empirical usage of tools, CLI commands, or bundled skill scripts:
-
-```bash
-# 1. Search for tool usage across the 200 most recent sessions (default ceiling):
-python3 <skill-dir>/scripts/search_tools.py --tool run_command
-
-# 2. Search for command executions or regex patterns:
-python3 <skill-dir>/scripts/search_tools.py --command "gh pr review"
-
-# 3. Check empirical invocations of a specific script:
-python3 <skill-dir>/scripts/search_tools.py --script pr_audit_bundle.sh
-
-# 4. Batch audit all scripts in a skill's scripts directory:
-python3 <skill-dir>/scripts/search_tools.py --scripts-dir <skill-dir>/scripts/
-
-# Configurable session depth: --sessions 500 or --all (default: 200 sessions)
-# Structured output: --json | Scope filter: --workspace <path> | Platform: --platform <name>
-```
-
-### Supporting Modules & Utilities
-
-| Utility | Location | Purpose |
-|---|---|---|
-| `parse_conversation.py` | `@scripts/parse_conversation.py` | Core transcript parser supporting Antigravity, VS Code, OpenCode, and Claude Code |
-| `offload_analysis.py` | `@scripts/offload_analysis.py` | Algorithmic detector for tool sequences, retry loops, and script offload candidates |
-| `export_opencode_session.py` | `@scripts/export_opencode_session.py` | Standalone utility to dump OpenCode SQLite conversations to portable JSONL |
-| `audit_vscode_session.py` | `@scripts/audit_vscode_session.py` | Standalone structural auditor for VS Code Copilot Chat session records |
-
-### Output of Stage 1 Dossier
-
-The default command emits a token-efficient Markdown dossier (<120 lines, ~1.2k tokens) containing:
-1. **Metrics & History Baseline**: tool calls, failed calls, mechanical chains, repeated sequences, retry loops, offloadable share %, and baseline delta comparison against previous runs.
-2. **Top Script Candidates**: sequence, occurrences, calls saved, suggested class, recommended script name, and **sample argument context**.
-3. **Failed Tool Calls & Smells**: exact event line numbers, tool names, arguments, error details, inline code counts, deep pipelines (>2 pipes), and duplicate reads.
-4. **User Turns & Corrections Timeline**: exact User Turn # and Event # for all turns, with user corrections highlighted (`Wait`, `instead`, `please ensure`, etc.).
-
-### Strict Prohibitions
-- **NEVER write ad-hoc Python scratch scripts or heredocs** (`python3 -c "..."`, `python3 << 'EOF'`).
-- **NEVER chain multi-command pipelines** (`cmd | grep | awk | sed | jq`).
-- **NEVER dump raw, unparsed transcripts into context**.
-- **NEVER run multiple manual script calls** when `review_conversation.py` collects everything deterministically in 1 call.
-
----
-
-## Stage 2: Offload Assessment & Script Classification
-
-Every review MUST answer, with numbers: **how much of this session's work could a script have done instead of the model?**
-
-All metrics are taken directly from the Section 1 & 2 outputs of `review_conversation.py`.
-
-| Signal | Meaning | Why it is offloadable |
-|---|---|---|
-| Mechanical chain | 2+ tool calls with no reasoning between them | The model added nothing between steps |
-| Repeated sequence | Same tool order seen 2+ times | It is a procedure; make it one parameterised script |
-| Retry loop | Failed call followed by the same tool | The model was guessing syntax |
-| Command smells | Pipelines >2 pipes, duplicate file reads, inline scripts | Brittle, token-wasteful trial-and-error |
-
-**Model Judgement:** Review each Script Candidate from the dossier and finalize its classification:
+Classify every script candidate from the dossier (`@references/script-consolidation-guide.md`):
 
 | Class | Rule | Action |
 |---|---|---|
-| **Script** | Inputs known up front; steps never branch on meaning (e.g. Git workflows, build/test pipelines) | Write the script, document it in the owning skill |
-| **Script + flags** | Branches on simple conditions (exists, failed, regex matches) | Script with a flag per branch |
-| **Keep in model** | Depends on interpreting content (code semantics, tone, architectural decisions) | Leave in model; script only data gathering in front of it |
+| **Script** | Deterministic inputs; steps never branch on meaning | Bundle in `<skill>/scripts/`, document in `SKILL.md` |
+| **Script + flags** | Branches on simple conditions (exists, exit code, regex) | Parameterize with explicit flags |
+| **Keep in model** | Depends on interpreting semantics, tone, or architecture | Keep in model; script only data gathering in front of it |
 
-You MUST NOT recommend scripting a "Keep in model" step.
+**Efficiency & script standards:** Flag N+1 sequential request loops (require batch/bulk endpoints), uncached immutable queries, and client-side filtering that belongs at the API boundary. Proposed scripts must expose `--help`, stay non-interactive, emit concise Markdown (plus `--json`), fail loudly, and support `--dry-run` on mutations. Start shell helpers from `templates/script-wrapper-blueprint.sh`.
 
-### Standards for Every Proposed Script
-1. `--help` documents every flag, so agents never read source code to use it.
-2. Non-interactive (no prompts, pagers, or TUIs).
-3. Concise Markdown to stdout by default; `--json` for machine use.
-4. Fails loudly: `set -euo pipefail` (shell) or structured `try/except` (Python).
-5. Idempotent; mutating scripts require `--dry-run`.
+## Stage 3: Guideline, Skill & Durable Learning Audit
 
-### Script & Process Efficiency Mandate (Batching & API Request Hygiene)
-Every review MUST explicitly evaluate existing scripts and processes for execution and network efficiency:
-1. **N+1 Sequential Request Smells**: Flag any loop or multi-turn sequence invoking CLI or REST calls per item (e.g. sequential `gh pr view` loops, per-session activities queries). Require batch endpoints, GraphQL query consolidation, or bulk repository fetches (e.g. `gh pr list --state all` once per repo).
-2. **Immutable Result Caching**: Verify whether scripts repeatedly query terminal, immutable entities (e.g. merged/closed PRs, completed historical tasks). Require disk or memory caching so repeated sweeps make zero redundant network calls.
-3. **Server-Side vs Client-Side Filtering**: Check whether commands download excessive payloads only to filter in client-side Python or shell loops. Enforce pushing filter expressions (`filter="archived=false"`, `--state`, `--limit`) directly to the API boundary.
-4. **Tool Call Sprawl Elimination**: Convert recurring multi-command chains of checks into single bundled scripts that fail loudly and return concise summaries.
+1. **Compliance**: Check active rules (`AGENTS.md`, `.github/copilot-instructions.md`, `*.instructions.md`, loaded `SKILL.md`) for checkable rules only; mark **Kept / Broken / N/A** with User Turn # (Event #) evidence.
+2. **Skills**: Audit whether bundled scripts were used or bypassed, diagnose missed triggers (frontmatter `description`), and check granularity via `@references/prompt-and-skill-audit-rubric.md`.
+3. **Durable Learnings**: Extract recurring user corrections and settled decisions with Turn # quotes; deduplicate against `@references/memory-and-instruction-hierarchy.md`.
 
-Start shell helpers from `<skill-dir>/templates/script-wrapper-blueprint.sh`. Detail: `references/script-consolidation-guide.md`.
+## Stage 4: Route Fixes to the Right Architectural Layer
 
----
+Scope first (project fixes in project files; universal fixes in global config), then route each finding to its owning layer — **never route agent fixes to `.github/workflows/` and never append dated war stories to `SKILL.md`**:
 
-## Stage 3: Guideline & Skill Audit
+| Finding Type | Target Layer | Rule |
+|---|---|---|
+| Timeless API, CLI, or tool gotchas | Domain skill `@references/` (`<skill>/references/*.md`) | Distill cause and fix; omit dates and session narratives |
+| Repeated multi-call shell sequences, loops, or N+1 queries | Domain skill `@scripts/` (`<skill>/scripts/*`) | Single bundled script + routing row in `SKILL.md` |
+| Workflow orchestration, step ordering, or role persona | `.github/agents/*.agent.md` or `.github/prompts/*.prompt.md` | Keep `SKILL.md` focused on domain knowledge |
+| Universal defaults, coding conventions, or safety invariants | `AGENTS.md` or `*.instructions.md` | Path-scoped rules for file globs; root `AGENTS.md` only for repo-wide rules |
 
-### 3a. Guideline Compliance
-1. Identify the instruction files active in the session (`AGENTS.md`, `.github/copilot-instructions.md`, `CLAUDE.md`, `GEMINI.md`, `*.instructions.md`, loaded `SKILL.md` files).
-2. Extract only **checkable** rules (e.g. "use script X", "no inline Python", "provide file paths and line numbers").
-3. Mark each rule **Kept / Broken / N/A** using the exact **User Turn # (Event #)** from the timeline as evidence.
-4. For each Broken rule, diagnose: rule unclear, rule buried, rule contradicted elsewhere, or tooling made it hard to follow.
+## Stage 5: Compact Report
 
-### 3b. Skills
-- **Loaded skills:** were their scripts used, or did the agent improvise around them? Any gaps in instructions?
-- **Missed skills:** a matching skill existed but was never loaded. Diagnose the cause: description too narrow, missing trigger phrases, or overlap with another skill. The fix is usually frontmatter `description`.
-- **Granularity:** recommend merging overlapping skills or splitting bloated skills.
-
-Rubric and symptom matrix: `references/prompt-and-skill-audit-rubric.md`.
-
-### 3c. Durable Learnings
-Extract only explicit user decisions, corrections and preferences that will recur. Cite the exact User Turn # and quote the user correction. Deduplicate against existing instructions. Detail: `references/memory-and-instruction-hierarchy.md`.
-
----
-
-## Stage 4: Route Fixes
-
-**Scope first:** project-specific fixes go in the project; universal fixes go in the user's global agent config. Never put project commands in global files, or universal tooling in project files.
-
-**Then the most specific target:**
-1. **Skill** (`SKILL.md` or `scripts/`): ad-hoc commands, missing scripts, triggers.
-2. **Agent / subagent definition**: fragile multi-step behaviour or delegation.
-3. **Path-scoped instruction** (`*.instructions.md`): unstated rules for particular file types.
-4. **Root `AGENTS.md`** (project or global): ONLY for behaviour that applies across that entire scope.
-
-Note: `.github/workflows/` holds CI pipelines, not agent workflows. Do not route agent fixes there.
-
-**Precedence when rules conflict:** the more specific file wins for its own scope. Root `AGENTS.md` sets defaults; skills and path rules may narrow them but must not contradict universal safety rules.
-
----
-
-## Stage 5: Report
-
-Keep conversation reviews **compact and lean**, containing strictly actionable suggestions, advice, and concrete improvements (diffs). **Omit metadata headers, event stats, and compliance audit sections** unless explicitly requested.
-
-Emphasize evaluating workflow scriptability (eliminating tool-call sprawl and cutting context token usage) and execution efficiency (identifying N+1 sequential loops, missing batch/bulk endpoints, un-cached immutable queries, and missing server-side filtering).
-
+Use `templates/conversation-review-report.md` (omit metadata headers and unrequested compliance tables; no praise, no narrative recap, no findings without turn evidence):
 1. **Script candidates**: sequence replaced, calls saved, suggested script, target skill.
-2. **Suggestions / Advice**: one line each, with priority (High/Medium/Low) and turn evidence.
-3. **Improvements**: concrete diffs per target file.
-
-No praise, no narrative recap, no findings without evidence.
+2. **Suggestions / Advice**: one line each with priority (`High`/`Medium`/`Low`) and Turn # evidence.
+3. **Improvements**: concrete diffs per target file routed per Stage 4.
