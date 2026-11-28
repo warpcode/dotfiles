@@ -78,9 +78,13 @@ class TestAgentAndPromptAlignment(unittest.TestCase):
             "software-engineer",
             "code-reviewer",
             "git-specialist",
+            "ai-specialist",
+            "web-researcher",
         )
         for agent in real_agents:
             self.assertIn(agent, text, f"Missing real agent '{agent}' in project-lifecycle.prompt.md")
+            agent_file = AGENTS_DIR / f"{agent}.agent.md"
+            self.assertTrue(agent_file.is_file(), f"Roster agent '{agent}' missing on disk: {agent_file}")
 
         self.assertIn("Mainline", text)
         self.assertIn("Epic-Tree", text)
