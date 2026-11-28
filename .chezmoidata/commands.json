@@ -1,6 +1,7 @@
 {
   "commands": {
     "allow": [
+      "./validate.sh",
       "awk",
       "basename",
       "bash -n",
@@ -76,6 +77,7 @@
       "git ls-files",
       "git ls-tree",
       "git merge origin/main",
+      "git merge origin/master",
       "git merge-base",
       "git push origin HEAD",
       "git remote",
