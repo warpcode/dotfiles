@@ -1,23 +1,23 @@
 ---
 name: code-review
-description: "Focused code review entrypoint for local diffs, uncommitted changes, branch comparisons, stacked PRs, and formal PRs or issues."
+description: "Thin review entrypoint delegating local diffs, branch comparisons, stacked PRs, and formal PR or issue reviews to the code-reviewer agent."
+argument-hint: "Target to review (e.g. PR #123, owner/repo#123, branch name, issue URL, or leave blank for local diff)"
+agent: "code-reviewer"
 ---
 
 # Code Review
 
-Review code changes objectively using `code-review` rubrics and verification guidelines. Issue/PR links are optional enrichment—never halt for missing tracker or PR links when a diff, commit, or branch target is available.
+Delegate the review to `code-reviewer` (`.github/agents/code-reviewer.agent.md`) to execute its 4-phase review pipeline (`Gather & Scope` -> `Audit & Mutate-Verify` -> `Reconcile Review Threads` -> `Disposition & Submit`) across the `code-review`, `github`, `git-expert`, `code-security-audit`, `code-architecture`, and `code-performance` knowledge centres.
 
-## Scope & Context Gathering
+## Target Binding
 
-- **Uncommitted / Local Diff / Commit**: Inspect the local working-tree diff (`git diff`) or commit directly.
-- **Branch Comparison**: Compare `origin/<branch>` against `origin/<base>` (default `origin/master` or `origin/main`).
-- **Pull Request**: Load PR snapshot via `github/scripts/pr_audit_bundle.sh` and check any associated issue context.
-- **Jira / GitHub Issue (optional)**: Load via `jira-api` (include subtasks/epic context) or `github` if referenced; if no linked PR exists, review any available diff/branch or clarify the target diff without gating on a tracker link.
-- **No Target Supplied**: Review the local `git diff`; if the working tree is clean, ask which commit, branch, or PR to review.
+- **Pull Request (`#N`, URL, or `<owner>/<repo>#N`)**: Confirm `<owner>/<repo>` explicitly, gather context via `github/scripts/pr_audit_bundle.sh`, and inspect the PR's actual `baseRefName` (supporting mainline, `epic/<id>-<slug>`, and stacked parent branches).
+- **Branch (`<branch>` vs optional `<base>`)**: Compare `origin/<branch>` against the resolved or explicit base (`origin/master`, `origin/main`, or stacked parent).
+- **Local Diff / Commit**: Inspect working-tree `git diff` or the named commit directly without requiring an issue or PR link.
+- **Jira / GitHub Issue (optional)**: Load via `jira-api` (include subtasks/epic context) or `github` as optional enrichment; never halt a diff or branch review for missing tracker links.
+- **No Target Supplied**: Inspect the local `git diff`; if the working tree is clean, ask which commit, branch, or PR to review.
 
-## Review Behavior
+## Execution Constraints
 
-- **Read-Only**: Never commit, check out branches, or modify local files unless explicitly instructed.
-- **Neutral & Evidence-Backed**: Cite exact `file:line` locations and snippets; follow the `code-review` prioritization hierarchy (`code-review/references/review-rubrics.md`), premise/diff scrutiny (`code-review/references/premise-and-diff-scrutiny.md`), and test/mutation verification (`code-review/references/test-and-mutation-verification.md`).
-- **Domain Specialists**: Load `code-security-audit`, `code-performance`, `code-architecture`, or `code-tdd` as needed for security, performance, architecture, or test-design findings.
-- **Finding Format**: Structure findings per `code-review/templates/review-finding.md` (`Severity`, `Description`, `Impact`, `Proposed Solution`).
+- **Read-Only Audit**: Never commit, check out branches in the primary working tree, or modify local files unless explicitly instructed.
+- **Disposition & Submission Policy**: Apply `code-reviewer` neutral tone, finding schema (`code-review/templates/review-finding.md`), and event rules (`REQUEST_CHANGES` on any valid finding, silent empty-body `APPROVE` when clean, `COMMENT` for self-authored PRs), obtaining explicit approval before posting GitHub reviews.

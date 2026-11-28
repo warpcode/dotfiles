@@ -59,6 +59,49 @@ class TestProjectJiraSkills(unittest.TestCase):
         self.assertIn("plain assistant text", text)
         self.assertIn("## Interaction Model", text)
 
+    def test_project_architect_agent_capabilities_and_schemas(self) -> None:
+        agent_file = AGENTS_DIR / "project-architect.agent.md"
+        text = agent_file.read_text(encoding="utf-8")
+        for skill_name in (
+            "project-planner",
+            "project-adr",
+            "project-tickets",
+            "code-architecture",
+            "database-architecture",
+            "github",
+            "jira-api",
+        ):
+            self.assertIn(skill_name, text, f"Missing knowledge centre '{skill_name}'")
+
+        lower = text.lower()
+        for required_concept in (
+            "fitness function",
+            "3.0 pt",
+            "cycle",
+            "ready frontier",
+            "epic-tree",
+            "stacked",
+            "mainline",
+            "dry-run",
+        ):
+            self.assertIn(required_concept, lower, f"Missing '{required_concept}' in project-architect")
+
+        import sys
+
+        scripts_dir = str(SKILLS_DIR / "ai-authoring" / "scripts")
+        if scripts_dir not in sys.path:
+            sys.path.insert(0, scripts_dir)
+        import validate_agents
+        import validate_antigravity
+
+        for validator_name, mod in (
+            ("validate_agents", validate_agents),
+            ("validate_antigravity", validate_antigravity),
+        ):
+            results = mod.validate_agent(agent_file)
+            bad = [(c, s, d) for c, s, d in results if s in ("FAIL", "WARN")]
+            self.assertEqual(bad, [], f"{validator_name} reported issues: {bad}")
+
     def test_jira_issue_assessment_rigid_prompt_removed(self) -> None:
         old_template = SKILLS_DIR / "jira-issue-assessment" / "templates" / "assessment-report.md"
         old_validator = SKILLS_DIR / "jira-issue-assessment" / "scripts" / "validate_assessment_report.py"
