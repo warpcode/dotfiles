@@ -51,6 +51,7 @@ class TestDomainSkills(unittest.TestCase):
         for expected in ("tone calibration", "de-escalat", "structural templates"):
             self.assertIn(expected, tone_text)
 
+        self.assertNotIn("## Tone Calibration Summary", skill_md)
         self.assertIn("tone-and-templates.md", skill_md)
         self.assertIn("difficult-emails.md", skill_md)
         self.assertIn("email-classifier", skill_md)

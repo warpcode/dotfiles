@@ -17,18 +17,7 @@ Standards for composing clear, well-calibrated, and structurally tight professio
 - **Four-zone structure**: Keep every email tight across `Opening` (greeting + brief anchor) -> `Body` (context -> message/ask -> supporting detail) -> `Close` (specific next step/CTA) -> `Sign-off`.
 - **Subject lines**: Keep to 6 words or fewer, front-load the key noun or action (*"Q3 Budget Sign-off — Action Required"*), and match urgency honestly (avoid *"Quick question"* or *"Following up"*).
 - **Language principles**: Prefer active voice, specific dates/times, short sentences (20–25 words max), and one ask per email (numbered if multiple). Omit hollow openers (*"I hope this email finds you well"*) and passive-aggressive phrasing (*"As per my last email"*).
-
-## Tone Calibration Summary
-
-| Situation | Target Tone | Key Rule |
-|---|---|---|
-| Senior stakeholder / client | Formal, concise, respectful | Lead with their interest and the decision needed |
-| Peer / colleague | Warm-professional, direct | Brief anchor, clear ask |
-| Cold outreach | Confident, humble | Lead with specific relevance, one small ask |
-| Delivering bad news | Direct, empathetic | State the news first; own it without over-explaining |
-| Complaint or pushback | Assertive, factual | Describe impact, not blame |
-| Follow-up (no response) | Light touch, good-faith | Wait 2–5 business days; give an easy out |
-| Apology | Clear, brief | Acknowledge the specific error and state the remedy |
+- **Tone calibration**: Calibrate formality, warmth, and firmness to stakes and relationship via the tone matrix in `@references/tone-and-templates.md` (and the 5-level Tone Ladder in `@references/difficult-emails.md` for sensitive or escalated threads).
 
 ## Reference Routing
 
